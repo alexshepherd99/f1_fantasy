@@ -112,5 +112,4 @@ def check_merged_integrity_constructors(df_merged_constructors: pd.DataFrame, nu
 
     df_grouped_filtered = df_grouped[flt_bad_points | flt_bad_price]
     if not df_grouped_filtered.empty:
-        print(df_grouped_filtered)
         raise ValueError("Merged DataFrame integrity check failed: unexpected number of constructors per race")
