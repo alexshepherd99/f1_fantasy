@@ -3,8 +3,13 @@ from pandas.testing import assert_frame_equal
 import pandas as pd
 
 from common import AssetType
-from import_data.import_history import convert_data_sheet, DataSheetType, get_archive_sheet_infos, ArchiveSheetInfo
-
+from import_data.import_history import (
+    convert_data_sheet,
+    DataSheetType,
+    get_archive_sheet_infos,
+    ArchiveSheetInfo,
+    merge_sheet_points_price,
+)
 
 def test_convert_data_sheet_two_column():
     df_input = pd.DataFrame(
@@ -85,7 +90,7 @@ def test_convert_data_sheet_one_column():
 def test_get_archive_sheet_infos():
     expected_driver_sheets = [
         ArchiveSheetInfo(2023, "2023 Drivers Points", ["Team", "Driver"], DataSheetType.POINTS),
-        ArchiveSheetInfo(2023, "2023 Drivers Price", ["Driver"], DataSheetType.PRICE),
+        ArchiveSheetInfo(2023, "2023 Drivers Price", ["Team", "Driver"], DataSheetType.PRICE),
     ]
 
     expected_team_sheets = [
@@ -98,3 +103,75 @@ def test_get_archive_sheet_infos():
 
     assert actual_driver_sheets == expected_driver_sheets
     assert actual_team_sheets == expected_team_sheets
+
+
+def test_merge_sheet_points_price():
+    df_bad_shape_1 = pd.DataFrame(columns=["A", "B"], data=[[1, 2], [3, 4]])
+    df_bad_shape_2 = pd.DataFrame(columns=["A", "B", "C"], data=[[1, 2, 3], [4, 5, 6]])
+    with pytest.raises(ValueError):
+        merge_sheet_points_price(df_bad_shape_1, df_bad_shape_2, AssetType.DRIVER)
+
+    df_bad_points = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023],
+            ["Team B", "Driver 2", 1, 12, 2023],
+        ],
+    )
+    df_bad_price = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023],
+            ["Team B", "Driver 3", 1, 14, 2023],
+        ],
+    )
+    with pytest.raises(ValueError):
+        merge_sheet_points_price(df_bad_points, df_bad_price, AssetType.DRIVER)
+
+    df_driver_good_points = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023],
+            ["Team B", "Driver 2", 1, 12, 2023],
+        ],
+    )
+    df_driver_good_price = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Price", "Season"],
+        data=[
+            ["Team A", "Driver 1", 1, 1.5, 2023],
+            ["Team B", "Driver 2", 1, 2.5, 2023],
+        ],
+    )
+    df_driver_expected = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 2", 1, 12, 2023, 2.5],
+        ],
+    )
+    df_driver_actual = merge_sheet_points_price(df_driver_good_points, df_driver_good_price, AssetType.DRIVER)
+    assert_frame_equal(df_driver_actual, df_driver_expected)
+
+    df_team_good_points = pd.DataFrame(
+        columns=["Team", "Race", "Points", "Season"],
+        data=[
+            ["Team A", 1, 30, 2023],
+            ["Team B", 1, 40, 2023],
+        ],
+    )
+    df_team_good_price = pd.DataFrame(
+        columns=["Team", "Race", "Price", "Season"],
+        data=[
+            ["Team A", 1, 3.5, 2023],
+            ["Team B", 1, 4.5, 2023],
+        ],
+    )
+    df_team_expected = pd.DataFrame(
+        columns=["Team", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", 1, 30, 2023, 3.5],
+            ["Team B", 1, 40, 2023, 4.5],
+        ],
+    )
+    df_team_actual = merge_sheet_points_price(df_team_good_points, df_team_good_price, AssetType.CONSTRUCTOR)
+    assert_frame_equal(df_team_actual, df_team_expected)
