@@ -2,7 +2,7 @@ import pytest
 from pandas.testing import assert_frame_equal
 import pandas as pd
 
-from import_data.import_history import convert_data_sheet
+from import_data.import_history import convert_data_sheet, DataSheetType
 
 
 def test_convert_data_sheet_two_column():
@@ -37,7 +37,45 @@ def test_convert_data_sheet_two_column():
         df_input=df_input,
         season=2023,
         id_cols=["Team", "Driver"],
-        val_col="Points",
+        sheet_type=DataSheetType.POINTS,
     )
 
-    assert_frame_equal(df_actual, df_expected, check_dtype=False)
+    assert_frame_equal(df_actual, df_expected)
+
+
+def test_convert_data_sheet_one_column():
+    df_input = pd.DataFrame(
+        columns=["Team", 1, 2, 3, 4],
+        data=[
+            ["Team A", 1.1, 2.2, 3.3, 4.4],
+            ["Team B", 5.5, 6.6, 7.7, 8.8],
+            ["Team C", 9.9, 10.1, 11.2, 12.3],            
+        ],
+    )
+
+    df_expected = pd.DataFrame(
+        columns=["Team", "Race", "Price", "Season"],
+        data=[
+            ["Team A", 1, 1.1, 2022],
+            ["Team B", 1, 5.5, 2022],
+            ["Team C", 1, 9.9, 2022],
+            ["Team A", 2, 2.2, 2022],
+            ["Team B", 2, 6.6, 2022],
+            ["Team C", 2, 10.1, 2022],
+            ["Team A", 3, 3.3, 2022],
+            ["Team B", 3, 7.7, 2022],
+            ["Team C", 3, 11.2, 2022],
+            ["Team A", 4, 4.4, 2022],
+            ["Team B", 4, 8.8, 2022],
+            ["Team C", 4, 12.3, 2022],
+        ]
+    )
+
+    df_actual = convert_data_sheet(
+        df_input=df_input,
+        season=2022,
+        id_cols=["Team"],
+        sheet_type=DataSheetType.PRICES,
+    )
+
+    assert_frame_equal(df_actual, df_expected)
