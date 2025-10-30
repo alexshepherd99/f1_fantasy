@@ -140,8 +140,8 @@ def test_merge_sheet_points_price():
     df_driver_good_price = pd.DataFrame(
         columns=["Team", "Driver", "Race", "Price", "Season"],
         data=[
+            ["Team B", "Driver 2", 1, 2.5, 2023],  # intentionally different order
             ["Team A", "Driver 1", 1, 1.5, 2023],
-            ["Team B", "Driver 2", 1, 2.5, 2023],
         ],
     )
     df_driver_expected = pd.DataFrame(
@@ -164,8 +164,8 @@ def test_merge_sheet_points_price():
     df_team_good_price = pd.DataFrame(
         columns=["Team", "Race", "Price", "Season"],
         data=[
+            ["Team B", 1, 4.5, 2023],  # intentionally different order
             ["Team A", 1, 3.5, 2023],
-            ["Team B", 1, 4.5, 2023],
         ],
     )
     df_team_expected = pd.DataFrame(

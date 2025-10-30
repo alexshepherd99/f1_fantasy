@@ -4,7 +4,7 @@ from typing import NamedTuple
 
 from common import AssetType
 
-_FILE_ARCHIVE_INPUTS = "../data/f1_fantasy_archive.xlsx"
+_FILE_ARCHIVE_INPUTS = "data/f1_fantasy_archive.xlsx"
 
 
 class DataSheetType(Enum):
@@ -72,8 +72,8 @@ def merge_sheet_points_price(df_points: pd.DataFrame, df_price: pd.DataFrame, as
     if df_points.shape != df_price.shape:
         raise ValueError("DataFrames to merge must have the same shape")
     
-    df_points_check = df_points.dropna()[cols_merge]
-    df_price_check = df_price.dropna()[cols_merge]
+    df_points_check = df_points.dropna()[cols_merge].sort_values(by=cols_merge).reset_index(drop=True)
+    df_price_check = df_price.dropna()[cols_merge].sort_values(by=cols_merge).reset_index(drop=True)
     if not df_points_check.reset_index().equals(df_price_check.reset_index()):
         raise ValueError("DataFrames to merge must have the same identifying columns and values")
 
@@ -97,7 +97,6 @@ def check_merged_integrity_drivers(df_merged_drivers: pd.DataFrame, num_construc
 
     df_grouped_filtered = df_grouped[flt_bad_points | flt_bad_price]
     if not df_grouped_filtered.empty:
-        print(df_grouped_filtered)
         raise ValueError("Merged DataFrame integrity check failed: unexpected number of drivers per race")
 
 
