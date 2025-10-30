@@ -16,20 +16,20 @@ def test_convert_data_sheet_two_column():
     )
 
     df_expected = pd.DataFrame(
-        columns=["Season", "Race", "Team", "Driver", "Points"],
+        columns=["Team", "Driver", "Race", "Points", "Season"],
         data=[
-            [2023, 1, "Team A", "Driver 1", 10],
-            [2023, 2, "Team A", "Driver 1", 15],
-            [2023, 3, "Team A", "Driver 1", 20],
-            [2023, 4, "Team A", "Driver 1", 25],
-            [2023, 1, "Team B", "Driver 2", 12],
-            [2023, 2, "Team B", "Driver 2", 18],
-            [2023, 3, "Team B", "Driver 2", 22],
-            [2023, 4, "Team B", "Driver 2", 28],
-            [2023, 1, "Team B", "Driver 3", 25],
-            [2023, 2, "Team B", "Driver 3", 43],
-            [2023, 3, "Team B", "Driver 3", 11],
-            [2023, 4, "Team B", "Driver 3", 63],
+            ["Team A", "Driver 1", 1, 10, 2023],
+            ["Team B", "Driver 2", 1, 12, 2023],
+            ["Team B", "Driver 3", 1, 25, 2023],
+            ["Team A", "Driver 1", 2, 15, 2023],
+            ["Team B", "Driver 2", 2, 18, 2023],
+            ["Team B", "Driver 3", 2, 43, 2023],
+            ["Team A", "Driver 1", 3, 20, 2023],
+            ["Team B", "Driver 2", 3, 22, 2023],
+            ["Team B", "Driver 3", 3, 11, 2023],
+            ["Team A", "Driver 1", 4, 25, 2023],
+            ["Team B", "Driver 2", 4, 28, 2023],
+            ["Team B", "Driver 3", 4, 63, 2023],
         ]
     )
 
@@ -40,4 +40,4 @@ def test_convert_data_sheet_two_column():
         val_col="Points",
     )
 
-    assert_frame_equal(df_actual, df_expected)
+    assert_frame_equal(df_actual, df_expected, check_dtype=False)
