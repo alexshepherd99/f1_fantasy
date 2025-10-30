@@ -84,3 +84,33 @@ def merge_sheet_points_price(df_points: pd.DataFrame, df_price: pd.DataFrame, as
         how="left",
     )
     return df_merged
+
+
+def check_merged_integrity_drivers(df_merged_drivers: pd.DataFrame, num_constructors: int):
+    all_constructors = df_merged_drivers["Team"].unique()
+    if len(all_constructors) != num_constructors:
+        raise ValueError(f"Expected {num_constructors} constructors, found {len(all_constructors)}")
+    
+    df_grouped = df_merged_drivers.groupby(["Season", "Race", "Team"]).count()
+    flt_bad_points = df_grouped["Points"] != 2
+    flt_bad_price = df_grouped["Price"] != 2
+
+    df_grouped_filtered = df_grouped[flt_bad_points | flt_bad_price]
+    if not df_grouped_filtered.empty:
+        print(df_grouped_filtered)
+        raise ValueError("Merged DataFrame integrity check failed: unexpected number of drivers per race")
+
+
+def check_merged_integrity_constructors(df_merged_constructors: pd.DataFrame, num_constructors: int):
+    all_constructors = df_merged_constructors["Team"].unique()
+    if len(all_constructors) != num_constructors:
+        raise ValueError(f"Expected {num_constructors} constructors, found {len(all_constructors)}")
+    
+    df_grouped = df_merged_constructors.groupby(["Season", "Race"]).count()
+    flt_bad_points = df_grouped["Points"] != num_constructors
+    flt_bad_price = df_grouped["Price"] != num_constructors
+
+    df_grouped_filtered = df_grouped[flt_bad_points | flt_bad_price]
+    if not df_grouped_filtered.empty:
+        print(df_grouped_filtered)
+        raise ValueError("Merged DataFrame integrity check failed: unexpected number of constructors per race")

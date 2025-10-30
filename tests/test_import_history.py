@@ -9,6 +9,8 @@ from import_data.import_history import (
     get_archive_sheet_infos,
     ArchiveSheetInfo,
     merge_sheet_points_price,
+    check_merged_integrity_drivers,
+    check_merged_integrity_constructors,
 )
 
 def test_convert_data_sheet_two_column():
@@ -175,3 +177,186 @@ def test_merge_sheet_points_price():
     )
     df_team_actual = merge_sheet_points_price(df_team_good_points, df_team_good_price, AssetType.CONSTRUCTOR)
     assert_frame_equal(df_team_actual, df_team_expected)
+
+
+def test_check_merged_integrity_drivers():
+    df_driver_missing_price = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 1, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 1, 12, 2023, ],
+            ["Team A", "Driver 1", 2, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 2, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 2, 12, 2023, 2.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_drivers(df_driver_missing_price, num_constructors=2)
+
+    df_driver_missing_points = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 1, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 1, None, 2023, 2.5],
+            ["Team A", "Driver 1", 2, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 2, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 2, 12, 2023, 2.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_drivers(df_driver_missing_points, num_constructors=2)
+
+    df_driver_too_many_drivers = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 1, 12, 2023, 2.5],
+            ["Team A", "Driver 9", 1, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 1, 12, 2023, 2.5],
+            ["Team A", "Driver 1", 2, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 2, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 2, 12, 2023, 2.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_drivers(df_driver_too_many_drivers, num_constructors=2)
+
+    df_driver_too_few_drivers = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 3", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 1, 12, 2023, 2.5],
+            ["Team A", "Driver 1", 2, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 2, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 2, 12, 2023, 2.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_drivers(df_driver_too_few_drivers, num_constructors=2)
+
+    df_driver_too_many_constructors = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023, 1.5],
+            ["Team C", "Driver 2", 1, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 1, 12, 2023, 2.5],
+            ["Team A", "Driver 1", 2, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 2, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 2, 12, 2023, 2.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_drivers(df_driver_too_many_constructors, num_constructors=2)
+
+    df_driver_too_few_constructors = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team B", "Driver 1", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 2", 1, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 1, 12, 2023, 2.5],
+            ["Team A", "Driver 1", 2, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 2, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 2, 12, 2023, 2.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_drivers(df_driver_too_few_constructors, num_constructors=2)
+
+    df_ok = pd.DataFrame(
+        columns=["Team", "Driver", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 1, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 1, 12, 2023, 2.5],
+            ["Team B", "Driver 5", 1, None, 2023, None],
+            ["Team A", "Driver 1", 2, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 2, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 5", 2, None, 2023, None],
+            ["Team A", "Driver 1", 3, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 3, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 3, None, 2023, None],
+            ["Team B", "Driver 4", 3, 12, 2023, 2.5],
+            ["Team B", "Driver 5", 3, 10, 2023, 1.5],
+        ]
+    )
+    check_merged_integrity_drivers(df_ok, num_constructors=2)
+
+
+def test_check_merged_integrity_drivers():
+    df_driver_missing_price = pd.DataFrame(
+        columns=["Team", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", 1, 10, 2023, 1.5],
+            ["Team B", 1, 12, 2023, ],
+            ["Team A", 2, 10, 2023, 1.5],
+            ["Team B", 2, 10, 2023, 1.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_constructors(df_driver_missing_price, num_constructors=2)
+
+    df_driver_missing_points = pd.DataFrame(
+        columns=["Team", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", 1, 10, 2023, 1.5],
+            ["Team B", 1, None, 2023, 1.5],
+            ["Team A", 2, 10, 2023, 1.5],
+            ["Team B", 2, 10, 2023, 1.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_constructors(df_driver_missing_points, num_constructors=2)
+
+    df_driver_too_many_constructors = pd.DataFrame(
+        columns=["Team", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", 1, 10, 2023, 1.5],
+            ["Team B", 1, 10, 2023, 1.5],
+            ["Team C", 1, 10, 2023, 1.5],
+            ["Team A", 2, 10, 2023, 1.5],
+            ["Team B", 2, 10, 2023, 1.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_constructors(df_driver_too_many_constructors, num_constructors=2)
+
+    df_driver_too_few_constructors = pd.DataFrame(
+        columns=["Team", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", 1, 10, 2023, 1.5],
+            ["Team A", 2, 10, 2023, 1.5],
+            ["Team B", 2, 10, 2023, 1.5],
+        ],
+    )
+    with pytest.raises(ValueError):
+        check_merged_integrity_constructors(df_driver_too_few_constructors, num_constructors=2)
+
+    df_ok = pd.DataFrame(
+        columns=["Team", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", 1, 10, 2023, 1.5],
+            ["Team B", 1, 10, 2023, 1.5],
+            ["Team A", 2, 10, 2023, 1.5],
+            ["Team B", 2, 10, 2023, 1.5],
+            ["Team A", 3, 10, 2023, 1.5],
+            ["Team B", 3, 10, 2023, 1.5],
+        ]
+    )
+    check_merged_integrity_constructors(df_ok, num_constructors=2)
