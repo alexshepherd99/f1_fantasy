@@ -2,7 +2,8 @@ import pytest
 from pandas.testing import assert_frame_equal
 import pandas as pd
 
-from import_data.import_history import convert_data_sheet, DataSheetType
+from common import AssetType
+from import_data.import_history import convert_data_sheet, DataSheetType, get_archive_sheet_infos, ArchiveSheetInfo
 
 
 def test_convert_data_sheet_two_column():
@@ -75,7 +76,25 @@ def test_convert_data_sheet_one_column():
         df_input=df_input,
         season=2022,
         id_cols=["Team"],
-        sheet_type=DataSheetType.PRICES,
+        sheet_type=DataSheetType.PRICE,
     )
 
     assert_frame_equal(df_actual, df_expected)
+
+
+def test_get_archive_sheet_infos():
+    expected_driver_sheets = [
+        ArchiveSheetInfo(2023, "2023 Drivers Points", ["Team", "Driver"], DataSheetType.POINTS),
+        ArchiveSheetInfo(2023, "2023 Drivers Price", ["Driver"], DataSheetType.PRICE),
+    ]
+
+    expected_team_sheets = [
+        ArchiveSheetInfo(2023, "2023 Constructors Points", ["Team"], DataSheetType.POINTS),
+        ArchiveSheetInfo(2023, "2023 Constructors Price", ["Team"], DataSheetType.PRICE),
+    ]
+
+    actual_driver_sheets = get_archive_sheet_infos(2023, AssetType.DRIVER)
+    actual_team_sheets = get_archive_sheet_infos(2023, AssetType.CONSTRUCTOR)
+
+    assert actual_driver_sheets == expected_driver_sheets
+    assert actual_team_sheets == expected_team_sheets
