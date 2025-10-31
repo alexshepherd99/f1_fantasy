@@ -33,8 +33,9 @@ def convert_data_sheet(df_input: pd.DataFrame, season: int, id_cols: list, sheet
     return df_melted
 
 
-def load_archive_sheet(sheet_info: ArchiveSheetInfo) -> pd.DataFrame:
-    df_input = pd.read_excel(_FILE_ARCHIVE_INPUTS, sheet_name=sheet_info.sheet_name)
+def load_archive_sheet(sheet_info: ArchiveSheetInfo, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
+
+    df_input = pd.read_excel(fn, sheet_name=sheet_info.sheet_name)
 
     df_converted = convert_data_sheet(
         df_input=df_input,
@@ -43,6 +44,7 @@ def load_archive_sheet(sheet_info: ArchiveSheetInfo) -> pd.DataFrame:
         sheet_type=sheet_info.sheet_type,
     )
 
+    logging.info(f"Loaded {fn}({sheet_info.sheet_name}) for season {sheet_info.season}, shape: {df_converted.shape}")        
     return df_converted
 
 
