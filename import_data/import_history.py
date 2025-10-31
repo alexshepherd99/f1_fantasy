@@ -34,7 +34,6 @@ def convert_data_sheet(df_input: pd.DataFrame, season: int, id_cols: list, sheet
 
 
 def load_archive_sheet(sheet_info: ArchiveSheetInfo, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
-
     df_input = pd.read_excel(fn, sheet_name=sheet_info.sheet_name)
 
     df_converted = convert_data_sheet(
