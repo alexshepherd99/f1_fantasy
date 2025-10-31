@@ -51,21 +51,21 @@ def get_id_cols(asset_type: AssetType) -> list:
     return ["Team", "Driver"] if asset_type == AssetType.DRIVER else ["Team"]
 
 
-def get_archive_sheet_infos(season: int, asset_type: AssetType) -> list[ArchiveSheetInfo]:
-    return [
-        ArchiveSheetInfo(
+def get_archive_sheet_infos(season: int, asset_type: AssetType) -> dict[DataSheetType, ArchiveSheetInfo]:
+    return {
+        DataSheetType.POINTS: ArchiveSheetInfo(
             season=season,
             sheet_name=f"{season} {asset_type.value}s Points",
             id_cols=get_id_cols(asset_type),
             sheet_type=DataSheetType.POINTS,
         ),
-        ArchiveSheetInfo(
+        DataSheetType.PRICE: ArchiveSheetInfo(
             season=season,
             sheet_name=f"{season} {asset_type.value}s Price",
             id_cols=get_id_cols(asset_type),
             sheet_type=DataSheetType.PRICE,
         ),
-    ]
+    }
 
 
 def merge_sheet_points_price(df_points: pd.DataFrame, df_price: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
