@@ -1,6 +1,6 @@
 import logging
 
-from common import F1_SEASON_CONSTRUCTORS, AssetType
+from common import F1_SEASON_CONSTRUCTORS, AssetType, setup_logging
 from import_data.import_history import (
     get_archive_sheet_infos,
     load_archive_sheet,
@@ -10,7 +10,7 @@ from import_data.import_history import (
 )
 
 
-def test_archive_integrity():
+def check_archive_integrity():
     for season in F1_SEASON_CONSTRUCTORS.keys():
         num_constructors = F1_SEASON_CONSTRUCTORS[season]
         logging.info(f"Testing archive integrity for season {season} with {num_constructors} constructors")
@@ -30,3 +30,12 @@ def test_archive_integrity():
                 check_merged_integrity_constructors(df_merged, num_constructors)
             else:
                 assert False, f"Unknown asset type: {asset_type}"
+
+
+def test_archive_integrity():
+    check_archive_integrity()
+
+
+if __name__ == "__main__":
+    setup_logging()
+    check_archive_integrity()

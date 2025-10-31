@@ -1,6 +1,7 @@
 import pandas as pd
 from enum import Enum
 from typing import NamedTuple
+import logging
 
 from common import AssetType
 
@@ -70,11 +71,13 @@ def merge_sheet_points_price(df_points: pd.DataFrame, df_price: pd.DataFrame, as
     cols_merge = get_id_cols(asset_type) + ["Race", "Season"]
 
     if df_points.shape != df_price.shape:
+        logging.error(pd.concat([df_points, df_price]).drop_duplicates(keep=False))
         raise ValueError("DataFrames to merge must have the same shape")
     
     df_points_check = df_points.dropna()[cols_merge].sort_values(by=cols_merge).reset_index(drop=True)
     df_price_check = df_price.dropna()[cols_merge].sort_values(by=cols_merge).reset_index(drop=True)
     if not df_points_check.reset_index().equals(df_price_check.reset_index()):
+        logging.error(pd.concat([df_points_check, df_price_check]).drop_duplicates(keep=False))
         raise ValueError("DataFrames to merge must have the same identifying columns and values")
 
     df_merged = pd.merge(
@@ -97,6 +100,7 @@ def check_merged_integrity_drivers(df_merged_drivers: pd.DataFrame, num_construc
 
     df_grouped_filtered = df_grouped[flt_bad_points | flt_bad_price]
     if not df_grouped_filtered.empty:
+        logging.error(df_grouped_filtered)
         raise ValueError("Merged DataFrame integrity check failed: unexpected number of drivers per race")
 
 
@@ -111,4 +115,5 @@ def check_merged_integrity_constructors(df_merged_constructors: pd.DataFrame, nu
 
     df_grouped_filtered = df_grouped[flt_bad_points | flt_bad_price]
     if not df_grouped_filtered.empty:
+        logging.error(df_grouped_filtered)
         raise ValueError("Merged DataFrame integrity check failed: unexpected number of constructors per race")
