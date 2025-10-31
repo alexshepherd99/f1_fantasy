@@ -299,7 +299,7 @@ def test_check_merged_integrity_drivers():
     check_merged_integrity_drivers(df_ok, num_constructors=2)
 
 
-def test_check_merged_integrity_drivers():
+def test_check_merged_integrity_constructors():
     df_driver_missing_price = pd.DataFrame(
         columns=["Team", "Race", "Points", "Season", "Price"],
         data=[
