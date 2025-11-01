@@ -90,15 +90,15 @@ def test_convert_data_sheet_one_column():
 
 
 def test_get_archive_sheet_infos():
-    expected_driver_sheets = [
-        ArchiveSheetInfo(2023, "2023 Drivers Points", ["Team", "Driver"], DataSheetType.POINTS),
-        ArchiveSheetInfo(2023, "2023 Drivers Price", ["Team", "Driver"], DataSheetType.PRICE),
-    ]
+    expected_driver_sheets = {
+        DataSheetType.POINTS: ArchiveSheetInfo(2023, "2023 Drivers Points", ["Team", "Driver"], DataSheetType.POINTS),
+        DataSheetType.PRICE: ArchiveSheetInfo(2023, "2023 Drivers Price", ["Team", "Driver"], DataSheetType.PRICE),
+    }
 
-    expected_team_sheets = [
-        ArchiveSheetInfo(2023, "2023 Constructors Points", ["Team"], DataSheetType.POINTS),
-        ArchiveSheetInfo(2023, "2023 Constructors Price", ["Team"], DataSheetType.PRICE),
-    ]
+    expected_team_sheets = {
+        DataSheetType.POINTS: ArchiveSheetInfo(2023, "2023 Constructors Points", ["Team"], DataSheetType.POINTS),
+        DataSheetType.PRICE: ArchiveSheetInfo(2023, "2023 Constructors Price", ["Team"], DataSheetType.PRICE),
+    }
 
     actual_driver_sheets = get_archive_sheet_infos(2023, AssetType.DRIVER)
     actual_team_sheets = get_archive_sheet_infos(2023, AssetType.CONSTRUCTOR)
@@ -299,7 +299,7 @@ def test_check_merged_integrity_drivers():
     check_merged_integrity_drivers(df_ok, num_constructors=2)
 
 
-def test_check_merged_integrity_drivers():
+def test_check_merged_integrity_constructors():
     df_driver_missing_price = pd.DataFrame(
         columns=["Team", "Race", "Points", "Season", "Price"],
         data=[

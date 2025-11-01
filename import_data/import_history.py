@@ -34,7 +34,6 @@ def convert_data_sheet(df_input: pd.DataFrame, season: int, id_cols: list, sheet
 
 
 def load_archive_sheet(sheet_info: ArchiveSheetInfo, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
-
     df_input = pd.read_excel(fn, sheet_name=sheet_info.sheet_name)
 
     df_converted = convert_data_sheet(
@@ -52,21 +51,21 @@ def get_id_cols(asset_type: AssetType) -> list:
     return ["Team", "Driver"] if asset_type == AssetType.DRIVER else ["Team"]
 
 
-def get_archive_sheet_infos(season: int, asset_type: AssetType) -> list[ArchiveSheetInfo]:
-    return [
-        ArchiveSheetInfo(
+def get_archive_sheet_infos(season: int, asset_type: AssetType) -> dict[DataSheetType, ArchiveSheetInfo]:
+    return {
+        DataSheetType.POINTS: ArchiveSheetInfo(
             season=season,
             sheet_name=f"{season} {asset_type.value}s Points",
             id_cols=get_id_cols(asset_type),
             sheet_type=DataSheetType.POINTS,
         ),
-        ArchiveSheetInfo(
+        DataSheetType.PRICE: ArchiveSheetInfo(
             season=season,
             sheet_name=f"{season} {asset_type.value}s Price",
             id_cols=get_id_cols(asset_type),
             sheet_type=DataSheetType.PRICE,
         ),
-    ]
+    }
 
 
 def merge_sheet_points_price(df_points: pd.DataFrame, df_price: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
