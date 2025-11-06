@@ -48,7 +48,7 @@ def load_archive_sheet(sheet_info: ArchiveSheetInfo, fn: str=_FILE_ARCHIVE_INPUT
 
 
 def get_id_cols(asset_type: AssetType) -> list:
-    return ["Team", "Driver"] if asset_type == AssetType.DRIVER else ["Team"]
+    return ["Constructor", "Driver"] if asset_type == AssetType.DRIVER else ["Constructor"]
 
 
 def get_archive_sheet_infos(season: int, asset_type: AssetType) -> dict[DataSheetType, ArchiveSheetInfo]:
@@ -91,11 +91,11 @@ def merge_sheet_points_price(df_points: pd.DataFrame, df_price: pd.DataFrame, as
 
 
 def check_merged_integrity_drivers(df_merged_drivers: pd.DataFrame, num_constructors: int):
-    all_constructors = df_merged_drivers["Team"].unique()
+    all_constructors = df_merged_drivers["Constructor"].unique()
     if len(all_constructors) != num_constructors:
         raise ValueError(f"Expected {num_constructors} constructors, found {len(all_constructors)}")
     
-    df_grouped = df_merged_drivers.groupby(["Season", "Race", "Team"]).count()
+    df_grouped = df_merged_drivers.groupby(["Season", "Race", "Constructor"]).count()
     flt_bad_points = df_grouped["Points"] != 2
     flt_bad_price = df_grouped["Price"] != 2
 
@@ -106,7 +106,7 @@ def check_merged_integrity_drivers(df_merged_drivers: pd.DataFrame, num_construc
 
 
 def check_merged_integrity_constructors(df_merged_constructors: pd.DataFrame, num_constructors: int):
-    all_constructors = df_merged_constructors["Team"].unique()
+    all_constructors = df_merged_constructors["Constructor"].unique()
     if len(all_constructors) != num_constructors:
         raise ValueError(f"Expected {num_constructors} constructors, found {len(all_constructors)}")
     
