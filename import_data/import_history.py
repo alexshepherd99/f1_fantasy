@@ -36,6 +36,9 @@ def convert_data_sheet(df_input: pd.DataFrame, season: int, id_cols: list, sheet
 def load_archive_sheet(sheet_info: ArchiveSheetInfo, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
     df_input = pd.read_excel(fn, sheet_name=sheet_info.sheet_name)
 
+    # Patch up column name, if incorrect in input file
+    df_input = df_input.rename(columns={"Team": "Constructor"})
+    
     df_converted = convert_data_sheet(
         df_input=df_input,
         season=sheet_info.season,
