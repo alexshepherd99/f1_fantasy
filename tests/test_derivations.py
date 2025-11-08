@@ -99,9 +99,7 @@ def test_derivation_cum_tot():
 
     df_result = derivation_cum_tot_driver(df_input)
 
-    df_expected = df_expected.sort_values(
-        ["Season", "Driver", "Race"], ignore_index=True
-    )
+    df_expected = df_expected.sort_values(["Season", "Driver", "Race"], ignore_index=True)
 
     assert_series_equal(df_expected["exp_cum_pts"], df_result["Points Cumulative"], check_names=False)
     assert_series_equal(df_expected["exp_cum_prc"], df_result["Price Cumulative"], check_names=False)
