@@ -5,10 +5,11 @@ from pandas.testing import assert_series_equal
 
 from import_data.derivations import (
     derivation_cum_tot_driver,
+    derivation_cum_tot_constructor,
 )
 
 
-def test_derivation_cum_tot():
+def test_derivation_cum_tot_driver():
     df_input = pd.DataFrame(
         columns=["Season", "Race", "Constructor", "Driver", "Points", "Price"],
         data=[
@@ -100,6 +101,43 @@ def test_derivation_cum_tot():
     df_result = derivation_cum_tot_driver(df_input)
 
     df_expected = df_expected.sort_values(["Season", "Driver", "Race"], ignore_index=True)
+
+    assert_series_equal(df_expected["exp_cum_pts"], df_result["Points Cumulative"], check_names=False)
+    assert_series_equal(df_expected["exp_cum_prc"], df_result["Price Cumulative"], check_names=False)
+    assert_series_equal(
+        df_expected["exp_cum_ppm"],
+        df_result["PPM Cumulative"],
+        check_names=False,
+        check_exact=False,
+        atol=1e-4)
+
+
+def test_derivation_cum_tot_constructor():
+    df_input = pd.DataFrame(
+        columns=["Season", "Race", "Constructor", "Points", "Price", "exp_cum_pts", "exp_cum_prc", "exp_cum_ppm"],
+        data=[
+            [2023, 2, "MER", 12, 1.2, 23, 2.3, 10.0],
+            [2023, 1, "MER", 11, 1.1, 11, 1.1, 10.0],  # out of order to test sorting
+            [2023, 3, "MER", 13, 1.3, 36, 3.6, 10.0],
+            [2023, 4, "MER", 14, 1.4, 50, 5.0, 10.0],
+            [2023, 1, "RED", 31, 3.1, 31, 3.1, 10.0],
+            [2023, 2, "RED", 32, 3.2, 63, 6.3, 10.0],
+            [2023, 3, "RED", 33, 3.3, 96, 9.6, 10.0],
+            [2023, 4, "RED", -10, 3.4, 86, 13.0, 6.6154],  # negative points
+            [2024, 1, "MER", 30, 2.0, 30, 2.0, 15.0],
+            [2024, 2, "MER", 30, 4.0, 60, 6.0, 10.0],
+            [2024, 3, "MER", 30, 6.0, 90, 12.0, 7.5],
+            [2024, 4, "MER", 60, 48.0, 150, 60.0, 2.5],  # different PPM
+            [2024, 1, "ALT", 131, 13.1, 131, 13.1, 10.0],
+            [2024, 2, "ALT", 132, 13.2, 263, 26.3, 10.0],
+            [2024, 3, "ALT", 133, 13.3, 396, 39.6, 10.0],
+            [2024, 4, "ALT", 134, 13.4, 530, 53.0, 10.0],
+        ]
+    )
+
+    df_result = derivation_cum_tot_constructor(df_input)
+
+    df_expected = df_input.sort_values(["Season", "Constructor", "Race"], ignore_index=True)
 
     assert_series_equal(df_expected["exp_cum_pts"], df_result["Points Cumulative"], check_names=False)
     assert_series_equal(df_expected["exp_cum_prc"], df_result["Price Cumulative"], check_names=False)
