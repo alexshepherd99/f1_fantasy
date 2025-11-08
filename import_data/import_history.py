@@ -3,7 +3,7 @@ from enum import Enum
 from typing import NamedTuple
 import logging
 
-from common import AssetType
+from common import AssetType, F1_SEASON_CONSTRUCTORS
 
 _FILE_ARCHIVE_INPUTS = "data/f1_fantasy_archive.xlsx"
 
@@ -121,3 +121,19 @@ def check_merged_integrity_constructors(df_merged_constructors: pd.DataFrame, nu
     if not df_grouped_filtered.empty:
         logging.error(df_grouped_filtered)
         raise ValueError("Merged DataFrame integrity check failed: unexpected number of constructors per race")
+
+
+def load_all_archive_data(asset_type: AssetType, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
+    df_all_data = pd.DataFrame()
+
+    for season in F1_SEASON_CONSTRUCTORS.keys():
+        archive_sheets = get_archive_sheet_infos(season, asset_type)
+        logging.info(f"Loading season {season} {asset_type.value}...")
+    
+        df_points = load_archive_sheet(archive_sheets[DataSheetType.POINTS])
+        df_price = load_archive_sheet(archive_sheets[DataSheetType.PRICE])
+        df_merged = merge_sheet_points_price(df_points, df_price, asset_type)
+
+        df_all_data = pd.concat([df_all_data, df_merged], ignore_index=True).reset_index(drop=True)
+
+    return df_all_data
