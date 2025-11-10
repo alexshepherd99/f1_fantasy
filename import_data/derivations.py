@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 
+#TODO: add rolling window option to cumulative functions
+# groupby(["Season","Driver"]) .fillna(0) .rolling(window=3, min_periods=1).sum().astype(int)
+
 
 def derivation_cum_tot_driver(df_input: pd.DataFrame) -> pd.DataFrame:
     # Group up drivers, regardless of which constructor they drove for
