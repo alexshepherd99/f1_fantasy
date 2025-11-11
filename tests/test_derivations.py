@@ -112,26 +112,38 @@ def test_derivation_cum_tot_driver():
         atol=1e-4)
 
 
-def test_derivation_cum_tot_constructor():
+def test_derivation_tot_constructor():
     df_input = pd.DataFrame(
-        columns=["Season", "Race", "Constructor", "Points", "Price", "exp_cum_pts", "exp_cum_prc", "exp_cum_ppm"],
+        columns=[
+            "Season",
+            "Race",
+            "Constructor",
+            "Points",
+            "Price",
+            "exp_cum_pts",
+            "exp_cum_prc",
+            "exp_cum_ppm",
+            "exp_roll_pts",
+            "exp_roll_prc",
+            "exp_roll_ppm"
+        ],
         data=[
-            [2023, 2, "MER", 12, 1.2, 23, 2.3, 10.0],
-            [2023, 1, "MER", 11, 1.1, 11, 1.1, 10.0],  # out of order to test sorting
-            [2023, 3, "MER", 13, 1.3, 36, 3.6, 10.0],
-            [2023, 4, "MER", 14, 1.4, 50, 5.0, 10.0],
-            [2023, 1, "RED", 31, 3.1, 31, 3.1, 10.0],
-            [2023, 2, "RED", 32, 3.2, 63, 6.3, 10.0],
-            [2023, 3, "RED", 33, 3.3, 96, 9.6, 10.0],
-            [2023, 4, "RED", -10, 3.4, 86, 13.0, 6.6154],  # negative points
-            [2024, 1, "MER", 30, 2.0, 30, 2.0, 15.0],
-            [2024, 2, "MER", 30, 4.0, 60, 6.0, 10.0],
-            [2024, 3, "MER", 30, 6.0, 90, 12.0, 7.5],
-            [2024, 4, "MER", 60, 48.0, 150, 60.0, 2.5],  # different PPM
-            [2024, 1, "ALT", 131, 13.1, 131, 13.1, 10.0],
-            [2024, 2, "ALT", 132, 13.2, 263, 26.3, 10.0],
-            [2024, 3, "ALT", 133, 13.3, 396, 39.6, 10.0],
-            [2024, 4, "ALT", 134, 13.4, 530, 53.0, 10.0],
+            [2023, 2, "MER", 12, 1.2, 23, 2.3, 10.0, 23, 2.3, 10.0],
+            [2023, 1, "MER", 11, 1.1, 11, 1.1, 10.0, 11, 1.1, 10.0],  # out of order to test sorting
+            [2023, 3, "MER", 13, 1.3, 36, 3.6, 10.0, 36, 3.6, 10.0],
+            [2023, 4, "MER", 14, 1.4, 50, 5.0, 10.0, 39, 3.9, 10.0],
+            [2023, 1, "RED", 31, 3.1, 31, 3.1, 10.0, 31, 3.1, 10.0],
+            [2023, 2, "RED", 32, 3.2, 63, 6.3, 10.0, 63, 6.3, 10.0],
+            [2023, 3, "RED", 33, 3.3, 96, 9.6, 10.0, 96, 9.6, 10.0],
+            [2023, 4, "RED", -10, 3.4, 86, 13.0, 6.6154, 55, 9.9, 5.5556],  # negative points
+            [2024, 1, "MER", 30, 2.0, 30, 2.0, 15.0, 30, 2.0, 15.0],
+            [2024, 2, "MER", 30, 4.0, 60, 6.0, 10.0, 60, 6.0, 10.0],
+            [2024, 3, "MER", 30, 6.0, 90, 12.0, 7.5, 90, 12.0, 7.5],
+            [2024, 4, "MER", 60, 48.0, 150, 60.0, 2.5, 120, 58.0, 2.0689],  # different PPM
+            [2024, 1, "ALT", 131, 13.1, 131, 13.1, 10.0, 131, 13.1, 10.0],
+            [2024, 2, "ALT", 132, 13.2, 263, 26.3, 10.0, 263, 26.3, 10.0],
+            [2024, 3, "ALT", 133, 13.3, 396, 39.6, 10.0, 396, 39.6, 10.0],
+            [2024, 4, "ALT", 134, 13.4, 530, 53.0, 10.0, 399, 39.9, 10.0],
         ]
     )
 
@@ -144,6 +156,17 @@ def test_derivation_cum_tot_constructor():
     assert_series_equal(
         df_expected["exp_cum_ppm"],
         df_result["PPM Cumulative"],
+        check_names=False,
+        check_exact=False,
+        atol=1e-4)
+
+    df_result_roll = derivation_cum_tot_constructor(df_input, rolling_window=3)
+
+    assert_series_equal(df_expected["exp_roll_pts"], df_result_roll["Points Cumulative (3)"], check_names=False)
+    assert_series_equal(df_expected["exp_roll_prc"], df_result_roll["Price Cumulative (3)"], check_names=False)
+    assert_series_equal(
+        df_expected["exp_roll_ppm"],
+        df_result_roll["PPM Cumulative (3)"],
         check_names=False,
         check_exact=False,
         atol=1e-4)
