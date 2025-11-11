@@ -47,9 +47,9 @@ def derivation_cum_tot(
     return df
 
 
-def derivation_cum_tot_driver(df_input: pd.DataFrame) -> pd.DataFrame:
-    return derivation_cum_tot(df_input, AssetType.DRIVER)
+def derivation_cum_tot_driver(df_input: pd.DataFrame, rolling_window: int = -1) -> pd.DataFrame:
+    return derivation_cum_tot(df_input, AssetType.DRIVER, rolling_window)
 
 
-def derivation_cum_tot_constructor(df_input: pd.DataFrame) -> pd.DataFrame:
-    return derivation_cum_tot(df_input, AssetType.CONSTRUCTOR)
+def derivation_cum_tot_constructor(df_input: pd.DataFrame, rolling_window: int = -1) -> pd.DataFrame:
+    return derivation_cum_tot(df_input, AssetType.CONSTRUCTOR, rolling_window)
