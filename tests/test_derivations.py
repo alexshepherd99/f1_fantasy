@@ -1,7 +1,6 @@
 import pandas as pd
-import pytest
 import numpy as np
-from pandas.testing import assert_series_equal
+from pandas.testing import assert_frame_equal, assert_series_equal
 
 from common import AssetType
 from import_data.derivations import (
@@ -9,6 +8,8 @@ from import_data.derivations import (
     derivation_cum_tot_constructor,
 )
 from scripts.check_run_ppm import load_all_archives_add_derived
+
+_FILE_EXPECTED_RESULTS = "data/test_expected_values.xlsx"
 
 
 def test_derivation_cum_tot_driver():
@@ -187,9 +188,20 @@ def test_actual_derivations():
     flt_bea = df_derived_data_driver["Driver"] == "BEA"
     flt_red = df_derived_data_constructor["Constructor"] == "RED"
 
-    ser_ver_points_23 = df_derived_data_driver[flt_23_drv & flt_ver][["Race", "PPM Cumulative (3)"]]
-    ser_ric_points_23 = df_derived_data_driver[flt_23_drv & flt_ric][["Race", "PPM Cumulative (3)"]]
-    ser_red_points_23 = df_derived_data_constructor[flt_23_con & flt_red][["Race", "PPM Cumulative (3)"]]
-    ser_bea_points_24 = df_derived_data_driver[flt_24_drv & flt_bea][["Race", "PPM Cumulative (3)"]]
+    df_ver_points_23 = df_derived_data_driver[flt_23_drv & flt_ver][["Race", "PPM Cumulative (3)"]].reset_index(drop=True)
+    df_ric_points_23 = df_derived_data_driver[flt_23_drv & flt_ric][["Race", "PPM Cumulative (3)"]].reset_index(drop=True)
+    df_red_points_23 = df_derived_data_constructor[flt_23_con & flt_red][["Race", "PPM Cumulative (3)"]].reset_index(drop=True)
+    df_bea_points_24 = df_derived_data_driver[flt_24_drv & flt_bea][["Race", "PPM Cumulative (3)"]].reset_index(drop=True)
 
-    assert_series_equal
+    df_expected_23 = pd.read_excel(_FILE_EXPECTED_RESULTS, sheet_name="2003 Expected", engine="openpyxl")  # typo!
+    df_expected_24 = pd.read_excel(_FILE_EXPECTED_RESULTS, sheet_name="2004 Expected", engine="openpyxl")  # typo!
+
+    df_exp_ver_points_23 = df_expected_23[["Race", "VER-RED-2003-ppm"]].rename(columns={"VER-RED-2003-ppm": "PPM Cumulative (3)"})
+    df_exp_ric_points_23 = df_expected_23[["Race", "RIC-ALT-2003-ppm"]].rename(columns={"RIC-ALT-2003-ppm": "PPM Cumulative (3)"})
+    df_exp_red_points_23 = df_expected_23[["Race", "RED-2003-ppm"]].rename(columns={"RED-2003-ppm": "PPM Cumulative (3)"})  # typo in sheet name!
+    df_exp_bea_points_24 = df_expected_24[["Race", "BEA-2003-ppm"]].rename(columns={"BEA-2003-ppm": "PPM Cumulative (3)"})  # typo in sheet name!
+
+    assert_frame_equal(df_ver_points_23, df_exp_ver_points_23)
+    assert_frame_equal(df_ric_points_23, df_exp_ric_points_23)
+    assert_frame_equal(df_red_points_23, df_exp_red_points_23)
+    assert_frame_equal(df_bea_points_24, df_exp_bea_points_24)
