@@ -3,10 +3,12 @@ import pytest
 import numpy as np
 from pandas.testing import assert_series_equal
 
+from common import AssetType
 from import_data.derivations import (
     derivation_cum_tot_driver,
     derivation_cum_tot_constructor,
 )
+from scripts.check_run_ppm import load_all_archives_add_derived
 
 
 def test_derivation_cum_tot_driver():
@@ -170,3 +172,24 @@ def test_derivation_tot_constructor():
         check_names=False,
         check_exact=False,
         atol=1e-4)
+
+
+def test_actual_derivations():
+    df_derived_data_driver = load_all_archives_add_derived(asset_type=AssetType.DRIVER, rolling_window=3)
+    df_derived_data_constructor = load_all_archives_add_derived(asset_type=AssetType.CONSTRUCTOR, rolling_window=3)
+
+    flt_23_drv = df_derived_data_driver["Season"] == 2023
+    flt_23_con = df_derived_data_constructor["Season"] == 2023
+    flt_24_drv = df_derived_data_driver["Season"] == 2024
+
+    flt_ver = df_derived_data_driver["Driver"] == "VER"
+    flt_ric = df_derived_data_driver["Driver"] == "RIC"
+    flt_bea = df_derived_data_driver["Driver"] == "BEA"
+    flt_red = df_derived_data_constructor["Constructor"] == "RED"
+
+    ser_ver_points_23 = df_derived_data_driver[flt_23_drv & flt_ver][["Race", "PPM Cumulative (3)"]]
+    ser_ric_points_23 = df_derived_data_driver[flt_23_drv & flt_ric][["Race", "PPM Cumulative (3)"]]
+    ser_red_points_23 = df_derived_data_constructor[flt_23_con & flt_red][["Race", "PPM Cumulative (3)"]]
+    ser_bea_points_24 = df_derived_data_driver[flt_24_drv & flt_bea][["Race", "PPM Cumulative (3)"]]
+
+    assert_series_equal
