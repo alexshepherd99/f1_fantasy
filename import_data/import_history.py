@@ -137,3 +137,18 @@ def load_all_archive_data(asset_type: AssetType, fn: str=_FILE_ARCHIVE_INPUTS) -
         df_all_data = pd.concat([df_all_data, df_merged], ignore_index=True).reset_index(drop=True)
 
     return df_all_data
+
+
+def get_race_driver_constructor_pairs(df_merged_point_price: pd.DataFrame) -> pd.DataFrame:
+    df_merged_point_price = df_merged_point_price[df_merged_point_price["Price"].notna()]
+    
+    df_merged_point_price = df_merged_point_price[
+        [
+            "Constructor",
+            "Driver",
+            "Race",
+            "Season",
+        ]
+    ]
+
+    return df_merged_point_price

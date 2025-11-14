@@ -30,17 +30,17 @@ class RaceLineUp:
 
 
 def factory_driver(
-    df_ppm_data: pd.DataFrame,
+    df_driver_ppm_data: pd.DataFrame,
     driver: str,
     season: int,
     race: int,
     col_ppm: str,    
 ) -> Driver:
 
-    df_ppm_filtered = df_ppm_data[
-        (df_ppm_data["Driver"] == driver) &
-        (df_ppm_data["Season"] == season) & 
-        (df_ppm_data["Race"] == race)
+    df_ppm_filtered = df_driver_ppm_data[
+        (df_driver_ppm_data["Driver"] == driver) &
+        (df_driver_ppm_data["Season"] == season) & 
+        (df_driver_ppm_data["Race"] == race)
     ]
 
     if df_ppm_filtered.empty:
