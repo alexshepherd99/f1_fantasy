@@ -12,6 +12,7 @@ from import_data.import_history import (
     check_merged_integrity_drivers,
     check_merged_integrity_constructors,
     get_race_driver_constructor_pairs,
+    check_drivers_against_constructors,
 )
 
 def test_convert_data_sheet_two_column():
@@ -406,3 +407,59 @@ def test_get_race_driver_constructor_pairs():
     df_resuls = get_race_driver_constructor_pairs(df_merged)
 
     assert_frame_equal(df_resuls.reset_index(drop=True), df_expected.reset_index(drop=True))
+
+
+def test_check_drivers_against_constructors():
+    df_drivers_ok = pd.DataFrame(
+        columns=["Constructor", "Driver", "Race", "Season"],
+        data=[
+            ["Team A", "Driver 1", 1, 2023],
+            ["Team A", "Driver 2", 1, 2023],
+            ["Team B", "Driver 3", 1, 2023],
+            ["Team B", "Driver 4", 1, 2023],
+            ["Team A", "Driver 1", 2, 2023],
+            ["Team A", "Driver 2", 2, 2023],
+            ["Team B", "Driver 3", 2, 2023],
+            ["Team B", "Driver 4", 2, 2023],
+        ]
+    )
+    df_constructors_ok = pd.DataFrame(
+        columns=["Constructor", "Race", "Season"],
+        data=[
+            ["Team A", 1, 2023],
+            ["Team B", 1, 2023],
+            ["Team A", 2, 2023],
+            ["Team B", 2, 2023],
+        ]
+    )
+    check_drivers_against_constructors(df_drivers_ok, df_constructors_ok)
+
+    # Add a constructor with no drivers - should error
+    df_constructors_extra = pd.concat(
+        [
+            df_constructors_ok,
+            pd.DataFrame([{"Constructor": "Team C", "Race": 2, "Season": 2023}])
+        ]
+    )
+    with pytest.raises(ValueError):
+        check_drivers_against_constructors(df_drivers_ok, df_constructors_extra)
+
+    # Remove a contructor - should error
+    df_constructors_removed = df_constructors_ok[df_constructors_ok["Constructor"] == "Team A"]
+    with pytest.raises(ValueError):
+        check_drivers_against_constructors(df_drivers_ok, df_constructors_removed)
+
+    # Add a driver with an unknown constructor - should error
+    df_drivers_extra = pd.concat(
+        [
+            df_drivers_ok,
+            pd.DataFrame([{"Driver": "Bob", "Constructor": "Team C", "Race": 2, "Season": 2023}])            
+        ]
+    )
+    with pytest.raises(ValueError):
+        check_drivers_against_constructors(df_drivers_extra, df_constructors_ok)
+
+    # Remove references to a given constructor from drivers
+    df_drivers_removed = df_drivers_ok[df_drivers_ok["Constructor"] == "Team A"]
+    with pytest.raises(ValueError):
+        check_drivers_against_constructors(df_drivers_removed, df_constructors_ok)

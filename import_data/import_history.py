@@ -123,6 +123,20 @@ def check_merged_integrity_constructors(df_merged_constructors: pd.DataFrame, nu
         raise ValueError("Merged DataFrame integrity check failed: unexpected number of constructors per race")
 
 
+def check_drivers_against_constructors(df_merged_drivers: pd.DataFrame, df_merged_constructors: pd.DataFrame):
+    drivers_constructors = set(df_merged_drivers["Constructor"].unique())
+    constructors_constructors = set(df_merged_constructors["Constructor"].unique())
+
+    diffs_1 = list(drivers_constructors - constructors_constructors)
+    diffs_2 = list(constructors_constructors - drivers_constructors)
+    diffs = diffs_1 + diffs_2
+    if len(diffs) > 0:
+        logging.error(f"Mismatched constructors and drivers {diffs}")
+        logging.error(f"Drivers: {drivers_constructors}")
+        logging.error(f"Constructors: {constructors_constructors}")
+        raise ValueError(f"Mismatched constructors and drivers {diffs}")
+
+
 def load_all_archive_data(asset_type: AssetType, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
     df_all_data = pd.DataFrame()
 

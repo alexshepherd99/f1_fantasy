@@ -8,6 +8,8 @@ from import_data.import_history import (
     merge_sheet_points_price,
     check_merged_integrity_drivers,
     check_merged_integrity_constructors,
+    load_all_archive_data,
+    check_drivers_against_constructors,
 )
 
 
@@ -31,6 +33,14 @@ def check_archive_integrity():
                 check_merged_integrity_constructors(df_merged, num_constructors)
             else:
                 assert False, f"Unknown asset type: {asset_type}"
+
+    # Check for cohesion between driver and constructor
+    df_all_driver = load_all_archive_data(AssetType.DRIVER)
+    df_all_constructor = load_all_archive_data(AssetType.CONSTRUCTOR)
+    for season in F1_SEASON_CONSTRUCTORS.keys():
+        df_season_driver = df_all_driver[df_all_driver["Season"] == season]
+        df_season_constructor = df_all_constructor[df_all_constructor["Season"] == season]
+        check_drivers_against_constructors(df_season_driver, df_season_constructor)
 
 
 def test_archive_integrity():
