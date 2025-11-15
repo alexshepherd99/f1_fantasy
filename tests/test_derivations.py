@@ -103,6 +103,12 @@ def test_derivation_cum_tot_driver():
 
     df_result = derivation_cum_tot_driver(df_input)
 
+    expected_cols = ["Season", "Race", "Driver", "Points", "Price", "Points Cumulative", "Price Cumulative", "PPM Cumulative"]
+    result_cols = list(df_result.columns)
+    expected_cols.sort()
+    result_cols.sort()
+    assert result_cols == expected_cols
+
     df_expected = df_expected.sort_values(["Season", "Driver", "Race"], ignore_index=True)
 
     assert_series_equal(df_expected["exp_cum_pts"], df_result["Points Cumulative"], check_names=False)
@@ -151,6 +157,12 @@ def test_derivation_tot_constructor():
     )
 
     df_result = derivation_cum_tot_constructor(df_input)
+
+    expected_cols = ["Season", "Race", "Constructor", "Points", "Price", "Points Cumulative", "Price Cumulative", "PPM Cumulative"]
+    result_cols = list(df_result.columns)
+    expected_cols.sort()
+    result_cols.sort()
+    assert result_cols == expected_cols
 
     df_expected = df_input.sort_values(["Season", "Constructor", "Race"], ignore_index=True)
 
