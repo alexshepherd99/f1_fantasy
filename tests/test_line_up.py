@@ -31,7 +31,7 @@ def test_factory_driver():
             1,
             "col"
         )
-    assert str(excinfo.value) == "Multiple entries found for driver VER in season 2020 and race 1"
+    assert str(excinfo.value) == "Multiple entries found for Driver VER in season 2020 and race 1"
 
     with pytest.raises(ValueError) as excinfo:
         factory_driver(
@@ -45,7 +45,7 @@ def test_factory_driver():
             1,
             "col"
         )
-    assert str(excinfo.value) == "Multiple price entries found for driver VER in season 2020 and race 2"
+    assert str(excinfo.value) == "Multiple price entries found for Driver VER in season 2020 and race 2"
 
     driver_1 = factory_driver(
         pd.DataFrame(
