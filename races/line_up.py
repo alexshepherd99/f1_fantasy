@@ -94,3 +94,26 @@ def factory_driver(
         ppm=ppm,
         price=price,
     )
+
+
+def factory_constructor(
+    df_driver_ppm_data: pd.DataFrame,
+    constructor: str,
+    season: int,
+    race: int,
+    col_ppm: str
+) -> Constructor:
+    (ppm, price) = factory_asset(
+        df_ppm_data=df_driver_ppm_data,
+        asset_type=AssetType.CONSTRUCTOR,
+        asset_name=constructor,
+        season=season,
+        race=race,
+        col_ppm=col_ppm
+    )
+
+    return Constructor(
+        constructor=constructor,
+        ppm=ppm,
+        price=price,
+    )
