@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from races.line_up import factory_driver, factory_constructor
+from races.line_up import factory_driver, factory_constructor, factory_race
 
 
 def test_factory_driver():
@@ -147,3 +147,23 @@ def test_factory_constructor():
     assert constructor_2.constructor == "RED"
     assert constructor_2.ppm == 3.3
     assert constructor_2.price is np.nan
+
+
+def test_factory_race():
+    race_1 = factory_race(
+        pd.DataFrame(
+            columns=["Driver", "Season", "Race", "col", "Price"],
+            data=[["VER", 2020, 1, 3.3, 33.33], ["VER", 2020, 2, 4.4, 44.44], ["VER", 2020, 3, np.nan, 55.55]]
+        ),
+        pd.DataFrame(
+            columns=["Constructor", "Season", "Race", "col", "Price"],
+            data=[["RED", 2020, 1, 6.6, 66.66], ["RED", 2020, 2, 7.7, 77.77], ["RED", 2020, 2, np.nan, 88.88]]
+        ),
+        pd.DataFrame(
+            columns=["Race", "Constructor", "Driver"],
+            data=[[1, "RED", "VER"], [2, "RED", "VER"]]
+        ),
+        2020,
+        1,
+        "col"
+    )

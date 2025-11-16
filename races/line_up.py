@@ -23,10 +23,12 @@ class Constructor(Asset):
         pass
 
 
-class RaceLineUp:
-    def __init__(self, season: int, race: int):
+class Race:
+    def __init__(self, season: int, race: int, drivers: list[Driver], constructors: list[Constructor]):
         self.season = season
         self.race = race
+        self.drivers = drivers
+        self.constructors = constructors
 
     def validate(self):
         pass
@@ -117,3 +119,14 @@ def factory_constructor(
         ppm=ppm,
         price=price,
     )
+
+
+def factory_race(
+    df_driver_ppm_data: pd.DataFrame,
+    df_constructor_ppm_data: pd.DataFrame,
+    df_driver_pairings: pd.DataFrame,
+    season: int,
+    race: int,
+    col_ppm: str       
+) -> Race:
+    pass
