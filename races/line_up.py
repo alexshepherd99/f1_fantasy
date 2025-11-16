@@ -31,8 +31,8 @@ class RaceLineUp:
 
 def factory_driver(
     df_driver_ppm_data: pd.DataFrame,
-    df_driver_constructor_pairs: pd.DataFrame,
     driver: str,
+    constructor: str,
     season: int,
     race: int,
     col_ppm: str,    
@@ -64,20 +64,6 @@ def factory_driver(
     
     if not df_price.empty:
         price = df_price.iloc[0]["Price"]
-
-    df_pairs_filtered = df_driver_constructor_pairs[
-        (df_driver_constructor_pairs["Driver"] == driver) &
-        (df_driver_constructor_pairs["Season"] == season) & 
-        (df_driver_constructor_pairs["Race"] == race)
-    ]
-
-    if df_pairs_filtered.empty:
-        raise ValueError(f"Driver pairing for {driver} not found for season {season} and race {race}")
-    
-    if df_pairs_filtered.shape[0] > 1:
-        raise ValueError(f"Multiple entries found for driver pairing {driver} in season {season} and race {race}")
-    
-    constructor = df_pairs_filtered.iloc[0]["Constructor"]
 
     return Driver(
         driver=driver,

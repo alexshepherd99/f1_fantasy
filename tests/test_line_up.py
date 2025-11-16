@@ -11,8 +11,8 @@ def test_factory_driver():
             pd.DataFrame(
                 columns=["Driver", "Season", "Race"],
             ),
-            pd.DataFrame(),
             "VER",
+            "RED",
             2020,
             1,
             "col"
@@ -25,8 +25,8 @@ def test_factory_driver():
                 columns=["Driver", "Season", "Race"],
                 data=[["VER", 2020, 1], ["VER", 2020, 1]]
             ),
-            pd.DataFrame(),
             "VER",
+            "RED",
             2020,
             1,
             "col"
@@ -39,57 +39,21 @@ def test_factory_driver():
                 columns=["Driver", "Season", "Race", "col"],
                 data=[["VER", 2020, 1, 3.3], ["VER", 2020, 2, 4.4], ["VER", 2020, 2, 5.5]]
             ),
-            pd.DataFrame(),
             "VER",
+            "RED",
             2020,
             1,
             "col"
         )
     assert str(excinfo.value) == "Multiple price entries found for driver VER in season 2020 and race 2"
 
-    with pytest.raises(ValueError) as excinfo:
-        factory_driver(
-            pd.DataFrame(
-                columns=["Driver", "Season", "Race", "col", "Price"],
-                data=[["VER", 2020, 1, 3.3, 33.33], ["VER", 2020, 2, 4.4, 44.44]]
-            ),
-            pd.DataFrame(
-                columns=["Driver", "Season", "Race"],
-            ),
-            "VER",
-            2020,
-            1,
-            "col"
-        )
-    assert str(excinfo.value) == "Driver pairing for VER not found for season 2020 and race 1"
-
-    with pytest.raises(ValueError) as excinfo:
-        factory_driver(
-            pd.DataFrame(
-                columns=["Driver", "Season", "Race", "col", "Price"],
-                data=[["VER", 2020, 1, 3.3, 33.33], ["VER", 2020, 2, 4.4, 44.44]]
-            ),
-            pd.DataFrame(
-                columns=["Driver", "Season", "Race"],
-                data=[["VER", 2020, 1], ["VER", 2020, 1]]
-            ),
-            "VER",
-            2020,
-            1,
-            "col"
-        )
-    assert str(excinfo.value) == "Multiple entries found for driver pairing VER in season 2020 and race 1"
-
     driver_1 = factory_driver(
         pd.DataFrame(
             columns=["Driver", "Season", "Race", "col", "Price"],
             data=[["VER", 2020, 1, 3.3, 33.33], ["VER", 2020, 2, 4.4, 44.44]]
         ),
-        pd.DataFrame(
-            columns=["Driver", "Season", "Race", "Constructor"],
-            data=[["VER", 2020, 1, "RED"]]
-        ),
         "VER",
+        "RED",
         2020,
         1,
         "col"
@@ -104,11 +68,8 @@ def test_factory_driver():
             columns=["Driver", "Season", "Race", "col", "Price"],
             data=[["VER", 2020, 1, 3.3, 33.33]]
         ),
-        pd.DataFrame(
-            columns=["Driver", "Season", "Race", "Constructor"],
-            data=[["VER", 2020, 1, "RED"]]
-        ),
         "VER",
+        "RED",
         2020,
         1,
         "col"
