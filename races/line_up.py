@@ -24,7 +24,7 @@ class Constructor(Asset):
 
 
 class Race:
-    def __init__(self, season: int, race: int, drivers: list[Driver], constructors: list[Constructor]):
+    def __init__(self, race: int, drivers: dict[str, Driver], constructors: dict[str, Constructor]):
         self.race = race
         self.drivers = drivers
         self.constructors = constructors
@@ -93,13 +93,13 @@ def factory_driver(
 
 
 def factory_constructor(
-    df_driver_ppm_data: pd.DataFrame,
+    df_constructor_ppm_data: pd.DataFrame,
     constructor: str,
     race: int,
     col_ppm: str
 ) -> Constructor:
     (ppm, price) = factory_asset(
-        df_ppm_data=df_driver_ppm_data,
+        df_ppm_data=df_constructor_ppm_data,
         asset_type=AssetType.CONSTRUCTOR,
         asset_name=constructor,
         race=race,
@@ -120,4 +120,27 @@ def factory_race(
     race: int,
     col_ppm: str       
 ) -> Race:
-    pass
+    df_filtered_pairs = df_driver_pairings[df_driver_pairings["Race"] == race]
+
+    # Add drivers
+    drivers = {}
+    for idx,row in df_filtered_pairs.iterrows():
+        drivers[row["Driver"]] = factory_driver(
+            df_driver_ppm_data=df_driver_ppm_data,
+            driver=row["Driver"],
+            constructor=row["Constructor"],
+            race=race,
+            col_ppm=col_ppm
+        )
+
+    # Add constructors
+    constructors = {}
+    for constructor in df_filtered_pairs["Constructor"].unique():
+        constructors[constructor] = factory_constructor(
+            df_constructor_ppm_data,
+            constructor=constructor,
+            race=race,
+            col_ppm=col_ppm
+        )
+
+    return Race(race=race, drivers=drivers, constructors=constructors)

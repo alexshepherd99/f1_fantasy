@@ -147,7 +147,7 @@ def test_factory_race():
         ),
         pd.DataFrame(
             columns=["Constructor", "Race", "col", "Price"],
-            data=[["RED", 1, 6.6, 66.66], ["RED", 2, 7.7, 77.77], ["RED", 2, np.nan, 88.88]]
+            data=[["RED", 1, 6.6, 66.66], ["RED", 2, 7.7, 77.77], ["RED", 3, np.nan, 88.88]]
         ),
         pd.DataFrame(
             columns=["Race", "Constructor", "Driver"],
@@ -156,3 +156,13 @@ def test_factory_race():
         1,
         "col"
     )
+    assert race_1.race == 1
+    assert len(race_1.drivers) == 1
+    assert len(race_1.constructors) == 1
+    assert race_1.drivers["VER"].constructor == "RED"
+    assert race_1.drivers["VER"].driver == "VER"
+    assert race_1.drivers["VER"].ppm == 3.3
+    assert race_1.drivers["VER"].price == 44.44
+    assert race_1.constructors["RED"].constructor == "RED"
+    assert race_1.constructors["RED"].ppm == 6.6
+    assert race_1.constructors["RED"].price == 77.77
