@@ -23,16 +23,6 @@ class Constructor(Asset):
         pass
 
 
-class Race:
-    def __init__(self, race: int, drivers: dict[str, Driver], constructors: dict[str, Constructor]):
-        self.race = race
-        self.drivers = drivers
-        self.constructors = constructors
-
-    def validate(self):
-        pass
-
-
 def factory_asset(
     df_ppm_data: pd.DataFrame,
     asset_type: AssetType,
@@ -111,36 +101,3 @@ def factory_constructor(
         ppm=ppm,
         price=price,
     )
-
-
-def factory_race(
-    df_driver_ppm_data: pd.DataFrame,
-    df_constructor_ppm_data: pd.DataFrame,
-    df_driver_pairings: pd.DataFrame,
-    race: int,
-    col_ppm: str       
-) -> Race:
-    df_filtered_pairs = df_driver_pairings[df_driver_pairings["Race"] == race]
-
-    # Add drivers
-    drivers = {}
-    for idx,row in df_filtered_pairs.iterrows():
-        drivers[row["Driver"]] = factory_driver(
-            df_driver_ppm_data=df_driver_ppm_data,
-            driver=row["Driver"],
-            constructor=row["Constructor"],
-            race=race,
-            col_ppm=col_ppm
-        )
-
-    # Add constructors
-    constructors = {}
-    for constructor in df_filtered_pairs["Constructor"].unique():
-        constructors[constructor] = factory_constructor(
-            df_constructor_ppm_data,
-            constructor=constructor,
-            race=race,
-            col_ppm=col_ppm
-        )
-
-    return Race(race=race, drivers=drivers, constructors=constructors)
