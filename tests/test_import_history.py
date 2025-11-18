@@ -11,7 +11,6 @@ from import_data.import_history import (
     merge_sheet_points_price,
     check_merged_integrity_drivers,
     check_merged_integrity_constructors,
-    get_race_driver_constructor_pairs,
     check_drivers_against_constructors,
 )
 
@@ -362,51 +361,6 @@ def test_check_merged_integrity_constructors():
         ]
     )
     check_merged_integrity_constructors(df_ok, num_constructors=2)
-
-
-def test_get_race_driver_constructor_pairs():
-    df_merged = pd.DataFrame(
-        columns=["Constructor", "Driver", "Race", "Points", "Season", "Price"],
-        data=[
-            ["Team A", "Driver 1", 1, 10, 2023, 1.5],
-            ["Team A", "Driver 2", 1, 12, 2023, 2.5],
-            ["Team B", "Driver 3", 1, 10, 2023, 1.5],
-            ["Team B", "Driver 4", 1, 12, 2023, 2.5],
-            ["Team B", "Driver 5", 1, None, 2023, None],
-            ["Team A", "Driver 1", 2, 10, 2023, 1.5],
-            ["Team A", "Driver 2", 2, 12, 2023, 2.5],
-            ["Team B", "Driver 3", 2, 10, 2023, 1.5],
-            ["Team B", "Driver 4", 2, 12, 2023, 2.5],
-            ["Team B", "Driver 5", 2, None, 2023, None],
-            ["Team A", "Driver 1", 3, 10, 2023, 1.5],
-            ["Team A", "Driver 2", 3, 12, 2023, 2.5],
-            ["Team B", "Driver 3", 3, None, 2023, None],
-            ["Team B", "Driver 4", 3, 12, 2023, 2.5],
-            ["Team B", "Driver 5", 3, 10, 2023, 1.5],
-        ]
-    )
-
-    df_expected = pd.DataFrame(
-        columns=["Constructor", "Driver", "Race", "Season"],
-        data=[
-            ["Team A", "Driver 1", 1, 2023],
-            ["Team A", "Driver 2", 1, 2023],
-            ["Team B", "Driver 3", 1, 2023],
-            ["Team B", "Driver 4", 1, 2023],
-            ["Team A", "Driver 1", 2, 2023],
-            ["Team A", "Driver 2", 2, 2023],
-            ["Team B", "Driver 3", 2, 2023],
-            ["Team B", "Driver 4", 2, 2023],
-            ["Team A", "Driver 1", 3, 2023],
-            ["Team A", "Driver 2", 3, 2023],
-            ["Team B", "Driver 4", 3, 2023],
-            ["Team B", "Driver 5", 3, 2023],            
-        ]
-    )
-    
-    df_resuls = get_race_driver_constructor_pairs(df_merged)
-
-    assert_frame_equal(df_resuls.reset_index(drop=True), df_expected.reset_index(drop=True))
 
 
 def test_check_drivers_against_constructors():

@@ -6,6 +6,7 @@ from common import AssetType
 from import_data.derivations import (
     derivation_cum_tot_driver,
     derivation_cum_tot_constructor,
+    get_race_driver_constructor_pairs,
 )
 from scripts.check_run_ppm import load_all_archives_add_derived
 
@@ -217,3 +218,48 @@ def test_actual_derivations():
     assert_frame_equal(df_ric_points_23, df_exp_ric_points_23)
     assert_frame_equal(df_red_points_23, df_exp_red_points_23)
     assert_frame_equal(df_bea_points_24, df_exp_bea_points_24)
+
+
+def test_get_race_driver_constructor_pairs():
+    df_merged = pd.DataFrame(
+        columns=["Constructor", "Driver", "Race", "Points", "Season", "Price"],
+        data=[
+            ["Team A", "Driver 1", 1, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 1, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 1, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 1, 12, 2023, 2.5],
+            ["Team B", "Driver 5", 1, None, 2023, None],
+            ["Team A", "Driver 1", 2, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 2, 10, 2023, 1.5],
+            ["Team B", "Driver 4", 2, 12, 2023, 2.5],
+            ["Team B", "Driver 5", 2, None, 2023, None],
+            ["Team A", "Driver 1", 3, 10, 2023, 1.5],
+            ["Team A", "Driver 2", 3, 12, 2023, 2.5],
+            ["Team B", "Driver 3", 3, None, 2023, None],
+            ["Team B", "Driver 4", 3, 12, 2023, 2.5],
+            ["Team B", "Driver 5", 3, 10, 2023, 1.5],
+        ]
+    )
+
+    df_expected = pd.DataFrame(
+        columns=["Constructor", "Driver", "Race", "Season"],
+        data=[
+            ["Team A", "Driver 1", 1, 2023],
+            ["Team A", "Driver 2", 1, 2023],
+            ["Team B", "Driver 3", 1, 2023],
+            ["Team B", "Driver 4", 1, 2023],
+            ["Team A", "Driver 1", 2, 2023],
+            ["Team A", "Driver 2", 2, 2023],
+            ["Team B", "Driver 3", 2, 2023],
+            ["Team B", "Driver 4", 2, 2023],
+            ["Team A", "Driver 1", 3, 2023],
+            ["Team A", "Driver 2", 3, 2023],
+            ["Team B", "Driver 4", 3, 2023],
+            ["Team B", "Driver 5", 3, 2023],            
+        ]
+    )
+    
+    df_resuls = get_race_driver_constructor_pairs(df_merged)
+
+    assert_frame_equal(df_resuls.reset_index(drop=True), df_expected.reset_index(drop=True))

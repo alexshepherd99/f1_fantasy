@@ -56,3 +56,18 @@ def derivation_cum_tot_driver(df_input: pd.DataFrame, rolling_window: int = -1) 
 
 def derivation_cum_tot_constructor(df_input: pd.DataFrame, rolling_window: int = -1) -> pd.DataFrame:
     return derivation_cum_tot(df_input, AssetType.CONSTRUCTOR, rolling_window)
+
+
+def get_race_driver_constructor_pairs(df_merged_point_price: pd.DataFrame) -> pd.DataFrame:
+    df_merged_point_price = df_merged_point_price[df_merged_point_price["Price"].notna()]
+    
+    df_merged_point_price = df_merged_point_price[
+        [
+            "Constructor",
+            "Driver",
+            "Race",
+            "Season",
+        ]
+    ]
+
+    return df_merged_point_price
