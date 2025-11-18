@@ -137,17 +137,20 @@ def check_drivers_against_constructors(df_merged_drivers: pd.DataFrame, df_merge
         raise ValueError(f"Mismatched constructors and drivers {diffs}")
 
 
+def load_archive_data_season(asset_type: AssetType, season: int, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
+    archive_sheets = get_archive_sheet_infos(season, asset_type)
+    logging.info(f"Loading season {season} {asset_type.value}...")
+
+    df_points = load_archive_sheet(archive_sheets[DataSheetType.POINTS])
+    df_price = load_archive_sheet(archive_sheets[DataSheetType.PRICE])
+    return merge_sheet_points_price(df_points, df_price, asset_type)
+
+
 def load_all_archive_data(asset_type: AssetType, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
     df_all_data = pd.DataFrame()
 
     for season in F1_SEASON_CONSTRUCTORS.keys():
-        archive_sheets = get_archive_sheet_infos(season, asset_type)
-        logging.info(f"Loading season {season} {asset_type.value}...")
-    
-        df_points = load_archive_sheet(archive_sheets[DataSheetType.POINTS])
-        df_price = load_archive_sheet(archive_sheets[DataSheetType.PRICE])
-        df_merged = merge_sheet_points_price(df_points, df_price, asset_type)
-
+        df_merged = load_archive_data_season(asset_type=asset_type, season=season, fn=fn)
         df_all_data = pd.concat([df_all_data, df_merged], ignore_index=True).reset_index(drop=True)
 
     return df_all_data
