@@ -234,3 +234,38 @@ def test_factory_race_real_data():
     assert race_1.constructors["MCL"].constructor == "MCL"
     assert race_1.constructors["MCL"].ppm == pytest.approx(-1.7582, 0.0001)
     assert race_1.constructors["MCL"].price == 9.0
+
+    race_12 = factory_race(
+        df_driver_ppm_2023,
+        df_constructor_ppm_2023,
+        df_driver_pairs_2023,
+        12,
+        "PPM Cumulative (3)"
+    )
+
+    assert list(race_12.drivers.keys()) == [
+        "VER",
+        "PER",
+        "HAM",
+        "NOR",
+        "ALO",
+        "SAI",
+        "RUS",
+        "LEC",
+        "PIA",
+        "STR",
+        "GAS",
+        "TSU",
+        "RIC",  # in for DEV
+        "ZHO",
+        "ALB",
+        "OCO",
+        "MAG",
+        "HUL",
+        "BOT",
+        "SAR",
+    ]
+
+    act = list(race_12.constructors.keys())
+    act.sort()
+    assert act == exp  # exp already defined above, expected list of constructors sorted
