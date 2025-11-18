@@ -14,8 +14,11 @@ class Race:
         self.drivers = drivers
         self.constructors = constructors
 
-    def validate(self):
-        pass
+
+class Season:
+    def __init__(self, season: int, races: dict[int, Race]):
+        self.season = season
+        self.races = races
 
 
 def factory_race(
@@ -49,3 +52,22 @@ def factory_race(
         )
 
     return Race(race=race, drivers=drivers, constructors=constructors)
+
+
+def factory_season(
+    df_driver_ppm_data: pd.DataFrame,
+    df_constructor_ppm_data: pd.DataFrame,
+    df_driver_pairings: pd.DataFrame,
+    season: int,
+    col_ppm: str       
+) -> Season:
+    races = {}
+    for race in df_driver_pairings["Race"].unique():
+        races[race] = factory_race(
+            df_driver_ppm_data=df_driver_ppm_data,
+            df_constructor_ppm_data=df_constructor_ppm_data,
+            df_driver_pairings=df_driver_pairings,
+            race=race,
+            col_ppm=col_ppm
+        )
+    return Season(season=season, races=races)

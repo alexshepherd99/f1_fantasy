@@ -9,7 +9,7 @@ from import_data.derivations import (
     get_race_driver_constructor_pairs,
 )
 from import_data.import_history import load_archive_data_season
-from races.season import factory_race
+from races.season import factory_race, factory_season
 
 
 def test_factory_race():
@@ -139,3 +139,47 @@ def test_factory_race_real_data():
     act = list(race_12.constructors.keys())
     act.sort()
     assert act == exp  # exp already defined above, expected list of constructors sorted
+
+
+def test_factory_season_real_data():
+    df_driver_2023 = load_archive_data_season(AssetType.DRIVER, 2023)
+    df_constructor_2023 = load_archive_data_season(AssetType.CONSTRUCTOR, 2023)
+    df_driver_pairs_2023 = get_race_driver_constructor_pairs(df_driver_2023)
+    df_driver_ppm_2023 = derivation_cum_tot_driver(df_driver_2023, rolling_window=3)
+    df_constructor_ppm_2023 = derivation_cum_tot_constructor(df_constructor_2023, rolling_window=3)
+
+    season = factory_season(
+        df_driver_ppm_2023,
+        df_constructor_ppm_2023,
+        df_driver_pairs_2023,
+        2023,
+        "PPM Cumulative (3)"
+    )
+    assert len(season.races) == 22
+
+    race_12 = season.races[12]
+    assert list(race_12.drivers.keys()) == [
+        "VER",
+        "PER",
+        "HAM",
+        "NOR",
+        "ALO",
+        "SAI",
+        "RUS",
+        "LEC",
+        "PIA",
+        "STR",
+        "GAS",
+        "TSU",
+        "RIC",  # in for DEV
+        "ZHO",
+        "ALB",
+        "OCO",
+        "MAG",
+        "HUL",
+        "BOT",
+        "SAR",
+    ]
+
+    cons_mcl = race_12.constructors["MCL"]
+    assert cons_mcl.price == 11.8
