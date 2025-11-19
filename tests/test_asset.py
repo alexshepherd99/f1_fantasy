@@ -9,7 +9,7 @@ def test_factory_driver():
     with pytest.raises(ValueError) as excinfo:
         factory_driver(
             pd.DataFrame(
-                columns=["Driver", "Race"],
+                columns=["Driver", "Race", "Price"],
             ),
             "VER",
             "RED",
@@ -21,8 +21,8 @@ def test_factory_driver():
     with pytest.raises(ValueError) as excinfo:
         factory_driver(
             pd.DataFrame(
-                columns=["Driver", "Race"],
-                data=[["VER", 1], ["VER", 1]]
+                columns=["Driver", "Race", "Price"],
+                data=[["VER", 1, 0.1], ["VER", 1, 0.1]]
             ),
             "VER",
             "RED",
@@ -34,8 +34,8 @@ def test_factory_driver():
     with pytest.raises(ValueError) as excinfo:
         factory_driver(
             pd.DataFrame(
-                columns=["Driver", "Race", "col"],
-                data=[["VER", 1, 3.3], ["VER", 2, 4.4], ["VER", 2, 5.5]]
+                columns=["Driver", "Race", "col", "Price"],
+                data=[["VER", 1, 3.3, 0.3], ["VER", 2, 4.4, 0.4], ["VER", 2, 5.5, 0.5]]
             ),
             "VER",
             "RED",
@@ -58,6 +58,7 @@ def test_factory_driver():
     assert driver_1.driver == "VER"
     assert driver_1.ppm == 3.3
     assert driver_1.price == 44.44
+    assert driver_1.price_old == 33.33
 
     driver_2 = factory_driver(
         pd.DataFrame(
@@ -73,6 +74,7 @@ def test_factory_driver():
     assert driver_2.driver == "VER"
     assert driver_2.ppm == 3.3
     assert driver_2.price is np.nan
+    assert driver_2.price_old == 33.33
 
 
 
@@ -103,8 +105,8 @@ def test_factory_constructor():
     with pytest.raises(ValueError) as excinfo:
         factory_constructor(
             pd.DataFrame(
-                columns=["Constructor", "Race", "col"],
-                data=[["RED", 1, 3.3], ["RED", 2, 4.4], ["RED", 2, 5.5]]
+                columns=["Constructor", "Race", "col", "Price"],
+                data=[["RED", 1, 3.3, 0.3], ["RED", 2, 4.4, 0.4], ["RED", 2, 5.5, 0.5]]
             ),
             "RED",
             1,
@@ -124,6 +126,7 @@ def test_factory_constructor():
     assert constructor_1.constructor == "RED"
     assert constructor_1.ppm == 3.3
     assert constructor_1.price == 44.44
+    assert constructor_1.price_old == 33.33
 
     constructor_2 = factory_constructor(
         pd.DataFrame(
@@ -137,3 +140,4 @@ def test_factory_constructor():
     assert constructor_2.constructor == "RED"
     assert constructor_2.ppm == 3.3
     assert constructor_2.price is np.nan
+    assert constructor_2.price_old == 33.33
