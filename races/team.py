@@ -43,4 +43,3 @@ class Team:
         for constructor in self.assets[AssetType.CONSTRUCTOR]:
             tot_val = tot_val + race.constructors[constructor].price_old
         return tot_val
-
