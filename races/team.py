@@ -16,12 +16,6 @@ class Team:
             AssetType.CONSTRUCTOR: num_constructors,
         }
 
-    def total_value(self, race: Race) -> float:
-        pass
-
-    def total_value_old(self, race: Race) -> float:
-        pass
-
     def add_asset(self, asset_type: AssetType, asset: str):
         if asset in self.assets[asset_type]:
             raise ValueError(f"Asset {asset} of type {asset_type} already present")
@@ -33,3 +27,20 @@ class Team:
         if asset not in self.assets[asset_type]:
             raise ValueError(f"Unable to remove asset {asset} of type {asset_type} as asset is not present")
         self.assets[asset_type].remove(asset)
+
+    def total_value(self, race: Race) -> float:
+        tot_val = 0.0
+        for driver in self.assets[AssetType.DRIVER]:
+            tot_val = tot_val + race.drivers[driver].price
+        for constructor in self.assets[AssetType.CONSTRUCTOR]:
+            tot_val = tot_val + race.constructors[constructor].price
+        return tot_val
+
+    def total_value_old(self, race: Race) -> float:
+        tot_val = 0.0
+        for driver in self.assets[AssetType.DRIVER]:
+            tot_val = tot_val + race.drivers[driver].price_old
+        for constructor in self.assets[AssetType.CONSTRUCTOR]:
+            tot_val = tot_val + race.constructors[constructor].price_old
+        return tot_val
+
