@@ -4,7 +4,7 @@ import logging
 
 from common import setup_logging
 from races.season import Race, factory_race
-from scripts.helper import load_with_derivations
+from helpers import load_with_derivations
 
 
 def get_all_combinations(
@@ -45,39 +45,41 @@ def set_combination_assets(df_combinations: pd.DataFrame, race: Race) -> pd.Data
     return df_combinations
 
 
-if __name__ == "__main__":
-    setup_logging()
+def get_starting_combinations(season: int, race_num: int) -> pd.DataFrame:
+    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season)
 
-    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(2023)
-
-    race_1 = factory_race(
+    race = factory_race(
         df_driver_ppm,
         df_constructor_ppm,
         df_driver_pairs,
-        1,
+        race_num,
         "PPM Cumulative (3)"
     )
 
-    df_combinations = set_combination_assets(get_all_team_combinations(), race_1)
-    logging.info(df_combinations.sample(2))
+    df_combinations = set_combination_assets(get_all_team_combinations(), race)
 
-    for driver in race_1.drivers.keys():
-        price_old = race_1.drivers[driver].price_old
+    for driver in race.drivers.keys():
+        price_old = race.drivers[driver].price_old
         df_combinations[driver] = df_combinations[driver].replace(1, price_old)
 
-    for constructor in race_1.constructors.keys():
-        price_old = race_1.constructors[constructor].price_old
+    for constructor in race.constructors.keys():
+        price_old = race.constructors[constructor].price_old
         df_combinations[constructor] = df_combinations[constructor].replace(1, price_old)
 
-    logging.info(df_combinations.sample(2))
-
     df_combinations["total_value"] = df_combinations.sum(axis=1)
+    return df_combinations
+
+
+if __name__ == "__main__":
+    setup_logging()
+
+    df_combinations = get_starting_combinations(2023, 1)
     logging.info(df_combinations.sample(2))
 
     df_combinations_limit = df_combinations[
         (df_combinations["total_value"] <= 100.0) &
         (df_combinations["total_value"] > 90)
     ]
+
     logging.info(df_combinations_limit.shape)
     logging.info(df_combinations_limit.sample(2))
-
