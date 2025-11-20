@@ -45,7 +45,7 @@ def set_combination_assets(df_combinations: pd.DataFrame, race: Race) -> pd.Data
     return df_combinations
 
 
-def get_starting_combinations(season: int, race_num: int) -> pd.DataFrame:
+def get_starting_combinations(season: int, race_num: int, min_total_value: float, max_total_value: float=100.0) -> pd.DataFrame:
     (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season)
 
     race = factory_race(
@@ -67,19 +67,18 @@ def get_starting_combinations(season: int, race_num: int) -> pd.DataFrame:
         df_combinations[constructor] = df_combinations[constructor].replace(1, price_old)
 
     df_combinations["total_value"] = df_combinations.sum(axis=1)
+
+    df_combinations = df_combinations[
+        (df_combinations["total_value"] <= max_total_value) &
+        (df_combinations["total_value"] > min_total_value)
+    ]
+
     return df_combinations
 
 
 if __name__ == "__main__":
     setup_logging()
 
-    df_combinations = get_starting_combinations(2023, 1)
+    df_combinations = get_starting_combinations(2023, 1, 90.0)
+    logging.info(df_combinations.shape)
     logging.info(df_combinations.sample(2))
-
-    df_combinations_limit = df_combinations[
-        (df_combinations["total_value"] <= 100.0) &
-        (df_combinations["total_value"] > 90)
-    ]
-
-    logging.info(df_combinations_limit.shape)
-    logging.info(df_combinations_limit.sample(2))

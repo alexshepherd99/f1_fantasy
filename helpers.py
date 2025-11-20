@@ -1,4 +1,5 @@
 import pandas as pd
+import functools
 
 from common import AssetType
 from import_data.import_history import load_archive_data_season
@@ -9,6 +10,7 @@ from import_data.derivations import (
 )
 
 
+@functools.cache
 def load_with_derivations(season: int) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     df_driver = load_archive_data_season(AssetType.DRIVER, season)
     df_constructor = load_archive_data_season(AssetType.CONSTRUCTOR, season)
