@@ -1,9 +1,11 @@
 import pandas as pd
 from itertools import combinations
 import logging
+import numpy as np
 
 from common import setup_logging
 from races.season import Race, factory_race
+from races.team import factory_team_row
 from helpers import load_with_derivations
 
 
@@ -61,10 +63,12 @@ def get_starting_combinations(season: int, race_num: int, min_total_value: float
     for driver in race.drivers.keys():
         price_old = race.drivers[driver].price_old
         df_combinations[driver] = df_combinations[driver].replace(1, price_old)
+        df_combinations[driver] = df_combinations[driver].replace(0, np.nan)
 
     for constructor in race.constructors.keys():
         price_old = race.constructors[constructor].price_old
         df_combinations[constructor] = df_combinations[constructor].replace(1, price_old)
+        df_combinations[constructor] = df_combinations[constructor].replace(0, np.nan)
 
     df_combinations["total_value"] = df_combinations.sum(axis=1)
 
@@ -82,3 +86,15 @@ if __name__ == "__main__":
     df_combinations = get_starting_combinations(2023, 1, 90.0)
     logging.info(df_combinations.shape)
     logging.info(df_combinations.sample(2))
+
+    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(2023)
+
+    race = factory_race(
+        df_driver_ppm,
+        df_constructor_ppm,
+        df_driver_pairs,
+        1,
+        "PPM Cumulative (3)"
+    )
+    
+    team = factory_team_row(df_combinations.iloc[0].to_dict(), race)

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from races.asset import AssetType
 from races.season import Race
@@ -43,3 +44,20 @@ class Team:
         for constructor in self.assets[AssetType.CONSTRUCTOR]:
             tot_val = tot_val + race.constructors[constructor].price_old
         return tot_val
+
+
+def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int = 5, num_constructors: int = 2) -> Team:
+    t = Team(num_drivers=num_drivers, num_constructors=num_constructors)
+    for asset in row_assets.keys():
+        if not np.isnan(row_assets[asset]):
+            if asset in race.drivers.keys():
+                t.add_asset(asset_type=AssetType.DRIVER, asset=asset)
+            elif asset in race.constructors.keys():
+                t.add_asset(asset_type=AssetType.CONSTRUCTOR, asset=asset)
+
+    if len(t.assets[AssetType.DRIVER]) != num_drivers:
+        raise ValueError(f"Incorrect number of drivers in {row_assets.keys()}")
+    if len(t.assets[AssetType.CONSTRUCTOR]) != num_constructors:
+        raise ValueError(f"Incorrect number of constructors in {row_assets.keys()}")
+    
+    return t
