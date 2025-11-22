@@ -1,41 +1,35 @@
 import sys
 sys.path.insert(0, "/workspaces/f1_fantasy")
 
-from pulp import LpMaximize, LpProblem, LpStatus, lpSum, LpVariable
+from pulp import LpMaximize, LpProblem, LpStatus, lpSum, LpVariable, PULP_CBC_CMD
 
+prices = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]
+team = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-var_d1_selected = LpVariable(name="D1 Sel", cat="Binary")
-var_d2_selected = LpVariable(name="D2 Sel", cat="Binary")
-var_d3_selected = LpVariable(name="D3 Sel", cat="Binary")
-var_d4_selected = LpVariable(name="D4 Sel", cat="Binary")
-var_d5_selected = LpVariable(name="D5 Sel", cat="Binary")
+n = len(prices)
+N = range(n)
 
-const_d1_price = 25.0
-const_d2_price = 30.0
-const_d3_price = 55.5
-const_d4_price = 10.0
-const_d5_price = 76.0
+max_cost = 139.0
 
-const_max_value = 100.0
+max_team_size = 2
 
-objective = (
-    (var_d1_selected * const_d1_price) +
-    (var_d2_selected * const_d2_price) +
-    (var_d3_selected * const_d3_price) +
-    (var_d4_selected * const_d4_price) +
-    (var_d5_selected * const_d5_price)
-)
+max_moves = 1
 
-constraint_total_value = objective <= 100.0
+model = LpProblem("F1_Team", LpMaximize)
 
-model = LpProblem("model", LpMaximize)
+var_team_new = LpVariable.dicts('team', N, cat="Binary")
+
+objective = lpSum([prices[i] * var_team_new[i] for i in N])
+constraint_total_value = objective <= max_cost
+constraint_team_size = lpSum([var_team_new[i] for i in N]) == max_team_size
+constraint_team_moves = lpSum([team[i] * var_team_new[i] for i in N]) >= (max_team_size - max_moves)
 
 model += objective
 model += constraint_total_value
+model += constraint_team_size
+model += constraint_team_moves
 
-model.solve()
+PULP_CBC_CMD(msg=0).solve(model)
 
 for var in model.variables():
     print(f"{var.name}: {var.value()}")
-
-https://stackoverflow.com/questions/60144756/how-to-optimize-variables-combination-in-a-dictionary-using-pulp-python
