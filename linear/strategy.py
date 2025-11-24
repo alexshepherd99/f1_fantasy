@@ -35,10 +35,36 @@ class StrategyBase:
         for i in all_available_constructors:
             if i not in prices_assets.keys():
                 raise ValueError(f"Constructor {i} does not have a price")
-
+            
+        # Everything with a price is available in either drivers or constructors
+        for i in prices_assets.keys():
+            if (i not in all_available_drivers) and (i not in all_available_constructors):
+                raise ValueError(f"Asset {i} has a price but is not in available drivers or constructors")
+            
+        # Check drivers and constructors from pairing are in all lists
+        for k,v in all_available_driver_pairs.items():
+            if k not in all_available_drivers:
+                raise ValueError(f"Driver from pairing {k}/{v} is not available in all drivers")
+            if v not in all_available_constructors:
+                raise ValueError(f"Constructor from pairing {k}/{v} is not available in all constructors")
+            
+        # Check all drivers are present in pairings
+        for i in all_available_drivers:
+            if i not in all_available_driver_pairs.keys():
+                raise ValueError(f"Driver {i} is not available in driver/constructor pairs")
+            
         # Take a copy of the prices
         self._prices_assets = prices_assets.copy()
         # Any drivers in the team which are no longer available, have a prohibitive price
         for x in team_drivers:
             if x not in self._prices_assets.keys():
                 self._prices_assets[x] = COST_PROHIBITIVE
+
+        # Set all parameters
+        self._team_drivers = team_drivers
+        self._team_constructors = team_constructors
+        self._all_available_drivers = all_available_drivers
+        self._all_available_constructors = all_available_constructors
+        self._all_available_driver_pairs = all_available_driver_pairs
+        self._max_cost = max_cost
+        self._max_moves = max_moves

@@ -36,10 +36,27 @@ def fixture_all_available_constructors() -> list[str]:
     return ["MCL", "FER", "RED", "MER", "AST"]
 
 
-def test_construct(
+@pytest.fixture
+def fixture_pairings() -> dict[str, str]:
+    return {
+        "VER": "RED",
+        "LEC": "FER",
+        "HAM": "FER",
+        "ALO": "AST",
+        "HUL": "AST",
+        "MAG": "MER",
+        "BOT": "MER",
+        "NOR": "MCL",
+        "PIA": "MCL",
+        "TSU": "RED",
+    }
+
+
+def test_construct_strategy(
         fixture_all_available_drivers,
         fixture_all_available_constructors,
         fixture_asset_prices,
+        fixture_pairings,
     ):
     # Team constructors all present in all available constructors
     with pytest.raises(ValueError) as excinfo:
@@ -48,7 +65,7 @@ def test_construct(
             team_constructors=["???"],
             all_available_drivers=[],
             all_available_constructors=fixture_all_available_constructors,
-            all_available_driver_pairs={},
+            all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets={}
@@ -62,7 +79,7 @@ def test_construct(
             team_constructors=[],
             all_available_drivers=fixture_all_available_drivers,
             all_available_constructors=[],
-            all_available_driver_pairs={},
+            all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets={}
@@ -76,7 +93,7 @@ def test_construct(
             team_constructors=["MCL", "MCL", "MCL", "MCL", "MCL", "MCL",],
             all_available_drivers=[],
             all_available_constructors=fixture_all_available_constructors,
-            all_available_driver_pairs={},
+            all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets={}
@@ -90,7 +107,7 @@ def test_construct(
             team_constructors=[],
             all_available_drivers=fixture_all_available_drivers + ["XXX"],
             all_available_constructors=[],
-            all_available_driver_pairs={},
+            all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices
@@ -104,7 +121,7 @@ def test_construct(
             team_constructors=[],
             all_available_drivers=[],
             all_available_constructors=fixture_all_available_constructors + ["XXX"],
-            all_available_driver_pairs={},
+            all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices
@@ -113,19 +130,90 @@ def test_construct(
 
     # Team drivers not available in all available drivers have a high price
     sb = StrategyBase(
-            team_drivers=["VER", "RUS"],
-            team_constructors=["MCL"],
-            all_available_drivers=fixture_all_available_drivers,
-            all_available_constructors=fixture_all_available_constructors,
-            all_available_driver_pairs={},
-            max_cost=0.0,
-            max_moves=2,
-            prices_assets=fixture_asset_prices
-        )
+        team_drivers=["VER", "RUS"],
+        team_constructors=["MCL"],
+        all_available_drivers=fixture_all_available_drivers,
+        all_available_constructors=fixture_all_available_constructors,
+        all_available_driver_pairs=fixture_pairings,
+        max_cost=0.0,
+        max_moves=2,
+        prices_assets=fixture_asset_prices
+    )
     assert len(sb._prices_assets) == len(fixture_asset_prices) + 1
     assert sb._prices_assets["RUS"] == COST_PROHIBITIVE
 
     # Everything in price assets is available in either all drivers or all constructors (check both)
+    fap2 = fixture_asset_prices.copy()
+    fap2["???"] = 99.99
+    with pytest.raises(ValueError) as excinfo:
+        StrategyBase(
+            team_drivers=[],
+            team_constructors=[],
+            all_available_drivers=fixture_all_available_drivers,
+            all_available_constructors=fixture_all_available_constructors,
+            all_available_driver_pairs=fixture_pairings,
+            max_cost=0.0,
+            max_moves=2,
+            prices_assets=fap2
+        )
+    assert str(excinfo.value) == "Asset ??? has a price but is not in available drivers or constructors"
+
     # All driver pairs keys are in all available drivers
+    with pytest.raises(ValueError) as excinfo:
+        dp = fixture_pairings.copy()
+        dp["XXX"] = "MCL"
+        StrategyBase(
+            team_drivers=[],
+            team_constructors=[],
+            all_available_drivers=fixture_all_available_drivers,
+            all_available_constructors=fixture_all_available_constructors,
+            all_available_driver_pairs=dp,
+            max_cost=0.0,
+            max_moves=2,
+            prices_assets=fixture_asset_prices
+        )
+    assert str(excinfo.value) == "Driver from pairing XXX/MCL is not available in all drivers"
+
     # All driver pairs values are in all available constructors
-    assert False
+    with pytest.raises(ValueError) as excinfo:
+        dp = fixture_pairings.copy()
+        dp["NOR"] = "XXX"
+        StrategyBase(
+            team_drivers=[],
+            team_constructors=[],
+            all_available_drivers=fixture_all_available_drivers,
+            all_available_constructors=fixture_all_available_constructors,
+            all_available_driver_pairs=dp,
+            max_cost=0.0,
+            max_moves=2,
+            prices_assets=fixture_asset_prices
+        )
+    assert str(excinfo.value) == "Constructor from pairing NOR/XXX is not available in all constructors"
+
+    # All drivers have a matching item in the pairs
+    with pytest.raises(ValueError) as excinfo:
+        fap2 = fixture_asset_prices.copy()
+        fap2["XXX"] = 99.99
+        StrategyBase(
+            team_drivers=[],
+            team_constructors=[],
+            all_available_drivers=fixture_all_available_drivers + ["XXX"],
+            all_available_constructors=fixture_all_available_constructors,
+            all_available_driver_pairs=fixture_pairings,
+            max_cost=0.0,
+            max_moves=2,
+            prices_assets=fap2
+        )
+    assert str(excinfo.value) == "Driver XXX is not available in driver/constructor pairs"
+
+    # Pairings valid, no exception raised
+    sb = StrategyBase(
+        team_drivers=[],
+        team_constructors=[],
+        all_available_drivers=fixture_all_available_drivers,
+        all_available_constructors=fixture_all_available_constructors,
+        all_available_driver_pairs=fixture_pairings,
+        max_cost=0.0,
+        max_moves=2,
+        prices_assets=fixture_asset_prices
+    )

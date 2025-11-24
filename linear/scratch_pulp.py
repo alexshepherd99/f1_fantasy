@@ -2,9 +2,7 @@ import sys
 if "/workspaces/f1_fantasy" not in sys.path:
     sys.path.insert(0, "/workspaces/f1_fantasy")
 
-import numpy as np
-
-from pulp import LpMaximize, LpProblem, LpStatus, lpSum, LpVariable, PULP_CBC_CMD
+from pulp import LpMaximize, LpProblem, lpSum, LpVariable, PULP_CBC_CMD
 
 driver_prices = {
     "VER": 1.0,
