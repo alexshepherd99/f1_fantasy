@@ -26,21 +26,14 @@ class StrategyBase:
         if len(team_constructors) > len(all_available_constructors):
             raise ValueError(f"Team count of {len(team_constructors)} is greater than {len(all_available_constructors)} available constructors")
 
-        # All available drivers have a price
-        for i in all_available_drivers:
-            if i not in prices_assets.keys():
-                raise ValueError(f"Driver {i} does not have a price")
-            
-        # All available constructors have a price
-        for i in all_available_constructors:
-            if i not in prices_assets.keys():
-                raise ValueError(f"Constructor {i} does not have a price")
-            
-        # Everything with a price is available in either drivers or constructors
-        for i in prices_assets.keys():
-            if (i not in all_available_drivers) and (i not in all_available_constructors):
-                raise ValueError(f"Asset {i} has a price but is not in available drivers or constructors")
-            
+        # Checks on price, helper method so we can re-use it
+        self.verify_data_available(
+            all_available_drivers,
+            all_available_constructors,
+            prices_assets,
+            "price"
+        )
+
         # Check drivers and constructors from pairing are in all lists
         for k,v in all_available_driver_pairs.items():
             if k not in all_available_drivers:
@@ -68,3 +61,26 @@ class StrategyBase:
         self._all_available_driver_pairs = all_available_driver_pairs
         self._max_cost = max_cost
         self._max_moves = max_moves
+
+    @classmethod
+    def verify_data_available(
+        cls,
+        all_available_drivers: list[str],
+        all_available_constructors: list[str],
+        data_assets: dict[str, float],
+        data_type: str,
+    ):
+        # All available drivers have a price
+        for i in all_available_drivers:
+            if i not in data_assets.keys():
+                raise ValueError(f"Driver {i} does not have a {data_type}")
+            
+        # All available constructors have a price
+        for i in all_available_constructors:
+            if i not in data_assets.keys():
+                raise ValueError(f"Constructor {i} does not have a {data_type}")
+            
+        # Everything with a price is available in either drivers or constructors
+        for i in data_assets.keys():
+            if (i not in all_available_drivers) and (i not in all_available_constructors):
+                raise ValueError(f"Asset {i} has a {data_type} but is not in available drivers or constructors")
