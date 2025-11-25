@@ -1,7 +1,11 @@
+from abc import ABC, abstractmethod
+from pulp import LpAffineExpression, LpProblem
+
+
 COST_PROHIBITIVE = 999999.99  # A really big float number that we can never afford
 
 
-class StrategyBase:
+class StrategyBase(ABC):
     def __init__(
         self,
         team_drivers: list[str],
@@ -84,3 +88,11 @@ class StrategyBase:
         for i in data_assets.keys():
             if (i not in all_available_drivers) and (i not in all_available_constructors):
                 raise ValueError(f"Asset {i} has a {data_type} but is not in available drivers or constructors")
+
+    @abstractmethod
+    def get_objective(self) -> LpAffineExpression:
+        pass
+
+    @abstractmethod
+    def get_problem(self) -> LpProblem:
+        pass
