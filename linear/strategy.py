@@ -89,6 +89,17 @@ class StrategyBase(ABC):
             if (i not in all_available_drivers) and (i not in all_available_constructors):
                 raise ValueError(f"Asset {i} has a {data_type} but is not in available drivers or constructors")
 
+    @classmethod
+    def get_team_selection_dict(cls, list_assets_available: list[str], list_assets_team: list[str]) -> dict[str, int]:
+        all_assets = set(list_assets_available).union(set(list_assets_team))
+        selection_dict = dict()
+        for i in all_assets:
+            if i in list_assets_team:
+                selection_dict[i] = 1
+            else:
+                selection_dict[i] = 0
+        return selection_dict
+
     @abstractmethod
     def get_objective(self) -> LpAffineExpression:
         pass

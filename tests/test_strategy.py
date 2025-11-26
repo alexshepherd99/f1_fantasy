@@ -226,3 +226,20 @@ def test_construct_strategy(
         max_moves=2,
         prices_assets=fixture_asset_prices
     )
+
+
+def test_get_team_selection_dict():
+    list_available = ["A", "C", "B", "D"]  # intentional unsorted
+    list_team = ["B", "E"]
+    dict_expected = {
+        "A": 0,
+        "B": 1,
+        "C": 0,
+        "D": 0,
+        "E": 1,
+    }
+    dict_result = StrategyBase.get_team_selection_dict(
+        list_available,
+        list_team
+    )
+    assert dict_result == dict_expected
