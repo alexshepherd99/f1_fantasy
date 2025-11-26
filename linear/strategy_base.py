@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from pulp import LpAffineExpression, LpProblem, LpVariable, lpSum
+from pulp import LpAffineExpression, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 from enum import Enum, auto
 
 
@@ -149,22 +149,29 @@ class StrategyBase(ABC):
         self._lp_variables[VarType.TeamMoves] = team_size_total - lpSum(driver_moves + constructor_moves)
         self._lp_constraints[VarType.TeamMoves] = self._lp_variables[VarType.TeamMoves] <= self._max_moves
 
+    def execute(self, strategy_name: str) -> LpProblem:
+        # Base initialisation and constraints
+        self.initialise()
 
-        # model += objective
-        #model += constraint_total_value
-        #model += constraint_driver_team_size
-        #model += constraint_constructor_team_size
-        #model += constraint_team_moves
+        # Derived class can optionally add additional constraints
+        self.additional_constraints()
 
-        # constraint_driver_unavailable = var_team_drivers["RUS"] == 0
-        # model += constraint_driver_unavailable
+        # Create the model, add the objective and constraints
+        model = self.get_problem(strategy_name)
+        model += self.get_objective()
+        for constraint in self._lp_constraints.values():
+            model += constraint
+
+        # Solve and return the model
+        PULP_CBC_CMD(msg=0).solve(model)
+        return model
 
     @abstractmethod
     def get_objective(self) -> LpAffineExpression:
         pass
 
     @abstractmethod
-    def get_problem(self) -> LpProblem:
+    def get_problem(self, strategy_name: str) -> LpProblem:
         pass
 
     @abstractmethod

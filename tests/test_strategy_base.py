@@ -1,5 +1,5 @@
 import pytest
-from pulp import LpAffineExpression, LpProblem
+from pulp import LpAffineExpression, LpProblem, lpSum, LpMaximize
 
 from linear.strategy_base import StrategyBase, COST_PROHIBITIVE, VarType
 
@@ -57,7 +57,7 @@ class StrategyDummy(StrategyBase):
     def get_objective(self) -> LpAffineExpression:
         return LpAffineExpression()
 
-    def get_problem(self) -> LpProblem:
+    def get_problem(self, strategy_name: str) -> LpProblem:
         return LpProblem()
 
     def additional_constraints(self):
@@ -310,3 +310,74 @@ def test_initialise_sets_up_lp_variables_and_constraints(
     # constraint expression (sum(vars) - RHS == 0), so check for -team_size
     assert constraint_drivers.constant == -len(team_drivers)
 
+
+class ExecStrategyDummy(StrategyBase):
+    def __init__(self, *args, scores=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # simple map used by the objective to prefer one driver over another
+        self.scores = scores or {}
+
+    def get_objective(self):
+        # Objective uses the already-created LP variables (initialise is called
+        # prior to get_objective in execute()). Aim to maximise the total score.
+        drivers = self._lp_variables[VarType.TeamDrivers]
+        constructors = self._lp_variables[VarType.TeamConstructors]
+
+        terms = []
+        for d, var in drivers.items():
+            terms.append(self.scores.get(d, 0.0) * var)
+        for c, var in constructors.items():
+            terms.append(self.scores.get(c, 0.0) * var)
+
+        return lpSum(terms)
+
+    def get_problem(self, strategy_name: str) -> LpProblem:
+        # Create a maximisation problem so the solver will pick the highest-score
+        # legal team according to the constraints created in initialise()
+        return LpProblem(strategy_name, LpMaximize)
+
+    def additional_constraints(self):
+        # no additional constraints for the test-case
+        return None
+
+
+def test_execute_picks_best_scoring_team():
+    # Two drivers available, must pick exactly 1 driver and 1 constructor
+    drivers = ["A", "B"]
+    constructors = ["C1"]
+    pairings = {"A": "C1", "B": "C1"}
+
+    # Prices must be present for all assets (values not important here other
+    # than satisfying verify_data_available)
+    prices = {"A": 1.0, "B": 1.0, "C1": 1.0}
+
+    # We'll require a team of one driver and one constructor
+    team_drivers = ["A"]
+    team_constructors = ["C1"]
+
+    # Give B a much higher score so the solver prefers B over initial team-member A
+    scores = {"A": 1.0, "B": 10.0, "C1": 0.0}
+
+    s = ExecStrategyDummy(
+        team_drivers=team_drivers,
+        team_constructors=team_constructors,
+        all_available_drivers=drivers,
+        all_available_constructors=constructors,
+        all_available_driver_pairs=pairings,
+        max_cost=1000.0,
+        max_moves=2,
+        prices_assets=prices,
+        scores=scores,
+    )
+
+    # Execute should initialise, add the objective, add constraints and then solve
+    model = s.execute("test_execute")
+
+    # result should be an LpProblem
+    assert isinstance(model, LpProblem)
+
+    # After solving, the variables in our bookkeeping should have values. The
+    # high-scoring driver 'B' should be chosen (=1) and 'A' should not (=0).
+    drivers_vars = s._lp_variables[VarType.TeamDrivers]
+    assert float(drivers_vars["B"].value()) == 1.0
+    assert float(drivers_vars["A"].value()) == 0.0
