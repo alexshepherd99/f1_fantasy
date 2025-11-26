@@ -1,7 +1,7 @@
 import pytest
 from pulp import LpAffineExpression, LpProblem
 
-from linear.strategy import StrategyBase, COST_PROHIBITIVE, VarType
+from linear.strategy_base import StrategyBase, COST_PROHIBITIVE, VarType
 
 
 @pytest.fixture
