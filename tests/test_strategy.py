@@ -60,7 +60,10 @@ class StrategyDummy(StrategyBase):
     def get_problem(self) -> LpProblem:
         return LpProblem()
 
+    def additional_constraints(self):
+        pass
 
+    
 def test_construct_strategy(
         fixture_all_available_drivers,
         fixture_all_available_constructors,
