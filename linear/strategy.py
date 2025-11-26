@@ -113,44 +113,51 @@ class StrategyBase(ABC):
         return selection_dict
 
     def initialise(self):
+        # Driver and constructor lists need to include available assets, in addition to driver assets which are
+        # currently in the team (even if no longer available)
         driver_team = self.get_team_selection_dict(self._all_available_drivers, self._team_drivers)
         constructor_team = self.get_team_selection_dict(self._all_available_constructors, self._team_constructors)
         driver_list = list(driver_team.keys())
         constructor_list = list(constructor_team.keys())
 
+        # Infer team sizes from the team which is passed in
         team_size_drivers = len(self._team_drivers)
         team_size_constructors = (len(self._team_constructors))
         team_size_total = team_size_drivers + team_size_constructors
 
+        # LP variables for resulting team selection, separate for drivers and constructors
         self._lp_variables[VarType.TeamDrivers] = LpVariable.dicts('driver', driver_list, cat="Binary")
         self._lp_variables[VarType.TeamConstructors] = LpVariable.dicts('constructor', constructor_list, cat="Binary")
 
+        # Costs as based on the team selection in the above LP variables
         cost_drivers = [self._prices_assets[i] * self._lp_variables[VarType.TeamDrivers][i] for i in driver_list]
         cost_constructors = [self._prices_assets[i] * self._lp_variables[VarType.TeamConstructors][i] for i in constructor_list]
 
+        # Variable and constraint for total cost
         self._lp_variables[VarType.TotalCost] = lpSum(cost_drivers + cost_constructors)
         self._lp_constraints[VarType.TotalCost] = self._lp_variables[VarType.TotalCost] <= self._max_cost
 
+        # Constraints for team sizes
         self._lp_constraints[VarType.TeamDrivers] = lpSum([self._lp_variables[VarType.TeamDrivers][i] for i in driver_list]) == team_size_drivers
         self._lp_constraints[VarType.TeamConstructors] = lpSum([self._lp_variables[VarType.TeamConstructors][i] for i in constructor_list]) == team_size_constructors
 
+        # Calculate number of driver and constructor moves, as a list of 0s / 1s initially
         driver_moves = [driver_team[i] * self._lp_variables[VarType.TeamDrivers][i] for i in driver_list]
         constructor_moves = [constructor_team[i] * self._lp_variables[VarType.TeamConstructors][i] for i in constructor_list]
 
+        # Variable and constraint for total team moves
         self._lp_variables[VarType.TeamMoves] = team_size_total - lpSum(driver_moves + constructor_moves)
         self._lp_constraints[VarType.TeamMoves] = self._lp_variables[VarType.TeamMoves] <= self._max_moves
 
 
-# model += objective
-#model += constraint_total_value
-#model += constraint_driver_team_size
-#model += constraint_constructor_team_size
-#model += constraint_team_moves
+        # model += objective
+        #model += constraint_total_value
+        #model += constraint_driver_team_size
+        #model += constraint_constructor_team_size
+        #model += constraint_team_moves
 
-# constraint_driver_unavailable = var_team_drivers["RUS"] == 0
-# model += constraint_driver_unavailable
-
-
+        # constraint_driver_unavailable = var_team_drivers["RUS"] == 0
+        # model += constraint_driver_unavailable
 
     @abstractmethod
     def get_objective(self) -> LpAffineExpression:

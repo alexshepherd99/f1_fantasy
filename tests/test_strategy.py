@@ -1,7 +1,7 @@
 import pytest
 from pulp import LpAffineExpression, LpProblem
 
-from linear.strategy import StrategyBase, COST_PROHIBITIVE
+from linear.strategy import StrategyBase, COST_PROHIBITIVE, VarType
 
 
 @pytest.fixture
@@ -246,3 +246,67 @@ def test_get_team_selection_dict():
         list_team
     )
     assert dict_result == dict_expected
+
+
+def test_initialise_sets_up_lp_variables_and_constraints(
+        fixture_all_available_drivers,
+        fixture_all_available_constructors,
+        fixture_asset_prices,
+        fixture_pairings,
+    ):
+    # Create a strategy with one driver that is no longer available to ensure it's included
+    team_drivers = [fixture_all_available_drivers[0], "RUS"]
+    team_constructors = [fixture_all_available_constructors[0]]
+
+    sb = StrategyDummy(
+        team_drivers=team_drivers,
+        team_constructors=team_constructors,
+        all_available_drivers=fixture_all_available_drivers,
+        all_available_constructors=fixture_all_available_constructors,
+        all_available_driver_pairs=fixture_pairings,
+        max_cost=1000.0,
+        max_moves=2,
+        prices_assets=fixture_asset_prices,
+    )
+
+    # Call initialise which should populate _lp_variables and _lp_constraints
+    sb.initialise()
+
+    # Verify expected VarType keys present
+    assert VarType.TeamDrivers in sb._lp_variables
+    assert VarType.TeamConstructors in sb._lp_variables
+    assert VarType.TotalCost in sb._lp_variables
+    assert VarType.TeamMoves in sb._lp_variables
+
+    # TeamDrivers and TeamConstructors variables should be dict-like and include team items
+    drivers_vars = sb._lp_variables[VarType.TeamDrivers]
+    constructors_vars = sb._lp_variables[VarType.TeamConstructors]
+
+    # All available drivers plus the unavailable team driver should be present
+    for d in fixture_all_available_drivers:
+        assert d in drivers_vars
+    # 'RUS' came from the team but was not in available drivers — it must still be present
+    assert "RUS" in drivers_vars
+
+    # All available constructors present
+    for c in fixture_all_available_constructors:
+        assert c in constructors_vars
+
+    # TotalCost and TeamMoves should be LpAffineExpressions (lpSum returns that)
+    from pulp import LpAffineExpression
+
+    assert isinstance(sb._lp_variables[VarType.TotalCost], LpAffineExpression)
+    assert isinstance(sb._lp_variables[VarType.TeamMoves], LpAffineExpression)
+
+    # Constraints for sizes and cost/moves should be present
+    assert VarType.TotalCost in sb._lp_constraints
+    assert VarType.TeamDrivers in sb._lp_constraints
+    assert VarType.TeamConstructors in sb._lp_constraints
+    assert VarType.TeamMoves in sb._lp_constraints
+
+    # The team drivers constraint should enforce exactly the team driver count
+    constraint_drivers = sb._lp_constraints[VarType.TeamDrivers]
+    # The right-hand side of the equality is stored as a negative constant on the
+    # constraint expression (sum(vars) - RHS == 0), so check for -team_size
+    assert constraint_drivers.constant == -len(team_drivers)
+
