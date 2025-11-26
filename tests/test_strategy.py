@@ -1,4 +1,5 @@
 import pytest
+from pulp import LpAffineExpression, LpProblem
 
 from linear.strategy import StrategyBase, COST_PROHIBITIVE
 
@@ -52,6 +53,14 @@ def fixture_pairings() -> dict[str, str]:
     }
 
 
+class StrategyDummy(StrategyBase):
+    def get_objective(self) -> LpAffineExpression:
+        return LpAffineExpression()
+
+    def get_problem(self) -> LpProblem:
+        return LpProblem()
+
+
 def test_construct_strategy(
         fixture_all_available_drivers,
         fixture_all_available_constructors,
@@ -60,7 +69,7 @@ def test_construct_strategy(
     ):
     # Team constructors all present in all available constructors
     with pytest.raises(ValueError) as excinfo:
-        StrategyBase(
+        StrategyDummy(
             team_drivers=[],
             team_constructors=["???"],
             all_available_drivers=[],
@@ -74,7 +83,7 @@ def test_construct_strategy(
 
     # Team count drivers greater than count of available drivers
     with pytest.raises(ValueError) as excinfo:
-        StrategyBase(
+        StrategyDummy(
             team_drivers=["A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",],
             team_constructors=[],
             all_available_drivers=fixture_all_available_drivers,
@@ -88,7 +97,7 @@ def test_construct_strategy(
 
     # Team count constructors greater than count of available constructors
     with pytest.raises(ValueError) as excinfo:
-        StrategyBase(
+        StrategyDummy(
             team_drivers=[],
             team_constructors=["MCL", "MCL", "MCL", "MCL", "MCL", "MCL",],
             all_available_drivers=[],
@@ -102,7 +111,7 @@ def test_construct_strategy(
 
     # All available drivers have a price
     with pytest.raises(ValueError) as excinfo:
-        StrategyBase(
+        StrategyDummy(
             team_drivers=[],
             team_constructors=[],
             all_available_drivers=fixture_all_available_drivers + ["XXX"],
@@ -116,7 +125,7 @@ def test_construct_strategy(
 
     # All available constructors have a price
     with pytest.raises(ValueError) as excinfo:
-        StrategyBase(
+        StrategyDummy(
             team_drivers=[],
             team_constructors=[],
             all_available_drivers=[],
@@ -129,7 +138,7 @@ def test_construct_strategy(
     assert str(excinfo.value) == "Constructor XXX does not have a price"
 
     # Team drivers not available in all available drivers have a high price
-    sb = StrategyBase(
+    sb = StrategyDummy(
         team_drivers=["VER", "RUS"],
         team_constructors=["MCL"],
         all_available_drivers=fixture_all_available_drivers,
@@ -146,7 +155,7 @@ def test_construct_strategy(
     fap2 = fixture_asset_prices.copy()
     fap2["???"] = 99.99
     with pytest.raises(ValueError) as excinfo:
-        StrategyBase(
+        StrategyDummy(
             team_drivers=[],
             team_constructors=[],
             all_available_drivers=fixture_all_available_drivers,
@@ -162,7 +171,7 @@ def test_construct_strategy(
     with pytest.raises(ValueError) as excinfo:
         dp = fixture_pairings.copy()
         dp["XXX"] = "MCL"
-        StrategyBase(
+        StrategyDummy(
             team_drivers=[],
             team_constructors=[],
             all_available_drivers=fixture_all_available_drivers,
@@ -178,7 +187,7 @@ def test_construct_strategy(
     with pytest.raises(ValueError) as excinfo:
         dp = fixture_pairings.copy()
         dp["NOR"] = "XXX"
-        StrategyBase(
+        StrategyDummy(
             team_drivers=[],
             team_constructors=[],
             all_available_drivers=fixture_all_available_drivers,
@@ -194,7 +203,7 @@ def test_construct_strategy(
     with pytest.raises(ValueError) as excinfo:
         fap2 = fixture_asset_prices.copy()
         fap2["XXX"] = 99.99
-        StrategyBase(
+        StrategyDummy(
             team_drivers=[],
             team_constructors=[],
             all_available_drivers=fixture_all_available_drivers + ["XXX"],
@@ -207,7 +216,7 @@ def test_construct_strategy(
     assert str(excinfo.value) == "Driver XXX is not available in driver/constructor pairs"
 
     # Pairings valid, no exception raised
-    sb = StrategyBase(
+    sb = StrategyDummy(
         team_drivers=[],
         team_constructors=[],
         all_available_drivers=fixture_all_available_drivers,
