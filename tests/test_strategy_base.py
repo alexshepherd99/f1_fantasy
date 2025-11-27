@@ -54,14 +54,8 @@ def fixture_pairings() -> dict[str, str]:
 
 
 class StrategyDummy(StrategyBase):
-    def get_objective(self) -> LpAffineExpression:
-        return LpAffineExpression()
-
-    def get_problem(self, strategy_name: str) -> LpProblem:
+    def get_problem(self) -> LpProblem:
         return LpProblem()
-
-    def additional_constraints(self):
-        pass
 
     
 def test_construct_strategy(
@@ -310,6 +304,11 @@ def test_initialise_sets_up_lp_variables_and_constraints(
     # constraint expression (sum(vars) - RHS == 0), so check for -team_size
     assert constraint_drivers.constant == -len(team_drivers)
 
+    # Execute on this dummy will throw an exception as no objective is set
+    with pytest.raises(ValueError) as excinfo:
+        sb.execute()
+    assert str(excinfo.value) == "Objective function not set in the problem"
+
 
 class ExecStrategyDummy(StrategyBase):
     def __init__(self, *args, scores=None, **kwargs):
@@ -317,7 +316,11 @@ class ExecStrategyDummy(StrategyBase):
         # simple map used by the objective to prefer one driver over another
         self.scores = scores or {}
 
-    def get_objective(self):
+    def get_problem(self) -> LpProblem:
+        # Create a maximisation problem so the solver will pick the highest-score
+        # legal team according to the constraints created in initialise()
+        problem = LpProblem("ExecStrategyDummy", LpMaximize)
+
         # Objective uses the already-created LP variables (initialise is called
         # prior to get_objective in execute()). Aim to maximise the total score.
         drivers = self._lp_variables[VarType.TeamDrivers]
@@ -329,17 +332,10 @@ class ExecStrategyDummy(StrategyBase):
         for c, var in constructors.items():
             terms.append(self.scores.get(c, 0.0) * var)
 
-        return lpSum(terms)
+        objective = lpSum(terms)
 
-    def get_problem(self, strategy_name: str) -> LpProblem:
-        # Create a maximisation problem so the solver will pick the highest-score
-        # legal team according to the constraints created in initialise()
-        return LpProblem(strategy_name, LpMaximize)
-
-    def additional_constraints(self):
-        # no additional constraints for the test-case
-        return None
-
+        problem += objective
+        return problem
 
 def test_execute_picks_best_scoring_team():
     # Two drivers available, must pick exactly 1 driver and 1 constructor
@@ -371,7 +367,7 @@ def test_execute_picks_best_scoring_team():
     )
 
     # Execute should initialise, add the objective, add constraints and then solve
-    model = s.execute("test_execute")
+    model = s.execute()
 
     # result should be an LpProblem
     assert isinstance(model, LpProblem)

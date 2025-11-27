@@ -149,16 +149,17 @@ class StrategyBase(ABC):
         self._lp_variables[VarType.TeamMoves] = team_size_total - lpSum(driver_moves + constructor_moves)
         self._lp_constraints[VarType.TeamMoves] = self._lp_variables[VarType.TeamMoves] <= self._max_moves
 
-    def execute(self, strategy_name: str) -> LpProblem:
+    def execute(self) -> LpProblem:
         # Base initialisation and constraints
         self.initialise()
 
-        # Derived class can optionally add additional constraints
-        self.additional_constraints()
-
         # Create the model, add the objective and constraints
-        model = self.get_problem(strategy_name)
-        model += self.get_objective()
+        model = self.get_problem()
+        # Make sure objective is added
+        if model.objective is None:
+            raise ValueError("Objective function not set in the problem")
+        
+        # Add the constraints
         for constraint in self._lp_constraints.values():
             model += constraint
 
@@ -167,13 +168,6 @@ class StrategyBase(ABC):
         return model
 
     @abstractmethod
-    def get_objective(self) -> LpAffineExpression:
+    def get_problem(self) -> LpProblem:
         pass
 
-    @abstractmethod
-    def get_problem(self, strategy_name: str) -> LpProblem:
-        pass
-
-    @abstractmethod
-    def additional_constraints(self):
-        pass

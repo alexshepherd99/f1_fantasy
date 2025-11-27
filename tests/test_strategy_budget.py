@@ -24,7 +24,7 @@ def test_strat_budget_three_swaps(
         max_moves=3,
         prices_assets=fixture_asset_prices,
     )
-    problem = strat.execute("max_budget_strat_3")
+    problem = strat.execute()
 
     drivers = strat._lp_variables[VarType.TeamDrivers]
     assert drivers["VER"].value() == 0.0
@@ -64,7 +64,7 @@ def test_strat_budget_limited_cost(
         max_moves=3,
         prices_assets=fixture_asset_prices,
     )
-    problem = strat.execute("max_budget_limited_cost")
+    problem = strat.execute()
 
     drivers = strat._lp_variables[VarType.TeamDrivers]
     assert drivers["VER"].value() == 0.0
@@ -104,7 +104,7 @@ def test_strat_budget_no_moves(
         max_moves=0,
         prices_assets=fixture_asset_prices,
     )
-    problem = strat.execute("max_budget_no_moves")
+    problem = strat.execute()
 
     drivers = strat._lp_variables[VarType.TeamDrivers]
     assert drivers["VER"].value() == 1.0
@@ -144,7 +144,7 @@ def test_strat_budget_driver_unavailable(
         max_moves=1,
         prices_assets=fixture_asset_prices,
     )
-    problem = strat.execute("max_budget_driver_unavailable")
+    problem = strat.execute()
 
     drivers = strat._lp_variables[VarType.TeamDrivers]
     assert drivers["RUS"].value() == 0.0
