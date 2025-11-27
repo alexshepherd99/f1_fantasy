@@ -170,4 +170,3 @@ class StrategyBase(ABC):
     @abstractmethod
     def get_problem(self) -> LpProblem:
         pass
-
