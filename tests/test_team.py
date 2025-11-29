@@ -74,7 +74,7 @@ def test_team_valuation():
         "PPM Cumulative (3)"
     )
 	
-    team = Team(num_drivers=2, num_constructors=2)
+    team = Team(num_drivers=2, num_constructors=2, unused_budget=3.1)
     team.add_asset(asset_type=AssetType.DRIVER, asset="NOR")
     team.add_asset(asset_type=AssetType.DRIVER, asset="VER")
     team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="FER")
@@ -85,3 +85,49 @@ def test_team_valuation():
 	
     assert price == 11.1 + 27.0 + 22.1 + 27.3
     assert price_old == 11.2 + 26.9 + 22.1 + 27.2
+
+    assert team.total_budget(race_1) == price + 3.1
+    assert team.total_budget_old(race_1) == price_old + 3.1
+
+
+def test_team_size_check():
+    df_driver_2023 = load_archive_data_season(AssetType.DRIVER, 2023)
+    df_constructor_2023 = load_archive_data_season(AssetType.CONSTRUCTOR, 2023)
+    df_driver_pairs_2023 = get_race_driver_constructor_pairs(df_driver_2023)
+    df_driver_ppm_2023 = derivation_cum_tot_driver(df_driver_2023, rolling_window=3)
+    df_constructor_ppm_2023 = derivation_cum_tot_constructor(df_constructor_2023, rolling_window=3)
+
+    race_1 = factory_race(
+        df_driver_ppm_2023,
+        df_constructor_ppm_2023,
+        df_driver_pairs_2023,
+        1,
+        "PPM Cumulative (3)"
+    )
+
+    team = Team(num_drivers=2, num_constructors=2, unused_budget=3.1)
+    team.add_asset(asset_type=AssetType.DRIVER, asset="NOR")
+    team.add_asset(asset_type=AssetType.DRIVER, asset="VER")
+    team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="FER")
+    team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="RED")
+	
+    team.asset_count[AssetType.DRIVER] = 3
+    with pytest.raises(ValueError, match="Team has incorrect number of assets of type Driver, 2 vs 3"):
+        team.total_value(race_1)
+    with pytest.raises(ValueError, match="Team has incorrect number of assets of type Driver, 2 vs 3"):
+        team.total_value_old(race_1)
+
+    team.asset_count[AssetType.DRIVER] = 1
+    with pytest.raises(ValueError, match="Team has incorrect number of assets of type Driver, 2 vs 1"):
+        team.total_value(race_1)
+
+    team.asset_count[AssetType.DRIVER] = 2
+    team.asset_count[AssetType.CONSTRUCTOR] = 3
+    with pytest.raises(ValueError, match="Team has incorrect number of assets of type Constructor, 2 vs 3"):
+        team.total_value(race_1)
+    with pytest.raises(ValueError, match="Team has incorrect number of assets of type Constructor, 2 vs 3"):
+        team.total_value_old(race_1)
+
+    team.asset_count[AssetType.CONSTRUCTOR] = 1
+    with pytest.raises(ValueError, match="Team has incorrect number of assets of type Constructor, 2 vs 1"):
+        team.total_value(race_1)

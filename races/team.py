@@ -6,8 +6,9 @@ from races.season import Race
 
 
 class Team:
-    def __init__(self, num_drivers: int = 5, num_constructors: int = 2):
+    def __init__(self, num_drivers: int = 5, num_constructors: int = 2, unused_budget: float = 0.0):
         self.total_points = 0
+        self.unused_budget = unused_budget
         self.assets: dict[AssetType, list[str]] = {
             AssetType.DRIVER: [],
             AssetType.CONSTRUCTOR: [],
@@ -29,7 +30,13 @@ class Team:
             raise ValueError(f"Unable to remove asset {asset} of type {asset_type} as asset is not present")
         self.assets[asset_type].remove(asset)
 
+    def check_asset_counts(self):
+        for asset_type in self.assets.keys():
+            if len(self.assets[asset_type]) != self.asset_count[asset_type]:
+                raise ValueError(f"Team has incorrect number of assets of type {asset_type.value}, {len(self.assets[asset_type])} vs {self.asset_count[asset_type]}")
+            
     def total_value(self, race: Race) -> float:
+        self.check_asset_counts()
         tot_val = 0.0
         for driver in self.assets[AssetType.DRIVER]:
             tot_val = tot_val + race.drivers[driver].price
@@ -38,12 +45,19 @@ class Team:
         return tot_val
 
     def total_value_old(self, race: Race) -> float:
+        self.check_asset_counts()
         tot_val = 0.0
         for driver in self.assets[AssetType.DRIVER]:
             tot_val = tot_val + race.drivers[driver].price_old
         for constructor in self.assets[AssetType.CONSTRUCTOR]:
             tot_val = tot_val + race.constructors[constructor].price_old
         return tot_val
+
+    def total_budget(self, race: Race) -> float:
+        return self.total_value(race) + self.unused_budget
+
+    def total_budget_old(self, race: Race) -> float:
+        return self.total_value_old(race) + self.unused_budget
 
 
 def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int = 5, num_constructors: int = 2) -> Team:
