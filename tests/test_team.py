@@ -131,3 +131,7 @@ def test_team_size_check():
     team.asset_count[AssetType.CONSTRUCTOR] = 1
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Constructor, 2 vs 1"):
         team.total_value(race_1)
+
+
+def test_factory_team_row():
+    assert False
