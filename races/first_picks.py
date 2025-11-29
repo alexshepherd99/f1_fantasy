@@ -83,7 +83,7 @@ def get_starting_combinations(season: int, race_num: int, min_total_value: float
 if __name__ == "__main__":
     setup_logging()
 
-    df_combinations = get_starting_combinations(2023, 1, 90.0)
+    df_combinations = get_starting_combinations(2023, 1, 98.0)
     logging.info(df_combinations.shape)
     logging.info(df_combinations.sample(2))
 
