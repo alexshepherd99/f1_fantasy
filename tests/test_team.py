@@ -2,8 +2,9 @@ import pytest
 
 from common import AssetType
 from import_data.import_history import load_archive_data_season
-from races.team import Team
+from races.team import Team, factory_team_row
 from races.season import factory_race
+import numpy as np
 from import_data.derivations import (
     derivation_cum_tot_constructor,
     derivation_cum_tot_driver,
@@ -134,4 +135,62 @@ def test_team_size_check():
 
 
 def test_factory_team_row():
-    assert False
+    # Prepare a race instance using real-season derived data
+    df_driver_2023 = load_archive_data_season(AssetType.DRIVER, 2023)
+    df_constructor_2023 = load_archive_data_season(AssetType.CONSTRUCTOR, 2023)
+    df_driver_pairs_2023 = get_race_driver_constructor_pairs(df_driver_2023)
+    df_driver_ppm_2023 = derivation_cum_tot_driver(df_driver_2023, rolling_window=3)
+    df_constructor_ppm_2023 = derivation_cum_tot_constructor(df_constructor_2023, rolling_window=3)
+
+    race_1 = factory_race(
+        df_driver_ppm_2023,
+        df_constructor_ppm_2023,
+        df_driver_pairs_2023,
+        1,
+        "PPM Cumulative (3)"
+    )
+
+    # Build a row dict where exactly the expected number of drivers and constructors
+    # are present (price_old values), and all others are NaN
+    drivers = list(race_1.drivers.keys())
+    constructors = list(race_1.constructors.keys())
+
+    sel_drivers = drivers[:5]
+    sel_constructors = constructors[:2]
+
+    row_assets = {}
+    total_value = 0.0
+    for d in drivers:
+        row_assets[d] = race_1.drivers[d].price_old if d in sel_drivers else np.nan
+        total_value += row_assets[d] if not np.isnan(row_assets[d]) else 0.0
+    for c in constructors:
+        row_assets[c] = race_1.constructors[c].price_old if c in sel_constructors else np.nan
+        total_value += row_assets[c] if not np.isnan(row_assets[c]) else 0.0
+
+    team = factory_team_row(row_assets, race_1, total_budget=100.0)
+
+    # Ensure drivers and constructors were added correctly
+    assert set(team.assets[AssetType.DRIVER]) == set(sel_drivers)
+    assert len(team.assets[AssetType.DRIVER]) == 5
+    assert set(team.assets[AssetType.CONSTRUCTOR]) == set(sel_constructors)
+    assert len(team.assets[AssetType.CONSTRUCTOR]) == 2
+
+    row_assets["total_value"] = 9999.99  # should be ignored by factory_team_row
+
+    # Check remaining budget
+    assert team.unused_budget == 100.0 - total_value
+
+    # Missing one driver should raise an informative ValueError
+    row_missing = row_assets.copy()
+    # remove the first selected driver
+    row_missing[sel_drivers[0]] = np.nan
+    with pytest.raises(ValueError, match="Incorrect number of drivers"):
+        factory_team_row(row_missing, race_1)
+
+    # Too many drivers should raise due to the Team driver limit being exceeded
+    # Add an extra driver from the remaining pool
+    extra_driver = drivers[5]
+    row_extra = row_assets.copy()
+    row_extra[extra_driver] = race_1.drivers[extra_driver].price_old
+    with pytest.raises(ValueError, match="limit already reached"):
+        factory_team_row(row_extra, race_1)

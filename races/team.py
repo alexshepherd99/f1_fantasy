@@ -60,18 +60,24 @@ class Team:
         return self.total_value_old(race) + self.unused_budget
 
 
-def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int = 5, num_constructors: int = 2) -> Team:
+def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int = 5, num_constructors: int = 2, total_budget: float = 100.0) -> Team:
     t = Team(num_drivers=num_drivers, num_constructors=num_constructors)
+
+    total_value = 0.0
+
     for asset in row_assets.keys():
         if not np.isnan(row_assets[asset]):
             if asset in race.drivers.keys():
                 t.add_asset(asset_type=AssetType.DRIVER, asset=asset)
+                total_value += row_assets[asset]
             elif asset in race.constructors.keys():
                 t.add_asset(asset_type=AssetType.CONSTRUCTOR, asset=asset)
+                total_value += row_assets[asset]
 
     if len(t.assets[AssetType.DRIVER]) != num_drivers:
         raise ValueError(f"Incorrect number of drivers in {row_assets.keys()}")
     if len(t.assets[AssetType.CONSTRUCTOR]) != num_constructors:
         raise ValueError(f"Incorrect number of constructors in {row_assets.keys()}")
     
+    t.unused_budget = total_budget - total_value
     return t
