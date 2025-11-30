@@ -2,8 +2,8 @@ import pytest
 
 from common import AssetType
 from import_data.import_history import load_archive_data_season
-from races.team import Team, factory_team_row
-from races.season import factory_race
+from races.team import Team, factory_team_row, factory_team_lists
+from races.season import Race, factory_race
 import numpy as np
 from import_data.derivations import (
     derivation_cum_tot_constructor,
@@ -60,21 +60,24 @@ def test_remove_asset_success_and_missing():
 		team.remove_asset(AssetType.CONSTRUCTOR, "Ferrari")
 
 
-def test_team_valuation():
+@pytest.fixture
+def race_1() -> Race:
     df_driver_2023 = load_archive_data_season(AssetType.DRIVER, 2023)
     df_constructor_2023 = load_archive_data_season(AssetType.CONSTRUCTOR, 2023)
     df_driver_pairs_2023 = get_race_driver_constructor_pairs(df_driver_2023)
     df_driver_ppm_2023 = derivation_cum_tot_driver(df_driver_2023, rolling_window=3)
     df_constructor_ppm_2023 = derivation_cum_tot_constructor(df_constructor_2023, rolling_window=3)
 
-    race_1 = factory_race(
+    return factory_race(
         df_driver_ppm_2023,
         df_constructor_ppm_2023,
         df_driver_pairs_2023,
         1,
         "PPM Cumulative (3)"
     )
-	
+
+
+def test_team_valuation(race_1):
     team = Team(num_drivers=2, num_constructors=2, unused_budget=3.1)
     team.add_asset(asset_type=AssetType.DRIVER, asset="NOR")
     team.add_asset(asset_type=AssetType.DRIVER, asset="VER")
@@ -91,21 +94,7 @@ def test_team_valuation():
     assert team.total_budget_old(race_1) == price_old + 3.1
 
 
-def test_team_size_check():
-    df_driver_2023 = load_archive_data_season(AssetType.DRIVER, 2023)
-    df_constructor_2023 = load_archive_data_season(AssetType.CONSTRUCTOR, 2023)
-    df_driver_pairs_2023 = get_race_driver_constructor_pairs(df_driver_2023)
-    df_driver_ppm_2023 = derivation_cum_tot_driver(df_driver_2023, rolling_window=3)
-    df_constructor_ppm_2023 = derivation_cum_tot_constructor(df_constructor_2023, rolling_window=3)
-
-    race_1 = factory_race(
-        df_driver_ppm_2023,
-        df_constructor_ppm_2023,
-        df_driver_pairs_2023,
-        1,
-        "PPM Cumulative (3)"
-    )
-
+def test_team_size_check(race_1):
     team = Team(num_drivers=2, num_constructors=2, unused_budget=3.1)
     team.add_asset(asset_type=AssetType.DRIVER, asset="NOR")
     team.add_asset(asset_type=AssetType.DRIVER, asset="VER")
@@ -134,22 +123,7 @@ def test_team_size_check():
         team.total_value(race_1)
 
 
-def test_factory_team_row():
-    # Prepare a race instance using real-season derived data
-    df_driver_2023 = load_archive_data_season(AssetType.DRIVER, 2023)
-    df_constructor_2023 = load_archive_data_season(AssetType.CONSTRUCTOR, 2023)
-    df_driver_pairs_2023 = get_race_driver_constructor_pairs(df_driver_2023)
-    df_driver_ppm_2023 = derivation_cum_tot_driver(df_driver_2023, rolling_window=3)
-    df_constructor_ppm_2023 = derivation_cum_tot_constructor(df_constructor_2023, rolling_window=3)
-
-    race_1 = factory_race(
-        df_driver_ppm_2023,
-        df_constructor_ppm_2023,
-        df_driver_pairs_2023,
-        1,
-        "PPM Cumulative (3)"
-    )
-
+def test_factory_team_row(race_1):
     # Build a row dict where exactly the expected number of drivers and constructors
     # are present (price_old values), and all others are NaN
     drivers = list(race_1.drivers.keys())
@@ -194,3 +168,23 @@ def test_factory_team_row():
     row_extra[extra_driver] = race_1.drivers[extra_driver].price_old
     with pytest.raises(ValueError, match="limit already reached"):
         factory_team_row(row_extra, race_1)
+
+
+def test_factory_team_lists(race_1):
+    drivers = [
+         "SAR",  # 4.0
+         "HUL",  # 4.3
+         "DEV",  # 5.0
+         "TSU",  # 4.8
+         "ZHO",  # 4.9
+    ]
+    constructors = [
+        "MCL",  # 9.1
+        "FER",  # 22.1
+    ]
+    # total value of 54.2
+
+    t = factory_team_lists(drivers, constructors, race_1, total_budget=90.0)
+    assert set(t.assets[AssetType.DRIVER]) == set(drivers)
+    assert set(t.assets[AssetType.CONSTRUCTOR]) == set(constructors)
+    assert t.unused_budget == 90.0 - 54.2

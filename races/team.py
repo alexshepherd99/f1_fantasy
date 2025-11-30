@@ -81,3 +81,15 @@ def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int 
     
     t.unused_budget = total_budget - total_value
     return t
+
+
+def factory_team_lists(drivers: list[str], constructors: list[str], race: Race, total_budget: float) -> Team:
+    team = Team(num_drivers=len(drivers), num_constructors=len(constructors))
+
+    for d in drivers:
+        team.add_asset(AssetType.DRIVER, d)
+    for c in constructors:
+        team.add_asset(AssetType.CONSTRUCTOR, c)
+
+    team.unused_budget = total_budget - team.total_value_old(race)
+    return team
