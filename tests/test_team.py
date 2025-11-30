@@ -188,3 +188,28 @@ def test_factory_team_lists(race_1):
     assert set(t.assets[AssetType.DRIVER]) == set(drivers)
     assert set(t.assets[AssetType.CONSTRUCTOR]) == set(constructors)
     assert t.unused_budget == 90.0 - 54.2
+
+
+def test_team_update_points(race_1):
+    drivers = [
+         "SAR",  # 11
+         "HUL",  # -1
+         "DEV",  # 8, highest value driver so gets x2 boost
+         "TSU",  # 8
+         "ZHO",  # 15
+    ]
+    constructors = [
+        "MCL",  # -16   
+        "FER",  # 31
+    ]
+    # total points 56 + 8 bonus = 64
+
+    t = factory_team_lists(drivers, constructors, race_1, total_budget=90.0)
+    assert t.total_points == 0
+
+    assert t.update_points(race_1) == 64
+    assert t.total_points == 64
+
+    # Repeat update, should add points again
+    assert t.update_points(race_1) == 64
+    assert t.total_points == 128

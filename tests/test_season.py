@@ -15,12 +15,12 @@ from races.season import factory_race, factory_season
 def test_factory_race():
     race_1 = factory_race(
         pd.DataFrame(
-            columns=["Driver", "Race", "col", "Price"],
-            data=[["VER", 1, 3.3, 33.33], ["VER", 2, 4.4, 44.44], ["VER", 3, np.nan, 55.55]]
+            columns=["Driver", "Race", "col", "Price", "Points"],
+            data=[["VER", 1, 3.3, 33.33, 13], ["VER", 2, 4.4, 44.44, 14], ["VER", 3, np.nan, 55.55, 15]]
         ),
         pd.DataFrame(
-            columns=["Constructor", "Race", "col", "Price"],
-            data=[["RED", 1, 6.6, 66.66], ["RED", 2, 7.7, 77.77], ["RED", 3, np.nan, 88.88]]
+            columns=["Constructor", "Race", "col", "Price", "Points"],
+            data=[["RED", 1, 6.6, 66.66, 16], ["RED", 2, 7.7, 77.77, 17], ["RED", 3, np.nan, 88.88, 18]]
         ),
         pd.DataFrame(
             columns=["Race", "Constructor", "Driver"],
@@ -36,9 +36,11 @@ def test_factory_race():
     assert race_1.drivers["VER"].driver == "VER"
     assert race_1.drivers["VER"].ppm == 3.3
     assert race_1.drivers["VER"].price == 44.44
+    assert race_1.drivers["VER"].points == 13
     assert race_1.constructors["RED"].constructor == "RED"
     assert race_1.constructors["RED"].ppm == 6.6
     assert race_1.constructors["RED"].price == 77.77
+    assert race_1.constructors["RED"].points == 16
 
 
 def test_factory_race_real_data():

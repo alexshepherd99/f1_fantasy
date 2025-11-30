@@ -59,6 +59,27 @@ class Team:
     def total_budget_old(self, race: Race) -> float:
         return self.total_value_old(race) + self.unused_budget
 
+    def update_points(self, race: Race) -> float:
+        self.check_asset_counts()
+        max_val = 0.0
+        max_val_points = 0
+        new_points = 0
+
+        for driver in self.assets[AssetType.DRIVER]:
+            new_points += race.drivers[driver].points
+            # x2 DRS boost for highest priced driver
+            if race.drivers[driver].price_old > max_val:
+                max_val = race.drivers[driver].price_old
+                max_val_points = race.drivers[driver].points
+
+        for constructor in self.assets[AssetType.CONSTRUCTOR]:
+            new_points += race.constructors[constructor].points
+
+        new_points += max_val_points
+        self.total_points += new_points
+
+        return new_points
+
 
 def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int = 5, num_constructors: int = 2, total_budget: float = 100.0) -> Team:
     t = Team(num_drivers=num_drivers, num_constructors=num_constructors)

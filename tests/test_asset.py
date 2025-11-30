@@ -46,8 +46,8 @@ def test_factory_driver():
 
     driver_1 = factory_driver(
         pd.DataFrame(
-            columns=["Driver", "Race", "col", "Price"],
-            data=[["VER", 1, 3.3, 33.33], ["VER", 2, 4.4, 44.44]]
+            columns=["Driver", "Race", "col", "Price", "Points"],
+            data=[["VER", 1, 3.3, 33.33, 13], ["VER", 2, 4.4, 44.44, 14]]
         ),
         "VER",
         "RED",
@@ -59,11 +59,12 @@ def test_factory_driver():
     assert driver_1.ppm == 3.3
     assert driver_1.price == 44.44
     assert driver_1.price_old == 33.33
+    assert driver_1.points == 13
 
     driver_2 = factory_driver(
         pd.DataFrame(
-            columns=["Driver", "Race", "col", "Price"],
-            data=[["VER", 1, 3.3, 33.33]]
+            columns=["Driver", "Race", "col", "Price", "Points"],
+            data=[["VER", 1, 3.3, 33.33, 13]]
         ),
         "VER",
         "RED",
@@ -75,7 +76,7 @@ def test_factory_driver():
     assert driver_2.ppm == 3.3
     assert driver_2.price is np.nan
     assert driver_2.price_old == 33.33
-
+    assert driver_2.points == 13
 
 
 def test_factory_constructor():
@@ -116,8 +117,8 @@ def test_factory_constructor():
 
     constructor_1 = factory_constructor(
         pd.DataFrame(
-            columns=["Constructor", "Race", "col", "Price"],
-            data=[["RED", 1, 3.3, 33.33], ["RED", 2, 4.4, 44.44]]
+            columns=["Constructor", "Race", "col", "Price", "Points"],
+            data=[["RED", 1, 3.3, 33.33, 13], ["RED", 2, 4.4, 44.44, 14]]
         ),
         "RED",
         1,
@@ -127,11 +128,12 @@ def test_factory_constructor():
     assert constructor_1.ppm == 3.3
     assert constructor_1.price == 44.44
     assert constructor_1.price_old == 33.33
+    assert constructor_1.points == 13
 
     constructor_2 = factory_constructor(
         pd.DataFrame(
-            columns=["Constructor", "Race", "col", "Price"],
-            data=[["RED", 1, 3.3, 33.33]]
+            columns=["Constructor", "Race", "col", "Price", "Points"],
+            data=[["RED", 1, 3.3, 33.33, 13]]
         ),
         "RED",
         1,
@@ -141,3 +143,4 @@ def test_factory_constructor():
     assert constructor_2.ppm == 3.3
     assert constructor_2.price is np.nan
     assert constructor_2.price_old == 33.33
+    assert constructor_2.points == 13

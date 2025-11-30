@@ -5,22 +5,23 @@ from common import AssetType
 
 
 class Asset:
-    def __init__(self, constructor: str, ppm: float, price: float, price_old: float):
+    def __init__(self, constructor: str, ppm: float, price: float, price_old: float, points: int):
         self.constructor = constructor
         self.ppm = ppm
         self.price = price
         self.price_old = price_old
+        self.points = points
 
 
 class Driver(Asset):
-    def __init__(self, driver: str, constructor: str, ppm: float, price: float, price_old: float):
-        super().__init__(constructor, ppm, price, price_old)
+    def __init__(self, driver: str, constructor: str, ppm: float, price: float, price_old: float, points: int):
+        super().__init__(constructor, ppm, price, price_old, points)
         self.driver = driver
 
 
 class Constructor(Asset):
-    def __init__(self, constructor: str, ppm: float, price: float, price_old: float):
-        super().__init__(constructor, ppm, price, price_old)   
+    def __init__(self, constructor: str, ppm: float, price: float, price_old: float, points: int):
+        super().__init__(constructor, ppm, price, price_old, points)   
 
 
 def factory_asset(
@@ -29,7 +30,7 @@ def factory_asset(
     asset_name: str,
     race: int,
     col_ppm: str,    
-) -> tuple[float, float, float]:
+) -> tuple[float, float, float, int]:
 
     df_ppm_filtered = df_ppm_data[
         (df_ppm_data[asset_type.value] == asset_name) &
@@ -56,8 +57,10 @@ def factory_asset(
     
     if not df_price.empty:
         price = df_price.iloc[0]["Price"]
+    
+    points = df_ppm_filtered.iloc[0]["Points"]
 
-    return (ppm, price, price_old)
+    return (ppm, price, price_old, points)
 
 
 def factory_driver(
@@ -67,7 +70,7 @@ def factory_driver(
     race: int,
     col_ppm: str
 ) -> Driver:
-    (ppm, price, price_old) = factory_asset(
+    (ppm, price, price_old, points) = factory_asset(
         df_ppm_data=df_driver_ppm_data,
         asset_type=AssetType.DRIVER,
         asset_name=driver,
@@ -80,7 +83,8 @@ def factory_driver(
         constructor=constructor,
         ppm=ppm,
         price=price,
-        price_old=price_old
+        price_old=price_old,
+        points=points
     )
 
 
@@ -90,7 +94,7 @@ def factory_constructor(
     race: int,
     col_ppm: str
 ) -> Constructor:
-    (ppm, price, price_old) = factory_asset(
+    (ppm, price, price_old, points) = factory_asset(
         df_ppm_data=df_constructor_ppm_data,
         asset_type=AssetType.CONSTRUCTOR,
         asset_name=constructor,
@@ -102,5 +106,6 @@ def factory_constructor(
         constructor=constructor,
         ppm=ppm,
         price=price,
-        price_old=price_old
+        price_old=price_old,
+        points=points
     )
