@@ -21,14 +21,14 @@ def test_strategy_factory():
 
     team = Team(num_drivers=5, num_constructors=2, unused_budget=5.1)
     team.add_asset(AssetType.DRIVER, "SAR")  # 4.0
-    team.add_asset(AssetType.DRIVER, "HUL")  # 4.3
+    team.add_asset(AssetType.DRIVER, "HUL")  # 4.3 / 4.2
     team.add_asset(AssetType.DRIVER, "DEV")  # 5.0
     team.add_asset(AssetType.DRIVER, "TSU")  # 4.8
     team.add_asset(AssetType.DRIVER, "ZHO")  # 4.9
-    team.add_asset(AssetType.CONSTRUCTOR, "MCL")  # 9.1
+    team.add_asset(AssetType.CONSTRUCTOR, "MCL")  # 9.1 / 9.0
     team.add_asset(AssetType.CONSTRUCTOR, "FER")  # 22.1
 
-    total_budget = 4.0 + 4.3 + 5.0 + 4.8 + 4.9 + 9.1 + 22.1 + 5.1  # 59.3
+    total_budget = 4.0 + 4.2 + 5.0 + 4.8 + 4.9 + 9.0 + 22.1 + 5.1  # 59.1
 
     strat_budget = factory_strategy(race, team, StrategyMaxBudget, max_moves=2)
 

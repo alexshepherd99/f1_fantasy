@@ -46,6 +46,7 @@ def test_strat_budget_three_swaps(
     assert constructors["AST"].value() == 1.0
 
     assert problem.objective.value() == 44.5
+    assert strat._lp_variables[VarType.UnusedBudget].value() == 55.5
 
 
 def test_strat_budget_limited_cost(
@@ -86,6 +87,7 @@ def test_strat_budget_limited_cost(
     assert constructors["AST"].value() == 0.0
 
     assert problem.objective.value() == 40.0
+    assert strat._lp_variables[VarType.UnusedBudget].value() == 0.0
 
 
 def test_strat_budget_no_moves(
@@ -126,6 +128,7 @@ def test_strat_budget_no_moves(
     assert constructors["AST"].value() == 0.0
 
     assert problem.objective.value() == 20.0
+    assert strat._lp_variables[VarType.UnusedBudget].value() == 80.0
 
 
 def test_strat_budget_driver_unavailable(
@@ -167,3 +170,4 @@ def test_strat_budget_driver_unavailable(
     assert constructors["AST"].value() == 0.0
 
     assert problem.objective.value() == 29.0
+    assert strat._lp_variables[VarType.UnusedBudget].value() == 71.0
