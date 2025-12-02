@@ -7,7 +7,7 @@ from helpers import load_with_derivations
 from linear.strategy_base import VarType
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_factory import factory_strategy
-from races.season import factory_season
+from races.season import factory_season, Race
 from races.team import Team, factory_team_lists
 
 _FILE_BATCH_RESULTS = "outputs/f1_fantasy_batch_results.xlsx"
@@ -15,18 +15,7 @@ _FILE_BATCH_RESULTS = "outputs/f1_fantasy_batch_results.xlsx"
 
 def load_batch_results(filename:str = _FILE_BATCH_RESULTS) -> pd.DataFrame:
 	if not os.path.exists(filename):
-		return pd.DataFrame(
-			columns=[
-				"strategy",
-				"season",
-                "race",
-				"drivers",
-				"constructors",
-				"points",
-				"total_points",
-				"unused_budget",
-            ]
-        )
+		return pd.DataFrame()
 
 	# Let pandas raise any exceptions encountered while reading a present file
 	# (e.g. corrupt file). This function's contract only requires returning
@@ -34,19 +23,29 @@ def load_batch_results(filename:str = _FILE_BATCH_RESULTS) -> pd.DataFrame:
 	return pd.read_excel(filename)
 
 
-def get_row_results(team: Team, race_num: int, race_points: int, total_budget: float, max_moves: int) -> dict:
+def get_row_results(team: Team, race: Race, race_num: int, race_points: int, max_moves: int) -> dict:
     row = {
         "strategy": "strat_test",
         "season": 2023,
         "race": race_num,
         "drivers": team.assets[AssetType.DRIVER],
         "constructors": team.assets[AssetType.CONSTRUCTOR],
+        "total_value": team.total_value_old(race),
         "points": race_points,
         "total_points": team.total_points,
-        "unused_budget": team.unused_budget,
-        "total_budget": float(total_budget),
+        "unused_budget": round(team.unused_budget, 1),
+        "total_budget": round(float(team.total_budget(season.races[race_num])), 1),
         "max_moves": max_moves,
     }
+    drivers = sorted(team.assets[AssetType.DRIVER])
+    for i in range(0, len(drivers)):
+        row[f"D{i+1}"] = drivers[i]
+        row[f"D{i+1}_val"] = race.drivers[drivers[i]].price_old
+    constructors = sorted(team.assets[AssetType.CONSTRUCTOR])
+    for i in range(0, len(constructors)):
+        row[f"C{i+1}"] = constructors[i]
+        row[f"C{i+1}_val"] = race.constructors[constructors[i]].price_old
+
     logging.info(f"Row results: {row}")
     return row
 
@@ -95,7 +94,7 @@ if __name__ == "__main__":
         max_moves = 3 if bonus_free_transfer else 2
 
         # Create and append a results row for this race selection
-        rows.append(get_row_results(team, race_num, race_points, team.total_budget(season.races[race_num]), max_moves))
+        rows.append(get_row_results(team, season.races[race_num], race_num, race_points, max_moves))
 
         # We don't need to do a strategy for the last race
         if race_num < max_race_num:

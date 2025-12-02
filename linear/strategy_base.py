@@ -136,7 +136,7 @@ class StrategyBase(ABC):
 
         # Variable and constraint for total cost
         self._lp_variables[VarType.TotalCost] = lpSum(cost_drivers + cost_constructors)
-        self._lp_constraints[VarType.TotalCost] = self._lp_variables[VarType.TotalCost] <= self._max_cost
+        self._lp_constraints[VarType.TotalCost] = self._lp_variables[VarType.TotalCost] <= (self._max_cost + 0.0000001)  # Add a small epsilon to avoid floating point issues
 
         # Convenience variable for unused budget, we don't need a constraint for this
         self._lp_variables[VarType.UnusedBudget] = self._max_cost - self._lp_variables[VarType.TotalCost]
