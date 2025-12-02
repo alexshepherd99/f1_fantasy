@@ -7,10 +7,10 @@ from common import AssetType
 class Asset:
     def __init__(self, constructor: str, ppm: float, price: float, price_old: float, points: int):
         self.constructor = constructor
-        self.ppm = ppm
-        self.price = price
-        self.price_old = price_old
-        self.points = points
+        self.ppm: float = float(ppm)
+        self.price: float = float(price)
+        self.price_old: float = float(price_old)
+        self.points:int = int(points)
 
 
 class Driver(Asset):

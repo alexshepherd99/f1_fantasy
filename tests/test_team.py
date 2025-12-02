@@ -13,51 +13,57 @@ from import_data.derivations import (
 
 
 def test_add_asset_success_duplicate_and_limit():
-	team = Team(num_drivers=2, num_constructors=1)
+    team = Team(num_drivers=2, num_constructors=1)
 
-	# successful add
-	team.add_asset(AssetType.DRIVER, "Hamilton")
-	assert "Hamilton" in team.assets[AssetType.DRIVER]
+    # successful add
+    team.add_asset(AssetType.DRIVER, "Hamilton")
+    assert "Hamilton" in team.assets[AssetType.DRIVER]
 
-	# duplicate add raises
-	with pytest.raises(ValueError, match="already present"):
-		team.add_asset(AssetType.DRIVER, "Hamilton")
+    # duplicate add raises
+    with pytest.raises(ValueError, match="already present"):
+        team.add_asset(AssetType.DRIVER, "Hamilton")
 
-	# add second driver ok
-	team.add_asset(AssetType.DRIVER, "Verstappen")
-	assert team.assets[AssetType.DRIVER] == ["Hamilton", "Verstappen"]
+    # add second driver ok
+    team.add_asset(AssetType.DRIVER, "Verstappen")
+    assert team.assets[AssetType.DRIVER] == ["Hamilton", "Verstappen"]
 
-	# exceeding driver limit raises
-	with pytest.raises(ValueError, match="limit already reached"):
-		team.add_asset(AssetType.DRIVER, "Alonso")
+    # exceeding driver limit raises
+    with pytest.raises(ValueError, match="limit already reached"):
+        team.add_asset(AssetType.DRIVER, "Alonso")
 
-	# constructor limit check
-	team_c = Team(num_drivers=1, num_constructors=1)
-	team_c.add_asset(AssetType.CONSTRUCTOR, "Ferrari")
-	with pytest.raises(ValueError, match="limit already reached"):
-		team_c.add_asset(AssetType.CONSTRUCTOR, "Mercedes")
+    # remove all assets
+    team.remove_all_assets()
+    assert team.assets[AssetType.DRIVER] == []
+    assert team.assets[AssetType.CONSTRUCTOR] == []
+    assert len(team.assets.keys()) == 2
+
+    # constructor limit check
+    team_c = Team(num_drivers=1, num_constructors=1)
+    team_c.add_asset(AssetType.CONSTRUCTOR, "Ferrari")
+    with pytest.raises(ValueError, match="limit already reached"):
+        team_c.add_asset(AssetType.CONSTRUCTOR, "Mercedes")
 
 
 def test_remove_asset_success_and_missing():
-	team = Team(num_drivers=2, num_constructors=1)
+    team = Team(num_drivers=2, num_constructors=1)
 
-	team.add_asset(AssetType.DRIVER, "Sainz")
-	team.add_asset(AssetType.CONSTRUCTOR, "Ferrari")
+    team.add_asset(AssetType.DRIVER, "Sainz")
+    team.add_asset(AssetType.CONSTRUCTOR, "Ferrari")
 
-	# successful remove
-	team.remove_asset(AssetType.DRIVER, "Sainz")
-	assert "Sainz" not in team.assets[AssetType.DRIVER]
+    # successful remove
+    team.remove_asset(AssetType.DRIVER, "Sainz")
+    assert "Sainz" not in team.assets[AssetType.DRIVER]
 
-	# removing non-existent driver raises
-	with pytest.raises(ValueError, match="asset is not present"):
-		team.remove_asset(AssetType.DRIVER, "Nonexistent")
+    # removing non-existent driver raises
+    with pytest.raises(ValueError, match="asset is not present"):
+        team.remove_asset(AssetType.DRIVER, "Nonexistent")
 
-	# constructor removal
-	team.remove_asset(AssetType.CONSTRUCTOR, "Ferrari")
-	assert "Ferrari" not in team.assets[AssetType.CONSTRUCTOR]
+    # constructor removal
+    team.remove_asset(AssetType.CONSTRUCTOR, "Ferrari")
+    assert "Ferrari" not in team.assets[AssetType.CONSTRUCTOR]
 
-	with pytest.raises(ValueError, match="asset is not present"):
-		team.remove_asset(AssetType.CONSTRUCTOR, "Ferrari")
+    with pytest.raises(ValueError, match="asset is not present"):
+        team.remove_asset(AssetType.CONSTRUCTOR, "Ferrari")
 
 
 @pytest.fixture
@@ -86,7 +92,7 @@ def test_team_valuation(race_1):
 
     price = team.total_value(race_1)
     price_old = team.total_value_old(race_1)
-	
+    
     assert price == 11.1 + 27.0 + 22.1 + 27.3
     assert price_old == 11.2 + 26.9 + 22.1 + 27.2
 
@@ -100,7 +106,7 @@ def test_team_size_check(race_1):
     team.add_asset(asset_type=AssetType.DRIVER, asset="VER")
     team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="FER")
     team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="RED")
-	
+    
     team.asset_count[AssetType.DRIVER] = 3
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Driver, 2 vs 3"):
         team.total_value(race_1)

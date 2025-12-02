@@ -7,7 +7,7 @@ from races.season import Race
 
 class Team:
     def __init__(self, num_drivers: int = 5, num_constructors: int = 2, unused_budget: float = 0.0):
-        self.total_points = 0
+        self.total_points: int = 0
         self.unused_budget = unused_budget
         self.assets: dict[AssetType, list[str]] = {
             AssetType.DRIVER: [],
@@ -29,6 +29,10 @@ class Team:
         if asset not in self.assets[asset_type]:
             raise ValueError(f"Unable to remove asset {asset} of type {asset_type} as asset is not present")
         self.assets[asset_type].remove(asset)
+
+    def remove_all_assets(self):
+        for asset_type in self.assets.keys():
+            self.assets[asset_type] = []
 
     def check_asset_counts(self):
         for asset_type in self.assets.keys():
@@ -59,11 +63,11 @@ class Team:
     def total_budget_old(self, race: Race) -> float:
         return self.total_value_old(race) + self.unused_budget
 
-    def update_points(self, race: Race) -> float:
+    def update_points(self, race: Race) -> int:
         self.check_asset_counts()
         max_val = 0.0
-        max_val_points = 0
-        new_points = 0
+        max_val_points: int = 0
+        new_points: int = 0
 
         for driver in self.assets[AssetType.DRIVER]:
             new_points += race.drivers[driver].points

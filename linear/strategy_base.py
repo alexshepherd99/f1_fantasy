@@ -11,6 +11,7 @@ class VarType(Enum):
     TeamConstructors = auto()
     TeamMoves = auto()
     TotalCost = auto()
+    UnusedBudget = auto()
 
 
 class StrategyBase(ABC):
@@ -136,6 +137,9 @@ class StrategyBase(ABC):
         # Variable and constraint for total cost
         self._lp_variables[VarType.TotalCost] = lpSum(cost_drivers + cost_constructors)
         self._lp_constraints[VarType.TotalCost] = self._lp_variables[VarType.TotalCost] <= self._max_cost
+
+        # Convenience variable for unused budget, we don't need a constraint for this
+        self._lp_variables[VarType.UnusedBudget] = self._max_cost - self._lp_variables[VarType.TotalCost]
 
         # Constraints for team sizes
         self._lp_constraints[VarType.TeamDrivers] = lpSum([self._lp_variables[VarType.TeamDrivers][i] for i in driver_list]) == team_size_drivers
