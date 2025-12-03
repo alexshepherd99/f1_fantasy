@@ -50,15 +50,15 @@ def test_factory_race_real_data():
     df_driver_ppm_2023 = derivation_cum_tot_driver(df_driver_2023, rolling_window=3)
     df_constructor_ppm_2023 = derivation_cum_tot_constructor(df_constructor_2023, rolling_window=3)
 
-    race_1 = factory_race(
+    race_2 = factory_race(
         df_driver_ppm_2023,
         df_constructor_ppm_2023,
         df_driver_pairs_2023,
-        1,
+        2,
         "PPM Cumulative (3)"
     )
 
-    assert list(race_1.drivers.keys()) == [
+    assert list(race_2.drivers.keys()) == [
         "VER",
         "PER",
         "HAM",
@@ -81,12 +81,12 @@ def test_factory_race_real_data():
         "SAR",
     ]
 
-    assert race_1.drivers["PIA"].constructor == "MCL"
-    assert race_1.drivers["PIA"].driver == "PIA"
-    assert race_1.drivers["PIA"].ppm == pytest.approx(-2.2857, 0.0001)
-    assert race_1.drivers["PIA"].price == 6.9
+    assert race_2.drivers["PIA"].constructor == "MCL"
+    assert race_2.drivers["PIA"].driver == "PIA"
+    assert race_2.drivers["PIA"].ppm == pytest.approx(-2.2857, 0.0001)
+    assert race_2.drivers["PIA"].price == 6.8
 
-    act = list(race_1.constructors.keys())
+    act = list(race_2.constructors.keys())
     exp = [
         "RED",
         "MER",
@@ -103,9 +103,9 @@ def test_factory_race_real_data():
     exp.sort()
     assert act == exp
 
-    assert race_1.constructors["MCL"].constructor == "MCL"
-    assert race_1.constructors["MCL"].ppm == pytest.approx(-1.7582, 0.0001)
-    assert race_1.constructors["MCL"].price == 9.0
+    assert race_2.constructors["MCL"].constructor == "MCL"
+    assert race_2.constructors["MCL"].ppm == pytest.approx(-1.7582, 0.0001)
+    assert race_2.constructors["MCL"].price == 9.0
 
     race_12 = factory_race(
         df_driver_ppm_2023,
