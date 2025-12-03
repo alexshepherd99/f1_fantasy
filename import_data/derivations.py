@@ -31,12 +31,14 @@ def derivation_cum_tot(
     df = df.sort_values(["Season", asset_type.value, "Race"], ignore_index=True)
 
     # Cumulative totals per group, treating NaN as zero
+    # Shift by 1 to exclude current value and sum previous values
     df[col_pts] = df.groupby(["Season", asset_type.value])["Points"] \
-                        .transform(lambda s: s.fillna(0).rolling(window=rolling_window, min_periods=1).sum()) \
+                        .transform(lambda s: s.fillna(0).shift(1).rolling(window=rolling_window, min_periods=1).sum()) \
+                        .fillna(0) \
                         .astype(int)  # if you know result should be integer
 
     df[col_prc] = df.groupby(["Season", asset_type.value])["Price"] \
-                        .transform(lambda s: s.fillna(0.0).rolling(window=rolling_window, min_periods=1).sum())  # float
+                        .transform(lambda s: s.fillna(0.0).shift(1).rolling(window=rolling_window, min_periods=1).sum())  # float
 
     # Expected cumulative points-per-money (ppm) = cumulative points divided by cumulative price.
     # Use the computed cumulative columns to avoid relying on pre-computed input fields.
