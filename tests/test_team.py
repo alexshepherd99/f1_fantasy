@@ -91,13 +91,9 @@ def test_team_valuation(race_1):
     team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="RED")
 
     price = team.total_value(race_1)
-    price_old = team.total_value_old(race_1)
     
-    assert price == 11.1 + 27.0 + 22.1 + 27.3
-    assert price_old == 11.2 + 26.9 + 22.1 + 27.2
-
+    assert price == 11.2 + 26.9 + 22.1 + 27.2
     assert team.total_budget(race_1) == price + 3.1
-    assert team.total_budget_old(race_1) == price_old + 3.1
 
 
 def test_team_size_check(race_1):
@@ -110,8 +106,6 @@ def test_team_size_check(race_1):
     team.asset_count[AssetType.DRIVER] = 3
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Driver, 2 vs 3"):
         team.total_value(race_1)
-    with pytest.raises(ValueError, match="Team has incorrect number of assets of type Driver, 2 vs 3"):
-        team.total_value_old(race_1)
 
     team.asset_count[AssetType.DRIVER] = 1
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Driver, 2 vs 1"):
@@ -121,8 +115,6 @@ def test_team_size_check(race_1):
     team.asset_count[AssetType.CONSTRUCTOR] = 3
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Constructor, 2 vs 3"):
         team.total_value(race_1)
-    with pytest.raises(ValueError, match="Team has incorrect number of assets of type Constructor, 2 vs 3"):
-        team.total_value_old(race_1)
 
     team.asset_count[AssetType.CONSTRUCTOR] = 1
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Constructor, 2 vs 1"):
@@ -141,10 +133,10 @@ def test_factory_team_row(race_1):
     row_assets = {}
     total_value = 0.0
     for d in drivers:
-        row_assets[d] = race_1.drivers[d].price_old if d in sel_drivers else np.nan
+        row_assets[d] = race_1.drivers[d].price if d in sel_drivers else np.nan
         total_value += row_assets[d] if not np.isnan(row_assets[d]) else 0.0
     for c in constructors:
-        row_assets[c] = race_1.constructors[c].price_old if c in sel_constructors else np.nan
+        row_assets[c] = race_1.constructors[c].price if c in sel_constructors else np.nan
         total_value += row_assets[c] if not np.isnan(row_assets[c]) else 0.0
 
     team = factory_team_row(row_assets, race_1, total_budget=100.0)
@@ -171,7 +163,7 @@ def test_factory_team_row(race_1):
     # Add an extra driver from the remaining pool
     extra_driver = drivers[5]
     row_extra = row_assets.copy()
-    row_extra[extra_driver] = race_1.drivers[extra_driver].price_old
+    row_extra[extra_driver] = race_1.drivers[extra_driver].price
     with pytest.raises(ValueError, match="limit already reached"):
         factory_team_row(row_extra, race_1)
 

@@ -35,11 +35,11 @@ def test_factory_race():
     assert race_1.drivers["VER"].constructor == "RED"
     assert race_1.drivers["VER"].driver == "VER"
     assert race_1.drivers["VER"].ppm == 3.3
-    assert race_1.drivers["VER"].price == 44.44
+    assert race_1.drivers["VER"].price == 33.33
     assert race_1.drivers["VER"].points == 13
     assert race_1.constructors["RED"].constructor == "RED"
     assert race_1.constructors["RED"].ppm == 6.6
-    assert race_1.constructors["RED"].price == 77.77
+    assert race_1.constructors["RED"].price == 66.66
     assert race_1.constructors["RED"].points == 16
 
 
@@ -84,7 +84,7 @@ def test_factory_race_real_data():
     assert race_2.drivers["PIA"].constructor == "MCL"
     assert race_2.drivers["PIA"].driver == "PIA"
     assert race_2.drivers["PIA"].ppm == pytest.approx(-2.2857, 0.0001)
-    assert race_2.drivers["PIA"].price == 6.8
+    assert race_2.drivers["PIA"].price == 6.9
 
     act = list(race_2.constructors.keys())
     exp = [
