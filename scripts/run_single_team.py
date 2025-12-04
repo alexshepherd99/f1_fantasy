@@ -128,7 +128,7 @@ if __name__ == "__main__":
         total_budget=100.0  # Starting budget
     )
     
-    _rows = run_for_team(_team, _season, _STARTING_RACE)
+    _rows = run_for_team(_team, _season, _SEASON, _STARTING_RACE)
 
     # Create a DataFrame from the results rows and save to Excel
     df_results = pd.DataFrame(_rows)
