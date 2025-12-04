@@ -1,5 +1,6 @@
 import pytest
-from pulp import LpAffineExpression, LpProblem, lpSum, LpMaximize
+import numpy as np
+from pulp import LpProblem, lpSum, LpMaximize
 
 from linear.strategy_base import StrategyBase, COST_PROHIBITIVE, VarType
 
@@ -377,3 +378,29 @@ def test_execute_picks_best_scoring_team():
     drivers_vars = s._lp_variables[VarType.TeamDrivers]
     assert float(drivers_vars["B"].value()) == 1.0
     assert float(drivers_vars["A"].value()) == 0.0
+
+
+def test_verify_data_available():
+    with pytest.raises(ValueError, match="Asset LAW has invalid DT of nan"):
+        StrategyBase.verify_data_available(
+            all_available_drivers = ["LAW"],
+            all_available_constructors = ["MCL"],
+            data_assets = {"LAW": np.nan, "MCL": 1.0},
+            data_type = "DT"
+        )
+
+    with pytest.raises(ValueError, match="Asset MCL has invalid DT of bad"):
+        StrategyBase.verify_data_available(
+            all_available_drivers = ["LAW"],
+            all_available_constructors = ["MCL"],
+            data_assets = {"LAW": 1.0, "MCL": "bad"},
+            data_type = "DT"
+        )
+
+    with pytest.raises(ValueError, match="Asset LAW has invalid DT of None"):
+        StrategyBase.verify_data_available(
+            all_available_drivers = ["LAW"],
+            all_available_constructors = ["MCL"],
+            data_assets = {"LAW": None, "MCL": 1.0},
+            data_type = "DT"
+        )

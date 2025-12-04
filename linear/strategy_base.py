@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from pulp import LpAffineExpression, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 from enum import Enum, auto
+import numpy as np
 
 
 COST_PROHIBITIVE = 999999.99  # A really big float number that we can never afford
@@ -101,6 +102,11 @@ class StrategyBase(ABC):
         for i in data_assets.keys():
             if (i not in all_available_drivers) and (i not in all_available_constructors):
                 raise ValueError(f"Asset {i} has a {data_type} but is not in available drivers or constructors")
+
+        # All data provided is of type float
+        for i in data_assets.keys():
+            if (not isinstance(data_assets[i], float)) or np.isnan(data_assets[i]):
+                raise ValueError(f"Asset {i} has invalid {data_type} of {data_assets[i]}")
 
     @classmethod
     def get_team_selection_dict(cls, list_assets_available: list[str], list_assets_team: list[str]) -> dict[str, int]:

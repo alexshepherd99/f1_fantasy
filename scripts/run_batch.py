@@ -26,7 +26,7 @@ def load_batch_results(filename:str = _FILE_BATCH_RESULTS) -> pd.DataFrame:
 def get_row_results(team: Team, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int) -> dict:
     row = {
         "strategy": "strat_test",
-        "season": 2023,
+        "season": 2025,
         "race": race_num,
         "drivers": sorted(team.assets[AssetType.DRIVER]),
         "constructors": sorted(team.assets[AssetType.CONSTRUCTOR]),
@@ -55,19 +55,19 @@ def get_row_results(team: Team, race: Race, race_prev: Race, race_num: int, race
 if __name__ == "__main__":
     setup_logging()
 
-    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=2023)
+    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=2025)
     
     season = factory_season(
         df_driver_ppm,
         df_constructor_ppm,
         df_driver_pairs,
-        2023,
+        2025,
         "PPM Cumulative (3)"
     )
 
     race_1 = season.races[1]
 	
-    team_start_drivers = ["SAR", "HUL", "DEV", "TSU", "ZHO"]
+    team_start_drivers = ["SAI", "HAD", "DOO", "BEA", "TSU"]
     team_start_constructors = ["MCL", "FER"]
 
     # This will calculate the unused budget based on starting prices
