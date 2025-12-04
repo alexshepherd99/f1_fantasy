@@ -4,13 +4,13 @@ from races.season import Race
 from races.team import Team
 
 
-def factory_strategy(race: Race, team: Team, strategy: type[StrategyBase], max_moves) -> StrategyBase:
+def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[StrategyBase], max_moves) -> StrategyBase:
     team_drivers = team.assets[AssetType.DRIVER]
     team_constructors = team.assets[AssetType.CONSTRUCTOR]
     all_available_drivers = list(race.drivers.keys())
     all_available_constructors = list(race.constructors.keys())
     all_available_driver_pairs = {driver: race.drivers[driver].constructor for driver in race.drivers}
-    max_cost = team.total_budget(race, race)  # Previous race should not be needed here
+    max_cost = team.total_budget(race, race_prev)  # Previous race, in case current race has no driver valuation
     prices_assets = {}
     for driver in race.drivers.values():
         prices_assets[driver.driver] = driver.price
