@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 import logging
 
@@ -10,23 +9,18 @@ from linear.strategy_factory import factory_strategy
 from races.season import factory_season, Race
 from races.team import Team, factory_team_lists
 
-_FILE_BATCH_RESULTS = "outputs/f1_fantasy_batch_results.xlsx"
+_FILE_BATCH_RESULTS = "outputs/f1_fantasy_results_single.xlsx"
 
-
-def load_batch_results(filename:str = _FILE_BATCH_RESULTS) -> pd.DataFrame:
-	if not os.path.exists(filename):
-		return pd.DataFrame()
-
-	# Let pandas raise any exceptions encountered while reading a present file
-	# (e.g. corrupt file). This function's contract only requires returning
-	# an empty DataFrame when the file does not exist.
-	return pd.read_excel(filename)
+_SEASON = 2025
+_TEAM_START_DRIVERS = ["SAI", "HAD", "DOO", "BEA", "TSU"]
+_TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
+_STARTING_RACE = 2
 
 
 def get_row_results(team: Team, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int) -> dict:
     row = {
         "strategy": "strat_test",
-        "season": 2025,
+        "season": _SEASON,
         "race": race_num,
         "drivers": sorted(team.assets[AssetType.DRIVER]),
         "constructors": sorted(team.assets[AssetType.CONSTRUCTOR]),
@@ -55,26 +49,21 @@ def get_row_results(team: Team, race: Race, race_prev: Race, race_num: int, race
 if __name__ == "__main__":
     setup_logging()
 
-    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=2025)
+    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=_SEASON)
     
     season = factory_season(
         df_driver_ppm,
         df_constructor_ppm,
         df_driver_pairs,
-        2025,
+        _SEASON,
         "PPM Cumulative (3)"
     )
 
-    race_1 = season.races[1]
-	
-    team_start_drivers = ["SAI", "HAD", "DOO", "BEA", "TSU"]
-    team_start_constructors = ["MCL", "FER"]
-
     # This will calculate the unused budget based on starting prices
     team = factory_team_lists(
-        drivers=team_start_drivers,
-        constructors=team_start_constructors,
-        race=race_1,
+        drivers=_TEAM_START_DRIVERS,
+        constructors=_TEAM_START_CONSTRUCTORS,
+        race=season.races[_STARTING_RACE],
         total_budget=100.0  # Starting budget
     )
     
@@ -88,8 +77,7 @@ if __name__ == "__main__":
     used_moves = -1
 
     # Get sorted list of races
-    races = sorted([int(r) for r in season.races.keys()])
-    max_race_num = max(races)
+    races = sorted([int(r) for r in season.races.keys() if r >= _STARTING_RACE])
 
     for race_num in races:
         # Do we have a bonus free transfer from the previous race?

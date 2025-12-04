@@ -2,7 +2,7 @@ import pandas as pd
 import pandas.testing as pdt
 from pathlib import Path
 
-from scripts.run_batch import load_batch_results
+from scripts.run_single_team import load_batch_results
 
 
 def test_load_nonexistent_returns_empty(tmp_path: Path):
