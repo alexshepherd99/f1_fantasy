@@ -66,8 +66,7 @@ def test_remove_asset_success_and_missing():
         team.remove_asset(AssetType.CONSTRUCTOR, "Ferrari")
 
 
-@pytest.fixture
-def race_1() -> Race:
+def race_n(race_num) -> Race:
     df_driver_2023 = load_archive_data_season(AssetType.DRIVER, 2023)
     df_constructor_2023 = load_archive_data_season(AssetType.CONSTRUCTOR, 2023)
     df_driver_pairs_2023 = get_race_driver_constructor_pairs(df_driver_2023)
@@ -78,25 +77,45 @@ def race_1() -> Race:
         df_driver_ppm_2023,
         df_constructor_ppm_2023,
         df_driver_pairs_2023,
-        1,
+        race_num,
         "PPM Cumulative (3)"
     )
 
 
-def test_team_valuation(race_1):
+@pytest.fixture
+def race_1() -> Race:
+    return race_n(1)
+
+
+@pytest.fixture
+def race_13() -> Race:
+    return race_n(13)
+
+
+def test_team_valuation(race_1, race_13):
     team = Team(num_drivers=2, num_constructors=2, unused_budget=3.1)
     team.add_asset(asset_type=AssetType.DRIVER, asset="NOR")
     team.add_asset(asset_type=AssetType.DRIVER, asset="VER")
     team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="FER")
     team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="RED")
 
-    price = team.total_value(race_1)
-    
+    price = team.total_value(race_1, race_13)    
     assert price == 11.2 + 26.9 + 22.1 + 27.2
-    assert team.total_budget(race_1) == price + 3.1
+    assert team.total_budget(race_1, race_13) == price + 3.1
+
+    # When driver is not available in race, use price from previous race
+    team2 = Team(num_drivers=2, num_constructors=2, unused_budget=3.1)
+    team2.add_asset(asset_type=AssetType.DRIVER, asset="LAW")
+    team2.add_asset(asset_type=AssetType.DRIVER, asset="VER")
+    team2.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="FER")
+    team2.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="RED")
+
+    price2 = team2.total_value(race_1, race_13)    
+    assert price2 == 4.5 + 26.9 + 22.1 + 27.2
+    assert team2.total_budget(race_1, race_13) == price2 + 3.1
 
 
-def test_team_size_check(race_1):
+def test_team_size_check(race_1, race_13):
     team = Team(num_drivers=2, num_constructors=2, unused_budget=3.1)
     team.add_asset(asset_type=AssetType.DRIVER, asset="NOR")
     team.add_asset(asset_type=AssetType.DRIVER, asset="VER")
@@ -105,20 +124,20 @@ def test_team_size_check(race_1):
     
     team.asset_count[AssetType.DRIVER] = 3
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Driver, 2 vs 3"):
-        team.total_value(race_1)
+        team.total_value(race_1, race_13)
 
     team.asset_count[AssetType.DRIVER] = 1
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Driver, 2 vs 1"):
-        team.total_value(race_1)
+        team.total_value(race_1, race_13)
 
     team.asset_count[AssetType.DRIVER] = 2
     team.asset_count[AssetType.CONSTRUCTOR] = 3
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Constructor, 2 vs 3"):
-        team.total_value(race_1)
+        team.total_value(race_1, race_13)
 
     team.asset_count[AssetType.CONSTRUCTOR] = 1
     with pytest.raises(ValueError, match="Team has incorrect number of assets of type Constructor, 2 vs 1"):
-        team.total_value(race_1)
+        team.total_value(race_1, race_13)
 
 
 def test_factory_team_row(race_1):

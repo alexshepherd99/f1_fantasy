@@ -39,17 +39,23 @@ class Team:
             if len(self.assets[asset_type]) != self.asset_count[asset_type]:
                 raise ValueError(f"Team has incorrect number of assets of type {asset_type.value}, {len(self.assets[asset_type])} vs {self.asset_count[asset_type]}")
             
-    def total_value(self, race: Race) -> float:
+    def total_value(self, race: Race, race_prev: Race) -> float:
         self.check_asset_counts()
         tot_val = 0.0
+
         for driver in self.assets[AssetType.DRIVER]:
-            tot_val = tot_val + race.drivers[driver].price
+            # If driver is not in current race, use previous race price
+            if driver not in race.drivers:
+                tot_val = tot_val + race_prev.drivers[driver].price
+            else:
+                tot_val = tot_val + race.drivers[driver].price
+
         for constructor in self.assets[AssetType.CONSTRUCTOR]:
             tot_val = tot_val + race.constructors[constructor].price
         return tot_val
 
-    def total_budget(self, race: Race) -> float:
-        return self.total_value(race) + self.unused_budget
+    def total_budget(self, race: Race, race_prev: Race) -> float:
+        return self.total_value(race, race_prev) + self.unused_budget
 
     def update_points(self, race: Race) -> int:
         self.check_asset_counts()
@@ -104,5 +110,5 @@ def factory_team_lists(drivers: list[str], constructors: list[str], race: Race, 
     for c in constructors:
         team.add_asset(AssetType.CONSTRUCTOR, c)
 
-    team.unused_budget = total_budget - team.total_value(race)
+    team.unused_budget = total_budget - team.total_value(race, race)  # Previous race should not be required here
     return team

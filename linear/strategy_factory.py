@@ -10,7 +10,7 @@ def factory_strategy(race: Race, team: Team, strategy: type[StrategyBase], max_m
     all_available_drivers = list(race.drivers.keys())
     all_available_constructors = list(race.constructors.keys())
     all_available_driver_pairs = {driver: race.drivers[driver].constructor for driver in race.drivers}
-    max_cost = team.total_budget(race)
+    max_cost = team.total_budget(race, race)  # Previous race should not be needed here
     prices_assets = {}
     for driver in race.drivers.values():
         prices_assets[driver.driver] = driver.price
