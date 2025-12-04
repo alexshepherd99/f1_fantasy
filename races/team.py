@@ -18,6 +18,11 @@ class Team:
             AssetType.CONSTRUCTOR: num_constructors,
         }
 
+    def __str__(self) -> str:
+        drivers = ",".join(sorted(self.assets[AssetType.DRIVER]))
+        constructors = ",".join(sorted(self.assets[AssetType.CONSTRUCTOR]))
+        return f"({drivers})({constructors})"
+
     def add_asset(self, asset_type: AssetType, asset: str):
         if asset in self.assets[asset_type]:
             raise ValueError(f"Asset {asset} of type {asset_type} already present")

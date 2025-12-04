@@ -61,13 +61,13 @@ def get_starting_combinations(season: int, race_num: int, min_total_value: float
     df_combinations = set_combination_assets(get_all_team_combinations(), race)
 
     for driver in race.drivers.keys():
-        price_old = race.drivers[driver].price_old
-        df_combinations[driver] = df_combinations[driver].replace(1, price_old)
+        price = race.drivers[driver].price
+        df_combinations[driver] = df_combinations[driver].replace(1, price)
         df_combinations[driver] = df_combinations[driver].replace(0, np.nan)
 
     for constructor in race.constructors.keys():
-        price_old = race.constructors[constructor].price_old
-        df_combinations[constructor] = df_combinations[constructor].replace(1, price_old)
+        price = race.constructors[constructor].price
+        df_combinations[constructor] = df_combinations[constructor].replace(1, price)
         df_combinations[constructor] = df_combinations[constructor].replace(0, np.nan)
 
     df_combinations["total_value"] = df_combinations.sum(axis=1)
@@ -83,7 +83,7 @@ def get_starting_combinations(season: int, race_num: int, min_total_value: float
 if __name__ == "__main__":
     setup_logging()
 
-    df_combinations = get_starting_combinations(2023, 1, 98.0)
+    df_combinations = get_starting_combinations(2023, 1, 99.0)
     logging.info(df_combinations.shape)
     logging.info(df_combinations.sample(2))
 

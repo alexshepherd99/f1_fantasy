@@ -17,13 +17,11 @@ _TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
 _STARTING_RACE = 1
 
 
-def get_row_intermediate_results(team: Team, season: Season, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int) -> dict:
+def get_row_intermediate_results(team: Team, season: Season, season_year: int, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int) -> dict:
     row = {
         "strategy": "strat_test",
-        "season": _SEASON,
+        "season": season_year,
         "race": race_num,
-        "drivers": sorted(team.assets[AssetType.DRIVER]),
-        "constructors": sorted(team.assets[AssetType.CONSTRUCTOR]),
         "total_value": team.total_value(race, race_prev),
         "points": race_points,
         "total_points": team.total_points,
@@ -46,7 +44,7 @@ def get_row_intermediate_results(team: Team, season: Season, race: Race, race_pr
     return row
 
 
-def run_for_team(team: Team, season: Season, race_num_start: int) -> list:
+def run_for_team(team: Team, season: Season, season_year: int, race_num_start: int) -> list:
     # Collection to put all the results rows into
     rows = []
 
@@ -92,7 +90,19 @@ def run_for_team(team: Team, season: Season, race_num_start: int) -> list:
         race_points = team.update_points(season.races[race_num])
 
         # Create and append a results row for this race selection
-        rows.append(get_row_intermediate_results(team, season, season.races[race_num], race_prev, race_num, race_points, max_moves, used_moves))
+        rows.append(
+            get_row_intermediate_results(
+                team,
+                season,
+                season_year,
+                season.races[race_num],
+                race_prev,
+                race_num,
+                race_points,
+                max_moves,
+                used_moves
+            )
+        )
 
     return rows
 

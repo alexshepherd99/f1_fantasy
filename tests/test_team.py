@@ -230,3 +230,13 @@ def test_team_update_points(race_1):
     # Repeat update, should add points again
     assert t.update_points(race_1) == 64
     assert t.total_points == 128
+
+
+def test_team_string():
+    team = Team(num_drivers=3, num_constructors=2, unused_budget=3.1)
+    team.add_asset(asset_type=AssetType.DRIVER, asset="LAW")
+    team.add_asset(asset_type=AssetType.DRIVER, asset="VER")
+    team.add_asset(asset_type=AssetType.DRIVER, asset="SHP")
+    team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="RED")
+    team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="FER")
+    assert f"{team}" == "(LAW,SHP,VER)(FER,RED)"
