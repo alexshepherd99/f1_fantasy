@@ -6,7 +6,7 @@ from helpers import load_with_derivations
 from linear.strategy_base import VarType
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_factory import factory_strategy
-from races.season import factory_season, Race
+from races.season import Season, factory_season, Race
 from races.team import Team, factory_team_lists
 
 _FILE_BATCH_RESULTS = "outputs/f1_fantasy_results_single.xlsx"
@@ -14,10 +14,10 @@ _FILE_BATCH_RESULTS = "outputs/f1_fantasy_results_single.xlsx"
 _SEASON = 2025
 _TEAM_START_DRIVERS = ["SAI", "HAD", "DOO", "BEA", "TSU"]
 _TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
-_STARTING_RACE = 2
+_STARTING_RACE = 1
 
 
-def get_row_results(team: Team, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int) -> dict:
+def get_row_intermediate_results(team: Team, season: Season, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int) -> dict:
     row = {
         "strategy": "strat_test",
         "season": _SEASON,
@@ -42,31 +42,11 @@ def get_row_results(team: Team, race: Race, race_prev: Race, race_num: int, race
         row[f"C{i+1}"] = constructors[i]
         row[f"C{i+1}_val"] = race.constructors[constructors[i]].price
         row[f"C{i+1}_pts"] = race.constructors[constructors[i]].points
-    logging.info(f"Row results: {row}")
+    #logging.info(f"Row results: {row}")
     return row
 
 
-if __name__ == "__main__":
-    setup_logging()
-
-    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=_SEASON)
-    
-    season = factory_season(
-        df_driver_ppm,
-        df_constructor_ppm,
-        df_driver_pairs,
-        _SEASON,
-        "PPM Cumulative (3)"
-    )
-
-    # This will calculate the unused budget based on starting prices
-    team = factory_team_lists(
-        drivers=_TEAM_START_DRIVERS,
-        constructors=_TEAM_START_CONSTRUCTORS,
-        race=season.races[_STARTING_RACE],
-        total_budget=100.0  # Starting budget
-    )
-    
+def run_for_team(team: Team, season: Season, race_num_start: int) -> list:
     # Collection to put all the results rows into
     rows = []
 
@@ -77,7 +57,7 @@ if __name__ == "__main__":
     used_moves = -1
 
     # Get sorted list of races
-    races = sorted([int(r) for r in season.races.keys() if r >= _STARTING_RACE])
+    races = sorted([int(r) for r in season.races.keys() if r >= race_num_start])
 
     for race_num in races:
         # Do we have a bonus free transfer from the previous race?
@@ -112,9 +92,35 @@ if __name__ == "__main__":
         race_points = team.update_points(season.races[race_num])
 
         # Create and append a results row for this race selection
-        rows.append(get_row_results(team, season.races[race_num], race_prev, race_num, race_points, max_moves, used_moves))
+        rows.append(get_row_intermediate_results(team, season, season.races[race_num], race_prev, race_num, race_points, max_moves, used_moves))
+
+    return rows
+
+
+if __name__ == "__main__":
+    setup_logging()
+
+    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=_SEASON)
+    
+    _season = factory_season(
+        df_driver_ppm,
+        df_constructor_ppm,
+        df_driver_pairs,
+        _SEASON,
+        "PPM Cumulative (3)"
+    )
+
+    # This will calculate the unused budget based on starting prices
+    _team = factory_team_lists(
+        drivers=_TEAM_START_DRIVERS,
+        constructors=_TEAM_START_CONSTRUCTORS,
+        race=_season.races[_STARTING_RACE],
+        total_budget=100.0  # Starting budget
+    )
+    
+    _rows = run_for_team(_team, _season, _STARTING_RACE)
 
     # Create a DataFrame from the results rows and save to Excel
-    df_results = pd.DataFrame(rows)
+    df_results = pd.DataFrame(_rows)
     df_results.to_excel(_FILE_BATCH_RESULTS, index=False)
     logging.info(f"Saved batch results to {_FILE_BATCH_RESULTS}")
