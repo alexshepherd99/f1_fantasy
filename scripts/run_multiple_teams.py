@@ -29,6 +29,9 @@ def open_batch_results_file(fn: str) -> pd.DataFrame:
 if __name__ == "__main__":
     setup_logging()
 
+    # TODO allow strategy to make x2 DRS selection
+    # TODO asset data points like PPM should be added as indexed array, with an enum as the type
+
     (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=_SEASON)
     
     _season = factory_season(

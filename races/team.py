@@ -9,6 +9,7 @@ class Team:
     def __init__(self, num_drivers: int = 5, num_constructors: int = 2, unused_budget: float = 0.0):
         self.total_points: int = 0
         self.unused_budget = unused_budget
+        self.drs_driver = ""
         self.assets: dict[AssetType, list[str]] = {
             AssetType.DRIVER: [],
             AssetType.CONSTRUCTOR: [],
@@ -64,24 +65,34 @@ class Team:
 
     def update_points(self, race: Race) -> int:
         self.check_asset_counts()
-        max_val = 0.0
-        max_val_points: int = 0
         new_points: int = 0
 
         for driver in self.assets[AssetType.DRIVER]:
             new_points += race.drivers[driver].points
-            # x2 DRS boost for highest priced driver
-            if race.drivers[driver].price > max_val:
-                max_val = race.drivers[driver].price
-                max_val_points = race.drivers[driver].points
 
         for constructor in self.assets[AssetType.CONSTRUCTOR]:
             new_points += race.constructors[constructor].points
 
-        new_points += max_val_points
+        new_points += self.get_drs_points(race)
         self.total_points += new_points
 
         return new_points
+    
+    def get_drs_points(self, race: Race) -> int:
+        if self.drs_driver in race.drivers:
+            return race.drivers[self.drs_driver].points
+        
+        else:
+            max_val = 0.0
+            max_val_points: int = 0
+
+            for driver in self.assets[AssetType.DRIVER]:
+                # x2 DRS boost for highest priced driver
+                if race.drivers[driver].price > max_val:
+                    max_val = race.drivers[driver].price
+                    max_val_points = race.drivers[driver].points
+
+            return max_val_points
 
 
 def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int = 5, num_constructors: int = 2, total_budget: float = 100.0) -> Team:

@@ -231,6 +231,18 @@ def test_team_update_points(race_1):
     assert t.update_points(race_1) == 64
     assert t.total_points == 128
 
+    # Set a different DRS driver, should be different points
+    t.drs_driver = "ZHO"
+    # total points = 56 + bonus 15 = 71
+    assert t.update_points(race_1) == 71
+    assert t.total_points == 199
+
+    # Set DRS driver which we don't have, should default back to the most expensive driver
+    t.drs_driver = "XXX"
+    # total points 56 + 8 bonus = 64
+    assert t.update_points(race_1) == 64
+    assert t.total_points == 263
+
 
 def test_team_string():
     team = Team(num_drivers=3, num_constructors=2, unused_budget=3.1)
