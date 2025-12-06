@@ -180,3 +180,8 @@ class StrategyBase(ABC):
     @abstractmethod
     def get_problem(self) -> LpProblem:
         pass
+
+    def get_drs_driver(self) -> str:
+        # By default, strategy won't select a DRS driver, so the team point scoring will just select the highest
+        # value driver for DRS.
+        return ""

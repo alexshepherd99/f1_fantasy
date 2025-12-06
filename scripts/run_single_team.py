@@ -29,6 +29,7 @@ def get_row_intermediate_results(strat_name: str, team: Team, season: Season, se
         "total_budget": round(float(team.total_budget(season.races[race_num], race_prev)), 1),
         "max_moves": max_moves,
         "used_moves": used_moves,
+        "drs_driver": team.drs_driver,
     }
     drivers = sorted(team.assets[AssetType.DRIVER])
     for i in range(0, len(drivers)):
@@ -85,6 +86,9 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
             team.add_asset(AssetType.DRIVER, d)
         for c in model_constructors:
             team.add_asset(AssetType.CONSTRUCTOR, c)
+
+        # Update the team DRS driver
+        team.drs_driver = strat.get_drs_driver()
 
         # Update team points based on the last race
         race_points = team.update_points(season.races[race_num])
