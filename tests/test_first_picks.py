@@ -81,8 +81,8 @@ def test_get_starting_combinations_replaces_prices_and_filters(monkeypatch):
 
 		# create dummy race object with price_old values
 		class DummyAsset:
-			def __init__(self, price_old):
-				self.price_old = price_old
+			def __init__(self, price):
+				self.price = price
 
 		class DummyRace:
 			def __init__(self):

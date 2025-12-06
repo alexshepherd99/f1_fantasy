@@ -3,7 +3,7 @@ import logging
 
 from common import AssetType, setup_logging
 from helpers import load_with_derivations
-from linear.strategy_base import VarType
+from linear.strategy_base import StrategyBase, VarType
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_factory import factory_strategy
 from races.season import Season, factory_season, Race
@@ -17,9 +17,9 @@ _TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
 _STARTING_RACE = 1
 
 
-def get_row_intermediate_results(team: Team, season: Season, season_year: int, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int) -> dict:
+def get_row_intermediate_results(strat_name: str, team: Team, season: Season, season_year: int, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int) -> dict:
     row = {
-        "strategy": "strat_test",
+        "strategy": strat_name,
         "season": season_year,
         "race": race_num,
         "total_value": team.total_value(race, race_prev),
@@ -44,7 +44,7 @@ def get_row_intermediate_results(team: Team, season: Season, season_year: int, r
     return row
 
 
-def run_for_team(team: Team, season: Season, season_year: int, race_num_start: int) -> list:
+def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, season_year: int, race_num_start: int) -> list:
     # Collection to put all the results rows into
     rows = []
 
@@ -62,7 +62,7 @@ def run_for_team(team: Team, season: Season, season_year: int, race_num_start: i
         max_moves = 3 if bonus_free_transfer else 2
 
         race_prev = season.races[race_num] if race_num == 1 else season.races[race_num - 1]
-        strat = factory_strategy(season.races[race_num], race_prev, team, StrategyMaxBudget, max_moves=max_moves)
+        strat = factory_strategy(season.races[race_num], race_prev, team, strategy, max_moves=max_moves)
 
         model = strat.execute()
 
@@ -92,6 +92,7 @@ def run_for_team(team: Team, season: Season, season_year: int, race_num_start: i
         # Create and append a results row for this race selection
         rows.append(
             get_row_intermediate_results(
+                strategy.__name__,
                 team,
                 season,
                 season_year,
@@ -128,7 +129,7 @@ if __name__ == "__main__":
         total_budget=100.0  # Starting budget
     )
     
-    _rows = run_for_team(_team, _season, _SEASON, _STARTING_RACE)
+    _rows = run_for_team(StrategyMaxBudget, _team, _season, _SEASON, _STARTING_RACE)
 
     # Create a DataFrame from the results rows and save to Excel
     df_results = pd.DataFrame(_rows)
