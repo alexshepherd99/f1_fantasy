@@ -1,4 +1,4 @@
-from pulp import LpProblem, LpMaximize, LpAffineExpression
+from pulp import LpProblem, LpMaximize
 
 from linear.strategy_base import StrategyBase, VarType
 
@@ -8,6 +8,6 @@ class StrategyMaxBudget(StrategyBase):
         super().__init__(*args, **kwargs)
 
     def get_problem(self) -> LpProblem:
-        problem = LpProblem("StrategyMaxBudget", LpMaximize)
+        problem = LpProblem(self.__class__.__name__, LpMaximize)
         problem += self._lp_variables[VarType.TotalCost]
         return problem

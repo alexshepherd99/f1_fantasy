@@ -29,7 +29,7 @@ def open_batch_results_file(fn: str) -> pd.DataFrame:
 if __name__ == "__main__":
     setup_logging()
 
-    # TODO asset data points like PPM should be added as indexed array, with an enum as the type
+    # TODO asset data points like PPM should be added as dict of dicts, with derivations class providing the key
 
     (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=_SEASON)
     

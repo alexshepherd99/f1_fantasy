@@ -6,6 +6,7 @@ from helpers import load_with_derivations
 from linear.strategy_base import StrategyBase, VarType
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_factory import factory_strategy
+from linear.strategy_zero_stop import StrategyZeroStop
 from races.season import Season, factory_season, Race
 from races.team import Team, factory_team_lists
 
@@ -133,7 +134,7 @@ if __name__ == "__main__":
         total_budget=100.0  # Starting budget
     )
     
-    _rows = run_for_team(StrategyMaxBudget, _team, _season, _SEASON, _STARTING_RACE)
+    _rows = run_for_team(StrategyZeroStop, _team, _season, _SEASON, _STARTING_RACE)
 
     # Create a DataFrame from the results rows and save to Excel
     df_results = pd.DataFrame(_rows)
