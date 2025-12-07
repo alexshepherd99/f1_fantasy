@@ -1,7 +1,22 @@
 import pandas as pd
 import numpy as np
+from enum import StrEnum
 
 from common import AssetType
+
+
+class DerivationType(StrEnum):
+    POINTS_CUMULATIVE = "Points Cumulative"
+    PRICE_CUMULATIVE = "Price Cumulative"
+    PPM_CUMULATIVE = "PPM Cumulative"
+    P2PM_CUMULATIVE = "P2PM Cumulative"
+
+
+def get_derivation_name(deriv_type: DerivationType, deriv_param: int) -> str:
+    if deriv_param == -1:
+        return f"{deriv_type.value}"
+    else:
+        return f"{deriv_type.value} ({deriv_param})"
 
 
 def derivation_cum_tot(
@@ -10,16 +25,14 @@ def derivation_cum_tot(
         rolling_window: int = -1
     ) -> pd.DataFrame:
 
+    col_pts = get_derivation_name(DerivationType.POINTS_CUMULATIVE, rolling_window)
+    col_prc = get_derivation_name(DerivationType.PRICE_CUMULATIVE, rolling_window)
+    col_ppm = get_derivation_name(DerivationType.PPM_CUMULATIVE, rolling_window)
+    col_p2pm = get_derivation_name(DerivationType.P2PM_CUMULATIVE, rolling_window)
+
     # If no rolling window, assume total cumulative
     if rolling_window == -1:
         rolling_window = len(df_input.index)
-        col_pts = "Points Cumulative"
-        col_prc = "Price Cumulative"
-        col_ppm = "PPM Cumulative"
-    else:
-        col_pts = f"Points Cumulative ({rolling_window})"
-        col_prc = f"Price Cumulative ({rolling_window})"
-        col_ppm = f"PPM Cumulative ({rolling_window})"
 
     # Just columns of interest
     df = df_input[["Season", "Race", asset_type.value, "Points", "Price"]]
@@ -48,6 +61,14 @@ def derivation_cum_tot(
         .div(df[col_prc]) 
         .replace([np.inf, -np.inf], np.nan)
     )
+
+    # Points squared per million enhanced the above to give greater emphasis to points scored, but still reflecting good
+    # value drivers who return a high ppm
+    #df[col_p2pm] = (
+    #    (df[col_pts].astype(float) * df[col_pts].astype(float))
+    #    .div(df[col_prc]) 
+    #    .replace([np.inf, -np.inf], np.nan)
+    #)
 
     return df
 
