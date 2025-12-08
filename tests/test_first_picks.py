@@ -113,4 +113,6 @@ def test_get_starting_combinations_replaces_prices_and_filters(monkeypatch):
 
 def test_get_starting_combinations_standalone():
 	df_combinations = get_starting_combinations(2023, 1, 99.0)
-    assert df_combinations.shape == (15283, 2)
+    #assert df_combinations.shape == (15283, 2)
+	assert False
+
