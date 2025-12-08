@@ -38,7 +38,6 @@ if __name__ == "__main__":
         df_constructor_ppm,
         df_driver_pairs,
         _SEASON,
-        "PPM Cumulative (3)"
     )
     
     _race_first = factory_race(
@@ -46,7 +45,6 @@ if __name__ == "__main__":
         df_constructor_ppm,
         df_driver_pairs,
         1,
-        "PPM Cumulative (3)"
     )
 
     _df_batch_results = open_batch_results_file(_FILE_BATCH_RESULTS)

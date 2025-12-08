@@ -123,7 +123,6 @@ if __name__ == "__main__":
         df_constructor_ppm,
         df_driver_pairs,
         _SEASON,
-        "PPM Cumulative (3)"
     )
 
     # This will calculate the unused budget based on starting prices

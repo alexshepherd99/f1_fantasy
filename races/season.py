@@ -26,7 +26,6 @@ def factory_race(
     df_constructor_ppm_data: pd.DataFrame,
     df_driver_pairings: pd.DataFrame,
     race: int,
-    col_ppm: str       
 ) -> Race:
     df_filtered_pairs = df_driver_pairings[df_driver_pairings["Race"] == race]
 
@@ -38,7 +37,6 @@ def factory_race(
             driver=row["Driver"],
             constructor=row["Constructor"],
             race=race,
-            col_ppm=col_ppm
         )
 
     # Add constructors
@@ -48,7 +46,6 @@ def factory_race(
             df_constructor_ppm_data,
             constructor=constructor,
             race=race,
-            col_ppm=col_ppm
         )
 
     return Race(race=race, drivers=drivers, constructors=constructors)
@@ -59,7 +56,6 @@ def factory_season(
     df_constructor_ppm_data: pd.DataFrame,
     df_driver_pairings: pd.DataFrame,
     season: int,
-    col_ppm: str       
 ) -> Season:
     races = {}
     for race in df_driver_pairings["Race"].unique():
@@ -68,6 +64,5 @@ def factory_season(
             df_constructor_ppm_data=df_constructor_ppm_data,
             df_driver_pairings=df_driver_pairings,
             race=race,
-            col_ppm=col_ppm
         )
     return Season(season=season, races=races)

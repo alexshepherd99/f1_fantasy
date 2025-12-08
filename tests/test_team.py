@@ -78,7 +78,6 @@ def race_n(race_num) -> Race:
         df_constructor_ppm_2023,
         df_driver_pairs_2023,
         race_num,
-        "PPM Cumulative (3)"
     )
 
 

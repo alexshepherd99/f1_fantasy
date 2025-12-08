@@ -27,18 +27,17 @@ def test_factory_race():
             data=[[1, "RED", "VER"], [2, "RED", "VER"]]
         ),
         1,
-        "col"
     )
     assert race_1.race == 1
     assert len(race_1.drivers) == 1
     assert len(race_1.constructors) == 1
     assert race_1.drivers["VER"].constructor == "RED"
     assert race_1.drivers["VER"].driver == "VER"
-    assert race_1.drivers["VER"].ppm == 3.3
+    assert race_1.drivers["VER"].derivs["col"] == 3.3
     assert race_1.drivers["VER"].price == 33.33
     assert race_1.drivers["VER"].points == 13
     assert race_1.constructors["RED"].constructor == "RED"
-    assert race_1.constructors["RED"].ppm == 6.6
+    assert race_1.constructors["RED"].derivs["col"] == 6.6
     assert race_1.constructors["RED"].price == 66.66
     assert race_1.constructors["RED"].points == 16
 
@@ -55,7 +54,6 @@ def test_factory_race_real_data():
         df_constructor_ppm_2023,
         df_driver_pairs_2023,
         2,
-        "PPM Cumulative (3)"
     )
 
     assert list(race_2.drivers.keys()) == [
@@ -83,7 +81,7 @@ def test_factory_race_real_data():
 
     assert race_2.drivers["PIA"].constructor == "MCL"
     assert race_2.drivers["PIA"].driver == "PIA"
-    assert race_2.drivers["PIA"].ppm == pytest.approx(-2.2857, 0.0001)
+    assert race_2.drivers["PIA"].derivs["PPM Cumulative (3)"] == pytest.approx(-2.2857, 0.0001)
     assert race_2.drivers["PIA"].price == 6.9
 
     act = list(race_2.constructors.keys())
@@ -104,7 +102,7 @@ def test_factory_race_real_data():
     assert act == exp
 
     assert race_2.constructors["MCL"].constructor == "MCL"
-    assert race_2.constructors["MCL"].ppm == pytest.approx(-1.7582, 0.0001)
+    assert race_2.constructors["MCL"].derivs["PPM Cumulative (3)"] == pytest.approx(-1.7582, 0.0001)
     assert race_2.constructors["MCL"].price == 9.0
 
     race_12 = factory_race(
@@ -112,7 +110,6 @@ def test_factory_race_real_data():
         df_constructor_ppm_2023,
         df_driver_pairs_2023,
         12,
-        "PPM Cumulative (3)"
     )
 
     assert list(race_12.drivers.keys()) == [
@@ -155,7 +152,6 @@ def test_factory_season_real_data():
         df_constructor_ppm_2023,
         df_driver_pairs_2023,
         2023,
-        "PPM Cumulative (3)"
     )
     assert len(season.races) == 22
 

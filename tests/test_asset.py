@@ -14,7 +14,6 @@ def test_factory_driver():
             "VER",
             "RED",
             1,
-            "col"
         )
     assert str(excinfo.value) == "Driver VER not found for race 1"
 
@@ -27,7 +26,6 @@ def test_factory_driver():
             "VER",
             "RED",
             1,
-            "col"
         )
     assert str(excinfo.value) == "Multiple entries found for Driver VER in race 1"
 
@@ -40,11 +38,10 @@ def test_factory_driver():
         "VER",
         "RED",
         1,
-        "col"
     )
     assert driver_0.constructor == "RED"
     assert driver_0.driver == "VER"
-    assert driver_0.ppm == 3.3
+    assert driver_0.derivs["col"] == 3.3
     assert driver_0.price == 0.3
     assert driver_0.points == 13
 
@@ -56,11 +53,10 @@ def test_factory_driver():
         "VER",
         "RED",
         2,
-        "col"
     )
     assert driver_1.constructor == "RED"
     assert driver_1.driver == "VER"
-    assert driver_1.ppm == 4.4
+    assert driver_1.derivs["col"] == 4.4
     assert driver_1.price == 44.44
     assert driver_1.points == 14
 
@@ -72,13 +68,24 @@ def test_factory_driver():
         "VER",
         "RED",
         1,
-        "col"
     )
     assert driver_2.constructor == "RED"
     assert driver_2.driver == "VER"
-    assert driver_2.ppm == 3.3
+    assert driver_2.derivs["col"] == 3.3
     assert driver_2.price == 33.33
     assert driver_2.points == 13
+
+    # Derivs column cannot be cast to a float
+    with pytest.raises(ValueError):
+        factory_driver(
+            pd.DataFrame(
+                columns=["Driver", "Race", "col", "Price", "Points"],
+                data=[["VER", 1, "string", 33.33, 13]]
+            ),
+            "VER",
+            "RED",
+            1,
+        )
 
 
 def test_factory_constructor():
@@ -89,7 +96,6 @@ def test_factory_constructor():
             ),
             "RED",
             1,
-            "col"
         )
     assert str(excinfo.value) == "Constructor RED not found for race 1"
 
@@ -101,7 +107,6 @@ def test_factory_constructor():
             ),
             "RED",
             1,
-            "col"
         )
     assert str(excinfo.value) == "Multiple entries found for Constructor RED in race 1"
 
@@ -113,10 +118,9 @@ def test_factory_constructor():
         ),
         "RED",
         1,
-        "col"
     )
     assert constructor_0.constructor == "RED"
-    assert constructor_0.ppm == 3.3
+    assert constructor_0.derivs["col"] == 3.3
     assert constructor_0.price == 0.3
     assert constructor_0.points == 13
 
@@ -127,10 +131,9 @@ def test_factory_constructor():
         ),
         "RED",
         2,
-        "col"
     )
     assert constructor_1.constructor == "RED"
-    assert constructor_1.ppm == 4.4
+    assert constructor_1.derivs["col"] == 4.4
     assert constructor_1.price == 44.44
     assert constructor_1.points == 14
 
@@ -141,9 +144,19 @@ def test_factory_constructor():
         ),
         "RED",
         1,
-        "col"
     )
     assert constructor_2.constructor == "RED"
-    assert constructor_2.ppm == 3.3
+    assert constructor_2.derivs["col"] == 3.3
     assert constructor_2.price == 33.33
     assert constructor_2.points == 13
+
+    # Derivs column cannot be cast to a float
+    with pytest.raises(ValueError):
+        factory_constructor(
+            pd.DataFrame(
+                columns=["Constructor", "Race", "col", "Price", "Points"],
+                data=[["RED", 1, "string", 33.33, 13]]
+            ),
+            "RED",
+            1,
+        )

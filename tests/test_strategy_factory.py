@@ -16,7 +16,6 @@ def test_strategy_factory():
         df_constructor_ppm,
         df_driver_pairs,
         2023,
-        "PPM Cumulative (3)"
     )
 
     race = season.races[1]

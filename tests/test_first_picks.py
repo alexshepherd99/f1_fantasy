@@ -109,3 +109,8 @@ def test_get_starting_combinations_replaces_prices_and_filters(monkeypatch):
 		assert np.isnan(outr.loc[0, "D2"])
 		# Row 1: D2 selected -> total 5 (should be excluded because >min_total_value required)
 		assert outr.shape[0] == 1
+
+
+def test_get_starting_combinations_standalone():
+	df_combinations = get_starting_combinations(2023, 1, 99.0)
+    assert df_combinations.shape == (15283, 2)
