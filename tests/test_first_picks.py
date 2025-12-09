@@ -94,7 +94,7 @@ def test_get_starting_combinations_replaces_prices_and_filters(monkeypatch):
 		race.constructors = {"C1": DummyAsset(8)}
 
 		# monkeypatch factory_race to return our dummy race
-		monkeypatch.setattr(fp, "factory_race", lambda a, b, c, race_num, s: race)
+		monkeypatch.setattr(fp, "factory_race", lambda a, b, race_num, s: race)
 
 		# run function with min_total_value = 5, max_total_value = 20
 		out = get_starting_combinations(2023, 1, 5.0, 20.0)
@@ -112,7 +112,6 @@ def test_get_starting_combinations_replaces_prices_and_filters(monkeypatch):
 
 
 def test_get_starting_combinations_standalone():
+	# Just making sure the entire unpatched function gets called by a unit test
 	df_combinations = get_starting_combinations(2023, 1, 99.0)
-    #assert df_combinations.shape == (15283, 2)
-	assert False
-
+	assert df_combinations.shape == (8149, 31)

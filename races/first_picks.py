@@ -55,7 +55,6 @@ def get_starting_combinations(season: int, race_num: int, min_total_value: float
         df_constructor_ppm,
         df_driver_pairs,
         race_num,
-        "PPM Cumulative (3)"
     )
 
     df_combinations = set_combination_assets(get_all_team_combinations(), race)
@@ -94,7 +93,6 @@ if __name__ == "__main__":
         df_constructor_ppm,
         df_driver_pairs,
         1,
-        "PPM Cumulative (3)"
     )
     
     team = factory_team_row(df_combinations.iloc[0].to_dict(), race)
