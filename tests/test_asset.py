@@ -87,6 +87,19 @@ def test_factory_driver():
             1,
         )
 
+    # Two derived columns
+    driver_3 = factory_driver(
+        pd.DataFrame(
+            columns=["Driver", "Race", "col1", "Price", "Points", "col2"],
+            data=[["VER", 1, 0.5, 33.33, 13, 0.6]]
+        ),
+        "VER",
+        "RED",
+        1,
+    )
+    assert driver_3.derivs["col1"] == 0.5
+    assert driver_3.derivs["col2"] == 0.6
+
 
 def test_factory_constructor():
     with pytest.raises(ValueError) as excinfo:
@@ -160,3 +173,15 @@ def test_factory_constructor():
             "RED",
             1,
         )
+
+    # Two derived columns
+    constructor_3 = factory_constructor(
+            pd.DataFrame(
+                columns=["Constructor", "Race", "col1", "Price", "Points", "col2"],
+                data=[["RED", 1, 0.5, 33.33, 13, 0.6]]
+            ),
+            "RED",
+            1,
+        )
+    assert constructor_3.derivs["col1"] == 0.5
+    assert constructor_3.derivs["col2"] == 0.6
