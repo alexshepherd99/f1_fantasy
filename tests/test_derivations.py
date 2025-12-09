@@ -61,50 +61,50 @@ def test_derivation_cum_tot_driver():
     )
 
     df_expected = pd.DataFrame(
-        columns=["Season", "Race", "Driver", "Points", "Price", "exp_cum_pts", "exp_cum_prc", "exp_cum_ppm"],
+        columns=["Season", "Race", "Driver", "Points", "Price", "exp_cum_pts", "exp_cum_prc", "exp_cum_ppm", "exp_cum_p2pm"],
         data=[
-            [2023, 1, "HAM", 11, 1.1, 0, np.nan, np.nan],  # updated order, although we'll sort below anyway
-            [2023, 2, "HAM", 12, 1.2, 11, 1.1, 10.0],
-            [2023, 3, "HAM", 13, 1.3, 23, 2.3, 10.0],
-            [2023, 4, "HAM", 14, 1.4, 36, 3.6, 10.0],
-            [2023, 1, "BOT", 30, 2.0, 0, np.nan, np.nan],  # different PPM
-            [2023, 2, "BOT", 30, 4.0, 30, 2.0, 15.0],
-            [2023, 3, "BOT", 30, 4.0, 60, 6.0, 10.0],
-            [2023, 4, "BOT", 60, 6.0, 90, 12.0, 7.5],
-            [2023, 1, "VER", 31, 3.1, 0, np.nan, np.nan],
-            [2023, 2, "VER", 32, 3.2, 31, 3.1, 10.0],
-            [2023, 3, "VER", -10, 3.3, 63, 6.3, 10.0],  
-            [2023, 4, "VER", 33, 3.4, 53, 9.6, 5.5208],  # negative points previous race
-            [2023, 1, "BEA", 41, 4.1, 0, np.nan, np.nan],
-            [2023, 2, "BEA", 42, 4.2, 41, 4.1, 10.0],
-            [2023, 3, "BEA", 43, 4.3, 83, 8.3, 10.0],
-            [2023, 4, "BEA", np.nan, np.nan, 126, 12.6, 10.0],
-            [2023, 1, "LEC", 51, 5.1, 0, np.nan, np.nan],
-            [2023, 2, "LEC", 52, 5.2, 51, 5.1, 10.0],
-            [2023, 3, "LEC", 53, 5.3, 103, 10.3, 10.0],
-            [2023, 4, "LEC", 54, 5.4, 156, 15.6, 10.0],
-            [2024, 1, "HAM", 111, 11.1, 0, np.nan, np.nan],
-            [2024, 2, "HAM", 112, 11.2, 111, 11.1, 10.0],
-            [2024, 3, "HAM", 113, 11.3, 223, 22.3, 10.0],
-            [2024, 4, "HAM", 114, 11.4, 336, 33.6, 10.0],
-            [2024, 1, "BOT", 121, 12.1, 0, np.nan, np.nan],
-            [2024, 2, "BOT", 122, 12.2, 121, 12.1, 10.0],
-            [2024, 3, "BOT", 123, 12.3, 243, 24.3, 10.0],
-            [2024, 4, "BOT", 124, 12.4, 366, 36.6, 10.0],
-            [2024, 1, "VER", 131, 13.1, 0, np.nan, np.nan],
-            [2024, 2, "VER", 132, 13.2, 131, 13.1, 10.0],
-            [2024, 3, "VER", 133, 13.3, 263, 26.3, 10.0],
-            [2024, 4, "VER", 134, 13.4, 396, 39.6, 10.0],
-            [2024, 1, "LEC", 151, 15.1, 0, np.nan, np.nan],
-            [2024, 2, "LEC", 152, 15.2, 151, 15.1, 10.0],
-            [2024, 3, "LEC", 153, 15.3, 303, 30.3, 10.0],
-            [2024, 4, "LEC", 154, 15.4, 456, 45.6, 10.0],
+            [2023, 1, "HAM", 11, 1.1, 0, np.nan, np.nan, np.nan],  # updated order, although we'll sort below anyway
+            [2023, 2, "HAM", 12, 1.2, 11, 1.1, 10.0, 110.0],
+            [2023, 3, "HAM", 13, 1.3, 23, 2.3, 10.0, 230.0],
+            [2023, 4, "HAM", 14, 1.4, 36, 3.6, 10.0, 360.0],
+            [2023, 1, "BOT", 30, 2.0, 0, np.nan, np.nan, np.nan],  # different PPM
+            [2023, 2, "BOT", 30, 4.0, 30, 2.0, 15.0, 450.0],
+            [2023, 3, "BOT", 30, 4.0, 60, 6.0, 10.0, 600.0],
+            [2023, 4, "BOT", 60, 6.0, 90, 12.0, 7.5, 675.0],
+            [2023, 1, "VER", 31, 3.1, 0, np.nan, np.nan, np.nan],
+            [2023, 2, "VER", 32, 3.2, 31, 3.1, 10.0, 310.0],
+            [2023, 3, "VER", -10, 3.3, 63, 6.3, 10.0, 630.0],  
+            [2023, 4, "VER", 33, 3.4, 53, 9.6, 5.5208, 292.6042],  # negative points previous race
+            [2023, 1, "BEA", 41, 4.1, 0, np.nan, np.nan, np.nan],
+            [2023, 2, "BEA", 42, 4.2, 41, 4.1, 10.0, 410.0],
+            [2023, 3, "BEA", 43, 4.3, 83, 8.3, 10.0, 830.0],
+            [2023, 4, "BEA", np.nan, np.nan, 126, 12.6, 10.0, 1260.0],
+            [2023, 1, "LEC", 51, 5.1, 0, np.nan, np.nan, np.nan],
+            [2023, 2, "LEC", 52, 5.2, 51, 5.1, 10.0, 510.0],
+            [2023, 3, "LEC", 53, 5.3, 103, 10.3, 10.0, 1030.0],
+            [2023, 4, "LEC", 54, 5.4, 156, 15.6, 10.0, 1560.0],
+            [2024, 1, "HAM", 111, 11.1, 0, np.nan, np.nan, np.nan],
+            [2024, 2, "HAM", 112, 11.2, 111, 11.1, 10.0, 1110.0],
+            [2024, 3, "HAM", 113, 11.3, 223, 22.3, 10.0, 2230.0],
+            [2024, 4, "HAM", 114, 11.4, 336, 33.6, 10.0, 3360.0],
+            [2024, 1, "BOT", 121, 12.1, 0, np.nan, np.nan, np.nan],
+            [2024, 2, "BOT", 122, 12.2, 121, 12.1, 10.0, 1210.0],
+            [2024, 3, "BOT", 123, 12.3, 243, 24.3, 10.0, 2430.0],
+            [2024, 4, "BOT", 124, 12.4, 366, 36.6, 10.0, 3660.0],
+            [2024, 1, "VER", 131, 13.1, 0, np.nan, np.nan, np.nan],
+            [2024, 2, "VER", 132, 13.2, 131, 13.1, 10.0, 1310.0],
+            [2024, 3, "VER", 133, 13.3, 263, 26.3, 10.0, 2630.0],
+            [2024, 4, "VER", 134, 13.4, 396, 39.6, 10.0, 3960.0],
+            [2024, 1, "LEC", 151, 15.1, 0, np.nan, np.nan, np.nan],
+            [2024, 2, "LEC", 152, 15.2, 151, 15.1, 10.0, 1510.0],
+            [2024, 3, "LEC", 153, 15.3, 303, 30.3, 10.0, 3030.0],
+            [2024, 4, "LEC", 154, 15.4, 456, 45.6, 10.0, 4560.0],
         ]
     )
 
     df_result = derivation_cum_tot_driver(df_input)
 
-    expected_cols = ["Season", "Race", "Driver", "Points", "Price", "Points Cumulative", "Price Cumulative", "PPM Cumulative"]
+    expected_cols = ["Season", "Race", "Driver", "Points", "Price", "Points Cumulative", "Price Cumulative", "PPM Cumulative", "P2PM Cumulative"]
     result_cols = list(df_result.columns)
     expected_cols.sort()
     result_cols.sort()
@@ -120,7 +120,12 @@ def test_derivation_cum_tot_driver():
         check_names=False,
         check_exact=False,
         atol=1e-4)
-
+    assert_series_equal(
+        df_expected["exp_cum_p2pm"],
+        df_result["P2PM Cumulative"],
+        check_names=False,
+        check_exact=False,
+        atol=1e-4)
 
 def test_derivation_tot_constructor():
     df_input = pd.DataFrame(

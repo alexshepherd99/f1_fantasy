@@ -64,11 +64,11 @@ def derivation_cum_tot(
 
     # Points squared per million enhanced the above to give greater emphasis to points scored, but still reflecting good
     # value drivers who return a high ppm
-    #df[col_p2pm] = (
-    #    (df[col_pts].astype(float) * df[col_pts].astype(float))
-    #    .div(df[col_prc]) 
-    #    .replace([np.inf, -np.inf], np.nan)
-    #)
+    df[col_p2pm] = (
+        (df[col_pts].astype(float) * df[col_pts].astype(float))
+        .div(df[col_prc]) 
+        .replace([np.inf, -np.inf], np.nan)
+    )
 
     return df
 
