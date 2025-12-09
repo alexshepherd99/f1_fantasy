@@ -406,5 +406,122 @@ def test_verify_data_available():
         )
 
 
-def test_strategy_derivs():
+def test_strategy_derivs(
+    fixture_all_available_drivers,
+    fixture_all_available_constructors,
+    fixture_asset_prices,
+    fixture_pairings,
+):
+    derivs_assets = {
+        "Deriv1": {
+            "VER": 0.1,
+            "LEC": 0.2,
+            "HAM": 0.3,
+            "ALO": 0.4,
+            "HUL": 0.5,
+            "MAG": 0.6,
+            "BOT": 0.7,
+            "NOR": 0.8,
+            "PIA": 0.9,
+            "TSU": 1.0,
+            "MCL": 1.1,
+            "FER": 1.2,
+            "RED": 1.3,
+            "MER": 1.4,
+            "AST": 1.5,
+        },
+        "Deriv2": {
+            "VER": 0.11,
+            "LEC": 0.22,
+            "HAM": 0.33,
+            "ALO": 0.44,
+            "HUL": 0.55,
+            "MAG": 0.66,
+            "BOT": 0.77,
+            "NOR": 0.88,
+            "PIA": 0.99,
+            "TSU": 1.01,
+            "MCL": 1.11,
+            "FER": 1.22,
+            "RED": 1.33,
+            "MER": 1.44,
+            "AST": 1.55,
+        },
+    }
+
+    derivs_assets_missing_driver = derivs_assets.copy()
+    derivs_assets_missing_driver["Deriv1"].pop("VER")
+    with pytest.raises(ValueError, match="Driver VER does not have a Deriv1"):
+        StrategyDummy(
+            team_drivers=[],
+            team_constructors=[],
+            all_available_drivers=fixture_all_available_drivers,
+            all_available_constructors=fixture_all_available_constructors,
+            all_available_driver_pairs=fixture_pairings,
+            max_cost=0.0,
+            max_moves=2,
+            prices_assets=fixture_asset_prices,
+            derivs_assets=derivs_assets_missing_driver
+        )
+
+    derivs_assets_missing_constructor = derivs_assets.copy()
+    derivs_assets_missing_constructor["Deriv2"].pop("RED")
+    with pytest.raises(ValueError, match="Constructor RED does not have a Deriv2"):
+        StrategyDummy(
+            team_drivers=[],
+            team_constructors=[],
+            all_available_drivers=fixture_all_available_drivers,
+            all_available_constructors=fixture_all_available_constructors,
+            all_available_driver_pairs=fixture_pairings,
+            max_cost=0.0,
+            max_moves=2,
+            prices_assets=fixture_asset_prices,
+            derivs_assets=derivs_assets_missing_constructor
+        )
+
+    derivs_assets_bad_driver = derivs_assets.copy()
+    derivs_assets_bad_driver["Deriv1"]["VER"] = "bad"
+    with pytest.raises(ValueError, match="Driver VER has an invalid Deriv1 of bad"):
+        StrategyDummy(
+            team_drivers=[],
+            team_constructors=[],
+            all_available_drivers=fixture_all_available_drivers,
+            all_available_constructors=fixture_all_available_constructors,
+            all_available_driver_pairs=fixture_pairings,
+            max_cost=0.0,
+            max_moves=2,
+            prices_assets=fixture_asset_prices,
+            derivs_assets=derivs_assets_bad_driver
+        )
+
+    derivs_assets_bad_constructor = derivs_assets.copy()
+    derivs_assets_bad_constructor["Deriv2"]["RED"] = "bad"
+    with pytest.raises(ValueError, match="Consrtructor RED has an invalid Deriv2 of bad"):
+        StrategyDummy(
+            team_drivers=[],
+            team_constructors=[],
+            all_available_drivers=fixture_all_available_drivers,
+            all_available_constructors=fixture_all_available_constructors,
+            all_available_driver_pairs=fixture_pairings,
+            max_cost=0.0,
+            max_moves=2,
+            prices_assets=fixture_asset_prices,
+            derivs_assets=derivs_assets_missing_constructor
+        )
+
+    sb=StrategyDummy(
+        team_drivers=[],
+        team_constructors=[],
+        all_available_drivers=fixture_all_available_drivers,
+        all_available_constructors=fixture_all_available_constructors,
+        all_available_driver_pairs=fixture_pairings,
+        max_cost=0.0,
+        max_moves=2,
+        prices_assets=fixture_asset_prices,
+        derivs_assets=derivs_assets
+    )
+    assert len(sb.derivs_assets.keys()) == 2
+    assert len(sb.derivs_assets["Deriv1"].keys()) == 15
+    assert sb.derivs_assets["Deriv2"]["AST"] == 1.55
+
     assert False
