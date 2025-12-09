@@ -140,31 +140,33 @@ def test_derivation_tot_constructor():
             "exp_cum_ppm",
             "exp_roll_pts",
             "exp_roll_prc",
-            "exp_roll_ppm"
+            "exp_roll_ppm",
+            "exp_cum_p2pm",
+            "exp_roll_p2pm",
         ],
         data=[
-            [2023, 2, "MER", 12, 1.2, 11, 1.1, 10.0, 11, 1.1, 10.0],
-            [2023, 1, "MER", 11, 1.1, 0, np.nan, np.nan, 0, np.nan, np.nan],  # out of order to test sorting
-            [2023, 3, "MER", 13, 1.3, 23, 2.3, 10.0, 23, 2.3, 10.0],
-            [2023, 4, "MER", 14, 1.4, 36, 3.6, 10.0, 25, 2.5, 10.0],
-            [2023, 1, "RED", 31, 3.1, 0, np.nan, np.nan, 0, np.nan, np.nan],
-            [2023, 2, "RED", 32, 3.2, 31, 3.1, 10.0, 31, 3.1, 10.0],
-            [2023, 3, "RED", -10, 3.3, 63, 6.3, 10.0, 63, 6.3, 10.0],  # negative points
-            [2023, 4, "RED", 33, 3.4, 53, 9.6, 5.5208, 22, 6.5, 3.3846],
-            [2024, 1, "MER", 30, 2.0, 0, np.nan, np.nan, 0, np.nan, np.nan],
-            [2024, 2, "MER", 30, 4.0, 30, 2.0, 15.0, 30, 2.0, 15.0],
-            [2024, 3, "MER", 60, 6.0, 60, 6.0, 10.0, 60, 6.0, 10.0],  # different PPM
-            [2024, 4, "MER", 60, 8.0, 120, 12, 10.0, 90, 10.0, 9.0],
-            [2024, 1, "ALT", 131, 13.1, 0, np.nan, np.nan, 0, np.nan, np.nan],
-            [2024, 2, "ALT", 132, 13.2, 131, 13.1, 10.0, 131, 13.1, 10.0],
-            [2024, 3, "ALT", 133, 13.3, 263, 26.3, 10.0, 263, 26.3, 10.0],
-            [2024, 4, "ALT", 134, 13.4, 396, 39.6, 10.0, 265, 26.5, 10.0],
+            [2023, 2, "MER", 12, 1.2, 11, 1.1, 10.0, 11, 1.1, 10.0, 110.0, 110.0],
+            [2023, 1, "MER", 11, 1.1, 0, np.nan, np.nan, 0, np.nan, np.nan, np.nan, np.nan],  # out of order to test sorting
+            [2023, 3, "MER", 13, 1.3, 23, 2.3, 10.0, 23, 2.3, 10.0, 230.0, 230.0],
+            [2023, 4, "MER", 14, 1.4, 36, 3.6, 10.0, 25, 2.5, 10.0, 360.0, 250.0],
+            [2023, 1, "RED", 31, 3.1, 0, np.nan, np.nan, 0, np.nan, np.nan, np.nan, np.nan],
+            [2023, 2, "RED", 32, 3.2, 31, 3.1, 10.0, 31, 3.1, 10.0, 310.0, 310.0],
+            [2023, 3, "RED", -10, 3.3, 63, 6.3, 10.0, 63, 6.3, 10.0, 630.0, 630.0],  # negative points
+            [2023, 4, "RED", 33, 3.4, 53, 9.6, 5.5208, 22, 6.5, 3.3846, 292.6042, 74.4615],
+            [2024, 1, "MER", 30, 2.0, 0, np.nan, np.nan, 0, np.nan, np.nan, np.nan, np.nan],
+            [2024, 2, "MER", 30, 4.0, 30, 2.0, 15.0, 30, 2.0, 15.0, 450.0, 450.0],
+            [2024, 3, "MER", 60, 6.0, 60, 6.0, 10.0, 60, 6.0, 10.0, 600.0, 600.0],  # different PPM
+            [2024, 4, "MER", 60, 8.0, 120, 12, 10.0, 90, 10.0, 9.0, 1200.0, 810.0],
+            [2024, 1, "ALT", 131, 13.1, 0, np.nan, np.nan, 0, np.nan, np.nan, np.nan, np.nan],
+            [2024, 2, "ALT", 132, 13.2, 131, 13.1, 10.0, 131, 13.1, 10.0, 1310.0, 1310.0],
+            [2024, 3, "ALT", 133, 13.3, 263, 26.3, 10.0, 263, 26.3, 10.0, 2630.0, 2630.0],
+            [2024, 4, "ALT", 134, 13.4, 396, 39.6, 10.0, 265, 26.5, 10.0, 3960.0, 2650.0],
         ]
     )
 
     df_result = derivation_cum_tot_constructor(df_input)
 
-    expected_cols = ["Season", "Race", "Constructor", "Points", "Price", "Points Cumulative", "Price Cumulative", "PPM Cumulative"]
+    expected_cols = ["Season", "Race", "Constructor", "Points", "Price", "Points Cumulative", "Price Cumulative", "PPM Cumulative", "P2PM Cumulative"]
     result_cols = list(df_result.columns)
     expected_cols.sort()
     result_cols.sort()
@@ -180,6 +182,12 @@ def test_derivation_tot_constructor():
         check_names=False,
         check_exact=False,
         atol=1e-4)
+    assert_series_equal(
+        df_expected["exp_cum_p2pm"],
+        df_result["P2PM Cumulative"],
+        check_names=False,
+        check_exact=False,
+        atol=1e-4)
 
     df_result_roll = derivation_cum_tot_constructor(df_input, rolling_window=2)
 
@@ -188,6 +196,12 @@ def test_derivation_tot_constructor():
     assert_series_equal(
         df_expected["exp_roll_ppm"],
         df_result_roll["PPM Cumulative (2)"],
+        check_names=False,
+        check_exact=False,
+        atol=1e-4)
+    assert_series_equal(
+        df_expected["exp_roll_p2pm"],
+        df_result_roll["P2PM Cumulative (2)"],
         check_names=False,
         check_exact=False,
         atol=1e-4)

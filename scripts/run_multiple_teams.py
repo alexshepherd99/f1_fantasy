@@ -11,7 +11,8 @@ from races.team import Team, factory_team_row
 from scripts.run_single_team import run_for_team
 
 _SEASON = 2025
-_FILE_BATCH_RESULTS = "outputs/f1_fantasy_results_batch.xlsx"
+_FILE_BATCH_RESULTS_PARQET = "outputs/f1_fantasy_results_batch.parquet"
+_FILE_BATCH_RESULTS_EXCEL = "outputs/f1_fantasy_results_batch.xlsx"
 _STRATEGY = StrategyMaxBudget
 
 
@@ -23,13 +24,13 @@ def open_batch_results_file(fn: str) -> pd.DataFrame:
     if not os.path.exists(fn):
         return pd.DataFrame(columns=["sim_key"])
     
-    return pd.read_excel(fn)
+    return pd.read_parquet(fn)
 
 
 if __name__ == "__main__":
     setup_logging()
 
-    # TODO asset data points like PPM should be added as dict of dicts, with derivations class providing the key
+    # TODO update final race points in sheet
 
     (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=_SEASON)
     
@@ -47,7 +48,7 @@ if __name__ == "__main__":
         1,
     )
 
-    _df_batch_results = open_batch_results_file(_FILE_BATCH_RESULTS)
+    _df_batch_results = open_batch_results_file(_FILE_BATCH_RESULTS_PARQET)
     _df_combinations = get_starting_combinations(_SEASON, 1, 99.5)
 
     counter = 0
@@ -73,5 +74,5 @@ if __name__ == "__main__":
                 logging.info(f"Batch {counter} of {len(_df_combinations.index)-skipped}, writing to disk...")
                 _df_tmp = pd.DataFrame(_rows_append)
                 _df_batch_results = pd.concat([_df_batch_results, _df_tmp])
-                _df_batch_results.to_excel(_FILE_BATCH_RESULTS, index=False)
+                _df_batch_results.to_parquet(_FILE_BATCH_RESULTS_PARQET)
                 _rows_append = []
