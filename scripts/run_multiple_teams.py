@@ -31,6 +31,7 @@ if __name__ == "__main__":
     setup_logging()
 
     # TODO update final race points in sheet
+    # TODO PP2M strategy
 
     (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=_SEASON)
     

@@ -404,3 +404,7 @@ def test_verify_data_available():
             data_assets = {"LAW": None, "MCL": 1.0},
             data_type = "DT"
         )
+
+
+def test_strategy_derivs():
+    assert False

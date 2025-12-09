@@ -13,6 +13,7 @@ class VarType(Enum):
     TeamMoves = auto()
     TotalCost = auto()
     UnusedBudget = auto()
+    OptimiseMax = auto()
 
 
 class StrategyBase(ABC):
