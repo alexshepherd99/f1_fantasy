@@ -23,6 +23,7 @@ def test_strat_budget_three_swaps(
         max_cost=100.0,
         max_moves=3,
         prices_assets=fixture_asset_prices,
+        derivs_assets={}
     )
     problem = strat.execute()
 
@@ -64,6 +65,7 @@ def test_strat_budget_limited_cost(
         max_cost=40.0,
         max_moves=3,
         prices_assets=fixture_asset_prices,
+        derivs_assets={}
     )
     problem = strat.execute()
 
@@ -105,6 +107,7 @@ def test_strat_budget_no_moves(
         max_cost=100.0,
         max_moves=0,
         prices_assets=fixture_asset_prices,
+        derivs_assets={}
     )
     problem = strat.execute()
 
@@ -146,6 +149,7 @@ def test_strat_budget_driver_unavailable(
         max_cost=100.0,
         max_moves=1,
         prices_assets=fixture_asset_prices,
+        derivs_assets={}
     )
     problem = strat.execute()
 

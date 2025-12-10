@@ -78,7 +78,8 @@ class StrategyBase(ABC):
                 all_available_drivers,
                 all_available_constructors,
                 self._derivs_assets[drv],
-                drv
+                drv,
+                check_type=False
             )            
 
         # Set all parameters
@@ -101,6 +102,7 @@ class StrategyBase(ABC):
         all_available_constructors: list[str],
         data_assets: dict[str, float],
         data_type: str,
+        check_type: bool = True
     ):
         # All available drivers have a price
         for i in all_available_drivers:
@@ -117,10 +119,11 @@ class StrategyBase(ABC):
             if (i not in all_available_drivers) and (i not in all_available_constructors):
                 raise ValueError(f"Asset {i} has a {data_type} but is not in available drivers or constructors")
 
-        # All data provided is of type float
-        for i in data_assets.keys():
-            if (not isinstance(data_assets[i], float)) or np.isnan(data_assets[i]):
-                raise ValueError(f"Asset {i} has invalid {data_type} of {data_assets[i]}")
+        if check_type:
+            # All data provided is of type float
+            for i in data_assets.keys():
+                if (not isinstance(data_assets[i], float)) or np.isnan(data_assets[i]):
+                    raise ValueError(f"Asset {i} has invalid {data_type} of {data_assets[i]}")
 
     @classmethod
     def get_team_selection_dict(cls, list_assets_available: list[str], list_assets_team: list[str]) -> dict[str, int]:

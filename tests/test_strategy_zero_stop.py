@@ -8,7 +8,7 @@ from tests.test_strategy_base import (
 )
 
 
-def test_strat_budget_no_moves(
+def test_strat_zero_stop_no_moves(
     fixture_all_available_drivers,
     fixture_all_available_constructors,
     fixture_asset_prices,
@@ -23,6 +23,7 @@ def test_strat_budget_no_moves(
         max_cost=100.0,
         max_moves=3,  # This should get forced back to zero by the strat
         prices_assets=fixture_asset_prices,
+        derivs_assets={}
     )
     assert strat._max_moves == 0
 
@@ -54,7 +55,7 @@ def test_strat_budget_no_moves(
     assert strat._lp_variables[VarType.UnusedBudget].value() == 80.0
 
 
-def test_strat_budget_unavailable_driver(
+def test_strat_zero_stop_unavailable_driver(
     fixture_all_available_drivers,
     fixture_all_available_constructors,
     fixture_asset_prices,
@@ -69,6 +70,7 @@ def test_strat_budget_unavailable_driver(
         max_cost=100.0,
         max_moves=3,  # This should get forced back to zero by the strat
         prices_assets=fixture_asset_prices,
+        derivs_assets={}
     )
     # One driver forced to change
     assert strat._max_moves == 1

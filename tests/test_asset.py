@@ -32,8 +32,8 @@ def test_factory_driver():
     # Even though there are multiple entries for race 2, no exception as we're not checking race 2
     driver_0 = factory_driver(
         pd.DataFrame(
-            columns=["Driver", "Race", "col", "Price", "Points"],
-            data=[["VER", 1, 3.3, 0.3, 13], ["VER", 2, 4.4, 0.4, 14], ["VER", 2, 5.5, 0.5, 15]]
+            columns=["Driver", "Race", "col", "Price", "Points", "Season"],
+            data=[["VER", 1, 3.3, 0.3, 13, 2023], ["VER", 2, 4.4, 0.4, 14, 2023], ["VER", 2, 5.5, 0.5, 15, 2023]]
         ),
         "VER",
         "RED",
@@ -44,6 +44,7 @@ def test_factory_driver():
     assert driver_0.derivs["col"] == 3.3
     assert driver_0.price == 0.3
     assert driver_0.points == 13
+    assert len(driver_0.derivs) == 1
 
     driver_1 = factory_driver(
         pd.DataFrame(
@@ -126,8 +127,8 @@ def test_factory_constructor():
     # Even though there are multiple entries for race 2, no exception as we're not checking race 2
     constructor_0 = factory_constructor(
         pd.DataFrame(
-            columns=["Constructor", "Race", "col", "Price", "Points"],
-            data=[["RED", 1, 3.3, 0.3, 13], ["RED", 2, 4.4, 0.4, 14], ["RED", 2, 5.5, 0.5, 15]]
+            columns=["Constructor", "Race", "col", "Price", "Points", "Season"],
+            data=[["RED", 1, 3.3, 0.3, 13, 2023], ["RED", 2, 4.4, 0.4, 14, 2023], ["RED", 2, 5.5, 0.5, 15, 2023]]
         ),
         "RED",
         1,
@@ -136,6 +137,7 @@ def test_factory_constructor():
     assert constructor_0.derivs["col"] == 3.3
     assert constructor_0.price == 0.3
     assert constructor_0.points == 13
+    assert len(constructor_0.derivs) == 1
 
     constructor_1 = factory_constructor(
         pd.DataFrame(

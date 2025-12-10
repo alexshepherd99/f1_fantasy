@@ -46,7 +46,7 @@ def factory_asset(
 
     derivs = {}
     for c in df_ppm_filtered.columns:
-        if c not in ["Driver", "Constructor", "Race", "Price", "Points"]:
+        if c not in ["Season", "Driver", "Constructor", "Race", "Price", "Points"]:
             derivs[c] = float(df_ppm_filtered.iloc[0][c])
 
     return (derivs, price, points)

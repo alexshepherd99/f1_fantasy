@@ -493,36 +493,6 @@ def test_strategy_derivs(
             derivs_assets=derivs_assets_missing_constructor
         )
 
-    derivs_assets_bad_driver = deepcopy(derivs_assets)
-    derivs_assets_bad_driver["Deriv1"]["VER"] = "bad"
-    with pytest.raises(ValueError, match="Asset VER has invalid Deriv1 of bad"):
-        StrategyDummy(
-            team_drivers=[],
-            team_constructors=[],
-            all_available_drivers=fixture_all_available_drivers,
-            all_available_constructors=fixture_all_available_constructors,
-            all_available_driver_pairs=fixture_pairings,
-            max_cost=0.0,
-            max_moves=2,
-            prices_assets=fixture_asset_prices,
-            derivs_assets=derivs_assets_bad_driver
-        )
-
-    derivs_assets_bad_constructor = deepcopy(derivs_assets)
-    derivs_assets_bad_constructor["Deriv2"]["RED"] = "bad"
-    with pytest.raises(ValueError, match="Asset RED has invalid Deriv2 of bad"):
-        StrategyDummy(
-            team_drivers=[],
-            team_constructors=[],
-            all_available_drivers=fixture_all_available_drivers,
-            all_available_constructors=fixture_all_available_constructors,
-            all_available_driver_pairs=fixture_pairings,
-            max_cost=0.0,
-            max_moves=2,
-            prices_assets=fixture_asset_prices,
-            derivs_assets=derivs_assets_bad_constructor
-        )
-
     sb=StrategyDummy(
         team_drivers=["???"],  # Team driver not available
         team_constructors=[],
