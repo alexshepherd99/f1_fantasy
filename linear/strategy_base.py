@@ -27,6 +27,7 @@ class StrategyBase(ABC):
         max_cost: float,
         max_moves: int,
         prices_assets: dict[str, float],
+        derivs_assets: dict[str, dict[str, float]]  # First dict is by derivation name
     ) -> None:
         # Check team constructors are available in list of all constructors
         for i in team_constructors:
@@ -67,6 +68,18 @@ class StrategyBase(ABC):
         for x in team_drivers:
             if x not in self._prices_assets.keys():
                 self._prices_assets[x] = COST_PROHIBITIVE
+
+        # Take a copy of the derivations.  Note that we will not add any derivations for team drivers that are
+        # not available for selection.
+        self._derivs_assets = derivs_assets
+        # Verify each derivative
+        for drv in self._derivs_assets.keys():
+            self.verify_data_available(
+                all_available_drivers,
+                all_available_constructors,
+                self._derivs_assets[drv],
+                drv
+            )            
 
         # Set all parameters
         self._team_drivers = team_drivers

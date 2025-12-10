@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from pulp import LpProblem, lpSum, LpMaximize
+from copy import deepcopy
 
 from linear.strategy_base import StrategyBase, COST_PROHIBITIVE, VarType
 
@@ -75,7 +76,8 @@ def test_construct_strategy(
             all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
-            prices_assets={}
+            prices_assets={},
+            derivs_assets={}
         );
     assert str(excinfo.value) == "Cannot find team constructor ??? in all available constructors"
 
@@ -89,7 +91,8 @@ def test_construct_strategy(
             all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
-            prices_assets={}
+            prices_assets={},
+            derivs_assets={}
         )
     assert str(excinfo.value) == "Team count of 11 is greater than 10 available drivers"
 
@@ -103,7 +106,8 @@ def test_construct_strategy(
             all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
-            prices_assets={}
+            prices_assets={},
+            derivs_assets={}
         )
     assert str(excinfo.value) == "Team count of 6 is greater than 5 available constructors"
 
@@ -117,7 +121,8 @@ def test_construct_strategy(
             all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
-            prices_assets=fixture_asset_prices
+            prices_assets=fixture_asset_prices,
+            derivs_assets={}
         )
     assert str(excinfo.value) == "Driver XXX does not have a price"
 
@@ -131,7 +136,8 @@ def test_construct_strategy(
             all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
-            prices_assets=fixture_asset_prices
+            prices_assets=fixture_asset_prices,
+            derivs_assets={}
         )
     assert str(excinfo.value) == "Constructor XXX does not have a price"
 
@@ -144,7 +150,8 @@ def test_construct_strategy(
         all_available_driver_pairs=fixture_pairings,
         max_cost=0.0,
         max_moves=2,
-        prices_assets=fixture_asset_prices
+        prices_assets=fixture_asset_prices,
+        derivs_assets={}
     )
     assert len(sb._prices_assets) == len(fixture_asset_prices) + 1
     assert sb._prices_assets["RUS"] == COST_PROHIBITIVE
@@ -161,7 +168,8 @@ def test_construct_strategy(
             all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
-            prices_assets=fap2
+            prices_assets=fap2,
+            derivs_assets={}
         )
     assert str(excinfo.value) == "Asset ??? has a price but is not in available drivers or constructors"
 
@@ -177,7 +185,8 @@ def test_construct_strategy(
             all_available_driver_pairs=dp,
             max_cost=0.0,
             max_moves=2,
-            prices_assets=fixture_asset_prices
+            prices_assets=fixture_asset_prices,
+            derivs_assets={}
         )
     assert str(excinfo.value) == "Driver from pairing XXX/MCL is not available in all drivers"
 
@@ -193,7 +202,8 @@ def test_construct_strategy(
             all_available_driver_pairs=dp,
             max_cost=0.0,
             max_moves=2,
-            prices_assets=fixture_asset_prices
+            prices_assets=fixture_asset_prices,
+            derivs_assets={}
         )
     assert str(excinfo.value) == "Constructor from pairing NOR/XXX is not available in all constructors"
 
@@ -209,7 +219,8 @@ def test_construct_strategy(
             all_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
-            prices_assets=fap2
+            prices_assets=fap2,
+            derivs_assets={}
         )
     assert str(excinfo.value) == "Driver XXX is not available in driver/constructor pairs"
 
@@ -222,7 +233,8 @@ def test_construct_strategy(
         all_available_driver_pairs=fixture_pairings,
         max_cost=0.0,
         max_moves=2,
-        prices_assets=fixture_asset_prices
+        prices_assets=fixture_asset_prices,
+        derivs_assets={}
     )
 
 
@@ -262,6 +274,7 @@ def test_initialise_sets_up_lp_variables_and_constraints(
         max_cost=1000.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
+        derivs_assets={}
     )
 
     # Call initialise which should populate _lp_variables and _lp_constraints
@@ -364,6 +377,7 @@ def test_execute_picks_best_scoring_team():
         max_cost=1000.0,
         max_moves=2,
         prices_assets=prices,
+        derivs_assets={},
         scores=scores,
     )
 
@@ -449,7 +463,7 @@ def test_strategy_derivs(
         },
     }
 
-    derivs_assets_missing_driver = derivs_assets.copy()
+    derivs_assets_missing_driver = deepcopy(derivs_assets)
     derivs_assets_missing_driver["Deriv1"].pop("VER")
     with pytest.raises(ValueError, match="Driver VER does not have a Deriv1"):
         StrategyDummy(
@@ -464,7 +478,7 @@ def test_strategy_derivs(
             derivs_assets=derivs_assets_missing_driver
         )
 
-    derivs_assets_missing_constructor = derivs_assets.copy()
+    derivs_assets_missing_constructor = deepcopy(derivs_assets)
     derivs_assets_missing_constructor["Deriv2"].pop("RED")
     with pytest.raises(ValueError, match="Constructor RED does not have a Deriv2"):
         StrategyDummy(
@@ -479,9 +493,9 @@ def test_strategy_derivs(
             derivs_assets=derivs_assets_missing_constructor
         )
 
-    derivs_assets_bad_driver = derivs_assets.copy()
+    derivs_assets_bad_driver = deepcopy(derivs_assets)
     derivs_assets_bad_driver["Deriv1"]["VER"] = "bad"
-    with pytest.raises(ValueError, match="Driver VER has an invalid Deriv1 of bad"):
+    with pytest.raises(ValueError, match="Asset VER has invalid Deriv1 of bad"):
         StrategyDummy(
             team_drivers=[],
             team_constructors=[],
@@ -494,9 +508,9 @@ def test_strategy_derivs(
             derivs_assets=derivs_assets_bad_driver
         )
 
-    derivs_assets_bad_constructor = derivs_assets.copy()
+    derivs_assets_bad_constructor = deepcopy(derivs_assets)
     derivs_assets_bad_constructor["Deriv2"]["RED"] = "bad"
-    with pytest.raises(ValueError, match="Consrtructor RED has an invalid Deriv2 of bad"):
+    with pytest.raises(ValueError, match="Asset RED has invalid Deriv2 of bad"):
         StrategyDummy(
             team_drivers=[],
             team_constructors=[],
@@ -506,11 +520,11 @@ def test_strategy_derivs(
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
-            derivs_assets=derivs_assets_missing_constructor
+            derivs_assets=derivs_assets_bad_constructor
         )
 
     sb=StrategyDummy(
-        team_drivers=[],
+        team_drivers=["???"],  # Team driver not available
         team_constructors=[],
         all_available_drivers=fixture_all_available_drivers,
         all_available_constructors=fixture_all_available_constructors,
@@ -520,8 +534,6 @@ def test_strategy_derivs(
         prices_assets=fixture_asset_prices,
         derivs_assets=derivs_assets
     )
-    assert len(sb.derivs_assets.keys()) == 2
-    assert len(sb.derivs_assets["Deriv1"].keys()) == 15
-    assert sb.derivs_assets["Deriv2"]["AST"] == 1.55
-
-    assert False
+    assert len(sb._derivs_assets.keys()) == 2
+    assert len(sb._derivs_assets["Deriv1"].keys()) == 15  # Added for available drivers only
+    assert sb._derivs_assets["Deriv2"]["AST"] == 1.55
