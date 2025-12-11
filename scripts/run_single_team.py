@@ -63,33 +63,38 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
         # Do we have a bonus free transfer from the previous race?
         max_moves = 3 if bonus_free_transfer else 2
 
+        # Needed for a fallback price when driver is no longer available for selection
         race_prev = season.races[race_num] if race_num == 1 else season.races[race_num - 1]
-        strat = factory_strategy(season.races[race_num], race_prev, team, strategy, max_moves=max_moves)
 
-        model = strat.execute()
+        # First race already has a team selection, skip this out
+        if race_num > race_num_start:
 
-        # Extract selected assets from the LP model
-        model_drivers = [d for d,v in strat._lp_variables[VarType.TeamDrivers].items() if v.varValue == 1]
-        model_constructors = [c for c,v in strat._lp_variables[VarType.TeamConstructors].items() if v.varValue == 1]
+            strat = factory_strategy(season.races[race_num], race_prev, team, strategy, max_moves=max_moves)
 
-        # Update the unused budget based on the new team selection
-        team.unused_budget = strat._lp_variables[VarType.UnusedBudget].value()
+            model = strat.execute()
 
-        # Set the free transfer flag if we used less than two moves
-        bonus_free_transfer = strat._lp_variables[VarType.TeamMoves].value() < 2
+            # Extract selected assets from the LP model
+            model_drivers = [d for d,v in strat._lp_variables[VarType.TeamDrivers].items() if v.varValue == 1]
+            model_constructors = [c for c,v in strat._lp_variables[VarType.TeamConstructors].items() if v.varValue == 1]
 
-        # Update the used moves for the next iteration
-        used_moves = int(strat._lp_variables[VarType.TeamMoves].value())
+            # Update the unused budget based on the new team selection
+            team.unused_budget = strat._lp_variables[VarType.UnusedBudget].value()
 
-        # Re-populate the team with the selected assets
-        team.remove_all_assets()
-        for d in model_drivers:
-            team.add_asset(AssetType.DRIVER, d)
-        for c in model_constructors:
-            team.add_asset(AssetType.CONSTRUCTOR, c)
+            # Set the free transfer flag if we used less than two moves
+            bonus_free_transfer = strat._lp_variables[VarType.TeamMoves].value() < 2
 
-        # Update the team DRS driver
-        team.drs_driver = strat.get_drs_driver()
+            # Update the used moves for the next iteration
+            used_moves = int(strat._lp_variables[VarType.TeamMoves].value())
+
+            # Re-populate the team with the selected assets
+            team.remove_all_assets()
+            for d in model_drivers:
+                team.add_asset(AssetType.DRIVER, d)
+            for c in model_constructors:
+                team.add_asset(AssetType.CONSTRUCTOR, c)
+
+            # Update the team DRS driver
+            team.drs_driver = strat.get_drs_driver()
 
         # Update team points based on the last race
         race_points = team.update_points(season.races[race_num])
@@ -133,7 +138,7 @@ if __name__ == "__main__":
         total_budget=100.0  # Starting budget
     )
     
-    _rows = run_for_team(StrategyZeroStop, _team, _season, _SEASON, _STARTING_RACE)
+    _rows = run_for_team(StrategyMaxBudget, _team, _season, _SEASON, _STARTING_RACE)
 
     # Create a DataFrame from the results rows and save to Excel
     df_results = pd.DataFrame(_rows)
