@@ -131,15 +131,19 @@ if __name__ == "__main__":
         _SEASON,
     )
 
-    # This will calculate the unused budget based on starting prices
-    _team = factory_team_lists(
-        drivers=_TEAM_START_DRIVERS,
-        constructors=_TEAM_START_CONSTRUCTORS,
-        race=_season.races[_STARTING_RACE],
-        total_budget=100.0  # Starting budget
-    )
-    
-    _rows = run_for_team(StrategyMaxP2PM, _team, _season, _SEASON, _STARTING_RACE)
+    _rows = []
+
+    for strat in StrategyMaxBudget, StrategyMaxP2PM, StrategyZeroStop:
+
+        # This will calculate the unused budget based on starting prices
+        _team = factory_team_lists(
+            drivers=_TEAM_START_DRIVERS,
+            constructors=_TEAM_START_CONSTRUCTORS,
+            race=_season.races[_STARTING_RACE],
+            total_budget=100.0  # Starting budget
+        )
+        
+        _rows = _rows + run_for_team(strat, _team, _season, _SEASON, _STARTING_RACE)
 
     # Create a DataFrame from the results rows and save to Excel
     df_results = pd.DataFrame(_rows)

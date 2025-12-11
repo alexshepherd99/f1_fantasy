@@ -21,8 +21,6 @@ class StrategyMaxP2PM(StrategyBase):
             else:
                 self._derivs_assets[deriv_name][d] = safe_to_float(self._derivs_assets[deriv_name][d])
 
-        print(self._derivs_assets[deriv_name])
-
         # P2PM values as based on the team selection, using the LP variables already provided by the base class
         p2pm_drivers = [self._derivs_assets[deriv_name][i] * self._lp_variables[VarType.TeamDrivers][i] for i in self._all_available_drivers]
         p2pm_constructors = [self._derivs_assets[deriv_name][i] * self._lp_variables[VarType.TeamConstructors][i] for i in self._all_available_constructors]
