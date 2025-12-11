@@ -35,7 +35,7 @@ def safe_to_float(value, default=0.0) -> float:
     """
     if value is None:
         return default
-    elif value is np.nan:
+    elif np.isnan(value):
         return default
     
     try:
