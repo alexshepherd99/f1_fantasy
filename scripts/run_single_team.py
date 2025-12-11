@@ -146,6 +146,5 @@ if __name__ == "__main__":
         _rows = _rows + run_for_team(strat, _team, _season, _SEASON, _STARTING_RACE)
 
     # Create a DataFrame from the results rows and save to Excel
-    df_results = pd.DataFrame(_rows)
-    df_results.to_excel(_FILE_BATCH_RESULTS, index=False)
-    logging.info(f"Saved batch results to {_FILE_BATCH_RESULTS}")
+    pd.DataFrame(_rows).to_excel(_FILE_BATCH_RESULTS, index=False)
+    logging.info(f"Saved batch results to {_FILE_BATCH_RESULTS} with {len(_rows)} rows")
