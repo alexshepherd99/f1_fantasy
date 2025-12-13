@@ -47,15 +47,20 @@ class Team:
             
     def total_value(self, race: Race, race_prev: Race) -> float:
         self.check_asset_counts()
-        tot_val = 0.0
+        return self.total_value_drivers(race, race_prev) + self.total_value_constructors(race)
 
+    def total_value_drivers(self, race: Race, race_prev: Race) -> float:
+        tot_val = 0.0
         for driver in self.assets[AssetType.DRIVER]:
             # If driver is not in current race, use previous race price
             if driver not in race.drivers:
                 tot_val = tot_val + race_prev.drivers[driver].price
             else:
                 tot_val = tot_val + race.drivers[driver].price
-
+        return tot_val
+    
+    def total_value_constructors(self, race: Race) -> float:
+        tot_val = 0.0
         for constructor in self.assets[AssetType.CONSTRUCTOR]:
             tot_val = tot_val + race.constructors[constructor].price
         return tot_val

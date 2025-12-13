@@ -110,8 +110,10 @@ def test_team_valuation(race_1, race_13):
     team2.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="RED")
 
     price2 = team2.total_value(race_1, race_13)    
-    assert price2 == 4.5 + 26.9 + 22.1 + 27.2
+    assert price2 == pytest.approx(4.5 + 26.9 + 22.1 + 27.2) 
     assert team2.total_budget(race_1, race_13) == price2 + 3.1
+    assert team2.total_value_drivers(race_1, race_13) == 4.5 + 26.9
+    assert team2.total_value_constructors(race_1) == 22.1 + 27.2
 
 
 def test_team_size_check(race_1, race_13):
