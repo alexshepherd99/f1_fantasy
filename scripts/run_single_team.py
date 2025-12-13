@@ -19,12 +19,13 @@ _TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
 _STARTING_RACE = 1
 
 
-def get_row_intermediate_results(strat_name: str, team: Team, season: Season, season_year: int, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int) -> dict:
+def get_row_intermediate_results(strat_name: str, team: Team, season: Season, season_year: int, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int, starting_value: float) -> dict:
     row = {
         "strategy": strat_name,
         "season": season_year,
         "race": race_num,
         "total_value": team.total_value(race, race_prev),
+        "starting_value": starting_value,
         "points": race_points,
         "total_points": team.total_points,
         "unused_budget": round(team.unused_budget, 1),
@@ -59,6 +60,9 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
 
     # Get sorted list of races
     races = sorted([int(r) for r in season.races.keys() if r >= race_num_start])
+
+    # Get starting value, which we record against every row for this season
+    starting_value = team.total_value(season.races[race_num_start], season.races[race_num_start])
 
     for race_num in races:
         # Do we have a bonus free transfer from the previous race?
@@ -112,7 +116,8 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
                 race_num,
                 race_points,
                 max_moves,
-                used_moves
+                used_moves,
+                starting_value,
             )
         )
 

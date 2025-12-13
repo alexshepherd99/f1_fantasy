@@ -27,13 +27,16 @@ def open_batch_results_file(fn: str) -> pd.DataFrame:
     if not os.path.exists(fn):
         return pd.DataFrame(columns=["sim_key"])
     
-    return pd.read_parquet(fn)
+    df = pd.read_parquet(fn)
+    logging.debug(f"Opened {fn} with shape {df.shape}")
+    return df
 
-
-def write_batch_results(df_batch_results: pd.DataFrame, rows_append: list):
+def write_batch_results(df_batch_results: pd.DataFrame, rows_append: list) -> pd.DataFrame:
     df_tmp = pd.DataFrame(rows_append)
     df_batch_results = pd.concat([df_batch_results, df_tmp])
+    logging.info(f"Writing {_FILE_BATCH_RESULTS_PARQET}, new shape {df_tmp.shape}, total shape {df_batch_results.shape}")
     df_batch_results.to_parquet(_FILE_BATCH_RESULTS_PARQET)
+    return df_batch_results
 
 
 def run_strategy_for_season(season_year: int, strategy: type[StrategyBase]):
@@ -60,12 +63,14 @@ def run_strategy_for_season(season_year: int, strategy: type[StrategyBase]):
     skipped = 0
     _rows_append = []
 
+    logging.info(f"Running simulation for season {season_year} strategy {strategy.__name__}")
+
     for _idx, _row in _df_combinations.iterrows():
         _team = factory_team_row(_row.to_dict(), _race_first)
         _sim_key = get_starting_key(strategy.__name__, season_year, _team)
 
         if _sim_key in _df_batch_results["sim_key"].unique():
-            logging.info(f"Skipping batch for {_sim_key}")
+            logging.debug(f"Skipping batch for {_sim_key}")
             skipped += 1
 
         else:
@@ -76,13 +81,13 @@ def run_strategy_for_season(season_year: int, strategy: type[StrategyBase]):
 
             counter += 1
             if counter % 100 == 0:
-                logging.info(f"Batch {counter} of {len(_df_combinations.index)-skipped}, writing to disk...")
-                write_batch_results(_df_batch_results, _rows_append)
+                logging.info(f"Batch {counter} of {len(_df_combinations.index)-skipped}, writing to disk, skipped {skipped}...")
+                _df_batch_results = write_batch_results(_df_batch_results, _rows_append)
                 _rows_append = []
 
     # Write any remaining results
-    logging.info(f"Writing remaining {len(_rows_append)} batches to disk...")
-    write_batch_results(_df_batch_results, _rows_append)
+    logging.info(f"Writing remaining {len(_rows_append)} batches to disk, skipped {skipped}...")
+    _df_batch_results = write_batch_results(_df_batch_results, _rows_append)
     _rows_append = []
 
 
