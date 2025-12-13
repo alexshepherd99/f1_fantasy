@@ -19,13 +19,29 @@ _TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
 _STARTING_RACE = 1
 
 
-def get_row_intermediate_results(strat_name: str, team: Team, season: Season, season_year: int, race: Race, race_prev: Race, race_num: int, race_points: int, max_moves: int, used_moves: int, starting_value: float) -> dict:
+def get_row_intermediate_results(
+        strat_name: str,
+        team: Team,
+        season: Season,
+        season_year: int,
+        race: Race,
+        race_prev: Race,
+        race_num: int,
+        race_points: int,
+        max_moves: int,
+        used_moves: int,
+        starting_value: float,
+        starting_value_d: float,
+        starting_value_c: float,
+    ) -> dict:
     row = {
         "strategy": strat_name,
         "season": season_year,
         "race": race_num,
         "total_value": team.total_value(race, race_prev),
         "starting_value": starting_value,
+        "starting_value_d": starting_value_d,
+        "starting_value_c": starting_value_c,
         "points": race_points,
         "total_points": team.total_points,
         "unused_budget": round(team.unused_budget, 1),
@@ -63,6 +79,8 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
 
     # Get starting value, which we record against every row for this season
     starting_value = team.total_value(season.races[race_num_start], season.races[race_num_start])
+    starting_value_d = team.total_value_drivers(season.races[race_num_start], season.races[race_num_start])
+    starting_value_c = team.total_value_constructors(season.races[race_num_start])
 
     for race_num in races:
         # Do we have a bonus free transfer from the previous race?
@@ -118,6 +136,8 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
                 max_moves,
                 used_moves,
                 starting_value,
+                starting_value_d,
+                starting_value_c,
             )
         )
 
