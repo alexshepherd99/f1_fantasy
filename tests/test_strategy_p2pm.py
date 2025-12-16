@@ -66,6 +66,72 @@ def test_strat_p2pm_basic_optimization(
     assert problem.objective.value() == expected_p2pm
 
 
+def test_get_drs_driver_selects_highest_points(
+    fixture_all_available_drivers,
+    fixture_all_available_constructors,
+    fixture_asset_prices,
+    fixture_pairings,
+):
+    """Ensure get_drs_driver returns selected driver with highest points."""
+    # Points derivations - make LEC highest among the current team
+    points_derivs = {
+        d: 5.0 for d in fixture_all_available_drivers + fixture_all_available_constructors
+    }
+    points_derivs.update({"VER": 10.0, "LEC": 50.0, "HAM": 20.0, "ALO": 5.0})
+
+    # P2PM can be zero since we fix the team with max_moves=0
+    p2pm_derivs = {d: 0.0 for d in fixture_all_available_drivers + fixture_all_available_constructors}
+
+    strat = StrategyMaxP2PM(
+        team_drivers=["VER", "LEC", "HAM", "ALO"],
+        team_constructors=["MCL", "FER"],
+        all_available_drivers=fixture_all_available_drivers,
+        all_available_constructors=fixture_all_available_constructors,
+        all_available_driver_pairs=fixture_pairings,
+        max_cost=100.0,
+        max_moves=0,  # keep team fixed so selected drivers are known
+        prices_assets=fixture_asset_prices,
+        derivs_assets={
+            "P2PM Cumulative (3)": p2pm_derivs,
+            "Points Cumulative (3)": points_derivs,
+        },
+    )
+    strat.execute()
+
+    # LEC has the highest points among the selected drivers
+    assert strat.get_drs_driver() == "LEC"
+
+
+def test_get_drs_driver_returns_empty_when_no_points(
+    fixture_all_available_drivers,
+    fixture_all_available_constructors,
+    fixture_asset_prices,
+    fixture_pairings,
+):
+    """If selected drivers have zero points, get_drs_driver returns empty string."""
+    points_derivs = {d: 0.0 for d in fixture_all_available_drivers + fixture_all_available_constructors}
+    p2pm_derivs = {d: 0.0 for d in fixture_all_available_drivers + fixture_all_available_constructors}
+
+    strat = StrategyMaxP2PM(
+        team_drivers=["VER", "LEC", "HAM", "ALO"],
+        team_constructors=["MCL", "FER"],
+        all_available_drivers=fixture_all_available_drivers,
+        all_available_constructors=fixture_all_available_constructors,
+        all_available_driver_pairs=fixture_pairings,
+        max_cost=100.0,
+        max_moves=0,
+        prices_assets=fixture_asset_prices,
+        derivs_assets={
+            "P2PM Cumulative (3)": p2pm_derivs,
+            "Points Cumulative (3)": points_derivs,
+        },
+    )
+    strat.execute()
+
+    # No points among selected drivers -> should return empty string
+    assert strat.get_drs_driver() == ""
+
+
 def test_strat_p2pm_with_cost_constraint(
     fixture_all_available_drivers,
     fixture_all_available_constructors,

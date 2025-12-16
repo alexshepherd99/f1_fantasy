@@ -14,6 +14,7 @@ class VarType(Enum):
     TotalCost = auto()
     UnusedBudget = auto()
     OptimiseMax = auto()
+    DrsDriver = auto()
 
 
 class StrategyBase(ABC):

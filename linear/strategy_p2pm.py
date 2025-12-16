@@ -25,9 +25,45 @@ class StrategyMaxP2PM(StrategyBase):
         p2pm_drivers = [self._derivs_assets[deriv_name][i] * self._lp_variables[VarType.TeamDrivers][i] for i in self._all_available_drivers]
         p2pm_constructors = [self._derivs_assets[deriv_name][i] * self._lp_variables[VarType.TeamConstructors][i] for i in self._all_available_constructors]
 
+        # Variable for DRS driver selection
+        #driver_team = self.get_team_selection_dict(self._all_available_drivers, self._team_drivers)
+        #driver_list = list(driver_team.keys())
+        #self._lp_variables[VarType.DrsDriver] = LpVariable.dicts('drs_driver', driver_list, cat="Binary")
+
+        # Constraint for DRS driver selection - only use AVAILABLE drivers, and specify exactly one DRS driver from them
+        #self._lp_constraints[VarType.DrsDriver] = lpSum([self._lp_variables[VarType.DrsDriver][i] for i in self._all_available_drivers]) == 1
+
+        # DRS gives that driver a boost - use SQUARED POINTS here, we don't care about value for money
+        #deriv_name_pts = get_derivation_name(DerivationType.POINTS_CUMULATIVE, 3)
+        #pts_drs_driver = [self._derivs_assets[deriv_name_pts][i] * self._derivs_assets[deriv_name_pts][i] * self._lp_variables[VarType.DrsDriver][i] for i in self._all_available_drivers]
+
         # Variable for total P2PM
+        #self._lp_variables[VarType.OptimiseMax] = lpSum(p2pm_drivers + p2pm_constructors + pts_drs_driver)
         self._lp_variables[VarType.OptimiseMax] = lpSum(p2pm_drivers + p2pm_constructors)
 
         # Optimise for this
         problem += self._lp_variables[VarType.OptimiseMax]
         return problem
+
+
+    def get_drs_driver(self) -> str:
+        # Override behaviour to select driver with highest points average
+        deriv_points = get_derivation_name(DerivationType.POINTS_CUMULATIVE, 3)
+
+        max_points = 0.0
+        max_driver = ""
+
+        for d in self._all_available_drivers:
+            # This will only be called after the strategy has run, so self._lp_variables[VarType.TeamDrivers] will
+            # represent the selected drivers
+            if self._lp_variables[VarType.TeamDrivers][d].value() > 0:
+                if self._derivs_assets[deriv_points][d] > max_points:
+                    max_points = self._derivs_assets[deriv_points][d]
+                    max_driver = d
+
+        # If we had no points to work with, ensure we return no driver.  This will allow the default team selection
+        # to choose, which will pick driver with max current value.
+        if max_points == 0.0:
+            return ""
+        else:
+            return max_driver

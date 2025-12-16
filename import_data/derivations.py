@@ -63,9 +63,10 @@ def derivation_cum_tot(
     )
 
     # Points squared per million enhanced the above to give greater emphasis to points scored, but still reflecting good
-    # value drivers who return a high ppm
+    # value drivers who return a high ppm.
+    # Use an absolute value for one of the points numbers, to ensure that negative points gives a negative squared value.
     df[col_p2pm] = (
-        (df[col_pts].astype(float) * df[col_pts].astype(float))
+        (df[col_pts].astype(float) * abs(df[col_pts].astype(float)))
         .div(df[col_prc]) 
         .replace([np.inf, -np.inf], np.nan)
     )
