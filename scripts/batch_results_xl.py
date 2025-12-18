@@ -12,5 +12,5 @@ if __name__ == "__main__":
     logging.info(f"... read {df.shape}")
 
     logging.info(f"Writing {_FILE_BATCH_RESULTS_EXCEL}...")
-    df.to_excel(_FILE_BATCH_RESULTS_EXCEL, index=False)
+    df.to_csv(_FILE_BATCH_RESULTS_EXCEL, index=False)
     logging.info(f"... done")

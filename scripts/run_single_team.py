@@ -64,7 +64,17 @@ def get_row_intermediate_results(
     return row
 
 
-def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, season_year: int, race_num_start: int) -> list:
+def get_strat_display_name(strategy: type[StrategyBase], sub_strat: str = ""):
+    if len(sub_strat) > 0:
+        return f"{strategy.__name__}:{sub_strat}"
+    else:
+        return f"{strategy.__name__}"
+
+
+def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, season_year: int, race_num_start: int, sub_strat: str = "") -> list:
+    # Strategy name we'll use for the results data set
+    strat_name = get_strat_display_name(strategy, sub_strat)
+    
     # Collection to put all the results rows into
     rows = []
 
@@ -125,7 +135,7 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
         # Create and append a results row for this race selection
         rows.append(
             get_row_intermediate_results(
-                strategy.__name__,
+                strat_name,
                 team,
                 season,
                 season_year,

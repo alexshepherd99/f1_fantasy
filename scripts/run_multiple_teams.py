@@ -11,17 +11,21 @@ from linear.strategy_zero_stop import StrategyZeroStop
 from races.first_picks import get_starting_combinations
 from races.season import factory_race, factory_season
 from races.team import Team, factory_team_row
-from scripts.run_single_team import run_for_team
+from scripts.run_single_team import get_strat_display_name, run_for_team
 
 _SEASONS = F1_SEASON_CONSTRUCTORS.keys()
 _FILE_BATCH_RESULTS_PARQET = "outputs/f1_fantasy_results_batch.parquet"
-_FILE_BATCH_RESULTS_EXCEL = "outputs/f1_fantasy_results_batch.xlsx"
+_FILE_BATCH_RESULTS_EXCEL = "outputs/f1_fantasy_results_batch.csv"
 _STRATEGIES = [StrategyMaxBudget, StrategyZeroStop, StrategyMaxP2PM]
+_SUB_STRAT = ""
 
 
-def get_starting_key(strat_name: str, season: int, team: Team) -> str:
-    return f"({strat_name})({season}){team}"
-
+def get_starting_key(strat_name: str, season: int, team: Team, sub_strat: str = "") -> str:
+    if len(sub_strat) > 0:
+        return f"({strat_name}:{sub_strat})({season}){team}"
+    else:
+        return f"({strat_name})({season}){team}"
+    
 
 def open_batch_results_file(fn: str) -> pd.DataFrame:
     if not os.path.exists(fn):
@@ -63,18 +67,19 @@ def run_strategy_for_season(season_year: int, strategy: type[StrategyBase]):
     skipped = 0
     _rows_append = []
 
-    logging.info(f"Running simulation for season {season_year} strategy {strategy.__name__}")
+    strat_display_name = get_strat_display_name(strategy, _SUB_STRAT)
+    logging.info(f"Running simulation for season {season_year} strategy {strat_display_name}")
 
     for _idx, _row in _df_combinations.iterrows():
         _team = factory_team_row(_row.to_dict(), _race_first)
-        _sim_key = get_starting_key(strategy.__name__, season_year, _team)
+        _sim_key = get_starting_key(strategy.__name__, season_year, _team, _SUB_STRAT)
 
         if _sim_key in _df_batch_results["sim_key"].unique():
             logging.debug(f"Skipping batch for {_sim_key}")
             skipped += 1
 
         else:
-            _rows_intermediate = run_for_team(strategy, _team, _season, season_year, 1)
+            _rows_intermediate = run_for_team(strategy, _team, _season, season_year, 1, _SUB_STRAT)
             _row_final = _rows_intermediate[-1]
             _row_final["sim_key"] = _sim_key
             _rows_append.append(_row_final)
