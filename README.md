@@ -1,6 +1,18 @@
 # f1_fantasy
 
-Context
+This module applies linear programming, using the Python PuLP library, to optimise team selection for the F! Fantasy game.  The data is represented in a way that allows back-testing strategies against all possible starting team combinations for historic seasons, taking into account game mechanics such as unused transfers granting a free bonus transfer in the next race, and price variation throughout the season.
+
+Drivers which are in the current team, but not available for selection in the upcoming race, force the usage of a transfer to swap the driver out
+
+Excluded drivers
+
+Limitation if driver moves team
+
+no chips
+
+performance not a consideration
+
+The "how" is as important as the "what" here; everything has been developed on a minimal-spec budget Chromebook using Codespaces and a local Chromebook Linux dev environment.  Co=pilot has helped with some of the unit tests. 
 
 ## To do
 
@@ -39,3 +51,8 @@ If updating race data in the middle of a season, drivers and constructors will h
 - **import_data** : 
 - **races** : 
 - **linear** : 
+
+## Links
+
+- https://fantasy.formula1.com/en/
+- https://f1fantasytools.com/statistics
