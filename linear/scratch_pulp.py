@@ -1,3 +1,4 @@
+"""Scratch/demo script used during development to experiment with PuLP models."""
 import sys
 if "/workspaces/f1_fantasy" not in sys.path:
     sys.path.insert(0, "/workspaces/f1_fantasy")

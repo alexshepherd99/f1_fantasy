@@ -1,3 +1,10 @@
+"""races.team: Team representation and factory helpers.
+
+Defines a Team container that holds driver and constructor selections,
+methods to compute value and points, and helper factories to construct
+teams from rows or lists.
+"""
+
 import pandas as pd
 import numpy as np
 
@@ -6,6 +13,15 @@ from races.season import Race
 
 
 class Team:
+    """Represents a fantasy team consisting of drivers and constructors.
+
+    Attributes:
+        total_points: Cumulative points scored by the team.
+        unused_budget: Remaining budget after selecting assets.
+        drs_driver: Name of the driver set for DRS boost (if any).
+        assets: Mapping from :class:`AssetType` to list of selected names.
+        asset_count: Expected counts per asset type.
+    """
     def __init__(self, num_drivers: int = 5, num_constructors: int = 2, unused_budget: float = 0.0):
         self.total_points: int = 0
         self.unused_budget = unused_budget
@@ -25,6 +41,10 @@ class Team:
         return f"({drivers})({constructors})"
 
     def add_asset(self, asset_type: AssetType, asset: str):
+        """Add an asset (driver or constructor) to the team.
+
+        Raises a ValueError if the asset is already present or the limit is reached.
+        """
         if asset in self.assets[asset_type]:
             raise ValueError(f"Asset {asset} of type {asset_type} already present")
         if len(self.assets[asset_type]) >= self.asset_count[asset_type]:
@@ -32,6 +52,10 @@ class Team:
         self.assets[asset_type].append(asset)
 
     def remove_asset(self, asset_type: AssetType, asset: str):
+        """Remove an asset from the team.
+
+        Raises a ValueError if the asset is not present.
+        """
         if asset not in self.assets[asset_type]:
             raise ValueError(f"Unable to remove asset {asset} of type {asset_type} as asset is not present")
         self.assets[asset_type].remove(asset)
@@ -41,11 +65,19 @@ class Team:
             self.assets[asset_type] = []
 
     def check_asset_counts(self):
+        """Validate that the team has the expected number of assets for each type.
+
+        Raises ValueError if any count is incorrect.
+        """
         for asset_type in self.assets.keys():
             if len(self.assets[asset_type]) != self.asset_count[asset_type]:
                 raise ValueError(f"Team has incorrect number of assets of type {asset_type.value}, {len(self.assets[asset_type])} vs {self.asset_count[asset_type]}")
             
     def total_value(self, race: Race, race_prev: Race) -> float:
+        """Return the total value of assets for budget calculations.
+
+        Uses previous race prices for drivers not present in the current race.
+        """
         self.check_asset_counts()
         return self.total_value_drivers(race, race_prev) + self.total_value_constructors(race)
 
@@ -69,6 +101,10 @@ class Team:
         return self.total_value(race, race_prev) + self.unused_budget
 
     def update_points(self, race: Race) -> int:
+        """Compute and add points scored in a race to the team's total.
+
+        Returns the number of newly added points.
+        """
         self.check_asset_counts()
         new_points: int = 0
 
@@ -84,6 +120,11 @@ class Team:
         return new_points
     
     def get_drs_points(self, race: Race) -> int:
+        """Return the points awarded for the DRS-boosted driver.
+
+        If an explicit `drs_driver` is set and present in the race, their points
+        are used; otherwise the highest-priced driver in the team is used.
+        """
         if self.drs_driver in race.drivers:
             return race.drivers[self.drs_driver].points
         
@@ -101,6 +142,12 @@ class Team:
 
 
 def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int = 5, num_constructors: int = 2, total_budget: float = 100.0) -> Team:
+    """Create a Team from a row-like mapping of asset prices.
+
+    `row_assets` is typically a dict from `DataFrame.iloc[row].to_dict()` where
+    assets not selected are NaN. The function populates drivers and constructors
+    into a `Team`, validates counts, and sets the unused budget.
+    """
     t = Team(num_drivers=num_drivers, num_constructors=num_constructors)
 
     total_value = 0.0
@@ -124,6 +171,11 @@ def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int 
 
 
 def factory_team_lists(drivers: list[str], constructors: list[str], race: Race, total_budget: float) -> Team:
+    """Create a Team from explicit driver and constructor name lists.
+
+    The `total_budget` is used to compute `unused_budget` after calculating
+    the team's total value for the provided `race`.
+    """
     team = Team(num_drivers=len(drivers), num_constructors=len(constructors))
 
     for d in drivers:

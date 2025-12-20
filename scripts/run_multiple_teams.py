@@ -1,3 +1,5 @@
+"""Run batch simulations across seasons and strategies, appending results to a parquet batch results file."""
+
 import os
 import pandas as pd
 import logging

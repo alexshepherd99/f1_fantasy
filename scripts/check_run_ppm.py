@@ -1,3 +1,5 @@
+"""Load archive data, compute cumulative PPM derivations for drivers and constructors, and write Excel output files."""
+
 import pandas as pd
 import logging
 

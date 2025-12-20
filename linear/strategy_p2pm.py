@@ -6,10 +6,12 @@ from linear.strategy_base import StrategyBase, VarType
 
 
 class StrategyMaxP2PM(StrategyBase):
+    """Strategy that maximises Points-per-Million (P2PM) derived over available assets."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def get_problem(self) -> LpProblem:
+        """Build an LP problem whose objective is the cumulative P2PM over selected assets."""
         problem = LpProblem(self.__class__.__name__, LpMaximize)
 
         deriv_name = get_derivation_name(DerivationType.P2PM_CUMULATIVE, 3)
@@ -34,6 +36,10 @@ class StrategyMaxP2PM(StrategyBase):
 
 
     def get_drs_driver(self) -> str:
+        """Select a driver from the chosen team to assign DRS based on maximum recent points.
+
+        Returns an empty string if no suitable driver has points data.
+        """
         # Override behaviour to select driver with highest points average
         deriv_points = get_derivation_name(DerivationType.POINTS_CUMULATIVE, 3)
 

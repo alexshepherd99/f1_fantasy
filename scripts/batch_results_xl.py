@@ -1,3 +1,5 @@
+"""Script to read the batch results parquet file and write a CSV file for Excel/CSV consumption."""
+
 import pandas as pd
 import logging
 

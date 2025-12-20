@@ -5,6 +5,11 @@ from races.team import Team
 
 
 def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[StrategyBase], max_moves) -> StrategyBase:
+    """Create and return a configured instance of `strategy` for a given race and team.
+
+    Gathers current prices and derivations from the `race` object and computes the
+    budget available using `team.total_budget` (using `race_prev` if needed).
+    """
     team_drivers = team.assets[AssetType.DRIVER]
     team_constructors = team.assets[AssetType.CONSTRUCTOR]
     all_available_drivers = list(race.drivers.keys())

@@ -8,3 +8,4 @@
 - script to identify best N starting teams
 - re-run all outputs
 - git repo public, main branch protected
+- drop and re-create venv on local dev

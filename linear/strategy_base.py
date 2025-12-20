@@ -8,6 +8,7 @@ COST_PROHIBITIVE = 999999.99  # A really big float number that we can never affo
 
 
 class VarType(Enum):
+    """Enum of LP variable/constraint types used in strategies."""
     TeamDrivers = auto()
     TeamConstructors = auto()
     TeamMoves = auto()
@@ -18,6 +19,34 @@ class VarType(Enum):
 
 
 class StrategyBase(ABC):
+    """Abstract base strategy for building an LP-based team selection.
+
+    Responsibilities:
+    - validate input data for drivers and constructors
+    - build common LP variables and constraints (team size, budget, moves)
+    - provide helper utilities for derived strategies
+
+    Parameters
+    ----------
+    team_drivers : list[str]
+        Drivers currently on the team.
+    team_constructors : list[str]
+        Constructors currently on the team.
+    all_available_drivers : list[str]
+        All drivers available for selection.
+    all_available_constructors : list[str]
+        All constructors available for selection.
+    all_available_driver_pairs : dict[str, str]
+        Mapping of driver -> constructor for available drivers.
+    max_cost : float
+        Maximum budget available for the team.
+    max_moves : int
+        Maximum allowed asset moves.
+    prices_assets : dict[str, float]
+        Mapping of asset -> price.
+    derivs_assets : dict[str, dict[str, float]]
+        Derivations keyed by derivation name, then asset -> value.
+    """
     def __init__(
         self,
         team_drivers: list[str],
@@ -105,6 +134,14 @@ class StrategyBase(ABC):
         data_type: str,
         check_type: bool = True
     ):
+        """Verify that every available asset has an entry in `data_assets` and that
+        provided numeric values are valid.
+
+        Raises
+        ------
+        ValueError
+            If any expected asset is missing or any value is invalid.
+        """
         # All available drivers have a price
         for i in all_available_drivers:
             if i not in data_assets.keys():
@@ -128,6 +165,11 @@ class StrategyBase(ABC):
 
     @classmethod
     def get_team_selection_dict(cls, list_assets_available: list[str], list_assets_team: list[str]) -> dict[str, int]:
+        """Return a mapping of asset -> 1 if the asset is currently in the team, otherwise 0.
+
+        The union of available assets and team assets is used to ensure assets that are on the
+        team but not currently available are still represented.
+        """
         all_assets = set(list_assets_available).union(set(list_assets_team))
         selection_dict = dict()
         for i in all_assets:
@@ -138,6 +180,11 @@ class StrategyBase(ABC):
         return selection_dict
 
     def initialise(self):
+        """Create LP variables and base constraints common to strategies.
+
+        Sets up binary selection variables for drivers/constructors, cost expressions and
+        team-size/moves constraints used by concrete strategies.
+        """
         # Driver and constructor lists need to include available assets, in addition to driver assets which are
         # currently in the team (even if no longer available)
         driver_team = self.get_team_selection_dict(self._all_available_drivers, self._team_drivers)
@@ -178,6 +225,11 @@ class StrategyBase(ABC):
         self._lp_constraints[VarType.TeamMoves] = self._lp_variables[VarType.TeamMoves] <= self._max_moves
 
     def execute(self) -> LpProblem:
+        """Build and solve the LP problem returning the solved LpProblem.
+
+        The concrete strategy must implement `get_problem` to provide the objective
+        and any additional strategy-specific constraints.
+        """
         # Base initialisation and constraints
         self.initialise()
 
@@ -197,9 +249,19 @@ class StrategyBase(ABC):
 
     @abstractmethod
     def get_problem(self) -> LpProblem:
+        """Return an LpProblem with objective set for the concrete strategy.
+
+        Implementations should construct and return the problem object to be solved
+        by `execute`.
+        """
         pass
 
     def get_drs_driver(self) -> str:
+        """Return the driver chosen for DRS based on strategy-specific logic.
+
+        The default implementation returns an empty string to indicate no explicit
+        choice; subclasses may override to choose a specific driver from the selected team.
+        """
         # By default, strategy won't select a DRS driver, so the team point scoring will just select the highest
         # value driver for DRS.
         return ""

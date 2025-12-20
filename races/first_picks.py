@@ -1,3 +1,10 @@
+"""Utilities to generate initial team combinations for a race.
+
+Provides functions to enumerate driver/constructor combinations and
+convert those 0/1 selections into price-based teams that satisfy a
+budget constraint.
+"""
+
 import pandas as pd
 from itertools import combinations
 import logging
@@ -14,6 +21,17 @@ def get_all_combinations(
     num_allowed: int,
     col_prefix: str
 ) -> pd.DataFrame:
+    """Return all combinations as a 0/1 DataFrame.
+
+    Args:
+        num_total: Total number of items (columns).
+        num_allowed: Number of items selected (1s per row).
+        col_prefix: Column name prefix for generated columns.
+
+    Returns:
+        DataFrame where each row is a 0/1 vector indicating a valid
+        selection of `num_allowed` items out of `num_total`.
+    """
     rows = []
     for comb in combinations(range(num_total), num_allowed):
         row = [0] * num_total
@@ -31,12 +49,22 @@ def get_all_team_combinations(
     num_constructors_total: int=10,
     num_constructors_team: int=2
 ) -> pd.DataFrame:
+    """Return all valid driver+constructor team selection combinations.
+
+    The returned DataFrame contains driver selection columns prefixed with
+    `D` and constructor columns prefixed with `C`, with 0/1 values.
+    """
     df_drivers = get_all_combinations(num_drivers_total, num_drivers_team, "D")
     df_constructors = get_all_combinations(num_constructors_total, num_constructors_team, "C")
     return df_drivers.merge(df_constructors, how="cross")
 
 
 def set_combination_assets(df_combinations: pd.DataFrame, race: Race) -> pd.DataFrame:
+    """Assign driver and constructor column names to a combinations frame.
+
+    Validates that the number of columns matches the race line-up and
+    replaces generic column names with driver and constructor names.
+    """
     drivers = list(race.drivers.keys())
     constructors = list(race.constructors.keys())
 
@@ -48,6 +76,22 @@ def set_combination_assets(df_combinations: pd.DataFrame, race: Race) -> pd.Data
 
 
 def get_starting_combinations(season: int, race_num: int, min_total_value: float, max_total_value: float=100.0) -> pd.DataFrame:
+    """Generate price-based team combinations that satisfy a budget window.
+
+    This loads PPM derivations for a season, builds a `Race` object for the
+    requested race, converts 0/1 combinations into price lists and filters
+    teams by total value between `min_total_value` (exclusive) and
+    `max_total_value` (inclusive).
+
+    Args:
+        season: Season year used to load PPM derivations.
+        race_num: Race number within the season.
+        min_total_value: Exclusive lower bound on team total value.
+        max_total_value: Inclusive upper bound on team total value (default 100).
+
+    Returns:
+        DataFrame of valid, priced team combinations for the given race.
+    """
     (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season)
 
     race = factory_race(

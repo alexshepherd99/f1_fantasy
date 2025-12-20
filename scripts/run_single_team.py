@@ -1,3 +1,5 @@
+"""Simulate a single team across races using various strategies and save per-race results to an Excel file."""
+
 import pandas as pd
 import logging
 
