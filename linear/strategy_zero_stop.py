@@ -11,7 +11,7 @@ class StrategyZeroStop(StrategyBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # We'll only allow a change if there are unavailable drivers, as we dont't currently handle the points penalty
+        # We'll only allow a change if there are unavailable drivers, as we don't currently handle the points penalty
         num_unavailable_drivers = 0
         for d in self._team_drivers:
             if d not in self._all_available_drivers:

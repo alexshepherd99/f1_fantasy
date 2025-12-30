@@ -15,10 +15,11 @@ from races.season import factory_race, factory_season
 from races.team import Team, factory_team_row
 from scripts.run_single_team import get_strat_display_name, run_for_team
 
+ALL_STRATEGIES = [StrategyMaxBudget, StrategyZeroStop, StrategyMaxP2PM]
+
 _SEASONS = F1_SEASON_CONSTRUCTORS.keys()
 _FILE_BATCH_RESULTS_PARQET = "outputs/f1_fantasy_results_batch.parquet"
 _FILE_BATCH_RESULTS_EXCEL = "outputs/f1_fantasy_results_batch.csv"
-_STRATEGIES = [StrategyMaxBudget, StrategyZeroStop, StrategyMaxP2PM]
 _SUB_STRAT = ""
 
 
@@ -102,5 +103,5 @@ if __name__ == "__main__":
     setup_logging()
 
     for _season_year in _SEASONS:
-        for _strategy in _STRATEGIES:
+        for _strategy in ALL_STRATEGIES:
             run_strategy_for_season(_season_year, _strategy)
