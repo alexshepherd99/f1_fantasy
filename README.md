@@ -18,7 +18,7 @@ There are some limitations to take into consideration:
 
 ## Usage scripts
 
-- **run_single_team.py** : Run all strategies for a given team in a given season, saving the results out to Excel format.
+- **run_single_team.py** : Run all strategies for a given team in a given season, saving the results out to Excel format.  Starting race can be specified within the script, so that you can predict from a particular point within the season against you team at that time.
 - **run_multiple_teams.py** : Full back-testing script, running all strategies against all available seasons, for every possible starting team combination above a specified total value.  Outputs are written to a parquet format file every 100 simulations, in case of interuption; when re-running, any simulations already present in the output will be skipped.
 - **batch_results_xl.py** : convert the parquet output file from run_multiple_teams.py into a csv format, for analysis and importing into Tableau.
 - **check_run_ppm.py** : generate an Excel version of the strategy input data, plus any derivation calculations.
@@ -56,5 +56,4 @@ These strategies are contained in the **linear** module:
 ## To do
 
 - fix team selection issue when driver changes team mid-season (e.g. TSU from VRB to RED)
-- script to run for a specific individual race, all strategies
 - git repo public, main branch protected

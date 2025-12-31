@@ -8,6 +8,7 @@ teams from rows or lists.
 import pandas as pd
 import numpy as np
 
+from common import DEFAULT_STARTING_BUDGET
 from races.asset import AssetType
 from races.season import Race
 
@@ -141,7 +142,7 @@ class Team:
             return max_val_points
 
 
-def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int = 5, num_constructors: int = 2, total_budget: float = 100.0) -> Team:
+def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int = 5, num_constructors: int = 2, total_budget: float = DEFAULT_STARTING_BUDGET) -> Team:
     """Create a Team from a row-like mapping of asset prices.
 
     `row_assets` is typically a dict from `DataFrame.iloc[row].to_dict()` where
@@ -170,7 +171,7 @@ def factory_team_row(row_assets: dict[str, float], race: Race, num_drivers: int 
     return t
 
 
-def factory_team_lists(drivers: list[str], constructors: list[str], race: Race, total_budget: float) -> Team:
+def factory_team_lists(drivers: list[str], constructors: list[str], race: Race, total_budget: float = DEFAULT_STARTING_BUDGET) -> Team:
     """Create a Team from explicit driver and constructor name lists.
 
     The `total_budget` is used to compute `unused_budget` after calculating

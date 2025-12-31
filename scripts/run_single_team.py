@@ -15,10 +15,20 @@ from races.team import Team, factory_team_lists
 
 _FILE_BATCH_RESULTS = "outputs/f1_fantasy_results_single.xlsx"
 
-_SEASON = 2025
-_TEAM_START_DRIVERS = ["SAI", "HAD", "DOO", "BEA", "TSU"]
-_TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
-_STARTING_RACE = 1
+# Config items to run a single team prediction for all strategies.  This will start at the specified race
+# within that season, then run to the last race with available data.
+#SEASON = 2025
+#TEAM_START_DRIVERS = ["LEC", "SAI", "VER", "HAD", "ALO"]
+#TEAM_START_CONSTRUCTORS = ["MER", "HAA"]
+#STARTING_RACE = 23  # The team above is for race 23, therefore we start predicting from race 24
+#STARTING_UNUSED_BUDGET = 0.5  # This will only be used if starting after the first race of the season
+
+# My starting team from 2025
+SEASON = 2025
+TEAM_START_DRIVERS = ["SAI", "HAD", "DOO", "BEA", "TSU"]
+TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
+STARTING_RACE = 1
+STARTING_UNUSED_BUDGET = 0.0  # Not used here, as we are starting in the first race of the season
 
 
 def get_row_intermediate_results(
@@ -159,13 +169,13 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
 if __name__ == "__main__":
     setup_logging()
 
-    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=_SEASON)
+    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=SEASON)
     
     _season = factory_season(
         df_driver_ppm,
         df_constructor_ppm,
         df_driver_pairs,
-        _SEASON,
+        SEASON,
     )
 
     _rows = []
@@ -174,13 +184,16 @@ if __name__ == "__main__":
 
         # This will calculate the unused budget based on starting prices
         _team = factory_team_lists(
-            drivers=_TEAM_START_DRIVERS,
-            constructors=_TEAM_START_CONSTRUCTORS,
-            race=_season.races[_STARTING_RACE],
-            total_budget=100.0  # Starting budget
+            drivers=TEAM_START_DRIVERS,
+            constructors=TEAM_START_CONSTRUCTORS,
+            race=_season.races[STARTING_RACE],
         )
+
+        # If we're starting mid-season, use the specified unused budget
+        if STARTING_RACE > 1:
+            _team.unused_budget = STARTING_UNUSED_BUDGET
         
-        _rows = _rows + run_for_team(strat, _team, _season, _SEASON, _STARTING_RACE)
+        _rows = _rows + run_for_team(strat, _team, _season, SEASON, STARTING_RACE)
 
     # Create a DataFrame from the results rows and save to Excel
     pd.DataFrame(_rows).to_excel(_FILE_BATCH_RESULTS, index=False)

@@ -7,6 +7,8 @@ F1_SEASON_CONSTRUCTORS = {
     2025: 10,
 }
 
+DEFAULT_STARTING_BUDGET = 100.0
+
 
 class AssetType(Enum):
     DRIVER = "Driver"
