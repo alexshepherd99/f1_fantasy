@@ -74,7 +74,7 @@ def test_get_starting_combinations_replaces_prices_and_filters(monkeypatch):
 		# monkeypatch get_all_team_combinations to return our small frame
 		import races.first_picks as fp
 
-		monkeypatch.setattr(fp, "get_all_team_combinations", lambda: df_combs.copy())
+		monkeypatch.setattr(fp, "get_all_team_combinations", lambda season_year: df_combs.copy())
 
 		# stub load_with_derivations (not used, but function expects it)
 		monkeypatch.setattr(fp, "load_with_derivations", lambda season: (None, None, None))

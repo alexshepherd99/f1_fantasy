@@ -10,7 +10,7 @@ from itertools import combinations
 import logging
 import numpy as np
 
-from common import setup_logging
+from common import CONSTRUCTORS_PER_TEAM, DEFAULT_STARTING_BUDGET, DRIVERS_PER_CONSTRUCTOR, DRIVERS_PER_TEAM, F1_SEASON_CONSTRUCTORS, setup_logging
 from races.season import Race, factory_race
 from races.team import factory_team_row
 from helpers import load_with_derivations
@@ -44,16 +44,17 @@ def get_all_combinations(
 
 
 def get_all_team_combinations(
-    num_drivers_total: int=20,
-    num_drivers_team: int=5,
-    num_constructors_total: int=10,
-    num_constructors_team: int=2
+    season_year: int,
+    num_drivers_team: int=DRIVERS_PER_TEAM,
+    num_constructors_team: int=CONSTRUCTORS_PER_TEAM
 ) -> pd.DataFrame:
     """Return all valid driver+constructor team selection combinations.
 
     The returned DataFrame contains driver selection columns prefixed with
     `D` and constructor columns prefixed with `C`, with 0/1 values.
     """
+    num_constructors_total = F1_SEASON_CONSTRUCTORS[season_year]  # Intentionally throw if we can't find the season
+    num_drivers_total = num_constructors_total * DRIVERS_PER_CONSTRUCTOR
     df_drivers = get_all_combinations(num_drivers_total, num_drivers_team, "D")
     df_constructors = get_all_combinations(num_constructors_total, num_constructors_team, "C")
     return df_drivers.merge(df_constructors, how="cross")
@@ -75,7 +76,7 @@ def set_combination_assets(df_combinations: pd.DataFrame, race: Race) -> pd.Data
     return df_combinations
 
 
-def get_starting_combinations(season: int, race_num: int, min_total_value: float, max_total_value: float=100.0) -> pd.DataFrame:
+def get_starting_combinations(season: int, race_num: int, min_total_value: float, max_total_value: float=DEFAULT_STARTING_BUDGET) -> pd.DataFrame:
     """Generate price-based team combinations that satisfy a budget window.
 
     This loads PPM derivations for a season, builds a `Race` object for the
@@ -101,7 +102,7 @@ def get_starting_combinations(season: int, race_num: int, min_total_value: float
         race_num,
     )
 
-    df_combinations = set_combination_assets(get_all_team_combinations(), race)
+    df_combinations = set_combination_assets(get_all_team_combinations(season), race)
 
     for driver in race.drivers.keys():
         price = race.drivers[driver].price
@@ -126,12 +127,11 @@ def get_starting_combinations(season: int, race_num: int, min_total_value: float
 if __name__ == "__main__":
     setup_logging()
 
-    df_combinations = get_starting_combinations(2023, 1, 99.0)
+    df_combinations = get_starting_combinations(2026, 1, 99.0)
     logging.info(df_combinations.shape)
     logging.info(df_combinations.sample(2))
 
-    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(2023)
-
+    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(2026)
     race = factory_race(
         df_driver_ppm,
         df_constructor_ppm,

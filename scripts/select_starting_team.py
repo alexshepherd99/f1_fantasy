@@ -6,7 +6,7 @@ from races.team import factory_team_row
 from scripts.run_multiple_teams import _FILE_BATCH_RESULTS_PARQET, ALL_STRATEGIES, get_starting_key, open_batch_results_file
 import logging
 
-_SEASON_YEAR = 2025
+_SEASON_YEAR = 2026
 _MIN_BUDGET = 99.9
 
 
