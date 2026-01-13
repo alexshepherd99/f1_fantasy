@@ -15,6 +15,7 @@ def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[Str
     all_available_drivers = list(race.drivers.keys())
     all_available_constructors = list(race.constructors.keys())
     all_available_driver_pairs = {driver: race.drivers[driver].constructor for driver in race.drivers}
+    prev_available_driver_pairs = {driver: race_prev.drivers[driver].constructor for driver in race_prev.drivers}
     max_cost = team.total_budget(race, race_prev)  # Previous race, in case current race has no driver valuation
 
     all_derivs = set()
@@ -41,6 +42,7 @@ def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[Str
         all_available_drivers=all_available_drivers,
         all_available_constructors=all_available_constructors,
         all_available_driver_pairs=all_available_driver_pairs,
+        prev_available_driver_pairs=prev_available_driver_pairs,
         max_cost=max_cost,
         max_moves=max_moves,
         prices_assets=prices_assets,

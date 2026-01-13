@@ -38,6 +38,8 @@ class StrategyBase(ABC):
         All constructors available for selection.
     all_available_driver_pairs : dict[str, str]
         Mapping of driver -> constructor for available drivers.
+    prev_available_driver_pairs : dict[str, str]
+        Mapping of driver -> constructor for available drivers for previous race
     max_cost : float
         Maximum budget available for the team.
     max_moves : int
@@ -54,6 +56,7 @@ class StrategyBase(ABC):
         all_available_drivers: list[str],
         all_available_constructors: list[str],
         all_available_driver_pairs: dict[str, str],
+        prev_available_driver_pairs: dict[str, str],
         max_cost: float,
         max_moves: int,
         prices_assets: dict[str, float],
@@ -99,6 +102,16 @@ class StrategyBase(ABC):
             if x not in self._prices_assets.keys():
                 self._prices_assets[x] = COST_PROHIBITIVE
 
+        # Any drivers which have a different driver/team pairing from the previous race are prevented from selection.
+        # This is because the game forces you to make a change in the rare event that a driver changes teams.  In its
+        # current form, the algo cannot force you to change a driver out while still making that driver available for
+        # selection in a different team.
+        for x in team_drivers:
+            team_prev = prev_available_driver_pairs.get(x)
+            if team_prev is not None:
+                if all_available_driver_pairs.get(x) != team_prev:
+                    self._prices_assets[x] = COST_PROHIBITIVE
+
         # Take a copy of the derivations.  Note that we will not add any derivations for team drivers that are
         # not available for selection.
         self._derivs_assets = derivs_assets
@@ -118,6 +131,7 @@ class StrategyBase(ABC):
         self._all_available_drivers = all_available_drivers
         self._all_available_constructors = all_available_constructors
         self._all_available_driver_pairs = all_available_driver_pairs
+        self._prev_available_driver_pairs = prev_available_driver_pairs
         self._max_cost = max_cost
         self._max_moves = max_moves
 

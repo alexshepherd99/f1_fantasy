@@ -74,6 +74,7 @@ def test_construct_strategy(
             all_available_drivers=[],
             all_available_constructors=fixture_all_available_constructors,
             all_available_driver_pairs=fixture_pairings,
+            prev_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets={},
@@ -89,6 +90,7 @@ def test_construct_strategy(
             all_available_drivers=fixture_all_available_drivers,
             all_available_constructors=[],
             all_available_driver_pairs=fixture_pairings,
+            prev_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets={},
@@ -104,6 +106,7 @@ def test_construct_strategy(
             all_available_drivers=[],
             all_available_constructors=fixture_all_available_constructors,
             all_available_driver_pairs=fixture_pairings,
+            prev_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets={},
@@ -119,6 +122,7 @@ def test_construct_strategy(
             all_available_drivers=fixture_all_available_drivers + ["XXX"],
             all_available_constructors=[],
             all_available_driver_pairs=fixture_pairings,
+            prev_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
@@ -134,6 +138,7 @@ def test_construct_strategy(
             all_available_drivers=[],
             all_available_constructors=fixture_all_available_constructors + ["XXX"],
             all_available_driver_pairs=fixture_pairings,
+            prev_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
@@ -148,6 +153,7 @@ def test_construct_strategy(
         all_available_drivers=fixture_all_available_drivers,
         all_available_constructors=fixture_all_available_constructors,
         all_available_driver_pairs=fixture_pairings,
+        prev_available_driver_pairs=fixture_pairings,
         max_cost=0.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
@@ -166,6 +172,7 @@ def test_construct_strategy(
             all_available_drivers=fixture_all_available_drivers,
             all_available_constructors=fixture_all_available_constructors,
             all_available_driver_pairs=fixture_pairings,
+            prev_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fap2,
@@ -183,6 +190,7 @@ def test_construct_strategy(
             all_available_drivers=fixture_all_available_drivers,
             all_available_constructors=fixture_all_available_constructors,
             all_available_driver_pairs=dp,
+            prev_available_driver_pairs=dp,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
@@ -200,6 +208,7 @@ def test_construct_strategy(
             all_available_drivers=fixture_all_available_drivers,
             all_available_constructors=fixture_all_available_constructors,
             all_available_driver_pairs=dp,
+            prev_available_driver_pairs=dp,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
@@ -217,6 +226,7 @@ def test_construct_strategy(
             all_available_drivers=fixture_all_available_drivers + ["XXX"],
             all_available_constructors=fixture_all_available_constructors,
             all_available_driver_pairs=fixture_pairings,
+            prev_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fap2,
@@ -231,6 +241,7 @@ def test_construct_strategy(
         all_available_drivers=fixture_all_available_drivers,
         all_available_constructors=fixture_all_available_constructors,
         all_available_driver_pairs=fixture_pairings,
+        prev_available_driver_pairs=fixture_pairings,
         max_cost=0.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
@@ -271,6 +282,7 @@ def test_initialise_sets_up_lp_variables_and_constraints(
         all_available_drivers=fixture_all_available_drivers,
         all_available_constructors=fixture_all_available_constructors,
         all_available_driver_pairs=fixture_pairings,
+        prev_available_driver_pairs=fixture_pairings,
         max_cost=1000.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
@@ -374,6 +386,7 @@ def test_execute_picks_best_scoring_team():
         all_available_drivers=drivers,
         all_available_constructors=constructors,
         all_available_driver_pairs=pairings,
+        prev_available_driver_pairs=pairings,
         max_cost=1000.0,
         max_moves=2,
         prices_assets=prices,
@@ -472,6 +485,7 @@ def test_strategy_derivs(
             all_available_drivers=fixture_all_available_drivers,
             all_available_constructors=fixture_all_available_constructors,
             all_available_driver_pairs=fixture_pairings,
+            prev_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
@@ -487,6 +501,7 @@ def test_strategy_derivs(
             all_available_drivers=fixture_all_available_drivers,
             all_available_constructors=fixture_all_available_constructors,
             all_available_driver_pairs=fixture_pairings,
+            prev_available_driver_pairs=fixture_pairings,
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
@@ -499,6 +514,7 @@ def test_strategy_derivs(
         all_available_drivers=fixture_all_available_drivers,
         all_available_constructors=fixture_all_available_constructors,
         all_available_driver_pairs=fixture_pairings,
+        prev_available_driver_pairs=fixture_pairings,
         max_cost=0.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
@@ -507,3 +523,66 @@ def test_strategy_derivs(
     assert len(sb._derivs_assets.keys()) == 2
     assert len(sb._derivs_assets["Deriv1"].keys()) == 15  # Added for available drivers only
     assert sb._derivs_assets["Deriv2"]["AST"] == 1.55
+
+
+def test_strategy_driver_change_team(
+        fixture_all_available_drivers,
+        fixture_all_available_constructors,
+        fixture_asset_prices,
+        fixture_pairings,
+    ):
+
+    # No change in driver pairings - costs not impacted
+    sb = StrategyDummy(
+        team_drivers=["VER", "LEC"],
+        team_constructors=["MCL"],
+        all_available_drivers=fixture_all_available_drivers,
+        all_available_constructors=fixture_all_available_constructors,
+        all_available_driver_pairs=fixture_pairings,
+        prev_available_driver_pairs=fixture_pairings,
+        max_cost=0.0,
+        max_moves=2,
+        prices_assets=fixture_asset_prices,
+        derivs_assets={}
+    )
+    assert sb._prices_assets["VER"] == 1.0
+    assert sb._prices_assets["LEC"] == 2.0
+    assert sb._prices_assets["MCL"] == 4.0
+
+    # Empty driver pairings - costs not impacted
+    sb = StrategyDummy(
+        team_drivers=["VER", "LEC"],
+        team_constructors=["MCL"],
+        all_available_drivers=fixture_all_available_drivers,
+        all_available_constructors=fixture_all_available_constructors,
+        all_available_driver_pairs=fixture_pairings,
+        prev_available_driver_pairs={},
+        max_cost=0.0,
+        max_moves=2,
+        prices_assets=fixture_asset_prices,
+        derivs_assets={}
+    )
+    assert sb._prices_assets["VER"] == 1.0
+    assert sb._prices_assets["LEC"] == 2.0
+    assert sb._prices_assets["MCL"] == 4.0
+
+    # VER has changed teams - only his price impacted
+    prev_pairings = {
+        "VER": "MCL",
+        "LEC": "FER",
+    }
+    sb = StrategyDummy(
+        team_drivers=["VER", "LEC"],
+        team_constructors=["MCL"],
+        all_available_drivers=fixture_all_available_drivers,
+        all_available_constructors=fixture_all_available_constructors,
+        all_available_driver_pairs=fixture_pairings,
+        prev_available_driver_pairs=prev_pairings,
+        max_cost=0.0,
+        max_moves=2,
+        prices_assets=fixture_asset_prices,
+        derivs_assets={}
+    )
+    assert sb._prices_assets["VER"] == COST_PROHIBITIVE
+    assert sb._prices_assets["LEC"] == 2.0
+    assert sb._prices_assets["MCL"] == 4.0

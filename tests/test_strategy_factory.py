@@ -2,6 +2,7 @@ import pytest
 
 from common import AssetType
 from helpers import load_with_derivations
+from linear.strategy_base import COST_PROHIBITIVE
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_factory import factory_strategy
 from races.season import factory_season
@@ -97,3 +98,46 @@ def test_strategy_factory_derivs():
     assert strat_budget._derivs_assets["P2PM Cumulative (3)"]["SAR"] == 30.25  # Driver in team and available
     assert strat_budget._derivs_assets["PPM Cumulative (3)"]["HAM"] == pytest.approx(0.8016, abs=1e-4)  # Driver not in team and available
     assert strat_budget._derivs_assets["Points Cumulative (3)"].get("LAW") is None  # Driver in team and not available
+
+
+def test_strategy_factory_driver_change():
+    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=2025)
+    
+    season = factory_season(
+        df_driver_ppm,
+        df_constructor_ppm,
+        df_driver_pairs,
+        2025,
+    )
+
+    # LAW moved from RED to VRB, between races 2 and 3
+    race_1 = season.races[1]
+    race_2 = season.races[2]
+    race_3 = season.races[3]
+
+    team_a = Team(num_drivers=2, num_constructors=1, unused_budget=50.0)
+    team_a.add_asset(AssetType.DRIVER, "LAW")
+    team_a.add_asset(AssetType.DRIVER, "VER")
+    team_a.add_asset(AssetType.CONSTRUCTOR, "MCL")
+
+    strat_budget_a = factory_strategy(race_2, race_1, team_a, StrategyMaxBudget, max_moves=2)
+
+    # LAW is still available in race 2
+    assert strat_budget_a._prices_assets["LAW"] == 17.4
+    assert strat_budget_a._prices_assets["VER"] == 28.5
+    assert strat_budget_a._prices_assets["MCL"] == 30.3
+    assert strat_budget_a._prices_assets["TSU"] == 9.0
+
+    team_b = Team(num_drivers=2, num_constructors=1, unused_budget=50.0)
+    team_b.add_asset(AssetType.DRIVER, "LAW")
+    team_b.add_asset(AssetType.DRIVER, "VER")
+    team_b.add_asset(AssetType.CONSTRUCTOR, "MCL")
+
+    strat_budget_b = factory_strategy(race_3, race_2, team_b, StrategyMaxBudget, max_moves=2)
+
+    # LAW is no longer available in race 3
+    assert strat_budget_b._prices_assets["LAW"] == COST_PROHIBITIVE
+    assert strat_budget_b._prices_assets["VER"] == 28.6
+    assert strat_budget_b._prices_assets["MCL"] == 30.6
+    # TSU switched as well, however as he was not in our team selection already, he can be selected
+    assert strat_budget_b._prices_assets["TSU"] == 16.8

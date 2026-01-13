@@ -20,6 +20,7 @@ def test_strat_zero_stop_no_moves(
         all_available_drivers=fixture_all_available_drivers,
         all_available_constructors=fixture_all_available_constructors,
         all_available_driver_pairs=fixture_pairings,
+        prev_available_driver_pairs=fixture_pairings,
         max_cost=100.0,
         max_moves=3,  # This should get forced back to zero by the strat
         prices_assets=fixture_asset_prices,
@@ -67,6 +68,7 @@ def test_strat_zero_stop_unavailable_driver(
         all_available_drivers=fixture_all_available_drivers,
         all_available_constructors=fixture_all_available_constructors,
         all_available_driver_pairs=fixture_pairings,
+        prev_available_driver_pairs=fixture_pairings,
         max_cost=100.0,
         max_moves=3,  # This should get forced back to zero by the strat
         prices_assets=fixture_asset_prices,
