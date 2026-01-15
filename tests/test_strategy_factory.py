@@ -127,6 +127,8 @@ def test_strategy_factory_driver_change():
     assert strat_budget_a._prices_assets["VER"] == 28.5
     assert strat_budget_a._prices_assets["MCL"] == 30.3
     assert strat_budget_a._prices_assets["TSU"] == 9.0
+    assert "LAW" in strat_budget_a._all_available_drivers
+    assert strat_budget_a._all_available_driver_pairs.get("LAW") == "RED"
 
     team_b = Team(num_drivers=2, num_constructors=1, unused_budget=50.0)
     team_b.add_asset(AssetType.DRIVER, "LAW")
@@ -141,3 +143,5 @@ def test_strategy_factory_driver_change():
     assert strat_budget_b._prices_assets["MCL"] == 30.6
     # TSU switched as well, however as he was not in our team selection already, he can be selected
     assert strat_budget_b._prices_assets["TSU"] == 16.8
+    assert "LAW" in strat_budget_b._all_available_drivers
+    assert strat_budget_b._all_available_driver_pairs.get("LAW") == "VRB"

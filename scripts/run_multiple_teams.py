@@ -20,7 +20,7 @@ ALL_STRATEGIES = [StrategyMaxBudget, StrategyZeroStop, StrategyMaxP2PM]
 _SEASONS = F1_SEASON_CONSTRUCTORS.keys()
 _FILE_BATCH_RESULTS_PARQET = "outputs/f1_fantasy_results_batch.parquet"
 _FILE_BATCH_RESULTS_EXCEL = "outputs/f1_fantasy_results_batch.csv"
-_SUB_STRAT = ""
+_SUB_STRAT = "fix_drv_chg"
 
 
 def get_starting_key(strat_name: str, season: int, team: Team, sub_strat: str = "") -> str:

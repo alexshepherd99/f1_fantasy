@@ -548,6 +548,8 @@ def test_strategy_driver_change_team(
     assert sb._prices_assets["VER"] == 1.0
     assert sb._prices_assets["LEC"] == 2.0
     assert sb._prices_assets["MCL"] == 4.0
+    assert "VER" in sb._all_available_drivers
+    assert sb._all_available_driver_pairs["VER"] == "RED"
 
     # Empty driver pairings - costs not impacted
     sb = StrategyDummy(
@@ -565,6 +567,8 @@ def test_strategy_driver_change_team(
     assert sb._prices_assets["VER"] == 1.0
     assert sb._prices_assets["LEC"] == 2.0
     assert sb._prices_assets["MCL"] == 4.0
+    assert "VER" in sb._all_available_drivers
+    assert sb._all_available_driver_pairs["VER"] == "RED"
 
     # VER has changed teams - only his price impacted
     prev_pairings = {
@@ -586,3 +590,5 @@ def test_strategy_driver_change_team(
     assert sb._prices_assets["VER"] == COST_PROHIBITIVE
     assert sb._prices_assets["LEC"] == 2.0
     assert sb._prices_assets["MCL"] == 4.0
+    assert "VER" in sb._all_available_drivers
+    assert sb._all_available_driver_pairs["VER"] == "RED"

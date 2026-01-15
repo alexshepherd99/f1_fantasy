@@ -2,6 +2,7 @@
 
 import pandas as pd
 import logging
+from pulp.constants import LpStatusOptimal
 
 from common import AssetType, setup_logging
 from helpers import load_with_derivations
@@ -117,6 +118,15 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
             strat = factory_strategy(season.races[race_num], race_prev, team, strategy, max_moves=max_moves)
 
             model = strat.execute()
+
+            # If model failed, we need to barf - it should never be impossible to solve
+            if model.status != LpStatusOptimal:
+                logging.error(f"LP model returned {model.status}")
+                logging.error(f"Team: {str(team)}")
+                logging.error(f"Season {season.season} race {race_num}")
+                logging.error([[d,v.varValue] for d,v in strat._lp_variables[VarType.TeamDrivers].items()])
+                logging.error([[d,v.varValue] for d,v in strat._lp_variables[VarType.TeamConstructors].items()])
+                raise RuntimeError()
 
             # Extract selected assets from the LP model
             model_drivers = [d for d,v in strat._lp_variables[VarType.TeamDrivers].items() if v.varValue == 1]

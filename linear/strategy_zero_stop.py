@@ -1,6 +1,6 @@
 from pulp import LpProblem, LpMaximize
 
-from linear.strategy_base import StrategyBase, VarType
+from linear.strategy_base import COST_PROHIBITIVE, StrategyBase, VarType
 
 
 class StrategyZeroStop(StrategyBase):
@@ -14,7 +14,7 @@ class StrategyZeroStop(StrategyBase):
         # We'll only allow a change if there are unavailable drivers, as we don't currently handle the points penalty
         num_unavailable_drivers = 0
         for d in self._team_drivers:
-            if d not in self._all_available_drivers:
+            if (d not in self._all_available_drivers) or (self._prices_assets[d] == COST_PROHIBITIVE):
                 num_unavailable_drivers += 1
 
         # Usually, this will be zero
