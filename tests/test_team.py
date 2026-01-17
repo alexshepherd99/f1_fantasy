@@ -93,8 +93,8 @@ def race_13() -> Race:
 
 def test_team_valuation(race_1, race_13):
     team = Team(num_drivers=2, num_constructors=2, unused_budget=3.1)
-    team.add_asset(asset_type=AssetType.DRIVER, asset="NOR")
-    team.add_asset(asset_type=AssetType.DRIVER, asset="VER")
+    team.add_asset(asset_type=AssetType.DRIVER, asset="NOR@MCL")
+    team.add_asset(asset_type=AssetType.DRIVER, asset="VER@RED")
     team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="FER")
     team.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="RED")
 
@@ -104,8 +104,8 @@ def test_team_valuation(race_1, race_13):
 
     # When driver is not available in race, use price from previous race
     team2 = Team(num_drivers=2, num_constructors=2, unused_budget=3.1)
-    team2.add_asset(asset_type=AssetType.DRIVER, asset="LAW")
-    team2.add_asset(asset_type=AssetType.DRIVER, asset="VER")
+    team2.add_asset(asset_type=AssetType.DRIVER, asset="LAW@ALT")
+    team2.add_asset(asset_type=AssetType.DRIVER, asset="VER@RED")
     team2.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="FER")
     team2.add_asset(asset_type=AssetType.CONSTRUCTOR, asset="RED")
 
@@ -190,11 +190,11 @@ def test_factory_team_row(race_1):
 
 def test_factory_team_lists(race_1):
     drivers = [
-         "SAR",  # 4.0
-         "HUL",  # 4.3
-         "DEV",  # 5.0
-         "TSU",  # 4.8
-         "ZHO",  # 4.9
+         "SAR@WIL",  # 4.0
+         "HUL@HAA",  # 4.3
+         "DEV@ALT",  # 5.0
+         "TSU@ALT",  # 4.8
+         "ZHO@ALF",  # 4.9
     ]
     constructors = [
         "MCL",  # 9.1
@@ -210,11 +210,11 @@ def test_factory_team_lists(race_1):
 
 def test_team_update_points(race_1):
     drivers = [
-         "SAR",  # 11
-         "HUL",  # -1
-         "DEV",  # 8, highest value driver so gets x2 boost
-         "TSU",  # 8
-         "ZHO",  # 15
+         "SAR@WIL",  # 11
+         "HUL@HAA",  # -1
+         "DEV@ALT",  # 8, highest value driver so gets x2 boost
+         "TSU@ALT",  # 8
+         "ZHO@ALF",  # 15
     ]
     constructors = [
         "MCL",  # -16   
@@ -233,7 +233,7 @@ def test_team_update_points(race_1):
     assert t.total_points == 128
 
     # Set a different DRS driver, should be different points
-    t.drs_driver = "ZHO"
+    t.drs_driver = "ZHO@ALF"
     # total points = 56 + bonus 15 = 71
     assert t.update_points(race_1) == 71
     assert t.total_points == 199

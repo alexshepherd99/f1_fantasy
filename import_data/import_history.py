@@ -93,7 +93,11 @@ def load_archive_sheet(sheet_info: ArchiveSheetInfo, fn: str=_FILE_ARCHIVE_INPUT
 
     # Patch up column name, if incorrect in input file
     df_input = df_input.rename(columns={"Team": "Constructor"})
-    
+
+    # If there is a driver column, merge it with the constuctor column
+    if "Driver" in df_input.columns:
+        df_input["Driver"] = df_input["Driver"].astype(str) + "@" + df_input["Constructor"].astype(str)
+
     df_converted = convert_data_sheet(
         df_input=df_input,
         season=sheet_info.season,

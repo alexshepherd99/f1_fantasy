@@ -15,12 +15,12 @@ from races.season import factory_race, factory_season
 from races.team import Team, factory_team_row
 from scripts.run_single_team import get_strat_display_name, run_for_team
 
-ALL_STRATEGIES = [StrategyMaxBudget, StrategyZeroStop, StrategyMaxP2PM]
+ALL_STRATEGIES = [StrategyZeroStop, StrategyMaxP2PM, StrategyMaxBudget]
 
 _SEASONS = F1_SEASON_CONSTRUCTORS.keys()
 _FILE_BATCH_RESULTS_PARQET = "outputs/f1_fantasy_results_batch.parquet"
 _FILE_BATCH_RESULTS_EXCEL = "outputs/f1_fantasy_results_batch.csv"
-_SUB_STRAT = "fix_drv_chg"
+_SUB_STRAT = ""
 
 
 def get_starting_key(strat_name: str, season: int, team: Team, sub_strat: str = "") -> str:

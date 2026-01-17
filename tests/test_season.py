@@ -57,32 +57,32 @@ def test_factory_race_real_data():
     )
 
     assert list(race_2.drivers.keys()) == [
-        "VER",
-        "PER",
-        "HAM",
-        "NOR",
-        "ALO",
-        "SAI",
-        "RUS",
-        "LEC",
-        "PIA",
-        "STR",
-        "GAS",
-        "TSU",
-        "ZHO",
-        "ALB",
-        "OCO",
-        "MAG",
-        "HUL",
-        "DEV",
-        "BOT",
-        "SAR",
+        "VER@RED",
+        "PER@RED",
+        "HAM@MER",
+        "NOR@MCL",
+        "ALO@AST",
+        "SAI@FER",
+        "RUS@MER",
+        "LEC@FER",
+        "PIA@MCL",
+        "STR@AST",
+        "GAS@ALP",
+        "TSU@ALT",
+        "ZHO@ALF",
+        "ALB@WIL",
+        "OCO@ALP",
+        "MAG@HAA",
+        "HUL@HAA",
+        "DEV@ALT",
+        "BOT@ALF",
+        "SAR@WIL",
     ]
 
-    assert race_2.drivers["PIA"].constructor == "MCL"
-    assert race_2.drivers["PIA"].driver == "PIA"
-    assert race_2.drivers["PIA"].derivs["PPM Cumulative (3)"] == pytest.approx(-2.2857, 0.0001)
-    assert race_2.drivers["PIA"].price == 6.9
+    assert race_2.drivers["PIA@MCL"].constructor == "MCL"
+    assert race_2.drivers["PIA@MCL"].driver == "PIA@MCL"
+    assert race_2.drivers["PIA@MCL"].derivs["PPM Cumulative (3)"] == pytest.approx(-2.2857, 0.0001)
+    assert race_2.drivers["PIA@MCL"].price == 6.9
 
     act = list(race_2.constructors.keys())
     exp = [
@@ -113,26 +113,26 @@ def test_factory_race_real_data():
     )
 
     assert list(race_12.drivers.keys()) == [
-        "VER",
-        "PER",
-        "HAM",
-        "NOR",
-        "ALO",
-        "SAI",
-        "RUS",
-        "LEC",
-        "PIA",
-        "STR",
-        "GAS",
-        "TSU",
-        "RIC",  # in for DEV
-        "ZHO",
-        "ALB",
-        "OCO",
-        "MAG",
-        "HUL",
-        "BOT",
-        "SAR",
+        "VER@RED",
+        "PER@RED",
+        "HAM@MER",
+        "NOR@MCL",
+        "ALO@AST",
+        "SAI@FER",
+        "RUS@MER",
+        "LEC@FER",
+        "PIA@MCL",
+        "STR@AST",
+        "GAS@ALP",
+        "TSU@ALT",
+        "RIC@ALT",  # in for DEV
+        "ZHO@ALF",
+        "ALB@WIL",
+        "OCO@ALP",
+        "MAG@HAA",
+        "HUL@HAA",
+        "BOT@ALF",
+        "SAR@WIL",
     ]
 
     act = list(race_12.constructors.keys())
@@ -157,26 +157,26 @@ def test_factory_season_real_data():
 
     race_12 = season.races[12]
     assert list(race_12.drivers.keys()) == [
-        "VER",
-        "PER",
-        "HAM",
-        "NOR",
-        "ALO",
-        "SAI",
-        "RUS",
-        "LEC",
-        "PIA",
-        "STR",
-        "GAS",
-        "TSU",
-        "RIC",  # in for DEV
-        "ZHO",
-        "ALB",
-        "OCO",
-        "MAG",
-        "HUL",
-        "BOT",
-        "SAR",
+        "VER@RED",
+        "PER@RED",
+        "HAM@MER",
+        "NOR@MCL",
+        "ALO@AST",
+        "SAI@FER",
+        "RUS@MER",
+        "LEC@FER",
+        "PIA@MCL",
+        "STR@AST",
+        "GAS@ALP",
+        "TSU@ALT",
+        "RIC@ALT",  # in for DEV
+        "ZHO@ALF",
+        "ALB@WIL",
+        "OCO@ALP",
+        "MAG@HAA",
+        "HUL@HAA",
+        "BOT@ALF",
+        "SAR@WIL",
     ]
 
     cons_mcl = race_12.constructors["MCL"]

@@ -13,7 +13,7 @@ The "how" is as important as the "what" here; everything has been developed on a
 There are some limitations to take into consideration:
 
 - Chips are not handled.  Each individual strategy is focused on a single race, with the back-testing executing each race as a standalone decision point.  As such, chips, which require a view across the season, are not taken into account.
-- It is rare, but not impossible, for a driver to switch teams mid-season, e.g. Tsunoda in 2025 from VRB to RED.  In this instance, the algo will not allow that driver to be selected in the following race.  In this rare event, the game itself forces you to make a change so that your team does not suddenly get a jump in total value.  The StrategyBase class is aware of driver/team pairings (TSU/RED) so can detect this, but pricing and selection is done on driver code alone (TSU).  As the algo prices on driver and not driver/team pair, it blocks selection of the driver in the next race, so that the team doesn't suddenly get a jump in total value.
+- In the event that a driver switches teams part way through the season, when assessing their value for money (cumulative points, cumulative points per million) will only take into account their points in the context of a single team.  E.g. TSU and LAW swapping between VRB and RED in 2025, TSU's points history with RED will not be taken into account when assessing his value with VRB.
 - Application performance is not currently a consideration, meaning that it can take several hours to run a full back-test for all strategies against seasons 2023-2025.  Performance improvements usually come at the cost of increased code complexity, so ease of making further changes has been prioritised over execution speed. 
 
 ## Usage scripts

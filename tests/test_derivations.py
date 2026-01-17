@@ -215,9 +215,9 @@ def test_actual_derivations():
     flt_23_con = df_derived_data_constructor["Season"] == 2023
     flt_24_drv = df_derived_data_driver["Season"] == 2024
 
-    flt_ver = df_derived_data_driver["Driver"] == "VER"
-    flt_ric = df_derived_data_driver["Driver"] == "RIC"
-    flt_bea = df_derived_data_driver["Driver"] == "BEA"
+    flt_ver = df_derived_data_driver["Driver"] == "VER@RED"
+    flt_ric = df_derived_data_driver["Driver"] == "RIC@ALT"
+    flt_bea = df_derived_data_driver["Driver"] == "BEA@HAA"
     flt_red = df_derived_data_constructor["Constructor"] == "RED"
 
     df_ver_points_23 = df_derived_data_driver[flt_23_drv & flt_ver][["Race", "PPM Cumulative (3)"]].reset_index(drop=True)

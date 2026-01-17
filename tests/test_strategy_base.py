@@ -570,7 +570,8 @@ def test_strategy_driver_change_team(
     assert "VER" in sb._all_available_drivers
     assert sb._all_available_driver_pairs["VER"] == "RED"
 
-    # VER has changed teams - only his price impacted
+    # VER has changed teams - however as in the real data, driver name also encodes constructor (e.g. VER/RED), this will
+    # no longer behave differently.  
     prev_pairings = {
         "VER": "MCL",
         "LEC": "FER",
@@ -587,7 +588,7 @@ def test_strategy_driver_change_team(
         prices_assets=fixture_asset_prices,
         derivs_assets={}
     )
-    assert sb._prices_assets["VER"] == COST_PROHIBITIVE
+    assert sb._prices_assets["VER"] == 1.0  # VER still available
     assert sb._prices_assets["LEC"] == 2.0
     assert sb._prices_assets["MCL"] == 4.0
     assert "VER" in sb._all_available_drivers

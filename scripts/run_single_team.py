@@ -26,7 +26,7 @@ _FILE_BATCH_RESULTS = "outputs/f1_fantasy_results_single.xlsx"
 
 # My starting team from 2025
 SEASON = 2025
-TEAM_START_DRIVERS = ["SAI", "HAD", "DOO", "BEA", "TSU"]
+TEAM_START_DRIVERS = ["SAI@WIL", "HAD@VRB", "DOO@ALP", "BEA@HAA", "TSU@VRB"]
 TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
 STARTING_RACE = 1
 STARTING_UNUSED_BUDGET = 0.0  # Not used here, as we are starting in the first race of the season

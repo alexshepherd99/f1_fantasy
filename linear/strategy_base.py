@@ -102,16 +102,6 @@ class StrategyBase(ABC):
             if x not in self._prices_assets.keys():
                 self._prices_assets[x] = COST_PROHIBITIVE
 
-        # Any drivers which have a different driver/team pairing from the previous race are prevented from selection.
-        # This is because the game forces you to make a change in the rare event that a driver changes teams.  In its
-        # current form, the algo cannot force you to change a driver out while still making that driver available for
-        # selection in a different team.
-        for x in team_drivers:
-            team_prev = prev_available_driver_pairs.get(x)
-            if team_prev is not None:
-                if all_available_driver_pairs.get(x) != team_prev:
-                    self._prices_assets[x] = COST_PROHIBITIVE
-
         # Take a copy of the derivations.  Note that we will not add any derivations for team drivers that are
         # not available for selection.
         self._derivs_assets = derivs_assets
