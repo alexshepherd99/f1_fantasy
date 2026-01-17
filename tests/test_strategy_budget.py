@@ -74,24 +74,30 @@ def test_strat_budget_limited_cost(
     problem = strat.execute()
     assert problem.status == LpStatusOptimal
 
-    drivers = strat._lp_variables[VarType.TeamDrivers]
-    assert drivers["VER"].value() == 0.0
-    assert drivers["LEC"].value() == 0.0
-    assert drivers["HAM"].value() == 0.0
-    assert drivers["ALO"].value() == 1.0
-    assert drivers["HUL"].value() == 1.0
-    assert drivers["MAG"].value() == 0.0
-    assert drivers["BOT"].value() == 0.0
-    assert drivers["NOR"].value() == 0.0
-    assert drivers["PIA"].value() == 1.0
-    assert drivers["TSU"].value() == 1.0
+    # Unbeknown to me at the time of writing this test, there are actually two different solutions to this strategy / team
+    # combination, and when I ran it for the first time on an ARM-based CPU, the alternative solution was found.  Instead of
+    # testing each driver and constructor individually, just check the aggregate solution.
 
+    drivers = strat._lp_variables[VarType.TeamDrivers]
     constructors = strat._lp_variables[VarType.TeamConstructors]
-    assert constructors["MCL"].value() == 1.0
-    assert constructors["FER"].value() == 1.0
-    assert constructors["RED"].value() == 0.0
-    assert constructors["MER"].value() == 0.0
-    assert constructors["AST"].value() == 0.0
+
+    total_value = 0.0
+    driver_count = 0
+    constructor_count = 0
+
+    for d in drivers.keys():
+        if drivers[d].value() > 0.5:  # Catch any odd large numbers
+            driver_count += 1
+            total_value += fixture_asset_prices[d]
+
+    for c in constructors.keys():
+        if constructors[c].value() > 0.5:  # Catch any odd large numbers
+            constructor_count += 1
+            total_value += fixture_asset_prices[c]
+
+    assert driver_count == 4
+    assert constructor_count == 2
+    assert total_value == 40.0
 
     assert problem.objective.value() == 40.0
     assert strat._lp_variables[VarType.UnusedBudget].value() == 0.0
