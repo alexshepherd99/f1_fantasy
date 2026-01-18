@@ -540,6 +540,8 @@ def test_strategy_p2pm_driver_changes_team():
     team.add_asset(AssetType.CONSTRUCTOR, "MCL")
     team.add_asset(AssetType.CONSTRUCTOR, "FER")
 
+    assert team.total_budget(race_3, race_2) == 98.4  # This is with the lower TSU@RED value
+
     strat = factory_strategy(race_3, race_2, team, StrategyMaxP2PM, max_moves=2)
     model = strat.execute()
     assert model.status == LpStatusOptimal
@@ -566,4 +568,4 @@ def test_strategy_p2pm_driver_changes_team():
 
     unused_budget = strat._lp_variables[VarType.UnusedBudget].value()
 
-    assert (unused_budget + total_value) < 100.0
+    assert (unused_budget + total_value) == 98.4
