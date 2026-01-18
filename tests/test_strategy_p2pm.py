@@ -1,5 +1,12 @@
+from pulp.constants import LpStatusOptimal
+
+from common import AssetType
+from helpers import load_with_derivations
 from linear.strategy_base import VarType
+from linear.strategy_factory import factory_strategy
 from linear.strategy_p2pm import StrategyMaxP2PM
+from races.season import factory_season
+from races.team import Team
 from tests.test_strategy_base import (
     fixture_all_available_drivers,
     fixture_all_available_constructors,
@@ -506,3 +513,57 @@ def test_strat_p2pm_with_some_zero_derivations(
     expected_p2pm = 50.0 + 45.0 + 40.0 + 35.0 + 60.0 + 55.0
     assert problem.objective.value() == expected_p2pm
 
+
+def test_strategy_p2pm_driver_changes_team():
+    (df_driver_ppm, df_constructor_ppm, df_driver_pairs) = load_with_derivations(season=2025)
+    
+    season = factory_season(
+        df_driver_ppm,
+        df_constructor_ppm,
+        df_driver_pairs,
+        2025,
+    )
+
+    # TSU moved from VRB to RED, between races 2 and 3.  His value went up as part of the move, however the game forced you
+    # to switch out TSU@VRB at the old lower price as he was no longer available.  Bringing him back in required buying him
+    # at the higher price for TSU@RED.  This test ensures that we don't incorrectly "bank" the increase in value by keeping
+    # TSU in the team.
+    race_2 = season.races[2]
+    race_3 = season.races[3]
+
+    team = Team(num_drivers=5, num_constructors=2, unused_budget=0.3)
+    team.add_asset(AssetType.DRIVER, "DOO@ALP")
+    team.add_asset(AssetType.DRIVER, "HAD@VRB")
+    team.add_asset(AssetType.DRIVER, "ALO@AST")
+    team.add_asset(AssetType.DRIVER, "ALB@WIL")
+    team.add_asset(AssetType.DRIVER, "TSU@VRB")
+    team.add_asset(AssetType.CONSTRUCTOR, "MCL")
+    team.add_asset(AssetType.CONSTRUCTOR, "FER")
+
+    strat = factory_strategy(race_3, race_2, team, StrategyMaxP2PM, max_moves=2)
+    model = strat.execute()
+    assert model.status == LpStatusOptimal
+
+    total_value = 0.0
+    driver_count = 0
+    constructor_count = 0
+
+    drivers = strat._lp_variables[VarType.TeamDrivers]
+    constructors = strat._lp_variables[VarType.TeamConstructors]
+
+    for d in drivers.keys():
+        if drivers[d].value() > 0.5:  # Catch any odd large numbers
+            driver_count += 1
+            total_value += strat._prices_assets[d]
+
+    for c in constructors.keys():
+        if constructors[c].value() > 0.5:  # Catch any odd large numbers
+            constructor_count += 1
+            total_value += strat._prices_assets[c]
+
+    assert driver_count == 5
+    assert constructor_count == 2
+
+    unused_budget = strat._lp_variables[VarType.UnusedBudget].value()
+
+    assert (unused_budget + total_value) < 100.0
