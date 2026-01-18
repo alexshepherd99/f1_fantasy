@@ -60,7 +60,8 @@ class StrategyBase(ABC):
         max_cost: float,
         max_moves: int,
         prices_assets: dict[str, float],
-        derivs_assets: dict[str, dict[str, float]]  # First dict is by derivation name
+        derivs_assets: dict[str, dict[str, float]],  # First dict is by derivation name
+        race_num: int
     ) -> None:
         # Check team constructors are available in list of all constructors
         for i in team_constructors:
@@ -124,6 +125,7 @@ class StrategyBase(ABC):
         self._prev_available_driver_pairs = prev_available_driver_pairs
         self._max_cost = max_cost
         self._max_moves = max_moves
+        self._race_num = race_num
 
         # Collections to support constraints and variables
         self._lp_variables = {}

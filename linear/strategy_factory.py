@@ -46,5 +46,6 @@ def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[Str
         max_cost=max_cost,
         max_moves=max_moves,
         prices_assets=prices_assets,
-        derivs_assets=derivs_assets
+        derivs_assets=derivs_assets,
+        race_num=race.race,
     )

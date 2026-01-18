@@ -13,6 +13,7 @@ The "how" is as important as the "what" here; everything has been developed on a
 There are some limitations to take into consideration:
 
 - Chips are not handled.  Each individual strategy is focused on a single race, with the back-testing executing each race as a standalone decision point.  As such, chips, which require a view across the season, are not taken into account.
+- The only exception to this, is that the P2PM strategy assumes playing the "unlimited moves" chip at race four.  Asset stats are built up as a rolling cumulative average over three races, so at race four, we take the opportunity to reset the team in case we started with some unfortunate picks at the start of the season.
 - In the event that a driver switches teams part way through the season, when assessing their value for money (cumulative points, cumulative points per million) will only take into account their points in the context of a single team.  E.g. TSU and LAW swapping between VRB and RED in 2025, TSU's points history with RED will not be taken into account when assessing his value with VRB.
 - Application performance is not currently a consideration, meaning that it can take several hours to run a full back-test for all strategies against seasons 2023-2025.  Performance improvements usually come at the cost of increased code complexity, so ease of making further changes has been prioritised over execution speed. 
 

@@ -31,7 +31,8 @@ def test_strat_zero_stop_no_moves(
         max_cost=100.0,
         max_moves=3,  # This should get forced back to zero by the strat
         prices_assets=fixture_asset_prices,
-        derivs_assets={}
+        derivs_assets={},
+        race_num=-1,
     )
     assert strat._max_moves == 0
 
@@ -79,7 +80,8 @@ def test_strat_zero_stop_unavailable_driver(
         max_cost=100.0,
         max_moves=3,  # This should get forced back to zero by the strat
         prices_assets=fixture_asset_prices,
-        derivs_assets={}
+        derivs_assets={},
+        race_num=-1,
     )
     # One driver forced to change
     assert strat._max_moves == 1

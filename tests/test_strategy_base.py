@@ -78,7 +78,8 @@ def test_construct_strategy(
             max_cost=0.0,
             max_moves=2,
             prices_assets={},
-            derivs_assets={}
+            derivs_assets={},
+            race_num=-1,
         );
     assert str(excinfo.value) == "Cannot find team constructor ??? in all available constructors"
 
@@ -94,7 +95,8 @@ def test_construct_strategy(
             max_cost=0.0,
             max_moves=2,
             prices_assets={},
-            derivs_assets={}
+            derivs_assets={},
+            race_num=-1,
         )
     assert str(excinfo.value) == "Team count of 11 is greater than 10 available drivers"
 
@@ -110,7 +112,8 @@ def test_construct_strategy(
             max_cost=0.0,
             max_moves=2,
             prices_assets={},
-            derivs_assets={}
+            derivs_assets={},
+            race_num=-1,
         )
     assert str(excinfo.value) == "Team count of 6 is greater than 5 available constructors"
 
@@ -126,7 +129,8 @@ def test_construct_strategy(
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
-            derivs_assets={}
+            derivs_assets={},
+            race_num=-1,
         )
     assert str(excinfo.value) == "Driver XXX does not have a price"
 
@@ -142,7 +146,8 @@ def test_construct_strategy(
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
-            derivs_assets={}
+            derivs_assets={},
+            race_num=-1,
         )
     assert str(excinfo.value) == "Constructor XXX does not have a price"
 
@@ -157,7 +162,8 @@ def test_construct_strategy(
         max_cost=0.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
-        derivs_assets={}
+        derivs_assets={},
+        race_num=-1,
     )
     assert len(sb._prices_assets) == len(fixture_asset_prices) + 1
     assert sb._prices_assets["RUS"] == COST_PROHIBITIVE
@@ -176,7 +182,8 @@ def test_construct_strategy(
             max_cost=0.0,
             max_moves=2,
             prices_assets=fap2,
-            derivs_assets={}
+            derivs_assets={},
+            race_num=-1,
         )
     assert str(excinfo.value) == "Asset ??? has a price but is not in available drivers or constructors"
 
@@ -194,7 +201,8 @@ def test_construct_strategy(
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
-            derivs_assets={}
+            derivs_assets={},
+            race_num=-1,
         )
     assert str(excinfo.value) == "Driver from pairing XXX/MCL is not available in all drivers"
 
@@ -212,7 +220,8 @@ def test_construct_strategy(
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
-            derivs_assets={}
+            derivs_assets={},
+            race_num=-1,
         )
     assert str(excinfo.value) == "Constructor from pairing NOR/XXX is not available in all constructors"
 
@@ -230,7 +239,8 @@ def test_construct_strategy(
             max_cost=0.0,
             max_moves=2,
             prices_assets=fap2,
-            derivs_assets={}
+            derivs_assets={},
+            race_num=-1,
         )
     assert str(excinfo.value) == "Driver XXX is not available in driver/constructor pairs"
 
@@ -245,7 +255,8 @@ def test_construct_strategy(
         max_cost=0.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
-        derivs_assets={}
+        derivs_assets={},
+        race_num=-1,
     )
 
 
@@ -286,7 +297,8 @@ def test_initialise_sets_up_lp_variables_and_constraints(
         max_cost=1000.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
-        derivs_assets={}
+        derivs_assets={},
+        race_num=-1,
     )
 
     # Call initialise which should populate _lp_variables and _lp_constraints
@@ -392,6 +404,7 @@ def test_execute_picks_best_scoring_team():
         prices_assets=prices,
         derivs_assets={},
         scores=scores,
+        race_num=-1,
     )
 
     # Execute should initialise, add the objective, add constraints and then solve
@@ -489,7 +502,8 @@ def test_strategy_derivs(
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
-            derivs_assets=derivs_assets_missing_driver
+            derivs_assets=derivs_assets_missing_driver,
+            race_num=-1,
         )
 
     derivs_assets_missing_constructor = deepcopy(derivs_assets)
@@ -505,7 +519,8 @@ def test_strategy_derivs(
             max_cost=0.0,
             max_moves=2,
             prices_assets=fixture_asset_prices,
-            derivs_assets=derivs_assets_missing_constructor
+            derivs_assets=derivs_assets_missing_constructor,
+            race_num=-1,
         )
 
     sb=StrategyDummy(
@@ -518,7 +533,8 @@ def test_strategy_derivs(
         max_cost=0.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
-        derivs_assets=derivs_assets
+        derivs_assets=derivs_assets,
+        race_num=-1,
     )
     assert len(sb._derivs_assets.keys()) == 2
     assert len(sb._derivs_assets["Deriv1"].keys()) == 15  # Added for available drivers only
@@ -543,7 +559,8 @@ def test_strategy_driver_change_team(
         max_cost=0.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
-        derivs_assets={}
+        derivs_assets={},
+        race_num=-1,
     )
     assert sb._prices_assets["VER"] == 1.0
     assert sb._prices_assets["LEC"] == 2.0
@@ -562,7 +579,8 @@ def test_strategy_driver_change_team(
         max_cost=0.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
-        derivs_assets={}
+        derivs_assets={},
+        race_num=-1,
     )
     assert sb._prices_assets["VER"] == 1.0
     assert sb._prices_assets["LEC"] == 2.0
@@ -586,7 +604,8 @@ def test_strategy_driver_change_team(
         max_cost=0.0,
         max_moves=2,
         prices_assets=fixture_asset_prices,
-        derivs_assets={}
+        derivs_assets={},
+        race_num=-1,
     )
     assert sb._prices_assets["VER"] == 1.0  # VER still available
     assert sb._prices_assets["LEC"] == 2.0

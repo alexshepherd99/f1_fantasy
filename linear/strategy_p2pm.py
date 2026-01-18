@@ -10,6 +10,15 @@ class StrategyMaxP2PM(StrategyBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # If we are at race 4, play the "unlimited moves" chip. After 3 races, we have our cumulative average stats fully
+        # populated, so this is a chance to recover from any unfortunate initial picks now that we have a picture of how
+        # well each asset is performing.  Total number of allowed moves is total size of team, we can swap out whole if
+        # we want to.
+        if self._race_num == 4:
+            team_size_drivers = len(self._team_drivers)
+            team_size_constructors = (len(self._team_constructors))
+            self._max_moves = team_size_drivers + team_size_constructors
+
     def get_problem(self) -> LpProblem:
         """Build an LP problem whose objective is the cumulative P2PM over selected assets."""
         problem = LpProblem(self.__class__.__name__, LpMaximize)
