@@ -33,8 +33,9 @@ def test_strategy_factory():
 
     total_budget = 4.0 + 4.3 + 5.0 + 4.8 + 4.9 + 9.1 + 22.1 + 5.1  # 59.3
 
-    strat_budget = factory_strategy(race, race_prev, team, StrategyMaxBudget, max_moves=2)
+    strat_budget = factory_strategy(race, race_prev, team, StrategyMaxBudget, max_moves=2, season_year=999)
 
+    assert strat_budget._season_year == 999
     assert strat_budget._max_cost == total_budget
     assert strat_budget._team_drivers == ["SAR@WIL", "HUL@HAA", "DEV@ALT", "TSU@ALT", "ZHO@ALF"]
     assert strat_budget._team_constructors == ["MCL", "FER"]
@@ -53,11 +54,11 @@ def test_strategy_factory():
     # Check previous race is used when there is no price for driver in current race
     team_prev_check = Team(num_drivers=1, num_constructors=0, unused_budget=0.0)
     team_prev_check.add_asset(AssetType.DRIVER, "LAW@ALT")  # 4.5, from previous race
-    strat_prev_check = factory_strategy(race, race_prev, team_prev_check, StrategyMaxBudget, max_moves=2)
+    strat_prev_check = factory_strategy(race, race_prev, team_prev_check, StrategyMaxBudget, max_moves=2, season_year=999)
     assert strat_prev_check._max_cost == 4.5
 
     with pytest.raises(KeyError, match="LAW@ALT"):
-        factory_strategy(race, race, team_prev_check, StrategyMaxBudget, max_moves=2)
+        factory_strategy(race, race, team_prev_check, StrategyMaxBudget, max_moves=2, season_year=999)
 
 
 def test_strategy_factory_derivs():
@@ -82,7 +83,7 @@ def test_strategy_factory_derivs():
     team.add_asset(AssetType.CONSTRUCTOR, "MCL")
     team.add_asset(AssetType.CONSTRUCTOR, "FER")
  
-    strat_budget = factory_strategy(race, race_prev, team, StrategyMaxBudget, max_moves=2)
+    strat_budget = factory_strategy(race, race_prev, team, StrategyMaxBudget, max_moves=2, season_year=999)
 
     assert len(strat_budget._derivs_assets.keys()) == 4
     assert "P2PM Cumulative (3)" in strat_budget._derivs_assets.keys()
@@ -120,7 +121,10 @@ def test_strategy_factory_driver_change():
     team_a.add_asset(AssetType.DRIVER, "VER@RED")
     team_a.add_asset(AssetType.CONSTRUCTOR, "MCL")
 
-    strat_budget_a = factory_strategy(race_2, race_1, team_a, StrategyMaxBudget, max_moves=2)
+    strat_budget_a = factory_strategy(race_2, race_1, team_a, StrategyMaxBudget, max_moves=2, season_year=999)
+
+    assert strat_budget_a._race_num == 2
+    assert strat_budget_a._season_year == 999
 
     # LAW is still available in race 2
     assert strat_budget_a._prices_assets["LAW@RED"] == 17.4
@@ -135,7 +139,7 @@ def test_strategy_factory_driver_change():
     team_b.add_asset(AssetType.DRIVER, "VER@RED")
     team_b.add_asset(AssetType.CONSTRUCTOR, "MCL")
 
-    strat_budget_b = factory_strategy(race_3, race_2, team_b, StrategyMaxBudget, max_moves=2)
+    strat_budget_b = factory_strategy(race_3, race_2, team_b, StrategyMaxBudget, max_moves=2, season_year=999)
 
     # LAW is no longer available in race 3
     assert strat_budget_b._prices_assets["LAW@RED"] == COST_PROHIBITIVE

@@ -56,6 +56,7 @@ def test_strat_p2pm_basic_optimization(
         prices_assets=fixture_asset_prices,
         derivs_assets={"P2PM Cumulative (3)": p2pm_derivs},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -107,6 +108,7 @@ def test_get_drs_driver_selects_highest_points(
             "Points Cumulative (3)": points_derivs,
         },
         race_num=-1,
+        season_year=-1,
     )
     strat.execute()
 
@@ -139,6 +141,7 @@ def test_get_drs_driver_returns_empty_when_no_points(
             "Points Cumulative (3)": points_derivs,
         },
         race_num=-1,
+        season_year=-1,
     )
     strat.execute()
 
@@ -184,6 +187,7 @@ def test_strat_p2pm_with_cost_constraint(
         prices_assets=fixture_asset_prices,
         derivs_assets={"P2PM Cumulative (3)": p2pm_derivs},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -241,6 +245,7 @@ def test_strat_p2pm_with_varying_derivations(
         prices_assets=fixture_asset_prices,
         derivs_assets={"P2PM Cumulative (3)": p2pm_derivs},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -299,6 +304,7 @@ def test_strat_p2pm_no_moves_constraint(
         prices_assets=fixture_asset_prices,
         derivs_assets={"P2PM Cumulative (3)": p2pm_derivs},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -342,6 +348,7 @@ def test_strat_p2pm_zero_p2pm_values(
         prices_assets=fixture_asset_prices,
         derivs_assets={"P2PM Cumulative (3)": p2pm_derivs},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -387,6 +394,7 @@ def test_strat_p2pm_negative_p2pm_values(
         prices_assets=fixture_asset_prices,
         derivs_assets={"P2PM Cumulative (3)": p2pm_derivs},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -447,6 +455,7 @@ def test_strat_p2pm_limited_moves(
         prices_assets=fixture_asset_prices,
         derivs_assets={"P2PM Cumulative (3)": p2pm_derivs},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -505,6 +514,7 @@ def test_strat_p2pm_with_some_zero_derivations(
         prices_assets=fixture_asset_prices,
         derivs_assets={"P2PM Cumulative (3)": p2pm_derivs},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -553,7 +563,7 @@ def test_strategy_p2pm_driver_changes_team():
 
     assert team.total_budget(race_3, race_2) == 98.4  # This is with the lower TSU@RED value
 
-    strat = factory_strategy(race_3, race_2, team, StrategyMaxP2PM, max_moves=2)
+    strat = factory_strategy(race_3, race_2, team, StrategyMaxP2PM, max_moves=2, season_year=999)
     model = strat.execute()
     assert model.status == LpStatusOptimal
 
@@ -603,7 +613,7 @@ def test_strategy_p2pm_unlimited_moves():
     team.add_asset(AssetType.CONSTRUCTOR, "MCL")
     team.add_asset(AssetType.CONSTRUCTOR, "FER")
 
-    strat = factory_strategy(race_4, race_3, team, StrategyMaxP2PM, max_moves=2)
+    strat = factory_strategy(race_4, race_3, team, StrategyMaxP2PM, max_moves=2, season_year=999)
     # As this is race 4, the P2PM strategy will play the "unlimited moves" chip, as we have now had three races
     # to accumulate cumulative rolling average stats.
     assert strat._max_moves == 7  # Alow a full team swap

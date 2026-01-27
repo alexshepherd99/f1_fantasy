@@ -33,6 +33,7 @@ def test_strat_zero_stop_no_moves(
         prices_assets=fixture_asset_prices,
         derivs_assets={},
         race_num=-1,
+        season_year=-1,
     )
     assert strat._max_moves == 0
 
@@ -82,6 +83,7 @@ def test_strat_zero_stop_unavailable_driver(
         prices_assets=fixture_asset_prices,
         derivs_assets={},
         race_num=-1,
+        season_year=-1,
     )
     # One driver forced to change
     assert strat._max_moves == 1
@@ -133,7 +135,7 @@ def test_strategy_zero_stop_change_real_data():
     team.add_asset(AssetType.DRIVER, "VER@RED")
     team.add_asset(AssetType.CONSTRUCTOR, "MCL")
 
-    strat = factory_strategy(race_3, race_2, team, StrategyZeroStop, max_moves=2)
+    strat = factory_strategy(race_3, race_2, team, StrategyZeroStop, max_moves=2, season_year=-1)
     assert strat._max_moves == 1
 
     model = strat.execute()

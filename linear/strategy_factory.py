@@ -4,7 +4,7 @@ from races.season import Race
 from races.team import Team
 
 
-def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[StrategyBase], max_moves) -> StrategyBase:
+def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[StrategyBase], max_moves, season_year: int) -> StrategyBase:
     """Create and return a configured instance of `strategy` for a given race and team.
 
     Gathers current prices and derivations from the `race` object and computes the
@@ -48,4 +48,5 @@ def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[Str
         prices_assets=prices_assets,
         derivs_assets=derivs_assets,
         race_num=race.race,
+        season_year=season_year,
     )

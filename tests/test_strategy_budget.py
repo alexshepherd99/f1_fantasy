@@ -28,6 +28,7 @@ def test_strat_budget_three_swaps(
         prices_assets=fixture_asset_prices,
         derivs_assets={},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -72,6 +73,7 @@ def test_strat_budget_limited_cost(
         prices_assets=fixture_asset_prices,
         derivs_assets={},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
     assert problem.status == LpStatusOptimal
@@ -123,6 +125,7 @@ def test_strat_budget_no_moves(
         prices_assets=fixture_asset_prices,
         derivs_assets={},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 
@@ -167,6 +170,7 @@ def test_strat_budget_driver_unavailable(
         prices_assets=fixture_asset_prices,
         derivs_assets={},
         race_num=-1,
+        season_year=-1,
     )
     problem = strat.execute()
 

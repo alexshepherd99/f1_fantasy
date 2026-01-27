@@ -48,6 +48,10 @@ class StrategyBase(ABC):
         Mapping of asset -> price.
     derivs_assets : dict[str, dict[str, float]]
         Derivations keyed by derivation name, then asset -> value.
+    race_num : int
+        Race number within season
+    season_year : int
+        Season year in full e.g. 2025
     """
     def __init__(
         self,
@@ -61,7 +65,8 @@ class StrategyBase(ABC):
         max_moves: int,
         prices_assets: dict[str, float],
         derivs_assets: dict[str, dict[str, float]],  # First dict is by derivation name
-        race_num: int
+        race_num: int,
+        season_year: int,
     ) -> None:
         # Check team constructors are available in list of all constructors
         for i in team_constructors:
@@ -126,6 +131,7 @@ class StrategyBase(ABC):
         self._max_cost = max_cost
         self._max_moves = max_moves
         self._race_num = race_num
+        self._season_year = season_year
 
         # Collections to support constraints and variables
         self._lp_variables = {}

@@ -115,7 +115,7 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
         # First race already has a team selection, skip this out
         if race_num > race_num_start:
 
-            strat = factory_strategy(season.races[race_num], race_prev, team, strategy, max_moves=max_moves)
+            strat = factory_strategy(season.races[race_num], race_prev, team, strategy, max_moves=max_moves, season_year=season_year)
 
             model = strat.execute()
 
