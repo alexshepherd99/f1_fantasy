@@ -37,34 +37,34 @@ def test_odds_to_pct():
         odds_to_pct("string")
 
 
-def test_load_adds():
-    assert load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=9999, race_num=1, all_expected=()).empty
-    assert load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=99, all_expected=()).empty
-    assert load_odds(ass_typ=AssetType.DRIVER, season_year=9999, race_num=1, all_expected=()).empty
-    assert load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=99, all_expected=()).empty
+def test_load_odds_no_extras():
+    assert load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=9999, race_num=1).empty
+    assert load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=99).empty
+    assert load_odds(ass_typ=AssetType.DRIVER, season_year=9999, race_num=1).empty
+    assert load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=99).empty
 
-    df_con_no_extras = load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1, all_expected=())
+    df_con_no_extras = load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1)
     assert len(df_con_no_extras) == 2
 
     df_con_no_extras_exp = pd.DataFrame(
-        columns=["Team", "Season", "Race", "Odds"],
+        columns=["Constructor", "Season", "Race", "Odds"],
         data=[
-            ["CON_test_1", 1900, 11, 0.1],
-            ["CON_test_2", 1900, 11, 0.2],
+            ["CON_test_1", 1900, 1, 0.1],
+            ["CON_test_2", 1900, 1, 0.2],
         ],
     )
+    assert_frame_equal(df_con_no_extras.reset_index(drop=True), df_con_no_extras_exp)
 
-    assert_frame_equal(df_con_no_extras, df_con_no_extras_exp)
-
-
-
-
-    #DRV_test_A,CON_test_1,1900,1,100/1
-    #DRV_test_B,CON_test_1,1900,1,50/2
-    #DRV_test_C,CON_test_2,1900,1,9/2
-    #DRV_test_D,CON_test_2,1900,1,8/4
-    #,CON_test_1,1900,1,10/1
-    #,CON_test_2,1900,1,5/1
-
-    df_drv_no_expected = load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=1, all_expected=())
+    df_drv_no_expected = load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=1)
     assert len(df_drv_no_expected) == 4
+
+    df_drv_no_extras_exp = pd.DataFrame(
+        columns=["Driver", "Constructor", "Season", "Race", "Odds"],
+        data=[
+            ["DRV_test_A@CON_test_1", "CON_test_1", 1900, 1, 0.01],
+            ["DRV_test_B@CON_test_1", "CON_test_1", 1900, 1, 0.04],
+            ["DRV_test_C@CON_test_2", "CON_test_2", 1900, 1, 0.222],
+            ["DRV_test_D@CON_test_2", "CON_test_2", 1900, 1, 0.5],
+        ],
+    )
+    assert_frame_equal(df_drv_no_expected.reset_index(drop=True), df_drv_no_extras_exp, atol=0.001)
