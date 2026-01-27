@@ -33,7 +33,7 @@ def odds_to_pct(odds: str) -> float:
 
 
 @functools.cache
-def load_odds(ass_typ: AssetType, season_year: int, race_num: int) -> pd.DataFrame:
+def load_odds(ass_typ: AssetType, season_year: int, race_num: int) -> dict[str, float]:
     # Load and filter
     df_all = pd.read_csv(_FILE_BETTING_ODDS)
     df_all = df_all[df_all["Season"] == season_year]
@@ -42,12 +42,14 @@ def load_odds(ass_typ: AssetType, season_year: int, race_num: int) -> pd.DataFra
     # Select asset type
     if ass_typ == AssetType.CONSTRUCTOR:
         df_all = df_all[df_all["Driver"].isna()]
-        df_all = df_all.drop(columns=["Driver"])
     elif ass_typ == AssetType.DRIVER:
         df_all = df_all[~df_all["Driver"].isna()]
         df_all["Driver"] = df_all["Driver"].astype(str) + "@" + df_all["Constructor"].astype(str)
-
+    
     # Process Odds column
     df_all["Odds"] = df_all["Odds"].apply(odds_to_pct)
 
-    return df_all
+    # Convert to dictionary
+    df_all = df_all[[ass_typ.value, "Odds"]]
+    df_all = df_all.set_index(ass_typ.value)
+    return df_all["Odds"].to_dict()

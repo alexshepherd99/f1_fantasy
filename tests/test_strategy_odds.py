@@ -1,6 +1,4 @@
 import pytest
-import pandas as pd
-from pandas.testing import assert_frame_equal
 
 from common import AssetType
 from linear.strategy_odds import load_odds, odds_to_pct
@@ -37,34 +35,29 @@ def test_odds_to_pct():
         odds_to_pct("string")
 
 
-def test_load_odds_no_extras():
-    assert load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=9999, race_num=1).empty
-    assert load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=99).empty
-    assert load_odds(ass_typ=AssetType.DRIVER, season_year=9999, race_num=1).empty
-    assert load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=99).empty
+def test_load_odds():
+    assert not load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=9999, race_num=1)
+    assert not load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=99)
+    assert not load_odds(ass_typ=AssetType.DRIVER, season_year=9999, race_num=1)
+    assert not load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=99)
 
-    df_con_no_extras = load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1)
-    assert len(df_con_no_extras) == 2
+    dict_con = load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1)
+    assert len(dict_con) == 2
 
-    df_con_no_extras_exp = pd.DataFrame(
-        columns=["Constructor", "Season", "Race", "Odds"],
-        data=[
-            ["CON_test_1", 1900, 1, 0.1],
-            ["CON_test_2", 1900, 1, 0.2],
-        ],
-    )
-    assert_frame_equal(df_con_no_extras.reset_index(drop=True), df_con_no_extras_exp)
+    dict_con_exp = {
+        "CON_test_1": 0.1,
+        "CON_test_2": 0.2,
+    }
+    assert dict_con == dict_con_exp
 
-    df_drv_no_expected = load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=1)
-    assert len(df_drv_no_expected) == 4
+    dict_drv = load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=1)
+    assert len(dict_drv) == 4
 
-    df_drv_no_extras_exp = pd.DataFrame(
-        columns=["Driver", "Constructor", "Season", "Race", "Odds"],
-        data=[
-            ["DRV_test_A@CON_test_1", "CON_test_1", 1900, 1, 0.01],
-            ["DRV_test_B@CON_test_1", "CON_test_1", 1900, 1, 0.04],
-            ["DRV_test_C@CON_test_2", "CON_test_2", 1900, 1, 0.222],
-            ["DRV_test_D@CON_test_2", "CON_test_2", 1900, 1, 0.5],
-        ],
-    )
-    assert_frame_equal(df_drv_no_expected.reset_index(drop=True), df_drv_no_extras_exp, atol=0.001)
+    dict_drv_exp = {
+        "DRV_test_A@CON_test_1": 0.01,
+        "DRV_test_B@CON_test_1": 0.04,
+        "DRV_test_C@CON_test_2": 0.222,
+        "DRV_test_D@CON_test_2": 0.5,
+    }
+    for k in dict_drv_exp.keys():
+        assert pytest.approx(dict_drv[k], 0.001) == dict_drv_exp[k]
