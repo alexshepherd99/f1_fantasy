@@ -1,4 +1,15 @@
+import pandas as pd
+import functools
+
+from common import AssetType
+
+_FILE_BETTING_ODDS = "data/f1_betting_odds.csv"
+
+
 def odds_to_pct(odds: str) -> float:
+    if odds is None:
+        raise ValueError(f"odds_to_pct invalid input {odds}")
+
     odds = odds.replace(":", "/")
     odds = odds.replace("-", "/")
     
@@ -19,3 +30,24 @@ def odds_to_pct(odds: str) -> float:
         raise ValueError(f"odds_to_pct invalid input {odds}")
 
     return 1 / (odds_left / odds_right)
+
+
+@functools.cache
+def load_odds(ass_typ: AssetType, season_year: int, race_num: int, all_expected: list[str]) -> pd.DataFrame:
+    # Load and filter
+    df_all = pd.read_csv(_FILE_BETTING_ODDS)
+    df_all = df_all[df_all["Season"] == season_year]
+    df_all = df_all[df_all["Race"] == race_num]
+
+    # Select asset type
+    if ass_typ == AssetType.CONSTRUCTOR:
+        df_all = df_all[df_all["Driver"].isna()]
+        df_all = df_all.drop(columns="Driver")
+    elif ass_typ == AssetType.DRIVER:
+        df_all = df_all[~df_all["Driver"].isna()]
+        df_all["Driver"] = df_all["Driver"].astype(str) + "@" + df_all["Constructor"].astype(str)
+
+
+
+    return df_all
+    #
