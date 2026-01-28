@@ -2,6 +2,7 @@ import pytest
 
 from common import AssetType
 from linear.strategy_odds import StrategyBettingOdds, load_odds, odds_to_pct
+from linear.strategy_base import VarType
 
 _TEST_ODDS_FILE = "data/test_betting_odds.xlsx"
 
@@ -41,15 +42,6 @@ def test_load_odds():
     assert not load_odds(ass_typ=AssetType.DRIVER, season_year=9999, race_num=1, fn=_TEST_ODDS_FILE)
     assert not load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=99, fn=_TEST_ODDS_FILE)
 
-    dict_con = load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1, fn=_TEST_ODDS_FILE)
-    assert len(dict_con) == 2
-
-    dict_con_exp = {
-        "CON_test_1": 0.1,
-        "CON_test_2": 0.2,
-    }
-    assert dict_con == dict_con_exp
-
     dict_drv = load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=1, fn=_TEST_ODDS_FILE)
     assert len(dict_drv) == 4
 
@@ -61,6 +53,16 @@ def test_load_odds():
     }
     for k in dict_drv_exp.keys():
         assert pytest.approx(dict_drv[k], 0.001) == dict_drv_exp[k]
+
+    dict_con = load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1, fn=_TEST_ODDS_FILE)
+    assert len(dict_con) == 2
+
+    dict_con_exp = {
+        "CON_test_1": 0.05,
+        "CON_test_2": 0.722,
+    }
+    for k in dict_con_exp.keys():
+        assert pytest.approx(dict_con[k], 0.001) == dict_con_exp[k]
 
 
 def test_strategy_odds_load_data():
@@ -82,24 +84,103 @@ def test_strategy_odds_load_data():
     )
     assert len(strat._odds_assets) == 6
     assert strat._odds_assets["DRV_test_A@CON_test_1"] == 0.01
-    assert strat._odds_assets["CON_test_1"] == 0.1
+    assert strat._odds_assets["CON_test_1"] == 0.05
 
 
 def test_strategy_odds_missing_assets():
     # Add extra constructor and extra driver which isn't in odds data, check that odds for these is set to 0.0
-    assert False
-
-
-def test_strategy_odds_check_assets():
-    # Check that driver odds are directly taken from file, and constructor odds are doubled to reflect extra value
-    assert False
+    strat = StrategyBettingOdds(
+        fn_odds=_TEST_ODDS_FILE,
+        team_drivers=["NewDrv1"],
+        team_constructors=["NewCon1"],
+        all_available_drivers=["NewDrv2"],
+        all_available_constructors=["NewCon1", "NewCon2"],
+        all_available_driver_pairs={"NewDrv2": "NewCon2"},
+        prev_available_driver_pairs={},
+        max_cost=0.0,
+        max_moves=0,
+        prices_assets={"NewDrv2": 10.0, "NewCon1": 11.0, "NewCon2": 12.0},
+        derivs_assets={},
+        race_num=1,
+        season_year=1900,
+    )
+    assert len(strat._odds_assets) == 10
+    assert strat._odds_assets["NewDrv1"] == 0.0
+    assert strat._odds_assets["NewDrv2"] == 0.0
+    assert strat._odds_assets["NewCon1"] == 0.0
+    assert strat._odds_assets["NewCon2"] == 0.0
 
 
 def test_strategy_odds_run():
     # Create a sub-optimal team with many possible moves, check best two moves are applied
-    assert False
+    team_drivers = ["Drv1@Con1", "Drv2@Con1"]
+    team_constructors = ["Con1", "Con2"]
+    all_available_drivers = ["Drv1@Con1", "Drv2@Con1", "Drv3@Con2", "Drv4@Con2", "Drv5@Con3", "Drv6@Con3"]
+    all_available_constructors = ["Con1", "Con2", "Con3"]
+    all_available_driver_pairs = {
+        "Drv1@Con1": "Con1",
+        "Drv2@Con1": "Con1",
+        "Drv3@Con2": "Con2",
+        "Drv4@Con2": "Con2",
+        "Drv5@Con3": "Con3",
+        "Drv6@Con3": "Con3",
+    }
+    prices_assets = {
+        "Drv1@Con1": 1.5,
+        "Drv2@Con1": 2.5,
+        "Drv3@Con2": 4.0,
+        "Drv4@Con2": 5.5,
+        "Drv5@Con3": 6.0,
+        "Drv6@Con3": 7.5,
+        "Con1": 6.0,
+        "Con2": 8.0,
+        "Con3": 12.0,
+    }
 
+    strat = StrategyBettingOdds(
+        fn_odds=_TEST_ODDS_FILE,
+        team_drivers=team_drivers,
+        team_constructors=team_constructors,
+        all_available_drivers=all_available_drivers,
+        all_available_constructors=all_available_constructors,
+        all_available_driver_pairs=all_available_driver_pairs,
+        prev_available_driver_pairs={},
+        max_cost=60.0,  # money is no object here
+        max_moves=3,
+        prices_assets=prices_assets,
+        derivs_assets={},
+        race_num=1,
+        season_year=1900,
+    )
 
-def test_strategy_odds_select_drs():
-    # DRS selection should pick the driver with the best odds, not the highest value
-    assert False
+    # Override the odds - we want cheaper options to be more appealing
+    strat._odds_assets = {
+        "Drv1@Con1": 0.2,
+        "Drv2@Con1": 0.3,
+        "Drv3@Con2": 0.9,
+        "Drv4@Con2": 0.8,  # this is more expensive than Drv3, but Drv3 should get DRS
+        "Drv5@Con3": 0.4,
+        "Drv6@Con3": 0.5,
+        "Con1": 0.4,
+        "Con2": 0.5,
+        "Con3": 0.6,  # Give slight preference to this one
+    }
+
+    # Execute and extract results
+    problem = strat.execute()
+    drivers = strat._lp_variables[VarType.TeamDrivers]
+    constructors = strat._lp_variables[VarType.TeamConstructors]
+    
+    # Should select high P2PM drivers
+    assert drivers["Drv1@Con1"].value() == 0.0
+    assert drivers["Drv2@Con1"].value() == 0.0
+    assert drivers["Drv3@Con2"].value() == 1.0
+    assert drivers["Drv4@Con2"].value() == 1.0
+    assert drivers["Drv5@Con3"].value() == 0.0
+    assert drivers["Drv6@Con3"].value() == 0.0
+    assert constructors["Con1"].value() == 0.0
+    assert constructors["Con2"].value() == 1.0
+    assert constructors["Con3"].value() == 1.0
+
+    # DRS driver should be highest odds, not highest price
+    assert strat.get_drs_driver() == "Drv3@Con2"
