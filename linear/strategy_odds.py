@@ -33,9 +33,9 @@ def odds_to_pct(odds: str) -> float:
 
 
 @functools.cache
-def load_odds(ass_typ: AssetType, season_year: int, race_num: int) -> dict[str, float]:
+def load_odds(ass_typ: AssetType, season_year: int, race_num: int, fn: str=_FILE_BETTING_ODDS) -> dict[str, float]:
     # Load and filter
-    df_all = pd.read_csv(_FILE_BETTING_ODDS)
+    df_all = pd.read_csv(fn)
     df_all = df_all[df_all["Season"] == season_year]
     df_all = df_all[df_all["Race"] == race_num]
 

@@ -1,0 +1,7 @@
+Driver,Constructor,Season,Race,Odds
+DRV_test_A,CON_test_1,1900,1,100/1
+DRV_test_B,CON_test_1,1900,1,50/2
+DRV_test_C,CON_test_2,1900,1,9/2
+DRV_test_D,CON_test_2,1900,1,8/4
+,CON_test_1,1900,1,10/1
+,CON_test_2,1900,1,5/1

@@ -3,6 +3,8 @@ import pytest
 from common import AssetType
 from linear.strategy_odds import load_odds, odds_to_pct
 
+_TEST_ODDS_FILE = "data/test_betting_odds.csv"
+
 
 def test_odds_to_pct():
     assert odds_to_pct("100/1") == pytest.approx(0.01, abs=0.001)
@@ -36,12 +38,12 @@ def test_odds_to_pct():
 
 
 def test_load_odds():
-    assert not load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=9999, race_num=1)
-    assert not load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=99)
-    assert not load_odds(ass_typ=AssetType.DRIVER, season_year=9999, race_num=1)
-    assert not load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=99)
+    assert not load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=9999, race_num=1, fn=_TEST_ODDS_FILE)
+    assert not load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=99, fn=_TEST_ODDS_FILE)
+    assert not load_odds(ass_typ=AssetType.DRIVER, season_year=9999, race_num=1, fn=_TEST_ODDS_FILE)
+    assert not load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=99, fn=_TEST_ODDS_FILE)
 
-    dict_con = load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1)
+    dict_con = load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1, fn=_TEST_ODDS_FILE)
     assert len(dict_con) == 2
 
     dict_con_exp = {
@@ -50,7 +52,7 @@ def test_load_odds():
     }
     assert dict_con == dict_con_exp
 
-    dict_drv = load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=1)
+    dict_drv = load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=1, fn=_TEST_ODDS_FILE)
     assert len(dict_drv) == 4
 
     dict_drv_exp = {
