@@ -6,7 +6,7 @@ from common import AssetType
 from linear.strategy_base import StrategyBase, VarType
 
 
-_FILE_BETTING_ODDS = "data/f1_betting_odds.xslx"
+_FILE_BETTING_ODDS = "data/f1_betting_odds.xlsx"
 
 
 def odds_to_pct(odds: str) -> float:
