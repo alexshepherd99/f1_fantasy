@@ -358,3 +358,68 @@ def test_concentration_variable():
     strat5.execute()
     conc5 = strat5._lp_variables[VarType.Concentration].value()
     assert conc5 == pytest.approx(0.0, abs=0.01), f"Scenario 5: Expected concentration 0.0, got {conc5}"
+
+
+def test_max_concentration_constraint():
+    """Test that max_concentration constraint limits concentration to specified value.
+    
+    When max_concentration is set to 1.0, the optimizer should avoid selecting
+    multiple drivers from the same constructor or driver-constructor pairs,
+    even if they have higher odds values.
+    """
+    
+    # Setup: two drivers from Con1 with high odds, one from Con2 with lower odds
+    team_drivers = ["Drv1@Con1"]
+    team_constructors = ["Con1"]
+    all_available_drivers = ["Drv1@Con1", "Drv2@Con1", "Drv3@Con2"]
+    all_available_constructors = ["Con1", "Con2"]
+    all_available_driver_pairs = {
+        "Drv1@Con1": "Con1",
+        "Drv2@Con1": "Con1",
+        "Drv3@Con2": "Con2",
+    }
+    prices_assets = {
+        "Drv1@Con1": 1.0,
+        "Drv2@Con1": 1.0,
+        "Drv3@Con2": 1.0,
+        "Con1": 1.0,
+        "Con2": 1.0,
+    }
+    
+    # Create strategy with max_concentration = 1.0
+    strat = StrategyBettingOdds(
+        fn_odds=_TEST_ODDS_FILE,
+        team_drivers=team_drivers,
+        team_constructors=team_constructors,
+        all_available_drivers=all_available_drivers,
+        all_available_constructors=all_available_constructors,
+        all_available_driver_pairs=all_available_driver_pairs,
+        prev_available_driver_pairs={},
+        max_cost=1000.0,
+        max_moves=10,
+        prices_assets=prices_assets,
+        derivs_assets={},
+        race_num=1,
+        season_year=1900,
+    )
+    
+    # Set max_concentration to 1.0
+    strat.max_concentration = 1.0
+    
+    # Set odds: both Con1 drivers have high odds, Con2 driver has lower odds
+    strat._odds_assets = {
+        "Drv1@Con1": 10.0,
+        "Drv2@Con1": 9.0,
+        "Drv3@Con2": 5.0,
+        "Con1": 10.0,
+        "Con2": 5.0,
+    }
+    
+    strat.execute()
+    concentration = strat._lp_variables[VarType.Concentration].value()
+    
+    # Verify that concentration is constrained to be <= 1.0
+    assert concentration <= 1.01, f"Concentration {concentration} exceeds max_concentration 1.0"
+    # In this case, selecting just one driver from Con1 gives concentration = 1
+    # (one driver-constructor pair)
+    assert concentration == pytest.approx(1.0, abs=0.01)

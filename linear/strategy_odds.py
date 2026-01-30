@@ -75,6 +75,9 @@ class StrategyBettingOdds(StrategyBase):
             if self._odds_assets.get(a) is None:
                 self._odds_assets[a] = 0.0
 
+        # Default max concentration is too large to have any impact
+        self.max_concentration = 999.99
+
 
     def get_problem(self) -> LpProblem:
         """Build an LP problem whose objective is the best odds."""
@@ -136,7 +139,7 @@ class StrategyBettingOdds(StrategyBase):
             problem += conc_var == 0, "concentration_total_def"
 
         # Constraint to reduce concentration
-        # problem += self._lp_variables[VarType.Concentration] <= 0.1
+        problem += self._lp_variables[VarType.Concentration] <= self.max_concentration
 
         # Variable for total odds value
         self._lp_variables[VarType.OptimiseMax] = lpSum(odds_drivers + odds_constructors)
