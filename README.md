@@ -24,7 +24,8 @@ There are some limitations to take into consideration:
 - **run_multiple_teams.py** : Full back-testing script, running all strategies against all available seasons, for every possible starting team combination above a specified total value.  Outputs are written to a parquet format file every 100 simulations, in case of interuption; when re-running, any simulations already present in the output will be skipped.
 - **batch_results_xl.py** : convert the parquet output file from run_multiple_teams.py into a csv format, for analysis and importing into Tableau.
 - **check_run_ppm.py** : generate an Excel version of the strategy input data, plus any derivation calculations.
-- **select_starting_team.py** : identify the best starting line-up for a given season, based on cost ratio of driver to constructor 
+- **select_starting_team.py** : identify the best starting line-up for a given season, based on cost ratio of driver to constructor.
+- **select_odds_start.py** : similar to the above to identify a starting line-up for a given season, based on available betting odds.  Requires thinking about driver concentration risk. 
 
 ## Input data
 
