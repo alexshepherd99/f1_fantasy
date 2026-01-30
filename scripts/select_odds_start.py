@@ -30,37 +30,40 @@ def select_odds_start_for_season(season_year: int):
         race=season.races[1],
     )
 
-    team_value = team.total_value(season.races[1], season.races[1])
-    team.unused_budget = 100.0 - team_value
-    logging.info(team_value)
-    logging.info(team.unused_budget)
+    for max_concentration in [999.9, 4.0, 3.0, 2.0, 1.0, 0.0]:
+        team_value = team.total_value(season.races[1], season.races[1])
+        team.unused_budget = 100.0 - team_value
+        logging.debug(team_value)
+        logging.debug(team.unused_budget)
 
-    strat = factory_strategy(
-        season.races[1],
-        season.races[1],
-        team,
-        StrategyBettingOdds,
-        max_moves=10,
-        season_year=season_year
-    )
+        strat = factory_strategy(
+            season.races[1],
+            season.races[1],
+            team,
+            StrategyBettingOdds,
+            max_moves=10,
+            season_year=season_year
+        )
 
-    model = strat.execute()
+        strat.max_concentration = max_concentration
+        model = strat.execute()
 
-    # If model failed, we need to barf - it should never be impossible to solve
-    if model.status != LpStatusOptimal:
-        logging.error(f"LP model returned {model.status}")
-        logging.error([[d,v.varValue] for d,v in strat._lp_variables[VarType.TeamDrivers].items()])
-        logging.error([[d,v.varValue] for d,v in strat._lp_variables[VarType.TeamConstructors].items()])
-        raise RuntimeError()
+        # If model failed, we need to barf - it should never be impossible to solve
+        if model.status != LpStatusOptimal:
+            logging.error(f"LP model returned {model.status}")
+            logging.error([[d,v.varValue] for d,v in strat._lp_variables[VarType.TeamDrivers].items()])
+            logging.error([[d,v.varValue] for d,v in strat._lp_variables[VarType.TeamConstructors].items()])
+            raise RuntimeError()
 
-    # Extract selected assets from the LP model
-    model_drivers = [d for d,v in strat._lp_variables[VarType.TeamDrivers].items() if v.varValue == 1]
-    model_constructors = [c for c,v in strat._lp_variables[VarType.TeamConstructors].items() if v.varValue == 1]
+        # Extract selected assets from the LP model
+        model_drivers = [d for d,v in strat._lp_variables[VarType.TeamDrivers].items() if v.varValue == 1]
+        model_constructors = [c for c,v in strat._lp_variables[VarType.TeamConstructors].items() if v.varValue == 1]
 
-    logging.info(model_drivers)
-    logging.info(model_constructors)
-    logging.info(strat._lp_variables[VarType.UnusedBudget].value())
-    logging.info(strat._lp_variables[VarType.Concentration].value())
+        logging.info(f"- Running with max concentration {max_concentration}")
+        logging.info(model_drivers)
+        logging.info(model_constructors)
+        logging.info(strat._lp_variables[VarType.UnusedBudget].value())
+        logging.info(strat._lp_variables[VarType.Concentration].value())
 
 
 if __name__ == "__main__":
