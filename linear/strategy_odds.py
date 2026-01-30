@@ -1,6 +1,6 @@
 import pandas as pd
 import functools
-from pulp import LpProblem, LpMaximize, lpSum
+from pulp import LpProblem, LpMaximize, lpSum, LpVariable
 
 from common import AssetType
 from linear.strategy_base import StrategyBase, VarType
@@ -83,6 +83,60 @@ class StrategyBettingOdds(StrategyBase):
         # Odds values as based on the team selection, using the LP variables already provided by the base class
         odds_drivers = [self._odds_assets[i] * self._lp_variables[VarType.TeamDrivers][i] for i in self._all_available_drivers]
         odds_constructors = [self._odds_assets[i] * self._lp_variables[VarType.TeamConstructors][i] for i in self._all_available_constructors]
+
+        # Variable for concentration: measure of how concentrated team selection is across constructors
+        # Includes both driver-driver pairs and driver-constructor pairs
+        conc_var = LpVariable("concentration_total", lowBound=0, cat='Continuous')
+        self._lp_variables[VarType.Concentration] = conc_var
+        
+        concentration_sum_expr = []
+        
+        for constructor in self._all_available_constructors:
+            # Get all drivers from this constructor
+            drivers_in_constructor = [
+                driver for driver in self._all_available_drivers 
+                if self._all_available_driver_pairs[driver] == constructor
+            ]
+            
+            # Driver-driver pair concentration: for each pair of drivers from same constructor
+            for i, driver1 in enumerate(drivers_in_constructor):
+                for driver2 in drivers_in_constructor[i+1:]:
+                    # Auxiliary variable: 1 if both drivers selected, 0 otherwise
+                    pair_var = LpVariable(f"conc_driver_pair_{driver1}_{driver2}", cat='Binary')
+                    
+                    # Constraint: pair_var <= driver1_selected
+                    problem += pair_var <= self._lp_variables[VarType.TeamDrivers][driver1], f"conc_dd_c1_{driver1}_{driver2}"
+                    # Constraint: pair_var <= driver2_selected
+                    problem += pair_var <= self._lp_variables[VarType.TeamDrivers][driver2], f"conc_dd_c2_{driver1}_{driver2}"
+                    # Constraint: pair_var >= driver1_selected + driver2_selected - 1
+                    problem += pair_var >= (self._lp_variables[VarType.TeamDrivers][driver1] + 
+                                           self._lp_variables[VarType.TeamDrivers][driver2] - 1), f"conc_dd_c3_{driver1}_{driver2}"
+                    
+                    concentration_sum_expr.append(pair_var)
+            
+            # Driver-constructor pair concentration: for each driver in this constructor
+            for driver in drivers_in_constructor:
+                # Auxiliary variable: 1 if both driver and constructor selected, 0 otherwise
+                pair_var = LpVariable(f"conc_driver_cons_{driver}_{constructor}", cat='Binary')
+                
+                # Constraint: pair_var <= driver_selected
+                problem += pair_var <= self._lp_variables[VarType.TeamDrivers][driver], f"conc_dc_c1_{driver}_{constructor}"
+                # Constraint: pair_var <= constructor_selected
+                problem += pair_var <= self._lp_variables[VarType.TeamConstructors][constructor], f"conc_dc_c2_{driver}_{constructor}"
+                # Constraint: pair_var >= driver_selected + constructor_selected - 1
+                problem += pair_var >= (self._lp_variables[VarType.TeamDrivers][driver] + 
+                                       self._lp_variables[VarType.TeamConstructors][constructor] - 1), f"conc_dc_c3_{driver}_{constructor}"
+                
+                concentration_sum_expr.append(pair_var)
+        
+        # Constraint: concentration_total = sum of all pair variables
+        if concentration_sum_expr:
+            problem += conc_var == lpSum(concentration_sum_expr), "concentration_total_def"
+        else:
+            problem += conc_var == 0, "concentration_total_def"
+
+        # Constraint to reduce concentration
+        # problem += self._lp_variables[VarType.Concentration] <= 0.1
 
         # Variable for total odds value
         self._lp_variables[VarType.OptimiseMax] = lpSum(odds_drivers + odds_constructors)

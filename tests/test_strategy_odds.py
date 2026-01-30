@@ -182,5 +182,179 @@ def test_strategy_odds_run():
     assert constructors["Con2"].value() == 1.0
     assert constructors["Con3"].value() == 1.0
 
+    assert strat._lp_variables[VarType.Concentration].value() == 3.0
+
     # DRS driver should be highest odds, not highest price
     assert strat.get_drs_driver() == "Drv3@Con2"
+
+
+def test_concentration_variable():
+    """Test that concentration variable correctly tracks driver-constructor pairing.
+    
+    Concentration measures how many drivers are paired with their selected constructor.
+    """
+    
+    # Scenario 1: Two drivers from same constructor, constructor selected
+    # Expected: concentration = 3 (1 driver-driver pair + 2 driver-constructor pairs)
+    strat1 = StrategyBettingOdds(
+        fn_odds=_TEST_ODDS_FILE,
+        team_drivers=["Drv1@Con1", "Drv2@Con1"],
+        team_constructors=["Con1"],
+        all_available_drivers=["Drv1@Con1", "Drv2@Con1", "Drv3@Con2", "Drv4@Con3"],
+        all_available_constructors=["Con1", "Con2", "Con3"],
+        all_available_driver_pairs={
+            "Drv1@Con1": "Con1",
+            "Drv2@Con1": "Con1",
+            "Drv3@Con2": "Con2",
+            "Drv4@Con3": "Con3",
+        },
+        prev_available_driver_pairs={},
+        max_cost=1000.0,
+        max_moves=10,
+        prices_assets={
+            "Drv1@Con1": 1.0, "Drv2@Con1": 1.0, "Drv3@Con2": 1.0, "Drv4@Con3": 1.0,
+            "Con1": 1.0, "Con2": 1.0, "Con3": 1.0,
+        },
+        derivs_assets={},
+        race_num=1,
+        season_year=1900,
+    )
+    # Make both Con1 drivers attractive (keep existing team)
+    strat1._odds_assets = {
+        "Drv1@Con1": 10.0, "Drv2@Con1": 10.0, "Drv3@Con2": 0.0, "Drv4@Con3": 0.0,
+        "Con1": 10.0, "Con2": 0.0, "Con3": 0.0,
+    }
+    strat1.execute()
+    conc1 = strat1._lp_variables[VarType.Concentration].value()
+    assert conc1 == pytest.approx(3.0, abs=0.01), f"Scenario 1: Expected concentration 3.0, got {conc1}"
+
+    # Scenario 2: One driver from selected constructor
+    # Expected: concentration = 1
+    strat2 = StrategyBettingOdds(
+        fn_odds=_TEST_ODDS_FILE,
+        team_drivers=["Drv1@Con1"],
+        team_constructors=["Con1"],
+        all_available_drivers=["Drv1@Con1", "Drv2@Con2", "Drv3@Con3"],
+        all_available_constructors=["Con1", "Con2", "Con3"],
+        all_available_driver_pairs={
+            "Drv1@Con1": "Con1",
+            "Drv2@Con2": "Con2",
+            "Drv3@Con3": "Con3",
+        },
+        prev_available_driver_pairs={},
+        max_cost=1000.0,
+        max_moves=10,
+        prices_assets={
+            "Drv1@Con1": 1.0, "Drv2@Con2": 1.0, "Drv3@Con3": 1.0,
+            "Con1": 1.0, "Con2": 1.0, "Con3": 1.0,
+        },
+        derivs_assets={},
+        race_num=1,
+        season_year=1900,
+    )
+    strat2._odds_assets = {
+        "Drv1@Con1": 10.0, "Drv2@Con2": 0.0, "Drv3@Con3": 0.0,
+        "Con1": 10.0, "Con2": 0.0, "Con3": 0.0,
+    }
+    strat2.execute()
+    conc2 = strat2._lp_variables[VarType.Concentration].value()
+    assert conc2 == pytest.approx(1.0, abs=0.01), f"Scenario 2: Expected concentration 1.0, got {conc2}"
+
+    # Scenario 3: No drivers from selected constructors
+    # Expected: concentration = 0
+    strat3 = StrategyBettingOdds(
+        fn_odds=_TEST_ODDS_FILE,
+        team_drivers=["Drv1@Con1"],
+        team_constructors=["Con1"],
+        all_available_drivers=["Drv1@Con1", "Drv2@Con2", "Drv3@Con3"],
+        all_available_constructors=["Con1", "Con2", "Con3"],
+        all_available_driver_pairs={
+            "Drv1@Con1": "Con1",
+            "Drv2@Con2": "Con2",
+            "Drv3@Con3": "Con3",
+        },
+        prev_available_driver_pairs={},
+        max_cost=1000.0,
+        max_moves=10,
+        prices_assets={
+            "Drv1@Con1": 1.0, "Drv2@Con2": 1.0, "Drv3@Con3": 1.0,
+            "Con1": 1.0, "Con2": 1.0, "Con3": 1.0,
+        },
+        derivs_assets={},
+        race_num=1,
+        season_year=1900,
+    )
+    # Only selected constructor is attractive for value
+    strat3._odds_assets = {
+        "Drv1@Con1": 0.0, "Drv2@Con2": 10.0, "Drv3@Con3": 10.0,
+        "Con1": 10.0, "Con2": 0.0, "Con3": 0.0,
+    }
+    strat3.execute()
+    conc3 = strat3._lp_variables[VarType.Concentration].value()
+    assert conc3 == pytest.approx(0.0, abs=0.01), f"Scenario 3: Expected concentration 0.0, got {conc3}"
+
+    # Scenario 4: Multiple selected constructors, each with paired driver
+    # Expected: concentration = 2 (1 driver from Con1 + 1 driver from Con2)
+    strat4 = StrategyBettingOdds(
+        fn_odds=_TEST_ODDS_FILE,
+        team_drivers=["Drv1@Con1", "Drv2@Con2"],
+        team_constructors=["Con1", "Con2"],
+        all_available_drivers=["Drv1@Con1", "Drv2@Con2", "Drv3@Con3"],
+        all_available_constructors=["Con1", "Con2", "Con3"],
+        all_available_driver_pairs={
+            "Drv1@Con1": "Con1",
+            "Drv2@Con2": "Con2",
+            "Drv3@Con3": "Con3",
+        },
+        prev_available_driver_pairs={},
+        max_cost=1000.0,
+        max_moves=10,
+        prices_assets={
+            "Drv1@Con1": 1.0, "Drv2@Con2": 1.0, "Drv3@Con3": 1.0,
+            "Con1": 1.0, "Con2": 1.0, "Con3": 1.0,
+        },
+        derivs_assets={},
+        race_num=1,
+        season_year=1900,
+    )
+    # Make both selected constructors' drivers attractive (keep existing team)
+    strat4._odds_assets = {
+        "Drv1@Con1": 10.0, "Drv2@Con2": 10.0, "Drv3@Con3": 0.0,
+        "Con1": 10.0, "Con2": 10.0, "Con3": 0.0,
+    }
+    strat4.execute()
+    conc4 = strat4._lp_variables[VarType.Concentration].value()
+    assert conc4 == pytest.approx(2.0, abs=0.01), f"Scenario 4: Expected concentration 2.0, got {conc4}"
+
+    # Scenario 5: Constructor selected but no drivers from it
+    # Expected: concentration = 0
+    strat5 = StrategyBettingOdds(
+        fn_odds=_TEST_ODDS_FILE,
+        team_drivers=["Drv1@Con1"],
+        team_constructors=["Con1"],
+        all_available_drivers=["Drv1@Con1", "Drv2@Con2", "Drv3@Con3"],
+        all_available_constructors=["Con1", "Con2", "Con3"],
+        all_available_driver_pairs={
+            "Drv1@Con1": "Con1",
+            "Drv2@Con2": "Con2",
+            "Drv3@Con3": "Con3",
+        },
+        prev_available_driver_pairs={},
+        max_cost=1000.0,
+        max_moves=10,
+        prices_assets={
+            "Drv1@Con1": 1.0, "Drv2@Con2": 1.0, "Drv3@Con3": 1.0,
+            "Con1": 10.0, "Con2": 0.0, "Con3": 0.0,
+        },
+        derivs_assets={},
+        race_num=1,
+        season_year=1900,
+    )
+    # Constructor is expensive, drivers are cheap
+    strat5._odds_assets = {
+        "Drv1@Con1": 0.0, "Drv2@Con2": 10.0, "Drv3@Con3": 10.0,
+        "Con1": 10.0, "Con2": 0.0, "Con3": 0.0,
+    }
+    strat5.execute()
+    conc5 = strat5._lp_variables[VarType.Concentration].value()
+    assert conc5 == pytest.approx(0.0, abs=0.01), f"Scenario 5: Expected concentration 0.0, got {conc5}"

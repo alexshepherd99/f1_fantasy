@@ -57,12 +57,10 @@ def select_odds_start_for_season(season_year: int):
     model_drivers = [d for d,v in strat._lp_variables[VarType.TeamDrivers].items() if v.varValue == 1]
     model_constructors = [c for c,v in strat._lp_variables[VarType.TeamConstructors].items() if v.varValue == 1]
 
-    # Update the unused budget based on the new team selection
-    team.unused_budget = strat._lp_variables[VarType.UnusedBudget].value()
-
     logging.info(model_drivers)
     logging.info(model_constructors)
-    logging.info(team.unused_budget)
+    logging.info(strat._lp_variables[VarType.UnusedBudget].value())
+    logging.info(strat._lp_variables[VarType.Concentration].value())
 
 
 if __name__ == "__main__":

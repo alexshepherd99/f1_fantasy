@@ -15,7 +15,7 @@ There are some limitations to take into consideration:
 - Chips are not handled.  Each individual strategy is focused on a single race, with the back-testing executing each race as a standalone decision point.  As such, chips, which require a view across the season, are not taken into account.
 - The only exception to this, is that the P2PM strategy assumes playing the "unlimited moves" chip at race four.  Asset stats are built up as a rolling cumulative average over three races, so at race four, we take the opportunity to reset the team in case we started with some unfortunate picks at the start of the season.
 - In the event that a driver switches teams part way through the season, when assessing their value for money (cumulative points, cumulative points per million) will only take into account their points in the context of a single team.  E.g. TSU and LAW swapping between VRB and RED in 2025, TSU's points history with RED will not be taken into account when assessing his value with VRB.
-- Concentration risk is not managed, i.e. there are no constraints on choosing a constructor alongside one or even two drivers from that constructor.  So far, the cost cap appears to mitigate the worst effects of concentration risk, in that it's difficult to afford top-flight drivers and constructors.  However this is one to watch, when the algo is used in the wild.
+- For most strategies, concentration risk is not managed, i.e. there are no constraints on choosing a constructor alongside one or even two drivers from that constructor.  So far, the cost cap appears to mitigate the worst effects of concentration risk, in that it's difficult to afford top-flight drivers and constructors.  However this is one to watch, when the algo is used in the wild.  The exception strategy which does manage this is the betting odds one, detailed below.
 - Application performance is not currently a consideration, meaning that it can take several hours to run a full back-test for all strategies against seasons 2023-2025.  Performance improvements usually come at the cost of increased code complexity, so ease of making further changes has been prioritised over execution speed. 
 
 ## Usage scripts
@@ -36,6 +36,8 @@ If updating race data in the middle of a season, drivers and constructors will h
 
 **data/test_expected_values.xlsx** has some pre-computed values of the derivation calculations, to support unit testing.
 
+**f1_betting_odds.xlsx** and **test_betting_odds.xlsx** are used by the betting odds strategy, see below.  Odds input format is 100/1, 9/4, 5:2, 4-3.
+
 ## Strategies
 
 These strategies are contained in the **linear** module:
@@ -43,6 +45,10 @@ These strategies are contained in the **linear** module:
 - **Zero-stop** : Simple control strategy, assume the same starting line-up throughout the whole season.  The only permitted changes are when a selected team driver is not available.
 - **Max budget** : Another simple control strategy, optimise to ensure the full budget is utilised.
 - **Max P2PM** : Optimises for points per million over a rolling total of the previous three races.  PPM alone can make some pretty unusual choices, so points squared per million is used instead, with points squared using an absolute value to ensure that negative cumulative points is reflected correctly.  DRS x2 selection behaviour is overridden, so that the driver with the highest rolling cumulative points is selected.
+- **Betting odds** : Use bookies odds to pick the most likely winners, and optimise for the highest overall odds within the cost constraints.  Only the Odds column is used from the input file; the best odds to use will be after FP3 (and obviously before quali) as this is the time all the professional analysts update their models.  If not possible to wait for FP3, try to wait until after FP2, when the long-running pace will be more visible.  The constructor odds are a summation of the two drivers, which is not accurate from a pure stats perspective, but works when using as an LP optimise variable.  This strategy is unique for three reasons:
+- - Betting odds are a forward-looking indicator as opposed to P2PM which is driven by historical performance;
+- - The points-based strategies are less exposed to concentration risk in team selection (exposure to more than one constructor) because the game price is also based on performance from the last few races.  As such, the odds strategy has a concentration metric built in.  Building this in a way that could be modelled in PuLP was a bit hairy, so it has not yet been ported back into the base strategy;
+- - No historical odds could be found during development, so it's not been back-tested.
 
 ## Modules
 
