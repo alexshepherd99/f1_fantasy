@@ -1,5 +1,5 @@
 # f1_fantasy
-
+test
 This module applies linear programming, using the Python PuLP library, to optimise team selection for the F1 Fantasy game.  This presents some interesting challenges in representing the team selection in a way that only linear algebra functions can be used - e.g. no min / max / abs.
 
 The data is represented in a way that allows back-testing strategies against all possible starting team combinations for historic seasons, taking into account game mechanics such as unused transfers granting a free bonus transfer in the next race, and price variation throughout the season.
