@@ -46,7 +46,7 @@ These strategies are contained in the **linear** module:
 - **Zero-stop** : Simple control strategy, assume the same starting line-up throughout the whole season.  The only permitted changes are when a selected team driver is not available.
 - **Max budget** : Another simple control strategy, optimise to ensure the full budget is utilised.
 - **Max P2PM** : Optimises for points per million over a rolling total of the previous three races.  PPM alone can make some pretty unusual choices, so points squared per million is used instead, with points squared using an absolute value to ensure that negative cumulative points is reflected correctly.  DRS x2 selection behaviour is overridden, so that the driver with the highest rolling cumulative points is selected.
-- **Betting odds** : Use bookies odds to pick the most likely winners, and optimise for the highest overall odds within the cost constraints.  Only the Odds column is used from the input file; the best odds to use will be after FP3 (and obviously before quali) as this is the time all the professional analysts update their models.  If not possible to wait for FP3, try to wait until after FP2, when the long-running pace will be more visible.  The constructor odds are a summation of the two drivers, which is not accurate from a pure stats perspective, but works when using as an LP optimise variable.  This strategy is unique for three reasons:
+- **Betting odds** : Use bookies odds to pick the most likely winners, and optimise for the highest overall odds within the cost constraints.  Only the Odds column is used from the input file; the best odds to use will be after FP3 (and obviously before quali) as this is the time all the professional analysts update their models.  If not possible to wait for FP3, try to wait until after FP2, when the long-running pace will be more visible.  The constructor odds are a summation of the two drivers, which is not accurate from a pure stats perspective, but works when using as an LP optimise variable.  This strategy differs from Max P2PM in three key ways:
 - - Betting odds are a forward-looking indicator as opposed to P2PM which is driven by historical performance;
 - - The points-based strategies are less exposed to concentration risk in team selection (exposure to more than one constructor) because the game price is also based on performance from the last few races.  As such, the odds strategy has a concentration metric built in.  Building this in a way that could be modelled in PuLP was a bit hairy, so it has not yet been ported back into the base strategy;
 - - No historical odds could be found during development, so it's not been back-tested.
@@ -61,7 +61,3 @@ These strategies are contained in the **linear** module:
 
 - https://fantasy.formula1.com/en/
 - https://f1fantasytools.com/statistics
-
-## To do
-
-- git repo public, main branch protected
