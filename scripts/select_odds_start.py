@@ -10,6 +10,7 @@ from linear.strategy_factory import factory_strategy
 from linear.strategy_odds import StrategyBettingOdds
 
 
+# Low-value initial team to test the effect of max concentration limits
 TEAM_START_DRIVERS = ["BOR@KCK", "BOT@CAD", "PER@CAD", "COL@ALP", "LIN@VRB"]
 TEAM_START_CONSTRUCTORS = ["CAD", "KCK"]
 
@@ -41,7 +42,7 @@ def select_odds_start_for_season(season_year: int):
             season.races[1],
             team,
             StrategyBettingOdds,
-            max_moves=10,
+            max_moves=10,  # Allow the whole team to be changed - we just want to see the effect of the max concentration limit
             season_year=season_year
         )
 
