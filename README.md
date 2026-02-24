@@ -61,3 +61,36 @@ These strategies are contained in the **linear** module:
 
 - https://fantasy.formula1.com/en/
 - https://f1fantasytools.com/statistics
+
+## 2026 team
+
+Strategy selection defined pre-season, right after the prices were released.
+
+| Race | Strategy | Chips | Drivers | Constructors | Total value | Points | Points Total
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | Betting odds, max concentration 1 | | | | | | |
+| 2 | Max P2PM | | | | | | |
+| 3 | Max P2PM | | | | | | |
+| 4 | Max P2PM | Unlimited moves (*) | | | | | |
+| 5 | Max P2PM | | | | | | |
+| 6 | Max P2PM | | | | | | |
+| 7 | Max P2PM | | | | | | |
+| 8 | Max P2PM | | | | | | |
+| 9 | Max P2PM | | | | | | |
+| 10 | Max P2PM | | | | | | |
+| 11 | Max P2PM | | | | | | |
+| 12 | Max P2PM | | | | | | |
+| 13 | Max P2PM | | | | | | |
+| 14  | Max P2PM | | | | | | |
+| 15  | Max P2PM | | | | | | |
+| 16 | Max P2PM | | | | | | |
+| 17 | Max P2PM | | | | | | |
+| 18 | Max P2PM | | | | | | |
+| 19 | Max P2PM | | | | | | |
+| 20 | Max P2PM | | | | | | |
+| 21 | Max P2PM | | | | | | |
+| 22 | Max P2PM | | | | | | |
+| 23 | Max P2PM | | | | | | |
+| 24 | Max P2PM | | | | | | |
+
+(*) Max P2PM strategy selects the unlimited moves chip at race 4, as we then have the full three races of history used and it gives the stratagy the means to reset if there was an unpredictable start to the season.
