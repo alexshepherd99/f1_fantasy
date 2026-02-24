@@ -11,8 +11,8 @@ from linear.strategy_odds import StrategyBettingOdds
 
 
 # Low-value initial team to test the effect of max concentration limits
-TEAM_START_DRIVERS = ["BOR@KCK", "BOT@CAD", "PER@CAD", "COL@ALP", "LIN@VRB"]
-TEAM_START_CONSTRUCTORS = ["CAD", "KCK"]
+TEAM_START_DRIVERS = ["BOR@AUD", "BOT@CAD", "PER@CAD", "COL@ALP", "LIN@VRB"]
+TEAM_START_CONSTRUCTORS = ["CAD", "AUD"]
 
 
 def select_odds_start_for_season(season_year: int):
