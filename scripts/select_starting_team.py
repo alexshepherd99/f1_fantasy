@@ -7,7 +7,7 @@ from scripts.run_multiple_teams import _FILE_BATCH_RESULTS_PARQET, ALL_STRATEGIE
 import logging
 
 _SEASON_YEAR = 2026
-_MIN_BUDGET = 99.9
+_MIN_BUDGET = 99.8
 
 
 def select_starting_team(season_year=_SEASON_YEAR, min_budget=_MIN_BUDGET) -> Team:
