@@ -61,6 +61,7 @@ These strategies are contained in the **linear** module:
 
 - https://fantasy.formula1.com/en/
 - https://f1fantasytools.com/statistics
+- https://docs.fastf1.dev/index.html (Free API with more data than you can shake a chequered flag at!  Not currently used by any of the strategies in this module, but definite potential to develop some forward-looking indicators.)
 
 ## 2026 team
 
