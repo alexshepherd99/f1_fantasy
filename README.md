@@ -20,7 +20,7 @@ There are some limitations to take into consideration:
 
 ## Usage scripts
 
-- **run_single_team.py** : Run all strategies for a given team in a given season, saving the results out to Excel format.  Starting race can be specified within the script, so that you can predict from a particular point within the season against you team at that time.
+- **run_single_team.py** : Run all strategies for a given team in a given season, saving the results out to Excel format.  Starting race can be specified within the script, so that you can predict from a particular point within the season against your team at that time.
 - **run_multiple_teams.py** : Full back-testing script, running all strategies against all available seasons, for every possible starting team combination above a specified total value.  Outputs are written to a parquet format file every 100 simulations, in case of interuption; when re-running, any simulations already present in the output will be skipped.
 - **batch_results_xl.py** : convert the parquet output file from run_multiple_teams.py into a csv format, for analysis and importing into Tableau.
 - **check_run_ppm.py** : generate an Excel version of the strategy input data, plus any derivation calculations.
@@ -93,4 +93,4 @@ Strategy selection defined pre-season, right after the prices were released.
 | 23 | Max P2PM | | | | | | |
 | 24 | Max P2PM | | | | | | |
 
-(*) Max P2PM strategy selects the unlimited moves chip at race 4, as we then have the full three races of history used and it gives the stratagy the means to reset if there was an unpredictable start to the season.
+(*) Max P2PM strategy selects the unlimited moves chip at race 4, as we then have the full three races of history required by the strategy, so a team reset at that point can mitigate an unlucky initial team selection.
