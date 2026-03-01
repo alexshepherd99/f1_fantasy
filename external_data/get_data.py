@@ -1,0 +1,68 @@
+import fastf1
+import logging
+import pandas as pd
+
+import external_data.fastf1_common
+
+
+def get_races_for_season(season_year: int) -> list[int]:
+	logging.info(f"Loading races for season {season_year}")
+	schedule = fastf1.get_event_schedule(season_year, include_testing=False)
+	races = [int(r) for r in schedule["RoundNumber"].unique()]
+	logging.info(f"Loaded races for season {season_year} : {races}")
+	return races
+
+
+def get_race_results(race_num: int, season_year: int) -> pd.DataFrame:
+	logging.info(f"Processing race results for season {season_year}, race {race_num}")
+	schedule = fastf1.get_event_schedule(season_year, include_testing=False)
+	event = schedule[schedule["RoundNumber"] == race_num].iloc[0]
+	race = event.get_session("R")
+	race.load()
+	results = race.results
+	results = results[["Abbreviation", "Status", "Position", "ClassifiedPosition", "GridPosition", "Points"]].copy()
+	results["Season"] = season_year
+	results["Race"] = race_num
+	logging.info(f"Processed race results for season {season_year}, race {race_num}, shape {results.shape}")
+	return results
+
+
+def get_all_race_results(season_year: int) -> pd.DataFrame:
+	df_collated = pd.DataFrame()
+	for race_num in get_races_for_season(season_year):
+		df = get_race_results(race_num, season_year)
+		df_collated = pd.concat([df_collated, df], ignore_index=True)
+	
+	return df_collated
+
+
+def get_session_laps(race_num: int, season_year: int, session_type: str) -> pd.DataFrame:
+	logging.info(f"Processing session laps for season {season_year}, race {race_num}, session {session_type}")
+	schedule = fastf1.get_event_schedule(season_year, include_testing=False)
+	event = schedule[schedule["RoundNumber"] == race_num].iloc[0]
+
+	try:
+		session = event.get_session(session_type)
+	except ValueError:
+		logging.warning(f"Could not find session for season {season_year}, race {race_num}, session {session_type}")
+		return pd.DataFrame()
+			
+	session.load()
+	session_laps = session.laps
+	session_laps = session_laps[
+		[
+			"Driver",
+			"LapTime",
+			"LapNumber",
+			"Stint",
+			"PitOutTime",
+			"PitInTime",
+			"Compound",
+			"TyreLife",
+			"FreshTyre",
+		]
+	]
+	session_laps["Season"] = season_year
+	session_laps["Race"] = race_num
+	logging.info(f"Processed session laps for season {season_year}, race {race_num}, session {session_type}, shape {session_laps.shape}")
+	return session_laps
