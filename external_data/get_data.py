@@ -15,7 +15,8 @@ def get_races_for_season(season_year: int) -> list[int]:
 	return races
 
 
-def get_race_results(race_num: int, season_year: int) -> pd.DataFrame:
+@filecache
+def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
 	logging.info(f"Processing race results for season {season_year}, race {race_num}")
 	schedule = fastf1.get_event_schedule(season_year, include_testing=False)
 	event = schedule[schedule["RoundNumber"] == race_num].iloc[0]
@@ -32,13 +33,14 @@ def get_race_results(race_num: int, season_year: int) -> pd.DataFrame:
 def get_all_race_results(season_year: int) -> pd.DataFrame:
 	df_collated = pd.DataFrame()
 	for race_num in get_races_for_season(season_year=season_year):
-		df = get_race_results(race_num, season_year)
+		df = get_race_results(season_year=season_year, race_num=race_num)
 		df_collated = pd.concat([df_collated, df], ignore_index=True)
 	
 	return df_collated
 
 
-def get_session_laps(race_num: int, season_year: int, session_type: str) -> pd.DataFrame:
+@filecache
+def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.DataFrame:
 	logging.info(f"Processing session laps for season {season_year}, race {race_num}, session {session_type}")
 	schedule = fastf1.get_event_schedule(season_year, include_testing=False)
 	event = schedule[schedule["RoundNumber"] == race_num].iloc[0]
