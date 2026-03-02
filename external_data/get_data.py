@@ -49,7 +49,7 @@ def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.D
 		session = event.get_session(session_type)
 	except ValueError:
 		logging.warning(f"Could not find session for season {season_year}, race {race_num}, session {session_type}")
-		return pd.DataFrame()
+		return pd.DataFrame(columns=["Season", "Race", "SessionType"])
 			
 	session.load()
 	session_laps = session.laps
@@ -65,8 +65,9 @@ def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.D
 			"TyreLife",
 			"FreshTyre",
 		]
-	]
+	].copy()
 	session_laps["Season"] = season_year
 	session_laps["Race"] = race_num
+	session_laps["SessionType"] = session_type
 	logging.info(f"Processed session laps for season {season_year}, race {race_num}, session {session_type}, shape {session_laps.shape}")
 	return session_laps
