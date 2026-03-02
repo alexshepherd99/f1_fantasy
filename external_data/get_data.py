@@ -3,8 +3,10 @@ import logging
 import pandas as pd
 
 import external_data.fastf1_common
+from external_data.fastf1_common import filecache
 
 
+@filecache
 def get_races_for_season(season_year: int) -> list[int]:
 	logging.info(f"Loading races for season {season_year}")
 	schedule = fastf1.get_event_schedule(season_year, include_testing=False)
@@ -29,7 +31,7 @@ def get_race_results(race_num: int, season_year: int) -> pd.DataFrame:
 
 def get_all_race_results(season_year: int) -> pd.DataFrame:
 	df_collated = pd.DataFrame()
-	for race_num in get_races_for_season(season_year):
+	for race_num in get_races_for_season(season_year=season_year):
 		df = get_race_results(race_num, season_year)
 		df_collated = pd.concat([df_collated, df], ignore_index=True)
 	
