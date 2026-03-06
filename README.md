@@ -63,9 +63,13 @@ These strategies are contained in the **linear** module:
 - https://f1fantasytools.com/statistics
 - https://docs.fastf1.dev/index.html (Free API with more data than you can shake a chequered flag at!  Not currently used by any of the strategies in this module, but definite potential to develop some forward-looking indicators.)
 
-## 2026 team
+## 2026 teams
 
-Strategy selection defined pre-season, right after the prices were released.
+Strategy selection defined as soon as the fantasy prices were released pre-season, after pre-season testing.  Starting team selections made after FP2 in the first race.
+
+(*) Max P2PM strategy selects the unlimited moves chip at race 4, as we then have the full three races of history required by the strategy, so a team reset at that point can mitigate an unlucky initial team selection.
+
+### Primary team
 
 | Race | Strategy | Chips | Drivers | Constructors | Total value | Points | Points Total
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -94,4 +98,31 @@ Strategy selection defined pre-season, right after the prices were released.
 | 23 | Max P2PM | | | | | | |
 | 24 | Max P2PM | | | | | | |
 
-(*) Max P2PM strategy selects the unlimited moves chip at race 4, as we then have the full three races of history required by the strategy, so a team reset at that point can mitigate an unlucky initial team selection.
+### Secondary team
+
+| Race | Strategy | Chips | Drivers | Constructors | Total value | Points | Points Total
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | Max constructor/driver cost ratio| | | | | | |
+| 2 | Max P2PM | | | | | | |
+| 3 | Max P2PM | | | | | | |
+| 4 | Max P2PM | Unlimited moves (*) | | | | | |
+| 5 | Max P2PM | | | | | | |
+| 6 | Max P2PM | | | | | | |
+| 7 | Max P2PM | | | | | | |
+| 8 | Max P2PM | | | | | | |
+| 9 | Max P2PM | | | | | | |
+| 10 | Max P2PM | | | | | | |
+| 11 | Max P2PM | | | | | | |
+| 12 | Max P2PM | | | | | | |
+| 13 | Max P2PM | | | | | | |
+| 14  | Max P2PM | | | | | | |
+| 15  | Max P2PM | | | | | | |
+| 16 | Max P2PM | | | | | | |
+| 17 | Max P2PM | | | | | | |
+| 18 | Max P2PM | | | | | | |
+| 19 | Max P2PM | | | | | | |
+| 20 | Max P2PM | | | | | | |
+| 21 | Max P2PM | | | | | | |
+| 22 | Max P2PM | | | | | | |
+| 23 | Max P2PM | | | | | | |
+| 24 | Max P2PM | | | | | | |
