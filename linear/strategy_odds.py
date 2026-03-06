@@ -43,6 +43,7 @@ def load_odds(ass_typ: AssetType, season_year: int, race_num: int, fn: str=_FILE
     df_all = df_all[df_all["Race"] == race_num]
 
     # Process Odds column
+    df_all = df_all[["Driver", "Constructor", "Season", "Race", "Odds"]]
     df_all["Odds"] = df_all["Odds"].apply(odds_to_pct)
 
     # Select asset type
