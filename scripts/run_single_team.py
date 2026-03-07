@@ -25,11 +25,25 @@ _FILE_BATCH_RESULTS = "outputs/f1_fantasy_results_single.xlsx"
 #STARTING_UNUSED_BUDGET = 0.5  # This will only be used if starting after the first race of the season
 
 # My starting team from 2025
-SEASON = 2025
-TEAM_START_DRIVERS = ["TSU@VRB", "SAI@WIL", "BEA@HAA", "HAD@VRB", "DOO@ALP"]
-TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
+#SEASON = 2025
+#TEAM_START_DRIVERS = ["TSU@VRB", "SAI@WIL", "BEA@HAA", "HAD@VRB", "DOO@ALP"]
+#TEAM_START_CONSTRUCTORS = ["MCL", "FER"]
+#STARTING_RACE = 1
+#STARTING_UNUSED_BUDGET = 0.1  # Not used here, if we are starting in the first race of the season
+
+# 2026 team - primary
+SEASON = 2026
+TEAM_START_DRIVERS = ["RUS@MER", "LIN@VRB", "COL@ALP", "BOR@AUD", "HAD@RED"]
+TEAM_START_CONSTRUCTORS = ["HAA", "MER"]
 STARTING_RACE = 1
-STARTING_UNUSED_BUDGET = 0.1  # Not used here, if we are starting in the first race of the season
+STARTING_UNUSED_BUDGET = 0.1
+
+# 2026 team - secondary
+#SEASON = 2026
+#TEAM_START_DRIVERS = ["BOR@AUD", "BOT@CAD", "HAD@RED", "LIN@VRB", "STR@AST"]
+#TEAM_START_CONSTRUCTORS = ["MER", "MCL"]
+#STARTING_RACE = 1
+#STARTING_UNUSED_BUDGET = 0.1
 
 
 def get_row_intermediate_results(

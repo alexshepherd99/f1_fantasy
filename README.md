@@ -73,7 +73,7 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 
 | Race | Strategy | Chips | Drivers | Constructors | Total value | Points | Points Total
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | Betting odds, max concentration 1 | | | | | | |
+| 1 | Betting odds, max concentration 1 | | RUS,LIN,COL,BOR,HAD | HAA,MER | 98.0 | | |
 | 2 | Max P2PM | | | | | | |
 | 3 | Max P2PM | | | | | | |
 | 4 | Max P2PM | Unlimited moves (*) | | | | | |
@@ -102,7 +102,7 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 
 | Race | Strategy | Chips | Drivers | Constructors | Total value | Points | Points Total
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | Max constructor/driver cost ratio| | | | | | |
+| 1 | Max constructor/driver cost ratio| | BOR,BOT,HAD,LIN,STR | MER,MCL | 99.8 | | |
 | 2 | Max P2PM | | | | | | |
 | 3 | Max P2PM | | | | | | |
 | 4 | Max P2PM | Unlimited moves (*) | | | | | |
