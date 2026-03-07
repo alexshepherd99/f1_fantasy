@@ -30,7 +30,7 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
 		results["Race"] = race_num
 		logging.info(f"Processed race results for season {season_year}, race {race_num}, shape {results.shape}")
 		return results
-	except ValueError:
+	except fastf1.SessionNotAvailableError:
 		logging.warning(f"Could not find race results for season {season_year}, race {race_num}")
 		return pd.DataFrame(columns=["Season", "Race", "Abbreviation", "Status", "Position", "ClassifiedPosition", "GridPosition", "Points"])
 

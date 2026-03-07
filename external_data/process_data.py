@@ -1,6 +1,8 @@
 import pandas as pd
 import logging
 
+from external_data.get_data import get_race_results, get_session_laps
+
 
 def get_practice_performance(df_session_laps: pd.DataFrame) -> pd.DataFrame:
     # Check session constants do not vary
@@ -80,3 +82,66 @@ def get_rolling_prev_points(df_all_race_results: pd.DataFrame, race_num: int, ro
     )
 
     return df_all_race_results
+
+
+def get_practice_and_rolling_metrics(
+    season_year: int, race_num: int, rolling_window: int = 3
+) -> pd.DataFrame:
+    """Return a unified dataframe containing
+
+    * rolling points and rank for the previous ``rolling_window`` races
+      ending with ``race_num``
+    * practice performance metrics for FP2 and FP3 of the supplied race
+
+    The workflow mirrors the description in the user request:
+
+    1. call :func:`get_rolling_window_races` to identify prior races.
+    2. fetch each race's results via :func:`get_race_results` and concat them.
+    3. compute rolling points using :func:`get_rolling_prev_points`.
+    4. load FP2 and FP3 laps for the current race and summarize them with
+       :func:`get_practice_performance`.
+    5. merge all partial dataframes together on ``Driver`` and annotate the
+       final frame with the input season and race.
+
+    The returned frame will include at least the columns
+    ``Driver``, ``RollingPoints``, ``RollingPointsRank`` plus prefixed
+    practice columns such as ``FP2_TotalLapCount`` and ``FP3_MinLapTime``.
+    """
+
+    # collect previous race results
+    races = get_rolling_window_races(race_num=race_num, rolling_window=rolling_window)
+    prev_results = pd.DataFrame(columns=["Race", "Abbreviation", "Points"])
+    for r in races:
+        df = get_race_results(season_year=season_year, race_num=r)
+        prev_results = pd.concat([prev_results, df], ignore_index=True)
+
+    rolling_df = get_rolling_prev_points(prev_results, race_num=race_num, rolling_window=rolling_window)
+
+    # gather practice laps for the current race
+    fp2_laps = get_session_laps(season_year=season_year, race_num=race_num, session_type="FP2")
+    fp3_laps = get_session_laps(season_year=season_year, race_num=race_num, session_type="FP3")
+
+    perf2 = get_practice_performance(fp2_laps) if not fp2_laps.empty else pd.DataFrame()
+    perf3 = get_practice_performance(fp3_laps) if not fp3_laps.empty else pd.DataFrame()
+
+    # merge everything
+    merged = rolling_df
+    if not perf2.empty:
+        merged = merged.merge(perf2, on=["Driver"], how="outer")
+    if not perf3.empty:
+        merged = merged.merge(perf3, on=["Driver", "Season", "Race"], how="outer")
+
+    # annotate with the race being processed
+    merged["Season"] = season_year
+    merged["Race"] = race_num
+
+    merged["AggregageRank"] = 0
+    if "RollingPointsRank" in merged.columns:
+        merged["AggregageRank"] = merged["AggregageRank"] + merged["RollingPointsRank"].fillna(0)
+    if "FP2_MinLapTime_rank" in merged.columns:
+        merged["AggregageRank"] = merged["AggregageRank"] + merged["FP2_MinLapTime_rank"].fillna(0)
+    if "FP3_MinLapTime_rank" in merged.columns:
+        merged["AggregageRank"] = merged["AggregageRank"] + merged["FP3_MinLapTime_rank"].fillna(0)
+    merged = merged.sort_values(by="AggregageRank", ascending=True)
+
+    return merged
