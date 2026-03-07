@@ -20,14 +20,19 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
 	logging.info(f"Processing race results for season {season_year}, race {race_num}")
 	schedule = fastf1.get_event_schedule(season_year, include_testing=False)
 	event = schedule[schedule["RoundNumber"] == race_num].iloc[0]
-	race = event.get_session("R")
-	race.load()
-	results = race.results
-	results = results[["Abbreviation", "Status", "Position", "ClassifiedPosition", "GridPosition", "Points"]].copy()
-	results["Season"] = season_year
-	results["Race"] = race_num
-	logging.info(f"Processed race results for season {season_year}, race {race_num}, shape {results.shape}")
-	return results
+
+	try:
+		race = event.get_session("R")
+		race.load()
+		results = race.results
+		results = results[["Abbreviation", "Status", "Position", "ClassifiedPosition", "GridPosition", "Points"]].copy()
+		results["Season"] = season_year
+		results["Race"] = race_num
+		logging.info(f"Processed race results for season {season_year}, race {race_num}, shape {results.shape}")
+		return results
+	except ValueError:
+		logging.warning(f"Could not find race results for season {season_year}, race {race_num}")
+		return pd.DataFrame(columns=["Season", "Race", "Abbreviation", "Status", "Position", "ClassifiedPosition", "GridPosition", "Points"])
 
 
 def get_all_race_results(season_year: int) -> pd.DataFrame:

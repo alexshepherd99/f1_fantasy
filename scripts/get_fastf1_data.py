@@ -9,7 +9,7 @@ if __name__ == "__main__":
     setup_fastf1_cache()
 
     #races = get_races_for_season(season_year=2025)
-    race_results = get_all_race_results(season_year=2025)
+    race_results = get_all_race_results(season_year=2026)
 
     #for race_num in get_races_for_season(season_year=2025):
     #	for session_type in ["FP2", "FP3"]:
