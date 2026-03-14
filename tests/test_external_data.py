@@ -172,7 +172,7 @@ def test_practice_and_rolling_metrics_end_to_end():
         "FP3_MaxLapsInStint",
         "Season",
         "Race",
-        "AggregageRank",
+        "AggregateRank",
     }
     assert expected.issubset(set(df.columns)), f"Missing cols: {expected - set(df.columns)}"
 
@@ -208,6 +208,24 @@ def test_practice_and_rolling_metrics_race_1():
     assert df_2026_1["RollingPointsRank"].min() == 0.0
     assert df_2026_1["RollingPointsRank"].max() == 0.0
 
+    # FP2 and FP3 min lap times
+    assert df_2026_1["FP2_MinLapTime_rank"].min() == 0.0
+    assert df_2026_1["FP2_MinLapTime_rank"].max() == 1.0
+    assert df_2026_1["FP3_MinLapTime_rank"].min() == 0.0
+    assert df_2026_1["FP3_MinLapTime_rank"].max() == 1.0
+    assert get_val_for_driver(df_2026_1, "PER", "FP2_MinLapTime_rank") == pytest.approx(0.0, 0.0001)
+    assert get_val_for_driver(df_2026_1, "ALO", "FP2_MinLapTime_rank") == pytest.approx(0.0, 0.0001)
+    assert get_val_for_driver(df_2026_1, "PIA", "FP2_MinLapTime_rank") == pytest.approx(1.0, 0.0001)
+    assert get_val_for_driver(df_2026_1, "RUS", "FP2_MinLapTime_rank") == pytest.approx(0.9351, 0.0001)
+    assert get_val_for_driver(df_2026_1, "PER", "FP3_MinLapTime_rank") == pytest.approx(0.0, 0.0001)
+    assert get_val_for_driver(df_2026_1, "ALO", "FP3_MinLapTime_rank") == pytest.approx(0.3138, 0.0001)
+    assert get_val_for_driver(df_2026_1, "PIA", "FP3_MinLapTime_rank") == pytest.approx(0.8065, 0.0001)
+    assert get_val_for_driver(df_2026_1, "RUS", "FP3_MinLapTime_rank") == pytest.approx(1.0, 0.0001)
+    assert get_val_for_driver(df_2026_1, "PER", "AggregateRank") == pytest.approx(0.0, 0.0001)
+    assert get_val_for_driver(df_2026_1, "ALO", "AggregateRank") == pytest.approx(0.3138, 0.0001)
+    assert get_val_for_driver(df_2026_1, "PIA", "AggregateRank") == pytest.approx(1.8065, 0.0001)
+    assert get_val_for_driver(df_2026_1, "RUS", "AggregateRank") == pytest.approx(1.9351, 0.0001)
+
 
 def test_practice_and_rolling_metrics_race_5():
     # Checks on the actual output data.  
@@ -219,3 +237,21 @@ def test_practice_and_rolling_metrics_race_5():
     assert get_val_for_driver(df_2025_5, "PIA", "RollingPointsRank") == pytest.approx(1.0, 0.0001)
     assert get_val_for_driver(df_2025_5, "NOR", "RollingPointsRank") == pytest.approx(0.7846, 0.0001)
     assert get_val_for_driver(df_2025_5, "BOR", "RollingPointsRank") == 0.0
+
+    # FP2 and FP3 min lap times
+    assert df_2025_5["FP2_MinLapTime_rank"].min() == 0.0
+    assert df_2025_5["FP2_MinLapTime_rank"].max() == 1.0
+    assert df_2025_5["FP3_MinLapTime_rank"].min() == 0.0
+    assert df_2025_5["FP3_MinLapTime_rank"].max() == 1.0
+
+    assert get_val_for_driver(df_2025_5, "PIA", "FP2_MinLapTime_rank") == pytest.approx(0.9070, 0.0001)
+    assert get_val_for_driver(df_2025_5, "NOR", "FP2_MinLapTime_rank") == pytest.approx(1.0, 0.0001)
+    assert get_val_for_driver(df_2025_5, "BOR", "FP2_MinLapTime_rank") == 0.0
+
+    assert get_val_for_driver(df_2025_5, "PIA", "FP3_MinLapTime_rank") == pytest.approx(0.9879, 0.0001)
+    assert get_val_for_driver(df_2025_5, "NOR", "FP3_MinLapTime_rank") == pytest.approx(1.0, 0.0001)
+    assert get_val_for_driver(df_2025_5, "BOR", "FP3_MinLapTime_rank") == pytest.approx(0.03419, 0.0001)
+
+    assert get_val_for_driver(df_2025_5, "PIA", "AggregateRank") == pytest.approx(2.8949, 0.0001)
+    assert get_val_for_driver(df_2025_5, "NOR", "AggregateRank") == pytest.approx(2.7846, 0.0001)
+    assert get_val_for_driver(df_2025_5, "BOR", "AggregateRank") == pytest.approx(0.03419, 0.0001)

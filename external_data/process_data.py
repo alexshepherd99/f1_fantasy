@@ -20,11 +20,18 @@ def get_practice_performance(df_session_laps: pd.DataFrame) -> pd.DataFrame:
     # Create a copy to preserve original data
     df_session_laps = df_session_laps.copy()
 
+    # Exclude any laps slower than 7% of the session fastest
+    fastest_overall_lap = df_session_laps["LapTime"].min()
+    threshold_time = fastest_overall_lap * 1.07
+    df_session_laps = df_session_laps[
+        df_session_laps["LapTime"] <= threshold_time
+    ].copy()
+
     # Basic metrics per driver
     total_lap_count = df_session_laps.groupby("Driver").size().reset_index(name="TotalLapCount")
     min_lap_time = df_session_laps.groupby("Driver")["LapTime"].min().reset_index(name="MinLapTime")
 
-    # Max laps in a single stint (no exclusions)
+    # Max laps in a single stint
     max_laps_in_stint = (
         df_session_laps.groupby(["Driver", "Stint"]).size()
         .reset_index(name="LapCountInStint")
@@ -38,7 +45,12 @@ def get_practice_performance(df_session_laps: pd.DataFrame) -> pd.DataFrame:
     df_result = df_result.merge(max_laps_in_stint, on="Driver")
 
     # Add rank columns for each metric
-    df_result["MinLapTime_rank"] = df_result["MinLapTime"].rank(method="min", ascending=True).astype("Int64")
+    df_result["MinLapTime_rank"] = (
+        1 - (
+            (df_result["MinLapTime"] - df_result["MinLapTime"].min()) /
+            (df_result["MinLapTime"].max() - df_result["MinLapTime"].min())
+        )
+    )
 
     # Prefix all column names (except Driver) with session_type
     columns_to_prefix = [col for col in df_result.columns if col != "Driver"]
@@ -139,16 +151,17 @@ def get_practice_and_rolling_metrics(
     merged["Season"] = season_year
     merged["Race"] = race_num
 
-    merged["AggregageRank"] = 0
+    # Aggregate rank metric
+    merged["AggregateRank"] = 0
     if "RollingPointsRank" in merged.columns:
         merged["RollingPointsRank"] = merged["RollingPointsRank"].fillna(0)
-        merged["AggregageRank"] = merged["AggregageRank"] + merged["RollingPointsRank"]
+        merged["AggregateRank"] = merged["AggregateRank"] + merged["RollingPointsRank"]
     if "FP2_MinLapTime_rank" in merged.columns:
         merged["FP2_MinLapTime_rank"] = merged["FP2_MinLapTime_rank"].fillna(0)
-        merged["AggregageRank"] = merged["AggregageRank"] + merged["FP2_MinLapTime_rank"]
+        merged["AggregateRank"] = merged["AggregateRank"] + merged["FP2_MinLapTime_rank"]
     if "FP3_MinLapTime_rank" in merged.columns:
         merged["FP3_MinLapTime_rank"] = merged["FP3_MinLapTime_rank"].fillna(0)
-        merged["AggregageRank"] = merged["AggregageRank"] + merged["FP3_MinLapTime_rank"]
-    merged = merged.sort_values(by="AggregageRank", ascending=True)
+        merged["AggregateRank"] = merged["AggregateRank"] + merged["FP3_MinLapTime_rank"]
+    merged = merged.sort_values(by="AggregateRank", ascending=True)
 
     return merged
