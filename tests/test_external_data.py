@@ -218,6 +218,8 @@ def test_practice_and_rolling_metrics_race_5():
     df_2025_5 = get_practice_and_rolling_metrics(2025, 5)
 
     # Race 5 has some zero points and some null values
+    assert df_2025_5["RollingPointsRank"].min() == 0.0
+    assert df_2025_5["RollingPointsRank"].max() == 1.0
     assert get_val_for_driver(df_2025_5, "PIA", "RollingPointsRank") == pytest.approx(1.0, 0.0001)
     assert get_val_for_driver(df_2025_5, "NOR", "RollingPointsRank") == pytest.approx(0.7846, 0.0001)
     assert get_val_for_driver(df_2025_5, "BOR", "RollingPointsRank") == 0.0
