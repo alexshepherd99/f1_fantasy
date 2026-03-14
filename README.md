@@ -8,7 +8,7 @@ Drivers which are in the current team, but not available for selection in the up
 
 By default, the team DRS x2 selection will go to the highest value driver.  The Strategy class has the option to override this behaviour if desired.
 
-The "how" is as important as the "what" here; everything has been developed on a minimal-spec budget Chromebook using Codespaces and a local Chromebook Linux dev environment.  Co-pilot has helped with some of the unit tests.
+The "how" is as important as the "what" here; everything has been developed on a minimal-spec budget Chromebook using Codespaces and a local Chromebook Linux dev environment.
 
 There are some limitations to take into consideration:
 
@@ -17,6 +17,12 @@ There are some limitations to take into consideration:
 - In the event that a driver switches teams part way through the season, when assessing their value for money (cumulative points, cumulative points per million) will only take into account their points in the context of a single team.  E.g. TSU and LAW swapping between VRB and RED in 2025, TSU's points history with RED will not be taken into account when assessing his value with VRB.
 - For most strategies, concentration risk is not managed, i.e. there are no constraints on choosing a constructor alongside one or even two drivers from that constructor.  So far, the cost cap appears to mitigate the worst effects of concentration risk, in that it's difficult to afford top-flight drivers and constructors.  However this is one to watch, when the algo is used in the wild.  The exception strategy which does manage this is the betting odds one, detailed below.
 - Application performance is not currently a consideration, meaning that it can take several hours to run a full back-test for all strategies against seasons 2023-2025.  Performance improvements usually come at the cost of increased code complexity, so ease of making further changes has been prioritised over execution speed. 
+
+## Agentic engineering
+
+After writing the initial version of the code mostly by hand, future iterations will be written by a coding agent, thus providing an experiment ground for agentic engineering in a brownfield environment.
+
+See [copilot-instructions.md](.github/copilot-instructions.md)
 
 ## Usage scripts
 
@@ -71,10 +77,10 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 
 ### Primary team
 
-| Race | Strategy | Chips | Drivers | Constructors | Total value | Points | Points Total
+| Race | Strategy | Chips | Drivers | Constructors | Total budget | Points | Points Total
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | Betting odds, max concentration 1 | | RUS,LIN,COL,BOR,HAD | HAA,MER | 98.0 | | |
-| 2 | Max P2PM | | | | | | |
+| 1 | Betting odds, max concentration 1 | | RUS,LIN,COL,BOR,HAD | HAA,MER | 100.0 | 234 | 234 |
+| 2 | Max P2PM | | RUS,LIN,COL,BOR,BEA | VRB,MER | 102.0 | | |
 | 3 | Max P2PM | | | | | | |
 | 4 | Max P2PM | Unlimited moves (*) | | | | | |
 | 5 | Max P2PM | | | | | | |
@@ -100,10 +106,10 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 
 ### Secondary team
 
-| Race | Strategy | Chips | Drivers | Constructors | Total value | Points | Points Total
+| Race | Strategy | Chips | Drivers | Constructors | Total budget | Points | Points Total
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | Max constructor/driver cost ratio| | BOR,BOT,HAD,LIN,STR | MER,MCL | 99.8 | | |
-| 2 | Max P2PM | | | | | | |
+| 1 | Max constructor/driver cost ratio| | BOR,BOT,HAD,LIN,STR | MER,MCL | 100.0 | 88 | 88 |
+| 2 | Max P2PM | | BOR,BOT,HAD,LIN,VER | MER,VRB | 99.6 | | |
 | 3 | Max P2PM | | | | | | |
 | 4 | Max P2PM | Unlimited moves (*) | | | | | |
 | 5 | Max P2PM | | | | | | |
