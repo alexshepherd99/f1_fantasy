@@ -38,9 +38,7 @@ def get_practice_performance(df_session_laps: pd.DataFrame) -> pd.DataFrame:
     df_result = df_result.merge(max_laps_in_stint, on="Driver")
 
     # Add rank columns for each metric
-    df_result["TotalLapCount_rank"] = df_result["TotalLapCount"].rank(method="min", ascending=False).astype("Int64")
     df_result["MinLapTime_rank"] = df_result["MinLapTime"].rank(method="min", ascending=True).astype("Int64")
-    df_result["MaxLapsInStint_rank"] = df_result["MaxLapsInStint"].rank(method="min", ascending=False).astype("Int64")
 
     # Prefix all column names (except Driver) with session_type
     columns_to_prefix = [col for col in df_result.columns if col != "Driver"]
