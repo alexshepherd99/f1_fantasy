@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from external_data.process_data import get_rolling_window_races, get_rolling_prev_points, get_practice_and_rolling_metrics
 from external_data.fastf1_common import get_cache_filename
 
@@ -62,7 +63,7 @@ def test_get_rolling_prev_points():
     })
 
     # Test 1: Rolling window of 3 for race 3 (includes races 1, 2)
-    result = get_rolling_prev_points(df_data, race_num=3, rolling_window=3)
+    result = get_rolling_prev_points(df_data, season_year=1999, race_num=3, rolling_window=3)
     
     # Check that both drivers are in the result
     assert len(result) == 2
@@ -77,8 +78,8 @@ def test_get_rolling_prev_points():
     assert ham_row["RollingPoints"] == 33
     
     # Check rankings (VER should be rank 1, HAM should be rank 2)
-    assert ver_row["RollingPointsRank"] == 1
-    assert ham_row["RollingPointsRank"] == 2
+    assert ver_row["RollingPointsRank"] == pytest.approx(1.0, 0.0001)
+    assert ham_row["RollingPointsRank"] == pytest.approx(0.0, 0.0001)
 
 
 def test_get_rolling_prev_points_with_nan():
@@ -89,7 +90,7 @@ def test_get_rolling_prev_points_with_nan():
         "Points": [25, "18", 20, None]  # Mixed valid and invalid values
     })
 
-    result = get_rolling_prev_points(df_data, race_num=3, rolling_window=3)
+    result = get_rolling_prev_points(df_data, season_year=1999, race_num=3, rolling_window=3)
     
     # get_rolling_window_races(3, 3) returns [1, 2]
     # VER: 25 (race 1) + 20 (race 2) = 45
@@ -108,7 +109,7 @@ def test_get_rolling_prev_points_single_race():
         "Points": [25, 18]
     })
 
-    result = get_rolling_prev_points(df_data, race_num=1, rolling_window=3)
+    result = get_rolling_prev_points(df_data, season_year=1999, race_num=1, rolling_window=3)
     
     # Should return empty dataframe since there are no races in rolling window
     assert len(result) == 0
@@ -119,11 +120,11 @@ def test_get_rolling_prev_points_five_races_three_drivers():
     df_data = pd.DataFrame({
         "Race": [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5],
         "Abbreviation": ["VER", "HAM", "LEC", "VER", "HAM", "LEC", "VER", "HAM", "LEC", "VER", "HAM", "LEC", "VER", "HAM", "LEC"],
-        "Points": [25, 18, 15, 20, 25, 18, 18, 20, 25, 25, 15, 20, 22, 20, 18]
+        "Points": [25, 18, 15, 20, 25, 18, 18, 20, 25, 25, 15, 15, 22, 20, 18]
     })
 
     # Test for race 5 with window 3 (includes races 2, 3, 4)
-    result = get_rolling_prev_points(df_data, race_num=5, rolling_window=3)
+    result = get_rolling_prev_points(df_data, season_year=1999, race_num=5, rolling_window=3)
     
     # Check that all three drivers are in the result
     assert len(result) == 3
@@ -139,12 +140,12 @@ def test_get_rolling_prev_points_five_races_three_drivers():
     
     assert ver_row["RollingPoints"] == 63
     assert ham_row["RollingPoints"] == 60
-    assert lec_row["RollingPoints"] == 63
+    assert lec_row["RollingPoints"] == 58
     
     # Check rankings (VER and LEC tied at rank 1, HAM at rank 2)
-    assert ver_row["RollingPointsRank"] == 1
-    assert lec_row["RollingPointsRank"] == 1
-    assert ham_row["RollingPointsRank"] == 2
+    assert ver_row["RollingPointsRank"] == pytest.approx(1.0, 0.001)
+    assert lec_row["RollingPointsRank"] == pytest.approx(0.0, 0.001)
+    assert ham_row["RollingPointsRank"] == pytest.approx(0.4, 0.001)
 
 
 def test_practice_and_rolling_metrics_end_to_end():
@@ -187,16 +188,36 @@ def test_practice_and_rolling_metrics_end_to_end():
 
     # season/race columns are consistent with the arguments
     assert df["Season"].nunique() <= 1
+    assert df["Race"].nunique() <= 1
     if not df.empty:
         assert df["Season"].iloc[0] == season
         assert df["Race"].iloc[0] == race
-
-    # some basic sanity on the data
-    # rolling points ranks should be integer type
-    assert pd.api.types.is_integer_dtype(df["RollingPointsRank"])
 
     # there should be at least one driver with a non-null rolling points rank
     assert df["RollingPointsRank"].notna().any()
 
     # Run again for first race of the season
     df = get_practice_and_rolling_metrics(2025, 1)
+
+
+def get_val_for_driver(df, drv, val):
+    return df.loc[df["Driver"]==drv][val].values[0]
+
+
+def test_practice_and_rolling_metrics_race_1():
+    # Checks on the actual output data.  
+    df_2026_1 = get_practice_and_rolling_metrics(2026, 1)
+
+    # No points yet to check, for race 1.  All rank values should be identical.
+    assert df_2026_1["RollingPointsRank"].min() == 0.0
+    assert df_2026_1["RollingPointsRank"].max() == 0.0
+
+
+def test_practice_and_rolling_metrics_race_5():
+    # Checks on the actual output data.  
+    df_2025_5 = get_practice_and_rolling_metrics(2025, 5)
+
+    # Race 5 has some zero points and some null values
+    assert get_val_for_driver(df_2025_5, "PIA", "RollingPointsRank") == pytest.approx(1.0, 0.0001)
+    assert get_val_for_driver(df_2025_5, "NOR", "RollingPointsRank") == pytest.approx(0.7846, 0.0001)
+    assert get_val_for_driver(df_2025_5, "BOR", "RollingPointsRank") == 0.0

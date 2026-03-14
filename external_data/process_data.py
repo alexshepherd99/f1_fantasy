@@ -63,7 +63,7 @@ def get_rolling_window_races(race_num: int, rolling_window: int=3) -> list[int]:
     return races
 
 
-def get_rolling_prev_points(df_all_race_results: pd.DataFrame, race_num: int, rolling_window: int=3) -> pd.DataFrame:
+def get_rolling_prev_points(df_all_race_results: pd.DataFrame, season_year: int, race_num: int, rolling_window: int=3) -> pd.DataFrame:
     races = get_rolling_window_races(race_num=race_num, rolling_window=rolling_window)
 
     df_all_race_results = df_all_race_results[df_all_race_results["Race"].isin(races)]
@@ -73,13 +73,19 @@ def get_rolling_prev_points(df_all_race_results: pd.DataFrame, race_num: int, ro
     df_all_race_results = df_all_race_results[["Driver", "RollingPoints"]]
     df_all_race_results = df_all_race_results.groupby("Driver").sum().reset_index(drop=False)
 
-    # Compute AggregatePointsRank per race. Fill NaN with a large value so
-    # that drivers without an AggregatePoints value rank last within the race.
+    # Compute RollingPointsRank per race
     df_all_race_results["RollingPointsRank"] = (
-        df_all_race_results["RollingPoints"]
-        .transform(lambda x: x.fillna(1e9).rank(method="dense", ascending=False))
-        .astype("Int64")
+        (
+            df_all_race_results["RollingPoints"] - df_all_race_results["RollingPoints"].min()
+        ) /
+        (
+            df_all_race_results["RollingPoints"].max() - df_all_race_results["RollingPoints"].min()
+        )
     )
+
+    # annotate with the race being processed
+    df_all_race_results["Season"] = season_year
+    df_all_race_results["Race"] = race_num
 
     return df_all_race_results
 
@@ -115,7 +121,7 @@ def get_practice_and_rolling_metrics(
         df = get_race_results(season_year=season_year, race_num=r)
         prev_results = pd.concat([prev_results, df], ignore_index=True)
 
-    rolling_df = get_rolling_prev_points(prev_results, race_num=race_num, rolling_window=rolling_window)
+    rolling_df = get_rolling_prev_points(prev_results, season_year=season_year, race_num=race_num, rolling_window=rolling_window)
 
     # gather practice laps for the current race
     fp2_laps = get_session_laps(season_year=season_year, race_num=race_num, session_type="FP2")
@@ -127,7 +133,7 @@ def get_practice_and_rolling_metrics(
     # merge everything
     merged = rolling_df
     if not perf2.empty:
-        merged = merged.merge(perf2, on=["Driver"], how="outer")
+        merged = merged.merge(perf2, on=["Driver", "Season", "Race"], how="outer")
     if not perf3.empty:
         merged = merged.merge(perf3, on=["Driver", "Season", "Race"], how="outer")
 
@@ -137,11 +143,14 @@ def get_practice_and_rolling_metrics(
 
     merged["AggregageRank"] = 0
     if "RollingPointsRank" in merged.columns:
-        merged["AggregageRank"] = merged["AggregageRank"] + merged["RollingPointsRank"].fillna(0)
+        merged["RollingPointsRank"] = merged["RollingPointsRank"].fillna(0)
+        merged["AggregageRank"] = merged["AggregageRank"] + merged["RollingPointsRank"]
     if "FP2_MinLapTime_rank" in merged.columns:
-        merged["AggregageRank"] = merged["AggregageRank"] + merged["FP2_MinLapTime_rank"].fillna(0)
+        merged["FP2_MinLapTime_rank"] = merged["FP2_MinLapTime_rank"].fillna(0)
+        merged["AggregageRank"] = merged["AggregageRank"] + merged["FP2_MinLapTime_rank"]
     if "FP3_MinLapTime_rank" in merged.columns:
-        merged["AggregageRank"] = merged["AggregageRank"] + merged["FP3_MinLapTime_rank"].fillna(0)
+        merged["FP3_MinLapTime_rank"] = merged["FP3_MinLapTime_rank"].fillna(0)
+        merged["AggregageRank"] = merged["AggregageRank"] + merged["FP3_MinLapTime_rank"]
     merged = merged.sort_values(by="AggregageRank", ascending=True)
 
     return merged
