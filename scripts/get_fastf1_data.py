@@ -20,4 +20,4 @@ if __name__ == "__main__":
 
     #df = get_rolling_prev_points(race_results, 1)
 
-    df = get_practice_and_rolling_metrics(2025, 5)
+    df = get_practice_and_rolling_metrics(2026, 1)

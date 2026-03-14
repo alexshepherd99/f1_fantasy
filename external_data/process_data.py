@@ -162,6 +162,6 @@ def get_practice_and_rolling_metrics(
     if "FP3_MinLapTime_rank" in merged.columns:
         merged["FP3_MinLapTime_rank"] = merged["FP3_MinLapTime_rank"].fillna(0)
         merged["AggregateRank"] = merged["AggregateRank"] + merged["FP3_MinLapTime_rank"]
-    merged = merged.sort_values(by="AggregateRank", ascending=True)
+    merged = merged.sort_values(by="AggregateRank", ascending=False)
 
     return merged
