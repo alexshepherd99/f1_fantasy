@@ -81,10 +81,10 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | Betting odds, max concentration 1 | | RUS,LIN,COL,BOR,HAD | HAA,MER | 100.0 | 234 | 234 |
 | 2 | Max P2PM | | RUS,LIN,COL,BOR,BEA | VRB,MER | 102.0 | 300 | 534 |
-| 3 | Max P2PM | | RUS,LIN,COL,LAW,BEA | HAA,MER | 104.4 | | |
-| 4 | Max P2PM | Unlimited moves (*) | | | | | |
-| 5 | Max P2PM | | | | | | |
-| 6 | Max P2PM | | | | | | |
+| 3 | Max P2PM | | RUS,LIN,COL,LAW,BEA | HAA,MER | 104.4 | 143 | 677 |
+| 4 | Max P2PM | Cancelled | | | | | |
+| 5 | Max P2PM | Cancelled | | | | | |
+| 6 | Max P2PM | Unlimited moves (*) | ANT,HUL,LAW,OCO,PER| FER,MER | 107.6 | | |
 | 7 | Max P2PM | | | | | | |
 | 8 | Max P2PM | | | | | | |
 | 9 | Max P2PM | | | | | | |
@@ -110,10 +110,10 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | Max constructor/driver cost ratio| | BOR,BOT,HAD,LIN,STR | MER,MCL | 100.0 | 88 | 88 |
 | 2 | Max P2PM | | BOR,BOT,HAD,LIN,VER | MER,VRB | 99.6 | 208 | 296 |
-| 3 | Max P2PM | | BOR,BEA,HAD,LIN,ANT | MER,VRB | 99.4 | | |
-| 4 | Max P2PM | Unlimited moves (*) | | | | | |
-| 5 | Max P2PM | | | | | | |
-| 6 | Max P2PM | | | | | | |
+| 3 | Max P2PM | | BOR,BEA,HAD,LIN,ANT | MER,VRB | 99.4 | 205 | 501 |
+| 4 | Max P2PM | Cancelled | | | | | |
+| 5 | Max P2PM | Cancelled | | | | | |
+| 6 | Max P2PM | Unlimited moves (*) | BEA,GAS,LAW,OCO,PER | MER,FER | 100.2 | | |
 | 7 | Max P2PM | | | | | | |
 | 8 | Max P2PM | | | | | | |
 | 9 | Max P2PM | | | | | | |
