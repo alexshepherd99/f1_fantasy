@@ -84,8 +84,8 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | 3 | Max P2PM | | RUS,LIN,COL,LAW,BEA | HAA,MER | 104.4 | 143 | 677 |
 | 4 | Max P2PM | Cancelled | | | | | |
 | 5 | Max P2PM | Cancelled | | | | | |
-| 6 | Max P2PM | Unlimited moves (*) | ANT,HUL,LAW,OCO,PER| FER,MER | 107.6 | | |
-| 7 | Max P2PM | | | | | | |
+| 6 | Max P2PM | Unlimited moves (*) | ANT,HUL,LAW,OCO,PER| FER,MER | 107.6 | 237 | 914 |
+| 7 | Max P2PM | | ANT,BOT,COL,OCO,PER | FER,MER | 109.7 | | |
 | 8 | Max P2PM | | | | | | |
 | 9 | Max P2PM | | | | | | |
 | 10 | Max P2PM | | | | | | |
@@ -113,8 +113,8 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | 3 | Max P2PM | | BOR,BEA,HAD,LIN,ANT | MER,VRB | 99.4 | 205 | 501 |
 | 4 | Max P2PM | Cancelled | | | | | |
 | 5 | Max P2PM | Cancelled | | | | | |
-| 6 | Max P2PM | Unlimited moves (*) | BEA,GAS,LAW,OCO,PER | MER,FER | 100.2 | | |
-| 7 | Max P2PM | | | | | | |
+| 6 | Max P2PM | Unlimited moves (*) | BEA,GAS,LAW,OCO,PER | MER,FER | 100.2 | 168 | 669 |
+| 7 | Max P2PM | | SAI,COL,LAW,OCO,PER | MER,FER | 102.6 | | |
 | 8 | Max P2PM | | | | | | |
 | 9 | Max P2PM | | | | | | |
 | 10 | Max P2PM | | | | | | |
