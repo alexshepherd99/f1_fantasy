@@ -71,4 +71,4 @@ if __name__ == "__main__":
     setup_logging()
     setup_fastf1_cache()
 
-    update_fastf1_metrics(season_years=[2026], race_numbers=[x for x in range(1,4)])
+    update_fastf1_metrics(season_years=[2023,2024,2025], race_numbers=[x for x in range(1,23)])

@@ -73,31 +73,48 @@ def get_rolling_window_races(race_num: int, rolling_window: int=3) -> list[int]:
     return races
 
 
-def get_rolling_prev_points(df_all_race_results: pd.DataFrame, season_year: int, race_num: int, rolling_window: int=3) -> pd.DataFrame:
+def get_rolling_prev_points(
+    df_all_race_results: pd.DataFrame,
+    season_year: int,
+    race_num: int,
+    rolling_window: int = 3,
+    df_current_race_results: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     races = get_rolling_window_races(race_num=race_num, rolling_window=rolling_window)
 
-    df_all_race_results = df_all_race_results[df_all_race_results["Race"].isin(races)]
-    df_all_race_results["Driver"] = df_all_race_results["Abbreviation"]
-    df_all_race_results["RollingPoints"] = df_all_race_results["Points"]
-    df_all_race_results["RollingPoints"] = pd.to_numeric(df_all_race_results["Points"], errors="coerce") 
-    df_all_race_results = df_all_race_results[["Driver", "RollingPoints"]]
-    df_all_race_results = df_all_race_results.groupby("Driver").sum().reset_index(drop=False)
+    df_prev_results = df_all_race_results[df_all_race_results["Race"].isin(races)].copy()
+    df_prev_results["Driver"] = df_prev_results["Abbreviation"]
+    df_prev_results["RollingPoints"] = pd.to_numeric(df_prev_results["Points"], errors="coerce")
+    df_result = df_prev_results[["Driver", "RollingPoints"]]
+    df_result = df_result.groupby("Driver", as_index=False).sum()
+
+    if df_current_race_results is not None:
+        current_results = df_current_race_results.copy()
+        current_results["Driver"] = current_results["Abbreviation"]
+        current_results["Points"] = pd.to_numeric(current_results["Points"], errors="coerce")
+        current_results = current_results[["Driver", "Points", "Position"]]
+        df_result = df_result.merge(current_results, on="Driver", how="outer")
+
+    if "Points" not in df_result.columns:
+        df_result["Points"] = pd.NA
+    if "Position" not in df_result.columns:
+        df_result["Position"] = pd.NA
 
     # Compute RollingPointsRank per race
-    df_all_race_results["RollingPointsRank"] = (
+    df_result["RollingPointsRank"] = (
         (
-            df_all_race_results["RollingPoints"] - df_all_race_results["RollingPoints"].min()
+            df_result["RollingPoints"] - df_result["RollingPoints"].min()
         ) /
         (
-            df_all_race_results["RollingPoints"].max() - df_all_race_results["RollingPoints"].min()
+            df_result["RollingPoints"].max() - df_result["RollingPoints"].min()
         )
     )
 
     # annotate with the race being processed
-    df_all_race_results["Season"] = season_year
-    df_all_race_results["Race"] = race_num
+    df_result["Season"] = season_year
+    df_result["Race"] = race_num
 
-    return df_all_race_results
+    return df_result
 
 
 def get_practice_and_rolling_metrics(
@@ -131,7 +148,14 @@ def get_practice_and_rolling_metrics(
         df = get_race_results(season_year=season_year, race_num=r)
         prev_results = pd.concat([prev_results, df], ignore_index=True)
 
-    rolling_df = get_rolling_prev_points(prev_results, season_year=season_year, race_num=race_num, rolling_window=rolling_window)
+    current_results = get_race_results(season_year=season_year, race_num=race_num)
+    rolling_df = get_rolling_prev_points(
+        prev_results,
+        season_year=season_year,
+        race_num=race_num,
+        rolling_window=rolling_window,
+        df_current_race_results=current_results,
+    )
 
     # gather practice laps for the current race
     fp2_laps = get_session_laps(season_year=season_year, race_num=race_num, session_type="FP2")

@@ -80,6 +80,37 @@ def test_get_rolling_prev_points():
     # Check rankings (VER should be rank 1, HAM should be rank 2)
     assert ver_row["RollingPointsRank"] == pytest.approx(1.0, 0.0001)
     assert ham_row["RollingPointsRank"] == pytest.approx(0.0, 0.0001)
+    assert "Points" in result.columns
+    assert "Position" in result.columns
+
+
+def test_get_rolling_prev_points_includes_current_race_points_and_position():
+    df_data = pd.DataFrame({
+        "Race": [1, 1, 2, 2],
+        "Abbreviation": ["VER", "HAM", "VER", "HAM"],
+        "Points": [25, 18, 20, 15],
+    })
+    current_df = pd.DataFrame({
+        "Season": [1999, 1999],
+        "Race": [3, 3],
+        "Abbreviation": ["VER", "HAM"],
+        "Points": [25, 18],
+        "Position": [1, 2],
+    })
+
+    result = get_rolling_prev_points(
+        df_data,
+        season_year=1999,
+        race_num=3,
+        rolling_window=3,
+        df_current_race_results=current_df,
+    )
+
+    assert set(result["Driver"]) == {"VER", "HAM"}
+    assert result.loc[result["Driver"] == "VER", "Points"].iloc[0] == 25
+    assert result.loc[result["Driver"] == "VER", "Position"].iloc[0] == 1
+    assert result.loc[result["Driver"] == "HAM", "Points"].iloc[0] == 18
+    assert result.loc[result["Driver"] == "HAM", "Position"].iloc[0] == 2
 
 
 def test_get_rolling_prev_points_with_nan():
@@ -162,6 +193,8 @@ def test_practice_and_rolling_metrics_end_to_end():
         "Driver",
         "RollingPoints",
         "RollingPointsRank",
+        "Points",
+        "Position",
         "FP2_TotalLapCount",
         "FP3_TotalLapCount",
         "FP2_MinLapTime",
