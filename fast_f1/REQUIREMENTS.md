@@ -2,7 +2,7 @@
 
 This module provides cached access to the FastF1 API data and derivations thereof.
 
-The `external_data` sub-module within this repo contains sample experimental code that can be used.  The `get_fastf1_data.py` script in the scripts module creates outputs similar to that required here.
+The `external_data` sub-module within this repo contains sample experimental code that can be used as an indicator of the desired outputs and API calls needed.  The `get_fastf1_data.py` script in the scripts module creates outputs similar to that required here, and can also be used as an indication of how to use the APIs.
 
 ## Purpose
 
