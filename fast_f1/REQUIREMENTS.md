@@ -2,73 +2,95 @@
 
 This module provides cached access to the FastF1 API data and derivations thereof.
 
-The `external_data` sub-module within this repo contains sample experimental code that can be used as an indicator of the desired outputs and API calls needed.  The `get_fastf1_data.py` script in the scripts module creates outputs similar to that required here, and can also be used as an indication of how to use the APIs.
+The `external_data` sub-module within this repo contains sample experimental code that is preserved as legacy/experimental support only. The new `fast_f1` package is the production implementation target for race prediction and historical metric gathering.
 
 ## Purpose
 
-Predict the outcome of a Formula 1 race, given data available before the race.  There are two formats of race weekend, with different data available for each.
+Predict the outcome of a Formula 1 race using data available before the race. There are two formats of race weekend, each with a different practice/qualifying signal set.
 
-When considering lap times, any laps which are greater than 107% of the fastest lap time across all drivers are discarded.
+When considering lap times, any laps that exceed 107% of the session fastest lap time are excluded from the analysis.
 
 ### Standard race weekend
 
-**Data available to predict outcome:** Free Practice 2 fastest lap time, Free Practice 3 fastest lap time. 
+Data available:
+- Free Practice 2 fastest lap time
+- Free Practice 3 fastest lap time
 
 ### Sprint race weekend
 
-**Data available to predict outcome:** Free Practice 1 fastest lap time, Sprint Qualifying fastest lap time.
+Data available:
+- Free Practice 1 fastest lap time
+- Sprint Qualifying fastest lap time
 
 ### All race weekends
 
-Formula 1 results can reasonably be judged by past performance within the same season, so previous points can be used as an indicator:
-
-**Data available to predict outcome:** Rolling total of points from the previous three races for the driver, rolling total of points from the previous three races for the driver's constructor.
+Use previous performance within the same season:
+- rolling total of points from the previous three races for the driver
+- rolling total of points from the previous three races for the driver's constructor
 
 ## Combining indicators
 
-Within a race, the individual indicators for each driver are normalised to a range 0-1, with 1 being the best value.
+For each driver, individual indicators are normalised to the range 0–1, where 1 is best.
 
-For lap times, this is calculated as: 1 - ((this driver's min lap time - fastest driver's min lap time) / (slowest driver's lap time - fastest driver's min lap time))
+- Lap time rank: `1 - ((driver min lap time - fastest min lap time) / (slowest min lap time - fastest min lap time))`
+- Points rank: `(driver points - lowest points) / (highest points - lowest points)`
 
-For points, this is calculated as: (this driver's points - lowest driver's points) / (highest driver's points - lowest driver's points)
-
-The ranks for each indicator are summed to provide a single aggregate rank.
+The final aggregate rank is the sum of the available indicator ranks.
 
 ## FastF1 API
 
 ### API-level cache
 
-All data for these indicators are obtained through the FastF1 API.
+All source data is obtained through the FastF1 API.
 
-The FastF1 API maintains a cache of calls made to its server.  This cache location is set by fastf1.Cache.enable_cache(), which must be called before any other FastF1 API is invoked.  The location of the cache will be determined on the local system.  The cache location will be set the first time this module is executed on the local system, and the cache location will be persisted somewhere.  The user will be prompted the first time the cache is set, offering two default directory options and the option for the user to provide their own value:
+The FastF1 API cache must be enabled via `fastf1.Cache.enable_cache()` before any other FastF1 API call. On first-run, the module should prompt the user to choose a cache directory from two defaults or provide a custom path:
+- `/mnt/chromeos/removable/sd256/linux/fastf1_cache`
+- `~/fastf1_cache`
 
-/mnt/chromeos/removable/sd256/linux/fastf1_cache
-~/fastf1_cache
-
-These directories will be checked and created if they do not exist, and the module will throw an exception if the directory cannot be created.
+The chosen directory must be created if missing, and an error should be raised if it cannot be created.
 
 ### Module-level cache
 
-Even with cache data, the FastF1 API is slow.  The results to all calls to the FastF1 API will be cached locally to disk, in a separate directory called "local_cache" under the main cache directory specified above.  The module will create that subdirectory if it does not exist.
+FastF1 API responses are also cached locally to disk in a subdirectory under the main cache directory. That subdirectory should be named `local_cache` and created automatically.
 
 ## Operation
 
-The module will provide two modes of operation, which will be implemented in scripts contained within the top-level module `scripts` directory.
+The module provides two modes of operation in `scripts/`.
 
 ### Run for specific race
 
-The user is promoted for a season (e.g. 2025) and a race number (e.g. 2).  The module will calculate the expected race result based on the indicators above.
-
-The module will determine the type of race weekend (sprint vs. normal) based on the available data.  If the data is not available yet, e.g. if the session has not completed or the session data has not been published, the module will stop and inform the user.
-
-The module will display the expected aggregate rank and race ordering by default, and write all the underlying detail to an Excel file in the main module `outputs` directory.  This output file will simply overwrite any previous file of the same name.
+- Accept season and race number via CLI arguments.
+- If arguments are omitted, prompt the user interactively.
+- Determine weekend type based on available session data:
+  - normal weekend = `FP2` + `FP3`
+  - sprint weekend = `FP1` + `SprintQualifying`
+- If required session data is not available yet, stop gracefully and inform the user.
+- Display expected aggregate rank and ordering.
+- Write detailed output to an Excel file in `outputs/` and overwrite the existing file if present.
 
 ### Gather historical data
 
-The module will run for all races in all seasons from 2023 to current, calculating the aggregate metric for each race.  All the interim data and final outputs will be written to a new Excel file in the main module `data` directory.
+- Process all races from 2023 to current.
+- Compute metrics for each race and write all results into one consolidated Excel file in `data/`.
+- The file should be checked for existing season/race combinations before recomputation, allowing interruption and resume.
+- Deleting the output file should allow a full regenerate.
 
-A single output file will contain all historical results, allowing for statistical analysis.  The module will check this file for each season/race combination before re-generating the results, to allow the script to be interupted and resumed.  The user can delete the output file if they want to regenerate all the statistics.
+## Indicators
+
+The final metric must include:
+- driver rolling points rank
+- constructor rolling points rank
+- practice lap time ranks for the selected sessions
+
+Driver and constructor rolling points are separate, independent indicators.
+
+## Error behavior
+
+- If constructor or driver rolling points data is missing, fail gracefully.
+- Log a clear message explaining the missing data and stop rather than raising an unhandled exception.
 
 ## Testing
 
-Unit tests must be independent from calls to the FastF1 API, with one exception:  a unit test is provided for each function call to the FastF1 API to confirm the columns and data types returned by each call.
+- Unit tests must avoid live FastF1 API calls where possible.
+- One explicit validation test is permitted for each FastF1 wrapper function to confirm returned columns and data types.
+- Offline logic tests should use synthetic or cached data.
