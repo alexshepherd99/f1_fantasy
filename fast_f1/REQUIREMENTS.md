@@ -51,6 +51,24 @@ These directories will be checked and created if they do not exist, and the modu
 
 Even with cache data, the FastF1 API is slow.  The results to all calls to the FastF1 API will be cached locally to disk, in a separate directory called "local_cache" under the main cache directory specified above.  The module will create that subdirectory if it does not exist.
 
+## Operation
+
+The module will provide two modes of operation, which will be implemented in scripts contained within the top-level module `scripts` directory.
+
+### Run for specific race
+
+The user is promoted for a season (e.g. 2025) and a race number (e.g. 2).  The module will calculate the expected race result based on the indicators above.
+
+The module will determine the type of race weekend (sprint vs. normal) based on the available data.  If the data is not available yet, e.g. if the session has not completed or the session data has not been published, the module will stop and inform the user.
+
+The module will display the expected aggregate rank and race ordering by default, and write all the underlying detail to an Excel file in the main module `outputs` directory.  This output file will simply overwrite any previous file of the same name.
+
+### Gather historical data
+
+The module will run for all races in all seasons from 2023 to current, calculating the aggregate metric for each race.  All the interim data and final outputs will be written to a new Excel file in the main module `data` directory.
+
+A single output file will contain all historical results, allowing for statistical analysis.  The module will check this file for each season/race combination before re-generating the results, to allow the script to be interupted and resumed.  The user can delete the output file if they want to regenerate all the statistics.
+
 ## Testing
 
 Unit tests must be independent from calls to the FastF1 API, with one exception:  a unit test is provided for each function call to the FastF1 API to confirm the columns and data types returned by each call.
