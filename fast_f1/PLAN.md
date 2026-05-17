@@ -2,6 +2,12 @@
 
 TL;DR - Build the new `fast_f1` package in the repo, formalize the existing FastF1 pipeline, preserve `external_data/` as legacy experimental code, and implement a CLI-first single-run mode plus a consolidated historical gather mode.
 
+**Current status**
+- Step 1 completed: legacy `external_data/` preserved as reference only.
+- Step 2 completed: new `fast_f1/` package skeleton created.
+- Step 3 completed: FastF1 cache initialization implemented with directory selection, fallback defaults, and `local_cache` creation.
+- Session paused here. Remaining work starts with FastF1 API wrappers and weekend detection.
+
 **Steps**
 1. Keep `external_data/` and its associated tests as legacy experimental code. Use it only as a reference for the new implementation.
 2. Create the `fast_f1/` package with separate modules for:
