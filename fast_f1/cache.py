@@ -8,6 +8,8 @@ import fastf1
 DEFAULT_FASTF1_CACHEDIR = Path("/mnt/chromeos/removable/sd256/linux/fastf1_cache")
 DEFAULT_FALLBACK_CACHEDIR = Path("~/fastf1_cache")
 DEFAULT_LOCAL_CACHE_SUBDIR = "local_cache"
+CACHE_DIR_CONFIG_FILENAME = ".fastf1_cache_dir"
+CACHE_LOCATION_CONFIG_FILE = Path(__file__).resolve().parents[1] / CACHE_DIR_CONFIG_FILENAME
 
 
 def get_default_cache_directories() -> list[Path]:
@@ -22,6 +24,29 @@ def ensure_directory(path: Path) -> Path:
     return path
 
 
+def get_persisted_cache_directory() -> Path | None:
+    """Return a previously persisted cache directory if it exists."""
+    if not CACHE_LOCATION_CONFIG_FILE.exists():
+        return None
+
+    cache_dir_value = CACHE_LOCATION_CONFIG_FILE.read_text().strip()
+    if not cache_dir_value:
+        return None
+
+    cache_path = Path(cache_dir_value).expanduser()
+    if not cache_path.is_absolute():
+        cache_path = (CACHE_LOCATION_CONFIG_FILE.parent / cache_path).resolve()
+
+    return cache_path
+
+
+def persist_cache_directory(cache_dir: Path | str) -> Path:
+    """Persist a chosen cache directory for this local environment."""
+    cache_path = Path(cache_dir).expanduser()
+    CACHE_LOCATION_CONFIG_FILE.write_text(str(cache_path))
+    return cache_path
+
+
 def select_cache_directory(
     cache_dir: Path | str | None = None,
     *,
@@ -30,10 +55,15 @@ def select_cache_directory(
     """Select the FastF1 cache directory.
 
     If ``cache_dir`` is provided, it is returned after expansion.
-    If ``interactive`` is True and no cache_dir is provided, the user is prompted.
+    If a local persisted cache directory exists, it is returned automatically.
+    If ``interactive`` is True and no cache_dir or persisted directory exists, the user is prompted.
     """
     if cache_dir is not None:
         return Path(cache_dir).expanduser()
+
+    persisted_cache_dir = get_persisted_cache_directory()
+    if persisted_cache_dir is not None:
+        return persisted_cache_dir
 
     default_dirs = get_default_cache_directories()
     if not interactive:
@@ -54,15 +84,17 @@ def select_cache_directory(
         raise ValueError("Cache directory selection must be a number") from exc
 
     if 1 <= selection <= len(default_dirs):
-        return default_dirs[selection - 1]
-
-    if selection == len(default_dirs) + 1:
+        selected_cache_dir = default_dirs[selection - 1]
+    elif selection == len(default_dirs) + 1:
         custom_path = input("Enter custom cache directory path: ").strip()
         if not custom_path:
             raise ValueError("Custom cache directory path cannot be empty")
-        return Path(custom_path).expanduser()
+        selected_cache_dir = Path(custom_path).expanduser()
+    else:
+        raise ValueError("Cache directory selection is out of range")
 
-    raise ValueError("Cache directory selection is out of range")
+    persist_cache_directory(selected_cache_dir)
+    return selected_cache_dir
 
 
 def setup_fastf1_cache(
@@ -72,6 +104,8 @@ def setup_fastf1_cache(
 ) -> tuple[Path, Path]:
     """Enable FastF1 cache and create a module-level local cache directory."""
     selected_cache_dir = select_cache_directory(cache_dir, interactive=interactive)
+    if cache_dir is not None:
+        persist_cache_directory(selected_cache_dir)
 
     try:
         cache_path = ensure_directory(selected_cache_dir)

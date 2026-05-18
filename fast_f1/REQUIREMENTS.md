@@ -49,6 +49,8 @@ The FastF1 API cache must be enabled via `fastf1.Cache.enable_cache()` before an
 
 The chosen directory must be created if missing, and an error should be raised if it cannot be created.
 
+The cache location is persisted in the local environment when set by the user, and can be reset by the user by manually deleting the entry in the local environment.  The cache location must not be committed to the git repo.
+
 ### Module-level cache
 
 FastF1 API responses are also cached locally to disk in a subdirectory under the main cache directory. That subdirectory should be named `local_cache` and created automatically.
