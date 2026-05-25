@@ -6,7 +6,8 @@ untouched. Actual FastF1 wrappers and metric computations will be added
 in later steps.
 """
 
+from fast_f1.api import get_available_sessions_from_event, select_practice_sessions_from_event
 from fast_f1.cache import setup_fastf1_cache
 from fast_f1.cli import main as main_cli
 
-__all__ = ["setup_fastf1_cache", "main_cli"]
+__all__ = ["setup_fastf1_cache", "main_cli", "get_available_sessions_from_event", "select_practice_sessions_from_event"]

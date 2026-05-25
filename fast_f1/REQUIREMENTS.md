@@ -66,7 +66,8 @@ The module provides two modes of operation in `scripts/`.
 - Determine weekend type based on available session data:
   - normal weekend = `FP2` + `FP3`
   - sprint weekend = `FP1` + `SprintQualifying`
-- If required session data is not available yet, stop gracefully and inform the user.
+- Session availability is discovered dynamically from the FastF1 Event object by attempting to load each known session code (FP1, FP2, FP3, SQ, SS, Q, R).
+- If required sessions are unavailable, the module raises `RuntimeError` with a logged message describing which sessions are missing.
 - Display expected aggregate rank and ordering.
 - Write detailed output to an Excel file in `outputs/` and overwrite the existing file if present.
 
@@ -88,8 +89,10 @@ Driver and constructor rolling points are separate, independent indicators.
 
 ## Error behavior
 
-- If constructor or driver rolling points data is missing, fail gracefully.
-- Log a clear message explaining the missing data and stop rather than raising an unhandled exception.
+- If required session data is unavailable, the module raises `RuntimeError` with a logged error message (e.g., missing FP2/FP3 for normal weekends).
+- If constructor or driver rolling points data is missing, fail gracefully with a logged error message and stop execution.
+- All errors are logged before raising or stopping to provide debugging context.
+- Callers should catch `RuntimeError` when required data is unavailable and handle gracefully (e.g., prompt user to retry or wait for data).
 
 ## Testing
 

@@ -6,7 +6,8 @@ TL;DR - Build the new `fast_f1` package in the repo, formalize the existing Fast
 - Step 1 completed: legacy `external_data/` preserved as reference only.
 - Step 2 completed: new `fast_f1/` package skeleton created.
 - Step 3 completed: FastF1 cache initialization implemented with directory selection, fallback defaults, and `local_cache` creation.
-- Session paused here. Remaining work starts with FastF1 API wrappers and weekend detection.
+- Step 4 completed: weekend detection implemented with API validation tests for 2025 races.
+- Next: Implement metric calculation (step 5).
 
 **Steps**
 1. Keep `external_data/` and its associated tests as legacy experimental code. Use it only as a reference for the new implementation.
@@ -53,3 +54,28 @@ TL;DR - Build the new `fast_f1` package in the repo, formalize the existing Fast
 2. Run the single-race script for a sample season/race and verify an Excel file is written in `outputs/`.
 3. Run the historical gather mode and verify a single consolidated file is produced in `data/`.
 4. Confirm sprint weekend detection works and missing session data is handled gracefully.
+
+## Step 4 Implementation: Weekend Detection
+
+**What was implemented:**
+- `fast_f1/weekend.py`: Core detection logic with two functions:
+  - `is_sprint_weekend(available_sessions)`: Returns True if "SprintQualifying" is in sessions
+  - `determine_practice_sessions(available_sessions)`: Returns ("FP2", "FP3") for normal weekends or ("FP1", "SprintQualifying") for sprint weekends. Raises RuntimeError if required sessions are missing.
+
+- `fast_f1/api.py`: FastF1 Event wrappers:
+  - `get_available_sessions_from_event(event)`: Attempts to load each known session code (FP1, FP2, FP3, SQ, SS, Q, R) and returns friendly names for available sessions
+  - `select_practice_sessions_from_event(event)`: Combines event session discovery with weekend detection
+  - `select_practice_sessions_from_available(sessions)`: Thin wrapper for list-based workflows
+
+- Tests:
+  - `tests/test_fastf1_weekend.py`: 5 unit tests for core logic (normal, sprint, missing-session cases)
+  - `tests/test_fastf1_api_validation.py`: 2 integration tests against real FastF1 API:
+    - 2025 Australia (race 1): Normal weekend with FP1, FP2, FP3, Qualifying, Race
+    - 2025 China (race 2): Sprint weekend with FP1, SprintQualifying, Qualifying, Race (no separate Sprint session)
+
+**Design choices:**
+- Raises exceptions on missing sessions rather than returning None, per copilot instructions
+- Event-based API (Option B): accepts FastF1 Event objects and extracts sessions dynamically
+- Generic exception handling in `get_available_sessions_from_event()` to handle multiple FastF1 exception types
+
+**All 7 tests passing** (5 unit + 2 API validation).

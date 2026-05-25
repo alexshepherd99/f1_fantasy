@@ -41,6 +41,9 @@ This file contains guidelines for GitHub Copilot when assisting with development
 ## Error Handling
 - Implement proper exception handling for file I/O, data parsing, and external API calls.
 - Log errors and warnings using Python's logging module where appropriate.
+- For data availability checks in FastF1 wrappers: raise `RuntimeError` with logged context when required data is unavailable (e.g., missing session data). This ensures callers must explicitly handle errors rather than silently proceeding with incomplete data.
+- Always log before raising exceptions to provide debugging context.
+- Avoid returning `None` or sentinel values for missing data; use exceptions instead for clarity and to prevent silent failures.
 
 ## Best Practices
 - Commit changes with descriptive messages.
