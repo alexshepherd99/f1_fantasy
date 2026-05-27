@@ -7,11 +7,10 @@ This file contains guidelines for GitHub Copilot when assisting with development
 - Start any development process by running the tests in the associated area, to ensure they run clean.
 - Use test-driven development for new code, and a red/green testing approach.
 - Ensure the full suite of pytest repo unit tests work before marking any work as complete.
-- Present options and ask for clarification often.
+- Be inquisitive, present options and ask for clarification often, ask questions in preference to making assumptions.
 - Propose updates to this instructions file for any best practice changes identified during development.
 - For larger changes impacting more than three functions, propose a plan which can be saved then implemented within a fresh chat context.
 - Plans and specifications will be saved down to the agent_docs folder in this repo.
-- *** SAVE DOCS LOCATION ***
 - When creating unit tests, avoid mocking existing functions if possible.
 - When importing modules, always use fully qualified module paths, never relative paths.
 - Prefer simple code.
