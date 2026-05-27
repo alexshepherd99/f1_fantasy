@@ -12,9 +12,10 @@ from __future__ import annotations
 import logging
 
 import fastf1
+import pandas as pd
 import pytest
 
-from fast_f1.api import get_available_sessions_from_event
+from fast_f1.api import get_available_sessions_from_event, get_race_results, get_session_laps
 from fast_f1.weekend import determine_practice_sessions, is_sprint_weekend
 
 logger = logging.getLogger(__name__)
@@ -55,3 +56,45 @@ def test_china_2025_is_sprint_weekend():
     # Normal weekends have FP2/FP3, sprint weekends should not (in 2025 China format)
     assert "FP2" not in sessions
     assert "FP3" not in sessions
+
+
+def test_get_race_results_returns_expected_columns():
+    df = get_race_results(2025, 1)
+    assert isinstance(df, pd.DataFrame)
+    assert set(df.columns) >= {
+        "Season",
+        "Race",
+        "Abbreviation",
+        "Status",
+        "Position",
+        "ClassifiedPosition",
+        "GridPosition",
+        "Points",
+    }
+    assert df["Season"].nunique() == 1
+    assert df["Race"].nunique() == 1
+    assert df["Season"].iloc[0] == 2025
+    assert df["Race"].iloc[0] == 1
+
+
+def test_get_session_laps_returns_expected_columns():
+    df = get_session_laps(2025, 1, "FP2")
+    assert isinstance(df, pd.DataFrame)
+    assert "SessionType" in df.columns
+    assert df["SessionType"].nunique() == 1
+    assert df["SessionType"].iloc[0] == "FP2"
+    assert set(df.columns) >= {
+        "Season",
+        "Race",
+        "SessionType",
+        "Driver",
+        "LapTime",
+        "LapNumber",
+        "Stint",
+        "PitOutTime",
+        "PitInTime",
+        "Compound",
+        "TyreLife",
+        "FreshTyre",
+    }
+    assert not df.empty

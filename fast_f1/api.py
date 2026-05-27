@@ -24,19 +24,93 @@ _SESSION_CODE_NAMES = {
 }
 
 
+def _get_event_for_race(season_year: int, race_num: int) -> Any:
+    schedule = fastf1.get_event_schedule(season_year, include_testing=False)
+    event_rows = schedule[schedule["RoundNumber"] == race_num]
+    if event_rows.empty:
+        raise ValueError(f"No event found for season {season_year}, race {race_num}")
+    return event_rows.iloc[0]
+
+
 def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
     """Return race results for a given season and race.
 
-    This is a placeholder for the eventual FastF1 wrapper. The legacy
-    implementation in ``external_data.get_data`` should be used as the
-    production reference when implementing this function.
+    The returned dataframe includes the driver abbreviation, status, position,
+    classified position, grid position, points, and the season/race metadata.
     """
-    raise NotImplementedError("get_race_results is not implemented yet")
+    try:
+        event = _get_event_for_race(season_year, race_num)
+        race = event.get_session("R")
+        race.load()
+        results = race.results
+        results = results[
+            [
+                "Abbreviation",
+                "Status",
+                "Position",
+                "ClassifiedPosition",
+                "GridPosition",
+                "Points",
+            ]
+        ].copy()
+        results["Season"] = season_year
+        results["Race"] = race_num
+        return results
+    except (fastf1.SessionNotAvailableError, ValueError) as exc:
+        logger.warning(
+            "Could not load race results for season %s race %s: %s",
+            season_year,
+            race_num,
+            exc,
+        )
+        return pd.DataFrame(
+            columns=[
+                "Season",
+                "Race",
+                "Abbreviation",
+                "Status",
+                "Position",
+                "ClassifiedPosition",
+                "GridPosition",
+                "Points",
+            ]
+        )
 
 
 def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.DataFrame:
     """Return session laps for a given season, race, and session."""
-    raise NotImplementedError("get_session_laps is not implemented yet")
+    try:
+        event = _get_event_for_race(season_year, race_num)
+        session = event.get_session(session_type)
+        session.load()
+        session_laps = session.laps
+    except (fastf1.SessionNotAvailableError, ValueError) as exc:
+        logger.warning(
+            "Could not load session laps for season %s race %s session %s: %s",
+            season_year,
+            race_num,
+            session_type,
+            exc,
+        )
+        return pd.DataFrame(columns=["Season", "Race", "SessionType"])
+
+    session_laps = session_laps[
+        [
+            "Driver",
+            "LapTime",
+            "LapNumber",
+            "Stint",
+            "PitOutTime",
+            "PitInTime",
+            "Compound",
+            "TyreLife",
+            "FreshTyre",
+        ]
+    ].copy()
+    session_laps["Season"] = season_year
+    session_laps["Race"] = race_num
+    session_laps["SessionType"] = session_type
+    return session_laps
 
 
 def get_available_sessions_from_event(event: Any) -> list[str]:

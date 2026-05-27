@@ -51,9 +51,13 @@ The chosen directory must be created if missing, and an error should be raised i
 
 The cache location is persisted in the local environment when set by the user, and can be reset by the user by manually deleting the entry in the local environment.  The cache location must not be committed to the git repo.
 
+**Current implementation status:** metric derivation logic is implemented in `fast_f1/metrics.py`, and actual FastF1 wrapper methods are now implemented in `fast_f1/api.py`. API validation tests for `get_race_results()` and `get_session_laps()` were added in step 6. Remaining work includes CLI entrypoints and historical gather orchestration in `fast_f1/cli.py` and `fast_f1/output.py`.
+
 ### Module-level cache
 
 FastF1 API responses are also cached locally to disk in a subdirectory under the main cache directory. That subdirectory should be named `local_cache` and created automatically.
+
+All wrapper calls in `fast_f1/api.py` must persist their fetched results to `local_cache` so repeated API requests can be served from disk.
 
 ## Operation
 
