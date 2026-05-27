@@ -64,6 +64,7 @@ Status: CLI, output, API wrappers, caching, graceful missing-data handling, and 
 10. Additional steps:
    - log every cache hit so the user can see when a cache is used (completed)
    - drivers and constructors always referred to by the three letter acronym, e.g. NOR for Norris, MCL for McLaren
+   - identify and remove any paths where tests can corrupt or overwrite `.fastf1_cache_dir` within the local environment
 11. Checks:
    - Carefully review requirements, plan, code, comments, test, highlighting any inconsistencies or missed requirements.
 

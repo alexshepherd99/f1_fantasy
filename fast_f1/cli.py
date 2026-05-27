@@ -68,3 +68,8 @@ def main() -> None:
         path,
     )
     print(dataframe.head(10).to_string(index=False))
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    main()
