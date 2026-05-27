@@ -47,6 +47,22 @@ def persist_cache_directory(cache_dir: Path | str) -> Path:
     return cache_path
 
 
+def get_local_cache_directory(
+    cache_dir: Path | str | None = None,
+    local_cache_subdir: str = DEFAULT_LOCAL_CACHE_SUBDIR,
+    *,
+    interactive: bool = False,
+) -> Path | None:
+    """Return the local cache subdirectory if a cache directory is available."""
+    if cache_dir is None:
+        cache_dir = get_persisted_cache_directory()
+        if cache_dir is None:
+            return None
+
+    local_cache_dir = Path(cache_dir).expanduser() / local_cache_subdir
+    return ensure_directory(local_cache_dir)
+
+
 def select_cache_directory(
     cache_dir: Path | str | None = None,
     *,

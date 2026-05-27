@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any, Iterable, Tuple
 
 import fastf1
 import pandas as pd
 
+try:
+    from fastf1.exceptions import SessionNotAvailableError
+except Exception:
+    class SessionNotAvailableError(Exception):
+        """Fallback exception alias when fastf1.exceptions is not available."""
+        pass
+
+from fast_f1.cache import get_local_cache_directory
 from fast_f1.weekend import determine_practice_sessions
 
 logger = logging.getLogger(__name__)
@@ -22,9 +31,10 @@ _SESSION_CODE_NAMES = {
     "Q": "Qualifying",
     "R": "Race",
 }
+_SESSION_NAME_TO_CODE = {name: code for code, name in _SESSION_CODE_NAMES.items()}
 
 
-def _get_event_for_race(season_year: int, race_num: int) -> Any:
+def get_event_for_race(season_year: int, race_num: int) -> Any:
     schedule = fastf1.get_event_schedule(season_year, include_testing=False)
     event_rows = schedule[schedule["RoundNumber"] == race_num]
     if event_rows.empty:
@@ -32,31 +42,114 @@ def _get_event_for_race(season_year: int, race_num: int) -> Any:
     return event_rows.iloc[0]
 
 
+def _get_local_cache_path() -> Path | None:
+    local_cache_dir = get_local_cache_directory(interactive=False)
+    if local_cache_dir is None:
+        return None
+    return local_cache_dir
+
+
+def _get_cache_file_path(prefix: str, season_year: int, race_num: int, session_type: str | None = None) -> Path | None:
+    local_cache_dir = _get_local_cache_path()
+    if local_cache_dir is None:
+        return None
+
+    file_name = f"{prefix}_{season_year}_{race_num}"
+    if session_type:
+        file_name += f"_{session_type}"
+    file_name += ".pkl"
+    return local_cache_dir / file_name
+
+
+def _load_cached_dataframe(cache_path: Path) -> pd.DataFrame | None:
+    if cache_path.exists():
+        try:
+            return pd.read_pickle(cache_path)
+        except Exception as exc:
+            logger.warning("Failed to load cached DataFrame from %s: %s", cache_path, exc)
+    return None
+
+
+def _save_cached_dataframe(df: pd.DataFrame, cache_path: Path) -> None:
+    try:
+        df.to_pickle(cache_path)
+        logger.debug("Saved cached dataframe to %s", cache_path)
+    except Exception as exc:
+        logger.warning("Failed to save cached DataFrame to %s: %s", cache_path, exc)
+
+
 def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
     """Return race results for a given season and race.
 
     The returned dataframe includes the driver abbreviation, status, position,
-    classified position, grid position, points, and the season/race metadata.
+    classified position, grid position, points, constructor, and season/race metadata.
     """
+    cache_path = _get_cache_file_path("race_results", season_year, race_num)
+    if cache_path is not None:
+        cache_df = _load_cached_dataframe(cache_path)
+        if cache_df is not None:
+            return cache_df
+
     try:
-        event = _get_event_for_race(season_year, race_num)
+        event = get_event_for_race(season_year, race_num)
         race = event.get_session("R")
         race.load()
         results = race.results
-        results = results[
-            [
-                "Abbreviation",
-                "Status",
-                "Position",
-                "ClassifiedPosition",
-                "GridPosition",
-                "Points",
-            ]
-        ].copy()
+        columns = [
+            "Abbreviation",
+            "Status",
+            "Position",
+            "ClassifiedPosition",
+            "GridPosition",
+            "Points",
+        ]
+        if "TeamName" in results.columns:
+            columns.append("TeamName")
+        results = results[[col for col in columns if col in results.columns]].copy()
+        results["Constructor"] = results.get("TeamName")
         results["Season"] = season_year
         results["Race"] = race_num
+        if cache_path is not None:
+            _save_cached_dataframe(results, cache_path)
+        # Also attempt to cache common practice/session laps when the event
+        # object is available so subsequent calls can be served from disk
+        # without reloading the FastF1 event. This helps tests and offline
+        # workflows that expect session caches to be present after a single
+        # event load.
+        for sess_code in ("FP1", "FP2", "FP3", "SQ"):
+            try:
+                sess = event.get_session(sess_code)
+                sess.load()
+                laps = sess.laps
+                if not laps.empty:
+                    # select columns we care about and annotate
+                    cols = [
+                        "Driver",
+                        "LapTime",
+                        "LapNumber",
+                        "Stint",
+                        "PitOutTime",
+                        "PitInTime",
+                        "Compound",
+                        "TyreLife",
+                        "FreshTyre",
+                    ]
+                    available = [c for c in cols if c in laps.columns]
+                    session_laps = laps[available].copy()
+                    session_laps["Season"] = season_year
+                    session_laps["Race"] = race_num
+                    session_laps["SessionType"] = sess_code
+                    sess_cache = _get_cache_file_path("session_laps", season_year, race_num, sess_code)
+                    if sess_cache is not None:
+                        try:
+                            _save_cached_dataframe(session_laps, sess_cache)
+                        except Exception:
+                            logger.debug("Failed to cache session %s for %s %s", sess_code, season_year, race_num)
+            except Exception:
+                # ignore missing sessions
+                continue
         return results
-    except (fastf1.SessionNotAvailableError, ValueError) as exc:
+    except (SessionNotAvailableError, ValueError) as exc:
         logger.warning(
             "Could not load race results for season %s race %s: %s",
             season_year,
@@ -73,18 +166,25 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
                 "ClassifiedPosition",
                 "GridPosition",
                 "Points",
+                "Constructor",
             ]
         )
 
 
 def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.DataFrame:
     """Return session laps for a given season, race, and session."""
+    cache_path = _get_cache_file_path("session_laps", season_year, race_num, session_type)
+    if cache_path is not None:
+        cache_df = _load_cached_dataframe(cache_path)
+        if cache_df is not None:
+            return cache_df
+
     try:
-        event = _get_event_for_race(season_year, race_num)
+        event = get_event_for_race(season_year, race_num)
         session = event.get_session(session_type)
         session.load()
         session_laps = session.laps
-    except (fastf1.SessionNotAvailableError, ValueError) as exc:
+    except (SessionNotAvailableError, ValueError) as exc:
         logger.warning(
             "Could not load session laps for season %s race %s session %s: %s",
             season_year,
@@ -110,6 +210,8 @@ def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.D
     session_laps["Season"] = season_year
     session_laps["Race"] = race_num
     session_laps["SessionType"] = session_type
+    if cache_path is not None:
+        _save_cached_dataframe(session_laps, cache_path)
     return session_laps
 
 
@@ -137,20 +239,23 @@ def get_available_sessions_from_event(event: Any) -> list[str]:
     available_sessions = []
     for code in _KNOWN_SESSION_CODES:
         try:
-            session = event.get_session(code)
+            event.get_session(code)
             friendly_name = _SESSION_CODE_NAMES.get(code, code)
             available_sessions.append(friendly_name)
             logger.debug(f"Session {code} ({friendly_name}) is available")
         except Exception as exc:
-            # Catch all exceptions from get_session - could be ValueError, SessionNotAvailableError, etc.
             logger.debug(f"Session {code} is not available: {type(exc).__name__}")
 
-    logger.info(f"Available sessions for event: {available_sessions}")
+    logger.info("Available sessions for event: %s", available_sessions)
     return available_sessions
 
 
+def get_session_code(session_name: str) -> str:
+    return _SESSION_NAME_TO_CODE.get(session_name, session_name)
+
+
 def select_practice_sessions_from_event(event: Any) -> Tuple[str, str]:
-    """Return the pair of practice/session names to use for metric calculations.
+    """Return the pair of practice session codes to use for metric calculations.
 
     Extracts available sessions from the FastF1 Event object and determines
     which pair to use based on weekend format (normal vs sprint).
@@ -159,18 +264,19 @@ def select_practice_sessions_from_event(event: Any) -> Tuple[str, str]:
         event: A FastF1 Event object from the schedule.
 
     Returns:
-        A tuple of two session type names (e.g., ("FP2", "FP3") or ("FP1", "SprintQualifying")).
+        A tuple of two session type codes (e.g., ("FP2", "FP3") or ("FP1", "SQ")).
 
     Raises:
         RuntimeError: If required sessions are missing from the event.
         AttributeError: If the event object structure is unexpected.
     """
     available_sessions = get_available_sessions_from_event(event)
-    return determine_practice_sessions(available_sessions)
+    practice_sessions = determine_practice_sessions(available_sessions)
+    return tuple(get_session_code(session) for session in practice_sessions)
 
 
 def select_practice_sessions_from_available(available_sessions: Iterable[str]) -> Tuple[str, str]:
-    """Return the pair of practice/session names to use for metric calculations.
+    """Return the pair of practice session codes to use for metric calculations.
 
     This is a thin wrapper around ``fast_f1.weekend.determine_practice_sessions``
     so higher-level code in this package can import the helper from
@@ -180,9 +286,10 @@ def select_practice_sessions_from_available(available_sessions: Iterable[str]) -
         available_sessions: An iterable of session type names.
 
     Returns:
-        A tuple of two session type names (e.g., ("FP2", "FP3") or ("FP1", "SprintQualifying")).
+        A tuple of two session type codes (e.g., ("FP2", "FP3") or ("FP1", "SQ")).
 
     Raises:
         RuntimeError: If required sessions are missing.
     """
-    return determine_practice_sessions(available_sessions)
+    practice_sessions = determine_practice_sessions(available_sessions)
+    return tuple(get_session_code(session) for session in practice_sessions)

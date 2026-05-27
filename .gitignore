@@ -1,6 +1,7 @@
 # Custom ignore folders
 cache/
 outputs/
+tmp_fastf1_cache/
 .fastf1_cache_dir
 
 # Byte-compiled / optimized / DLL files

@@ -9,7 +9,22 @@ TL;DR - Build the new `fast_f1` package in the repo, formalize the existing Fast
 - Step 4 completed: weekend detection implemented with API validation tests for 2025 races.
 - Step 5 completed: metric calculation implemented with offline rolling points, practice performance, aggregate rank, and new unit tests.
 - Step 6 completed: actual FastF1 API wrapper implementations and validation tests added.
-- Next: create script entrypoints and historical gather mode (step 7).
+-- Next: create script entrypoints and historical gather mode (step 7).
+
+Step 7 completed: CLI, output orchestration and caching
+
+- Implemented `fast_f1/cli.py` with two modes:
+   - single-race prediction mode accepting `--season` and `--race` (with interactive fallback)
+   - `--historical` mode to generate consolidated metrics across seasons
+- Implemented `fast_f1/output.py` to orchestrate metric building, persistence to `data/` and `outputs/`, and resume semantics when an existing consolidated file exists.
+- Implemented persistent module-level caching for wrapper responses to a `local_cache` subdirectory via `fast_f1/api.py` so repeated calls are served from disk.
+- Added `fast_f1/cache.py` helpers to select, persist, ensure, and expose the `local_cache` directory.
+- Added targeted tests covering the new functionality:
+   - `tests/test_fast_f1_cli.py`
+   - `tests/test_fast_f1_output.py`
+   - `tests/test_fast_f1_api_cache.py`
+
+Status: CLI, output, API wrappers, caching, and targeted unit tests implemented and verified locally. Remaining verification: run the full pytest suite and commit changes when ready.
 
 **Steps**
 1. Keep `external_data/` and its associated tests as legacy experimental code. Use it only as a reference for the new implementation.
@@ -43,6 +58,11 @@ TL;DR - Build the new `fast_f1` package in the repo, formalize the existing Fast
 9. Add tests:
    - offline unit tests for logic functions
    - preserve legacy `external_data` tests without modifying them
+10. Additional steps:
+   - log every cache hit so the user can see when a cache is used
+   - drivers and constructors always referred to by the three letter acronym, e.g. NOR for Norris, MCL for McLaren
+11. Checks:
+   - Carefully review requirements, plan, code, comments, test, highlighting any inconsistencies or missed requirements.
 
 **Relevant files**
 - `fast_f1/REQUIREMENTS.md`
