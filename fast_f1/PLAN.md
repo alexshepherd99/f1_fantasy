@@ -9,6 +9,7 @@ TL;DR - Build the new `fast_f1` package in the repo, formalize the existing Fast
 - Step 4 completed: weekend detection implemented with API validation tests for 2025 races.
 - Step 5 completed: metric calculation implemented with offline rolling points, practice performance, aggregate rank, and new unit tests.
 - Step 6 completed: actual FastF1 API wrapper implementations and validation tests added.
+- Step 8 completed: graceful handling for missing FastF1 API data and malformed payloads implemented.
 -- Next: create script entrypoints and historical gather mode (step 7).
 
 Step 7 completed: CLI, output orchestration and caching
@@ -23,8 +24,9 @@ Step 7 completed: CLI, output orchestration and caching
    - `tests/test_fast_f1_cli.py`
    - `tests/test_fast_f1_output.py`
    - `tests/test_fast_f1_api_cache.py`
+- Implemented graceful handling for unavailable FastF1 API data and malformed payloads in `fast_f1/api.py`, with clean exit behavior for single-race CLI mode.
 
-Status: CLI, output, API wrappers, caching, and targeted unit tests implemented and verified locally. Remaining verification: run the full pytest suite and commit changes when ready.
+Status: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging has been added and is now covered by regression tests. Remaining verification: run the full pytest suite and commit changes when ready.
 
 **Steps**
 1. Keep `external_data/` and its associated tests as legacy experimental code. Use it only as a reference for the new implementation.
@@ -55,11 +57,12 @@ Status: CLI, output, API wrappers, caching, and targeted unit tests implemented 
    - cache FastF1 wrapper responses to `local_cache` for all API calls
 8. Implement graceful handling for missing data:
    - if driver or constructor rolling points are unavailable, log the issue and stop cleanly
+   - if any expected data from the FastF1 API is unavailable, log the problem and return an empty DataFrame
 9. Add tests:
    - offline unit tests for logic functions
    - preserve legacy `external_data` tests without modifying them
 10. Additional steps:
-   - log every cache hit so the user can see when a cache is used
+   - log every cache hit so the user can see when a cache is used (completed)
    - drivers and constructors always referred to by the three letter acronym, e.g. NOR for Norris, MCL for McLaren
 11. Checks:
    - Carefully review requirements, plan, code, comments, test, highlighting any inconsistencies or missed requirements.
@@ -109,6 +112,6 @@ Status: CLI, output, API wrappers, caching, and targeted unit tests implemented 
   - practice session performance ranks with 107% lap-time filtering
   - aggregate rank as the sum of available rank indicators
 - `tests/test_fastf1_metrics.py`: added offline unit tests for rolling points, practice performance, and aggregate ranking.
-- The `fast_f1/api.py` wrapper methods `get_race_results()` and `get_session_laps()` remain placeholders; actual FastF1 data fetch is pending in step 6.
+- `fast_f1/api.py` wrapper methods `get_race_results()` and `get_session_laps()` are implemented and persist data into `local_cache`.
 
 **All 7 tests passing** (5 unit + 2 API validation).

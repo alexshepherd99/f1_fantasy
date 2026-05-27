@@ -50,7 +50,17 @@ def main() -> None:
 
     output_path = Path(args.output) if args.output else None
     output_arg = str(output_path) if output_path is not None else None
-    path, dataframe = generate_single_race_prediction(args.season, args.race, output_path=output_arg)
+    try:
+        path, dataframe = generate_single_race_prediction(args.season, args.race, output_path=output_arg)
+    except RuntimeError as exc:
+        logger.error(
+            "Failed to generate metrics for season %s race %s: %s",
+            args.season,
+            args.race,
+            exc,
+        )
+        sys.exit(1)
+
     logger.info(
         "Single-race metrics generated for season %s race %s and saved to %s",
         args.season,

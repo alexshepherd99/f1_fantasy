@@ -51,9 +51,10 @@ The chosen directory must be created if missing, and an error should be raised i
 
 The cache location is persisted in the local environment when set by the user, and can be reset by the user by manually deleting the entry in the local environment.  The cache location must not be committed to the git repo.
 
-**Current implementation status:** metric derivation logic is implemented in `fast_f1/metrics.py`, and FastF1 wrapper methods are implemented in `fast_f1/api.py`. The following features were added in this session:
+**Current implementation status:** metric derivation logic is implemented in `fast_f1/metrics.py`, and FastF1 wrapper methods are implemented in `fast_f1/api.py`. The following features have been completed:
 
 - `fast_f1/api.py`: implemented `get_race_results()` and `get_session_laps()` wrappers that persist responses to a module-level `local_cache` subdirectory so repeated requests are served from disk.
+- `fast_f1/api.py`: logs local cache hits when cached data is loaded.
 - `fast_f1/cache.py`: helpers to select, persist, create, and expose the FastF1 cache and `local_cache` paths; prompts on first-run when interactive.
 - `fast_f1/output.py`: orchestration for building per-race metrics, merging driver/constructor rolling points and practice performance, aggregating ranks, and saving to Excel output files.
 - `fast_f1/cli.py`: CLI entrypoints for single-race prediction and historical gather mode.
@@ -105,6 +106,8 @@ Driver and constructor rolling points are separate, independent indicators.
 
 - If required session data is unavailable, the module raises `RuntimeError` with a logged error message (e.g., missing FP2/FP3 for normal weekends).
 - If constructor or driver rolling points data is missing, fail gracefully with a logged error message and stop execution.
+- If FastF1 API event, session, or result data is unavailable or malformed, the wrapper functions should log the failure and return an empty DataFrame rather than crash.
+- Single-race CLI mode should exit cleanly with an error status if required metrics cannot be built due to missing FastF1 data.
 - All errors are logged before raising or stopping to provide debugging context.
 - Callers should catch `RuntimeError` when required data is unavailable and handle gracefully (e.g., prompt user to retry or wait for data).
 

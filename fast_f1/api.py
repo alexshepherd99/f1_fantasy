@@ -35,7 +35,16 @@ _SESSION_NAME_TO_CODE = {name: code for code, name in _SESSION_CODE_NAMES.items(
 
 
 def get_event_for_race(season_year: int, race_num: int) -> Any:
-    schedule = fastf1.get_event_schedule(season_year, include_testing=False)
+    try:
+        schedule = fastf1.get_event_schedule(season_year, include_testing=False)
+    except Exception as exc:
+        logger.warning(
+            "Could not load event schedule for season %s: %s",
+            season_year,
+            exc,
+        )
+        raise ValueError(f"Could not load event schedule for season {season_year}") from exc
+
     event_rows = schedule[schedule["RoundNumber"] == race_num]
     if event_rows.empty:
         raise ValueError(f"No event found for season {season_year}, race {race_num}")
@@ -64,7 +73,9 @@ def _get_cache_file_path(prefix: str, season_year: int, race_num: int, session_t
 def _load_cached_dataframe(cache_path: Path) -> pd.DataFrame | None:
     if cache_path.exists():
         try:
-            return pd.read_pickle(cache_path)
+            dataframe = pd.read_pickle(cache_path)
+            logger.info("Loaded cached DataFrame from %s", cache_path)
+            return dataframe
         except Exception as exc:
             logger.warning("Failed to load cached DataFrame from %s: %s", cache_path, exc)
     return None
@@ -76,6 +87,45 @@ def _save_cached_dataframe(df: pd.DataFrame, cache_path: Path) -> None:
         logger.debug("Saved cached dataframe to %s", cache_path)
     except Exception as exc:
         logger.warning("Failed to save cached DataFrame to %s: %s", cache_path, exc)
+
+
+def _empty_race_results_dataframe() -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=[
+            "Season",
+            "Race",
+            "Abbreviation",
+            "Status",
+            "Position",
+            "ClassifiedPosition",
+            "GridPosition",
+            "Points",
+            "Constructor",
+        ]
+    )
+
+
+def _empty_session_laps_dataframe(season_year: int, race_num: int, session_type: str) -> pd.DataFrame:
+    df = pd.DataFrame(
+        columns=[
+            "Driver",
+            "LapTime",
+            "LapNumber",
+            "Stint",
+            "PitOutTime",
+            "PitInTime",
+            "Compound",
+            "TyreLife",
+            "FreshTyre",
+            "Season",
+            "Race",
+            "SessionType",
+        ]
+    )
+    df["Season"] = season_year
+    df["Race"] = race_num
+    df["SessionType"] = session_type
+    return df
 
 
 def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
@@ -94,7 +144,10 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
         event = get_event_for_race(season_year, race_num)
         race = event.get_session("R")
         race.load()
-        results = race.results
+        results = getattr(race, "results", pd.DataFrame())
+        if not isinstance(results, pd.DataFrame) or results.empty:
+            raise ValueError("Race results are unavailable or malformed")
+
         columns = [
             "Abbreviation",
             "Status",
@@ -120,55 +173,45 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
             try:
                 sess = event.get_session(sess_code)
                 sess.load()
-                laps = sess.laps
-                if not laps.empty:
-                    # select columns we care about and annotate
-                    cols = [
-                        "Driver",
-                        "LapTime",
-                        "LapNumber",
-                        "Stint",
-                        "PitOutTime",
-                        "PitInTime",
-                        "Compound",
-                        "TyreLife",
-                        "FreshTyre",
-                    ]
-                    available = [c for c in cols if c in laps.columns]
-                    session_laps = laps[available].copy()
-                    session_laps["Season"] = season_year
-                    session_laps["Race"] = race_num
-                    session_laps["SessionType"] = sess_code
-                    sess_cache = _get_cache_file_path("session_laps", season_year, race_num, sess_code)
-                    if sess_cache is not None:
-                        try:
-                            _save_cached_dataframe(session_laps, sess_cache)
-                        except Exception:
-                            logger.debug("Failed to cache session %s for %s %s", sess_code, season_year, race_num)
-            except Exception:
-                # ignore missing sessions
+                laps = getattr(sess, "laps", pd.DataFrame())
+                if not isinstance(laps, pd.DataFrame) or laps.empty:
+                    continue
+                cols = [
+                    "Driver",
+                    "LapTime",
+                    "LapNumber",
+                    "Stint",
+                    "PitOutTime",
+                    "PitInTime",
+                    "Compound",
+                    "TyreLife",
+                    "FreshTyre",
+                ]
+                available = [c for c in cols if c in laps.columns]
+                if not available:
+                    continue
+                session_laps = laps[available].copy()
+                session_laps["Season"] = season_year
+                session_laps["Race"] = race_num
+                session_laps["SessionType"] = sess_code
+                sess_cache = _get_cache_file_path("session_laps", season_year, race_num, sess_code)
+                if sess_cache is not None:
+                    try:
+                        _save_cached_dataframe(session_laps, sess_cache)
+                    except Exception:
+                        logger.debug("Failed to cache session %s for %s %s", sess_code, season_year, race_num)
+            except Exception as exc:
+                logger.debug("Ignoring unavailable practice session %s for %s %s: %s", sess_code, season_year, race_num, exc)
                 continue
         return results
-    except (SessionNotAvailableError, ValueError) as exc:
+    except Exception as exc:
         logger.warning(
             "Could not load race results for season %s race %s: %s",
             season_year,
             race_num,
             exc,
         )
-        return pd.DataFrame(
-            columns=[
-                "Season",
-                "Race",
-                "Abbreviation",
-                "Status",
-                "Position",
-                "ClassifiedPosition",
-                "GridPosition",
-                "Points",
-                "Constructor",
-            ]
-        )
+        return _empty_race_results_dataframe()
 
 
 def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.DataFrame:
@@ -183,8 +226,10 @@ def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.D
         event = get_event_for_race(season_year, race_num)
         session = event.get_session(session_type)
         session.load()
-        session_laps = session.laps
-    except (SessionNotAvailableError, ValueError) as exc:
+        session_laps = getattr(session, "laps", pd.DataFrame())
+        if not isinstance(session_laps, pd.DataFrame) or session_laps.empty:
+            raise ValueError("Session laps are unavailable or malformed")
+    except Exception as exc:
         logger.warning(
             "Could not load session laps for season %s race %s session %s: %s",
             season_year,
@@ -192,21 +237,21 @@ def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.D
             session_type,
             exc,
         )
-        return pd.DataFrame(columns=["Season", "Race", "SessionType"])
+        return _empty_session_laps_dataframe(season_year, race_num, session_type)
 
-    session_laps = session_laps[
-        [
-            "Driver",
-            "LapTime",
-            "LapNumber",
-            "Stint",
-            "PitOutTime",
-            "PitInTime",
-            "Compound",
-            "TyreLife",
-            "FreshTyre",
-        ]
-    ].copy()
+    columns = [
+        "Driver",
+        "LapTime",
+        "LapNumber",
+        "Stint",
+        "PitOutTime",
+        "PitInTime",
+        "Compound",
+        "TyreLife",
+        "FreshTyre",
+    ]
+    available = [c for c in columns if c in session_laps.columns]
+    session_laps = session_laps[available].copy()
     session_laps["Season"] = season_year
     session_laps["Race"] = race_num
     session_laps["SessionType"] = session_type
