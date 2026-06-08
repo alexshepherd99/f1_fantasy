@@ -112,11 +112,12 @@ def test_aggregate_metrics_sums_rank_columns():
     df = pd.DataFrame({
         "Driver": ["A", "B"],
         "RollingPointsRank": [1.0, 0.0],
+        "ConstructorRollingPointsRank": [0.2, 0.4],
         "FP2_MinLapTime_rank": [0.5, 1.0],
         "FP3_MinLapTime_rank": [0.5, 0.0],
     })
 
     result = aggregate_metrics(df)
     assert list(result["Driver"]) == ["A", "B"]
-    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(2.0, 1e-4)
-    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(1.0, 1e-4)
+    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(2.2, 1e-4)
+    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(1.4, 1e-4)

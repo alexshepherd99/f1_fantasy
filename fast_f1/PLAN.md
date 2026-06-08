@@ -58,13 +58,15 @@ Status: CLI, output, API wrappers, caching, graceful missing-data handling, and 
 8. Implement graceful handling for missing data:
    - if driver or constructor rolling points are unavailable, log the issue and stop cleanly
    - if any expected data from the FastF1 API is unavailable, log the problem and return an empty DataFrame
-9. Add tests:
-   - offline unit tests for logic functions
-   - preserve legacy `external_data` tests without modifying them
-10. Additional steps:
+9. Additional steps:
    - log every cache hit so the user can see when a cache is used (completed)
    - drivers and constructors always referred to by the three letter acronym, e.g. NOR for Norris, MCL for McLaren
    - identify and remove any paths where tests can corrupt or overwrite `.fastf1_cache_dir` within the local environment
+   - do not write empty API results to cache if the result set is empty or invalid
+   - check the the local cache results are being used when available
+10. Add tests:
+   - offline unit tests for logic functions
+   - preserve legacy `external_data` tests without modifying them
 11. Checks:
    - Carefully review requirements, plan, code, comments, test, highlighting any inconsistencies or missed requirements.
 
@@ -116,3 +118,13 @@ Status: CLI, output, API wrappers, caching, graceful missing-data handling, and 
 - `fast_f1/api.py` wrapper methods `get_race_results()` and `get_session_laps()` are implemented and persist data into `local_cache`.
 
 **All 7 tests passing** (5 unit + 2 API validation).
+
+## Recent Implementation: Missing Race Results & Aggregate Rank Fix
+
+What was implemented in this round:
+- `fast_f1/output.py`: `build_race_metrics()` no longer fails when official Race results are missing. It now derives a minimal `current_results` from available practice session drivers (or from prior rolling drivers) and attempts to infer constructors from prior results. This allows metrics to be computed before the Race session is published.
+- `fast_f1/metrics.py`: `aggregate_metrics()` was updated to include both PascalCase `...Rank` and snake_case `..._rank` suffixes when summing indicators, ensuring `ConstructorRollingPointsRank` contributes to `AggregateRank`.
+- Tests updated to reflect these changes:
+   - `tests/test_fast_f1_output.py`: updated/added assertions in `test_build_race_metrics_works_when_race_results_missing` to verify drivers are derived from practice, constructors are mapped from prior results, and `AggregateRank` equals the sum of rank columns including constructor rank.
+   - `tests/test_fastf1_metrics.py`: updated `test_aggregate_metrics_sums_rank_columns` to include `ConstructorRollingPointsRank` and verify the aggregate calculation.
+- Verification: Ran the focused tests and the `fast_f1` sub-module test set; the targeted tests passed locally.

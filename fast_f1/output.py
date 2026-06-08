@@ -89,10 +89,43 @@ def build_race_metrics(
     )
 
     current_results = get_race_results(season_year, race_num)
+
+    # If official race results are not yet available, derive a minimal
+    # current_results dataframe from available practice session data or
+    # the rolling results. This allows metrics to be computed before the
+    # Race session is published.
     if current_results.empty:
-        msg = f"Current race results are unavailable for season {season_year} race {race_num}."
-        logger.error(msg)
-        raise RuntimeError(msg)
+        driver_list: list[str] = []
+        for df in practice_dfs:
+            if "Driver" in df.columns:
+                driver_list.extend(df["Driver"].tolist())
+
+        if not driver_list and not driver_rolling.empty:
+            driver_list = driver_rolling["Driver"].tolist()
+
+        driver_list = sorted(set(driver_list))
+        if not driver_list:
+            msg = (
+                f"Current race results unavailable and no drivers could be derived for season {season_year} "
+                f"race {race_num}."
+            )
+            logger.error(msg)
+            raise RuntimeError(msg)
+
+        current_results = pd.DataFrame({"Abbreviation": driver_list})
+        current_results["Season"] = season_year
+        current_results["Race"] = race_num
+
+        # Attempt to infer constructors from previous results if present.
+        if "Abbreviation" in previous_results.columns and "Constructor" in previous_results.columns:
+            mapping = (
+                previous_results.dropna(subset=["Abbreviation", "Constructor"]).
+                drop_duplicates(subset=["Abbreviation"]).
+                set_index("Abbreviation")["Constructor"]
+            )
+            current_results["Constructor"] = current_results["Abbreviation"].map(mapping)
+        else:
+            current_results["Constructor"] = None
 
     if "Constructor" not in current_results.columns:
         current_results["Constructor"] = current_results.get("TeamName")

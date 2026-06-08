@@ -188,10 +188,11 @@ def aggregate_metrics(df: pd.DataFrame) -> pd.DataFrame:
         return df.copy()
 
     df = df.copy()
+    # Include both PascalCase `...Rank` and snake_case `..._rank` suffixes
     rank_columns = [
         col for col in df.columns
         if col != "AggregateRank" and (
-            col == "RollingPointsRank" or col.endswith("_rank")
+            col.endswith("Rank") or col.endswith("_rank")
         )
     ]
     df["AggregateRank"] = 0.0
