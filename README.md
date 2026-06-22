@@ -92,8 +92,8 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | 11 | Max P2PM | | | | | | |
 | 12 | Max P2PM | | | | | | |
 | 13 | Max P2PM | | | | | | |
-| 14  | Max P2PM | | | | | | |
-| 15  | Max P2PM | | | | | | |
+| 14 | Max P2PM | | | | | | |
+| 15 | Max P2PM | | | | | | |
 | 16 | Max P2PM | | | | | | |
 | 17 | Max P2PM | | | | | | |
 | 18 | Max P2PM | | | | | | |
@@ -115,20 +115,4 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | 5 | Max P2PM | | SAI,COL,LAW,OCO,PER | MER,FER | 102.6 | 212 | 881 |
 | 6 | Max P2PM | | SAI,COL,LAW,OCO,BOT | MER,FER | 103.0 | 98 | 979 |
 | 7 | Max P2PM | Free transfer | ANT,BOR,LAW,STR,BOT | MER,FER | 103.8 | 67 | 1046 |
-| 8 | Max P2PM | | | | | | |
-| 9 | Max P2PM | | | | | | |
-| 10 | Max P2PM | | | | | | |
-| 11 | Max P2PM | | | | | | |
-| 12 | Max P2PM | | | | | | |
-| 13 | Max P2PM | | | | | | |
-| 14  | Max P2PM | | | | | | |
-| 15  | Max P2PM | | | | | | |
-| 16 | Max P2PM | | | | | | |
-| 17 | Max P2PM | | | | | | |
-| 18 | Max P2PM | | | | | | |
-| 19 | Max P2PM | | | | | | |
-| 20 | Max P2PM | | | | | | |
-| 21 | Max P2PM | | | | | | |
-| 22 | Max P2PM | | | | | | |
-| 23 | Max P2PM | | | | | | |
-| 24 | Max P2PM | | | | | | |
+| 8 | Max P2PM | Team abandoned | | | | | |
