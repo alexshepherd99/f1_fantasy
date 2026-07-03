@@ -69,13 +69,11 @@ These strategies are contained in the **linear** module:
 - https://f1fantasytools.com/statistics
 - https://docs.fastf1.dev/index.html (Free API with more data than you can shake a chequered flag at!  Not currently used by any of the strategies in this module, but definite potential to develop some forward-looking indicators.)
 
-## 2026 teams
+## 2026 team
 
 Strategy selection defined as soon as the fantasy prices were released pre-season, after pre-season testing.  Starting team selections made after FP2 in the first race.
 
 (*) Max P2PM strategy selects the unlimited moves chip at race 4, as we then have the full three races of history required by the strategy, so a team reset at that point can mitigate an unlucky initial team selection.
-
-### Primary team
 
 | Race | Strategy | Chips | Drivers | Constructors | Total budget | Points | Points Total
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -87,7 +85,7 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | 6 | Max P2PM | | ANT,BOT,COL,OCO,LAW | FER,MER | 111.4 | 214 | 1431 |
 | 7 | Max P2PM | Free transfer | ANT,BOT,COL,OCO,LAW | FER,MER | 112.7 | 97 | 1528 |
 | 8 | Max P2PM | Free transfer, 3x Boost | ANT,HAM,COL,HUL,LAW | VRB,MER | 114.4 | 296 | 1824 |
-| 9 | Max P2PM | No negative | ANT,HAM,HAD,HUL,LIN | VRB,MER | 115.7 | | |
+| 9 | Max P2PM | Auto pilot | ANT,HAM,HAD,HUL,LIN | VRB,MER | 115.7 | | |
 | 10 | Max P2PM | | | | | | |
 | 11 | Max P2PM | | | | | | |
 | 12 | Max P2PM | | | | | | |
@@ -103,16 +101,3 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | 22 | Max P2PM | | | | | | |
 | 23 | Max P2PM | | | | | | |
 | 24 | Max P2PM | | | | | | |
-
-### Secondary team
-
-| Race | Strategy | Chips | Drivers | Constructors | Total budget | Points | Points Total
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | Max constructor/driver cost ratio| | BOR,BOT,HAD,LIN,STR | MER,MCL | 100.0 | 88 | 88 |
-| 2 | Max P2PM | | BOR,BOT,HAD,LIN,VER | MER,VRB | 99.6 | 208 | 296 |
-| 3 | Max P2PM | | BOR,BEA,HAD,LIN,ANT | MER,VRB | 99.4 | 205 | 501 |
-| 4 | Max P2PM | Unlimited moves (*) | BEA,GAS,LAW,OCO,PER | MER,FER | 100.2 | 168 | 669 |
-| 5 | Max P2PM | | SAI,COL,LAW,OCO,PER | MER,FER | 102.6 | 212 | 881 |
-| 6 | Max P2PM | | SAI,COL,LAW,OCO,BOT | MER,FER | 103.0 | 98 | 979 |
-| 7 | Max P2PM | Free transfer | ANT,BOR,LAW,STR,BOT | MER,FER | 103.8 | 67 | 1046 |
-| 8 | Max P2PM | Team abandoned | | | | | |
