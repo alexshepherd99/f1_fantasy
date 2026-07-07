@@ -63,7 +63,6 @@ Status: CLI, output, API wrappers, caching, graceful missing-data handling, and 
    - do not write empty API results to cache if the result set is empty or invalid
    - check the the local cache results are being used when available
    - ensure the local cache is used for every API call
-   - the metrics calculations should work on race 1 when there are no previous races
 10. Add tests:
    - offline unit tests for logic functions
    - preserve legacy `external_data` tests without modifying them

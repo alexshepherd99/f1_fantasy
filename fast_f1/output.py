@@ -52,25 +52,32 @@ def build_race_metrics(
         practice_dfs.append(calculate_practice_performance(session_laps))
 
     previous_race_numbers = [r for r in range(race_num - rolling_window, race_num) if r > 0]
-    if not previous_race_numbers:
-        msg = f"No prior races available to compute rolling points for season {season_year} race {race_num}"
-        logger.error(msg)
-        raise RuntimeError(msg)
-
     previous_results = pd.DataFrame()
-    for prior_race in previous_race_numbers:
-        prior_results = get_race_results(season_year, prior_race)
-        previous_results = pd.concat([previous_results, prior_results], ignore_index=True, sort=False)
+    if not previous_race_numbers:
+        if race_num == 1:
+            msg = (
+                f"No prior races available to compute rolling points for season {season_year} "
+                f"race {race_num}. Assuming zero historical points for drivers and constructors."
+            )
+            logger.info(msg)
+        else:
+            msg = f"No prior races available to compute rolling points for season {season_year} race {race_num}"
+            logger.error(msg)
+            raise RuntimeError(msg)
+    else:
+        for prior_race in previous_race_numbers:
+            prior_results = get_race_results(season_year, prior_race)
+            previous_results = pd.concat([previous_results, prior_results], ignore_index=True, sort=False)
 
-    if previous_results.empty:
-        msg = (
-            f"Failed to collect prior race results for season {season_year} "
-            f"race {race_num}. Cannot compute rolling points."
-        )
-        logger.error(msg)
-        raise RuntimeError(msg)
+        if previous_results.empty:
+            msg = (
+                f"Failed to collect prior race results for season {season_year} "
+                f"race {race_num}. Cannot compute rolling points."
+            )
+            logger.error(msg)
+            raise RuntimeError(msg)
 
-    if "Constructor" not in previous_results.columns:
+    if not previous_results.empty and "Constructor" not in previous_results.columns:
         msg = "Constructor names are required in prior results to compute constructor rolling points."
         logger.error(msg)
         raise RuntimeError(msg)
@@ -161,7 +168,7 @@ def build_race_metrics(
         )
 
     merged = aggregate_metrics(merged)
-    merged["FinalPosition"] = (
+    merged["RankPosition"] = (
         merged["AggregateRank"].fillna(float("-inf")).rank(method="first", ascending=False).astype(int)
     )
     merged = merged.sort_values(by="AggregateRank", ascending=False).reset_index(drop=True)

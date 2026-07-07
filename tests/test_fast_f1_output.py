@@ -257,9 +257,9 @@ def test_build_race_metrics_adds_final_position_from_aggregate_rank(monkeypatch)
 
     metrics = build_race_metrics(season_year, race_num)
 
-    assert "FinalPosition" in metrics.columns
+    assert "RankPosition" in metrics.columns
     sorted_metrics = metrics.sort_values("AggregateRank", ascending=False).reset_index(drop=True)
-    assert sorted_metrics["FinalPosition"].tolist() == [1, 2]
+    assert sorted_metrics["RankPosition"].tolist() == [1, 2]
 
 
 def test_build_race_metrics_works_when_race_results_missing(monkeypatch):
@@ -377,3 +377,86 @@ def test_build_race_metrics_works_when_race_results_missing(monkeypatch):
         driver_row = metrics[metrics["Driver"] == driver].iloc[0]
         expected_aggregate = sum(driver_row[col] for col in rank_columns)
         assert driver_row["AggregateRank"] == pytest.approx(expected_aggregate)
+
+
+def test_build_race_metrics_handles_first_race_with_no_prior_points(monkeypatch, caplog):
+    season_year = 2025
+    race_num = 1
+
+    def fake_get_event_for_race(season: int, race: int):
+        return DummyEvent({"FP2": DummySession(pd.DataFrame()), "FP3": DummySession(pd.DataFrame())})
+
+    def fake_select_practice_sessions_from_event(event):
+        return ("FP2", "FP3")
+
+    fp2_laps = pd.DataFrame(
+        {
+            "Driver": ["HAM", "VER"],
+            "LapTime": [80.0, 81.0],
+            "LapNumber": [1, 1],
+            "Stint": [1, 1],
+            "PitOutTime": [0, 0],
+            "PitInTime": [0, 0],
+            "Compound": ["C1", "C1"],
+            "TyreLife": [5, 5],
+            "FreshTyre": [True, True],
+            "Season": [season_year, season_year],
+            "Race": [race_num, race_num],
+            "SessionType": ["FP2", "FP2"],
+        }
+    )
+    fp3_laps = pd.DataFrame(
+        {
+            "Driver": ["HAM", "VER"],
+            "LapTime": [79.0, 82.0],
+            "LapNumber": [1, 1],
+            "Stint": [1, 1],
+            "PitOutTime": [0, 0],
+            "PitInTime": [0, 0],
+            "Compound": ["C1", "C1"],
+            "TyreLife": [4, 4],
+            "FreshTyre": [True, True],
+            "Season": [season_year, season_year],
+            "Race": [race_num, race_num],
+            "SessionType": ["FP3", "FP3"],
+        }
+    )
+    current_results = pd.DataFrame(
+        {
+            "Abbreviation": ["HAM", "VER"],
+            "Status": ["Finished", "Finished"],
+            "Position": [1, 2],
+            "ClassifiedPosition": [1, 2],
+            "GridPosition": [2, 1],
+            "Points": [25, 18],
+            "Constructor": ["Mercedes", "Red Bull"],
+            "Season": [season_year, season_year],
+            "Race": [race_num, race_num],
+        }
+    )
+
+    def fake_get_session_laps(season, race, session_type):
+        if session_type == "FP2":
+            return fp2_laps
+        if session_type == "FP3":
+            return fp3_laps
+        raise ValueError("Unexpected session type")
+
+    def fake_get_race_results(season, race):
+        assert season == season_year
+        assert race == race_num
+        return current_results
+
+    monkeypatch.setattr("fast_f1.output.get_event_for_race", fake_get_event_for_race)
+    monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", fake_select_practice_sessions_from_event)
+    monkeypatch.setattr("fast_f1.output.get_session_laps", fake_get_session_laps)
+    monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
+
+    caplog.set_level("INFO", logger="fast_f1.output")
+    metrics = build_race_metrics(season_year, race_num)
+
+    assert "No prior races available to compute rolling points" in caplog.text
+    assert "Assuming zero historical points" in caplog.text
+    assert not metrics.empty
+    assert all(metrics["RollingPointsRank"].fillna(0.0) == 0.0)
+    assert all(metrics["ConstructorRollingPointsRank"].fillna(0.0) == 0.0)

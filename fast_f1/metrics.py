@@ -91,6 +91,11 @@ def calculate_rolling_points(
     The returned frame includes at least:
     ``Driver``, ``RollingPoints``, ``RollingPointsRank``, ``Season``, ``Race``.
     """
+    if df_all_race_results.empty:
+        return pd.DataFrame(
+            columns=["Driver", "RollingPoints", "RollingPointsRank", "Season", "Race"]
+        )
+
     asset_col = _get_asset_column(df_all_race_results)
     return _calculate_rolling_points(
         df_all_race_results,
@@ -110,6 +115,11 @@ def calculate_constructor_rolling_points(
     rolling_window: int = 3,
 ) -> pd.DataFrame:
     """Calculate rolling constructor points and normalized rank over prior races."""
+    if df_all_race_results.empty:
+        return pd.DataFrame(
+            columns=["Constructor", "ConstructorRollingPoints", "ConstructorRollingPointsRank", "Season", "Race"]
+        )
+
     return _calculate_rolling_points(
         df_all_race_results,
         asset_col="Constructor",

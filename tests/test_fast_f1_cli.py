@@ -25,7 +25,7 @@ def test_cli_single_race_mode(monkeypatch, tmp_path):
                 "Driver": ["TEST"],
                 "Constructor": ["TEST"],
                 "AggregateRank": [1.0],
-                "FinalPosition": [99.99],
+                "RankPosition": [99.99],
             }
         )
 

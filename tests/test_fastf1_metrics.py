@@ -5,6 +5,7 @@ import pytest
 
 from fast_f1.metrics import (
     aggregate_metrics,
+    calculate_constructor_rolling_points,
     calculate_practice_performance,
     calculate_rolling_points,
     get_rolling_window_races,
@@ -66,6 +67,24 @@ def test_calculate_rolling_points_returns_empty_when_no_previous_races():
     result = calculate_rolling_points(df_data, season_year=2025, race_num=1, rolling_window=3)
     assert result.empty
     assert list(result.columns) == ["Driver", "RollingPoints", "RollingPointsRank", "Season", "Race"]
+
+
+def test_calculate_rolling_points_handles_empty_input_frame():
+    result = calculate_rolling_points(pd.DataFrame(), season_year=2025, race_num=1, rolling_window=3)
+    assert result.empty
+    assert list(result.columns) == ["Driver", "RollingPoints", "RollingPointsRank", "Season", "Race"]
+
+
+def test_calculate_constructor_rolling_points_handles_empty_input_frame():
+    result = calculate_constructor_rolling_points(pd.DataFrame(), season_year=2025, race_num=1, rolling_window=3)
+    assert result.empty
+    assert list(result.columns) == [
+        "Constructor",
+        "ConstructorRollingPoints",
+        "ConstructorRollingPointsRank",
+        "Season",
+        "Race",
+    ]
 
 
 def test_calculate_practice_performance_creates_ranked_columns():
