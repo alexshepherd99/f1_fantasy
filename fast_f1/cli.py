@@ -67,7 +67,7 @@ def main() -> None:
         args.race,
         path,
     )
-    print(dataframe.head(10).to_string(index=False))
+    print(dataframe[["FinalPosition", "Driver", "Constructor", "AggregateRank"]].to_string(index=False))
 
 
 if __name__ == "__main__":

@@ -18,7 +18,16 @@ def test_cli_single_race_mode(monkeypatch, tmp_path):
 
     def fake_generate_single_race_prediction(season, race, output_path=None):
         called["single"] = (season, race, output_path)
-        return Path(output_path), pd.DataFrame({"Season": [season], "Race": [race]})
+        return Path(output_path), pd.DataFrame(
+            {
+                "Season": [season],
+                "Race": [race],
+                "Driver": ["TEST"],
+                "Constructor": ["TEST"],
+                "AggregateRank": [1.0],
+                "FinalPosition": [99.99],
+            }
+        )
 
     monkeypatch.setattr(cli, "setup_fastf1_cache", fake_setup_fastf1_cache)
     monkeypatch.setattr(cli, "generate_single_race_prediction", fake_generate_single_race_prediction)

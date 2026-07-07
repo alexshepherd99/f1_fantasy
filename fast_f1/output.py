@@ -161,6 +161,9 @@ def build_race_metrics(
         )
 
     merged = aggregate_metrics(merged)
+    merged["FinalPosition"] = (
+        merged["AggregateRank"].fillna(float("-inf")).rank(method="first", ascending=False).astype(int)
+    )
     merged = merged.sort_values(by="AggregateRank", ascending=False).reset_index(drop=True)
     return merged
 
