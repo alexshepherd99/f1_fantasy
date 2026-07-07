@@ -60,8 +60,6 @@ Status: CLI, output, API wrappers, caching, graceful missing-data handling, and 
    - if any expected data from the FastF1 API is unavailable, log the problem and return an empty DataFrame
 9. Additional steps:
    - log every cache hit so the user can see when a cache is used (completed)
-   - drivers and constructors always referred to by the three letter acronym, e.g. NOR for Norris, MCL for McLaren
-   - identify and remove any paths where tests can corrupt or overwrite `.fastf1_cache_dir` within the local environment
    - do not write empty API results to cache if the result set is empty or invalid
    - check the the local cache results are being used when available
    - ensure the local cache is used for every API call

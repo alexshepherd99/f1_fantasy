@@ -14,13 +14,6 @@ from fast_f1.cache import (
 )
 
 
-@pytest.fixture(autouse=True)
-def isolate_cache_config(monkeypatch, tmp_path):
-    config_file = tmp_path / ".fastf1_cache_dir"
-    monkeypatch.setattr("fast_f1.cache.CACHE_LOCATION_CONFIG_FILE", config_file)
-    yield
-
-
 def test_get_default_cache_directories():
     directories = get_default_cache_directories()
 
