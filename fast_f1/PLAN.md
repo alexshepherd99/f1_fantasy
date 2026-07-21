@@ -63,6 +63,8 @@ Status: CLI, output, API wrappers, caching, graceful missing-data handling, and 
    - do not write empty API results to cache if the result set is empty or invalid
    - check the the local cache results are being used when available
    - ensure the local cache is used for every API call
+   - historical API runs should handle season parameter, and only default to all if not specified
+   - historical API runs should check which races are available within a given season
 10. Add tests:
    - offline unit tests for logic functions
    - preserve legacy `external_data` tests without modifying them
