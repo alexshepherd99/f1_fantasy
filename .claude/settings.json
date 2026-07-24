@@ -2,8 +2,7 @@
   "permissions": {
     "additionalDirectories": ["../agentic"],
     "deny": [
-      "Write(../agentic/**)",
-      "Edit(../agentic/**)"
+      "Edit(~/**/agentic/**)"
     ]
   }
 }
