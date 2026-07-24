@@ -1,4 +1,4 @@
-# fast_f1
+# fastf1_v1 — Requirements
 
 This module provides cached access to the FastF1 API data and derivations thereof.
 
@@ -49,20 +49,7 @@ The FastF1 API cache must be enabled via `fastf1.Cache.enable_cache()` before an
 
 The chosen directory must be created if missing, and an error should be raised if it cannot be created.
 
-The cache location is persisted in the local environment when set by the user, and can be reset by the user by manually deleting the entry in the local environment.  The cache location must not be committed to the git repo.
-
-**Current implementation status:** metric derivation logic is implemented in `fast_f1/metrics.py`, and FastF1 wrapper methods are implemented in `fast_f1/api.py`. The following features have been completed:
-
-- `fast_f1/api.py`: implemented `get_race_results()` and `get_session_laps()` wrappers that persist responses to a module-level `local_cache` subdirectory so repeated requests are served from disk.
-- `fast_f1/api.py`: logs local cache hits when cached data is loaded.
-- `fast_f1/cache.py`: helpers to select, persist, create, and expose the FastF1 cache and `local_cache` paths; prompts on first-run when interactive.
-- `fast_f1/output.py`: orchestration for building per-race metrics, merging driver/constructor rolling points and practice performance, aggregating ranks, and saving to Excel output files.
-- `fast_f1/cli.py`: CLI entrypoints for single-race prediction and historical gather mode.
-- Tests added: `tests/test_fast_f1_cli.py`, `tests/test_fast_f1_output.py`, `tests/test_fast_f1_api_cache.py` (targeted tests pass locally).
-
-Notes and behaviors:
-- `get_race_results()` will also attempt to warm-cache common practice session laps (FP1/FP2/FP3/SQ) when the Event object is loaded so subsequent `get_session_laps()` calls can be satisfied from `local_cache` without reloading the event.
-- Exception handling for missing FastF1 sessions uses `fastf1.exceptions.SessionNotAvailableError` when available; a small fallback alias is provided to remain robust across FastF1 versions.
+The cache location is persisted in the local environment when set by the user, and can be reset by the user by manually deleting the entry in the local environment. The cache location must not be committed to the git repo.
 
 ### Module-level cache
 
