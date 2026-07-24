@@ -6,6 +6,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Applies linear programming (PuLP) to optimise F1 Fantasy team selection. It back-tests strategies (zero-stop, max-budget, max P2PM, betting odds) against all possible starting team combinations for historic seasons, accounting for game mechanics: forced transfers when a team driver becomes unavailable, price variation through the season, and unused-transfer bonuses. See `README.md` for the full strategy write-up, game-mechanic caveats (chips not handled except P2PM's race-4 reset, no cross-team point carry when a driver switches constructors mid-season, concentration risk mostly unmanaged) and the current season's team log.
 
+## Shared agents/skills/conventions
+
+This repo pulls in reusable agents, skills, and conventions from the
+`agentic` repo, mounted read-only at `../agentic`.
+See its `learning/CONVENTIONS.md` for settled decisions and
+`skills/`/`agents/` for what's available.
+
+Apply these shared skills as a matter of course:
+- **`how-we-work`** — the working discipline for any task; consult it at
+  the very start of a piece of work, before planning or code.
+- **`coding-standards`** — how code here should be written; consult it
+  before writing, modifying, or reviewing code.
+
+Propose changes to `agentic` by drafting text in this session — actual
+edits happen from a session whose working directory is `agentic` itself.
+
 ## Commands
 
 Activate the venv or prefix commands with it: `venv/bin/python`. The repo is not an installed package — modules use fully-qualified imports from repo root (`from races.team import Team`, never relative imports), so **`PYTHONPATH` must include the repo root** when running anything outside pytest (pytest's own rootdir insertion handles tests fine).
@@ -28,18 +44,6 @@ PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical
 ```
 
 There is no lint/format tooling configured in this repo (no ruff/black/flake8 config) — just PEP 8 by convention.
-
-## Agent working conventions
-
-These come from `.github/copilot-instructions.md` and apply to Claude Code too:
-
-- Start by running the tests in the area you're touching to confirm they're clean before changing anything; ensure the full pytest suite passes before calling work done.
-- Use TDD / red-green for new code.
-- Prefer asking clarifying questions over assuming, especially for anything touching more than a few functions.
-- For larger changes (>3 functions impacted), propose a plan first; specs/plans get saved to `agent_docs/` (see existing pattern in `fast_f1/PLAN.md` and `fast_f1/REQUIREMENTS.md` — a living plan doc updated as steps complete, plus a separate requirements doc).
-- Avoid mocking existing functions in unit tests where possible — prefer exercising real code paths with synthetic/small data.
-- Always use fully-qualified imports (`from races.season import Race`), never relative imports.
-- For FastF1 data-availability checks specifically: raise `RuntimeError` with a logged message rather than returning `None`/sentinels for missing data — callers must handle it explicitly.
 
 ## Architecture
 
