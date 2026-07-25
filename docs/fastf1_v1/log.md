@@ -89,8 +89,33 @@ Step 1 of the plan preserved `external_data/` as a reference implementation whil
 
 **Why it was safe:** nothing outside the package imported it — no `scripts/`, `linear/`, `races/`, `import_data/` or `fast_f1/` module referenced it, and `tests/test_external_data.py` was its only importer. `scripts/get_fastf1_data.py` already used `fast_f1` exclusively.
 
-**Test-suite effect:** 106 → 96 passing (the 10 removed tests), and 51s → 16s. Two of the removed tests (`test_practice_and_rolling_metrics_end_to_end`, `..._race_5`) called the live FastF1 API through a hardcoded cache path in `external_data/fastf1_common.py`, bypassing the autouse cache patch in `tests/conftest.py`; the suite is now fully offline.
+**Test-suite effect:** 106 → 96 passing (the 10 removed tests), and 51s → 16s. Two of the removed tests (`test_practice_and_rolling_metrics_end_to_end`, `..._race_5`) called the live FastF1 API through a hardcoded cache path in `external_data/fastf1_common.py`, bypassing the autouse cache patch in `tests/conftest.py`; the suite is now fully offline. [Superseded 2026-07-25: `tests/test_fastf1_api_validation.py` was re-enabled and does reach the API, deliberately — see the entry below.]
 
 **Signals not ported:** stint/tyre pace analysis (`Compound`/`TyreLife`/`FreshTyre`), per-driver reliability ratio, and season-to-date aggregate points rank had no `fast_f1/` equivalent, so they are recorded in `BACKLOG.md` with the recovery SHA rather than silently dropped.
 
 **References updated:** `CLAUDE.md` architecture notes and the `fast_f1/__init__.py` docstring now describe the current layout. `requirements.md` and `plan.md` keep their original wording with `[Superseded 2026-07-25: …]` annotations, so the effort's history stays readable without implying the module still exists.
+
+## API validation test re-enabled, and session loads narrowed (2026-07-25)
+
+`tests/test_fastf1_api_validation.py` had been disabled by a local rename. It is back in the suite and deliberately reaches the live API — that is its purpose, to catch upstream changing shape under us. It is the only networked test.
+
+**Test rewritten to test the API.** It previously went through `fast_f1.api.get_race_results` / `get_session_laps`, whose empty-frame fallbacks hardcode exactly the columns being asserted, so the column checks could not fail. It now calls FastF1 directly and asserts on known 2025 Australia values (Norris/McLaren/25 points/Finished, 20 classified drivers) and on `LapTime` still being `timedelta64`, which `metrics.py` depends on for its 107% threshold. The weekend-detection tests still go through `get_available_sessions_from_event`, which is the contract under test there.
+
+**One cache, not two.** `tests/conftest.py` isolates the cache config into a tmp dir, so under pytest nothing called `fastf1.Cache.enable_cache` and FastF1 silently filled its own default cache at `~/.cache/fastf1` (255MB of it) instead of the configured one. A module-scoped fixture now points this file - and only this file - at the directory in `.fastf1_cache_dir`, falling back to the FastF1 default where that is unset or unreachable. `fast_f1.cache.get_default_config_file_location()` was added so the fixture can find the genuine config path despite the patch.
+
+**Session loads narrowed to what we read.** All three `session.load()` calls in `fast_f1/api.py` now go through `_load_session()`, which passes `telemetry=False, weather=False`. Neither is ever read and telemetry dominates load time. Messages stay on: they cost roughly nothing and populate a lap's `Deleted` flag, which a future fastest-lap metric may want for excluding track-limits laps.
+
+Verified equivalent before changing: for a normal weekend, a sprint session and a race, a selective load returns the same shape, the same columns, and byte-identical values across every column `api.py` returns.
+
+| call | before | after |
+| --- | --- | --- |
+| `get_race_results(2025, 1)` | 22.6s | 5.5s |
+| `get_session_laps(2025, 1, "FP2")` | 4.2s | 1.6s |
+| `tests/test_fastf1_api_validation.py` | 27.2s | 4.6s |
+| full suite | 98.9s | ~21s |
+
+**Known behaviour change:** with telemetry off, race-lap `TrackStatus` values differ from a full load (practice laps are unaffected). Nothing reads that column.
+
+**Test-suite effect:** 96 → 101 passing — the 4 re-enabled validation tests, plus `test_api_loads_only_the_session_data_it_reads`, which pins the load flags so a future full load is caught. The fake sessions in `tests/test_fast_f1_api_cache.py` and `tests/test_fast_f1_output.py` needed `**kwargs` on their `load()` methods; without it the new call raises `TypeError`, which `get_race_results` would have swallowed into an empty frame.
+
+**Still open in `BACKLOG.md`:** the silent-failure fallbacks in `api.py` (and the `CLAUDE.md` claim that it raises `RuntimeError`), and `get_race_results` warming a session cache with four session loads that are discarded when no local cache directory is configured.
