@@ -9,7 +9,19 @@ DEFAULT_FASTF1_CACHEDIR = Path("/mnt/chromeos/removable/sd256/linux/fastf1_cache
 DEFAULT_FALLBACK_CACHEDIR = Path("~/fastf1_cache")
 DEFAULT_LOCAL_CACHE_SUBDIR = "local_cache"
 CACHE_DIR_CONFIG_FILENAME = ".fastf1_cache_dir"
-CACHE_LOCATION_CONFIG_FILE = Path(__file__).resolve().parents[1] / CACHE_DIR_CONFIG_FILENAME
+
+
+def get_default_config_file_location() -> Path:
+    """Return the repo-level location of the cache directory config file.
+
+    Tests patch ``CACHE_LOCATION_CONFIG_FILE`` to isolate themselves from the
+    real cache, so anything needing the genuine location must derive it here
+    rather than read the module attribute.
+    """
+    return Path(__file__).resolve().parents[1] / CACHE_DIR_CONFIG_FILENAME
+
+
+CACHE_LOCATION_CONFIG_FILE = get_default_config_file_location()
 
 
 def get_default_cache_directories() -> list[Path]:
