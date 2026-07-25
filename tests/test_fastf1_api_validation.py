@@ -13,7 +13,6 @@ import logging
 
 import fastf1
 import pandas as pd
-import pytest
 
 from fast_f1.api import get_available_sessions_from_event, get_race_results, get_session_laps
 from fast_f1.weekend import determine_practice_sessions, is_sprint_weekend
