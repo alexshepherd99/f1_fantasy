@@ -51,6 +51,16 @@ def get_event_for_race(season_year: int, race_num: int) -> Any:
     return event_rows.iloc[0]
 
 
+def _load_session(session: Any, *, laps: bool) -> None:
+    """Load only the session data this module reads.
+
+    Car telemetry and weather are never used and dominate the load time, so
+    both are skipped. Race control messages are kept: they cost next to
+    nothing and are what populate a lap's ``Deleted`` flag.
+    """
+    session.load(laps=laps, telemetry=False, weather=False, messages=True)
+
+
 def _get_local_cache_path() -> Path | None:
     local_cache_dir = get_local_cache_directory(interactive=False)
     if local_cache_dir is None:
@@ -143,7 +153,7 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
     try:
         event = get_event_for_race(season_year, race_num)
         race = event.get_session("R")
-        race.load()
+        _load_session(race, laps=False)
         results = getattr(race, "results", pd.DataFrame())
         if not isinstance(results, pd.DataFrame) or results.empty:
             raise ValueError("Race results are unavailable or malformed")
@@ -172,7 +182,7 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
         for sess_code in ("FP1", "FP2", "FP3", "SQ"):
             try:
                 sess = event.get_session(sess_code)
-                sess.load()
+                _load_session(sess, laps=True)
                 laps = getattr(sess, "laps", pd.DataFrame())
                 if not isinstance(laps, pd.DataFrame) or laps.empty:
                     continue
@@ -225,7 +235,7 @@ def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.D
     try:
         event = get_event_for_race(season_year, race_num)
         session = event.get_session(session_type)
-        session.load()
+        _load_session(session, laps=True)
         session_laps = getattr(session, "laps", pd.DataFrame())
         if not isinstance(session_laps, pd.DataFrame) or session_laps.empty:
             raise ValueError("Session laps are unavailable or malformed")

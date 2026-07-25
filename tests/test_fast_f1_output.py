@@ -10,7 +10,7 @@ class DummySession:
     def __init__(self, laps: pd.DataFrame):
         self.laps = laps
 
-    def load(self) -> None:
+    def load(self, **kwargs) -> None:
         pass
 
 
@@ -18,7 +18,7 @@ class DummyRaceSession:
     def __init__(self, results: pd.DataFrame):
         self.results = results
 
-    def load(self) -> None:
+    def load(self, **kwargs) -> None:
         pass
 
 

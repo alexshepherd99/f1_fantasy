@@ -11,17 +11,19 @@ from fast_f1.cache import setup_fastf1_cache
 class FakeSession:
     def __init__(self, laps: pd.DataFrame):
         self.laps = laps
+        self.load_kwargs = None
 
-    def load(self):
-        pass
+    def load(self, **kwargs):
+        self.load_kwargs = kwargs
 
 
 class FakeRaceSession:
     def __init__(self, results: pd.DataFrame):
         self.results = results
+        self.load_kwargs = None
 
-    def load(self):
-        pass
+    def load(self, **kwargs):
+        self.load_kwargs = kwargs
 
 
 class FakeEvent:
@@ -142,6 +144,59 @@ def test_api_logs_cache_hits(monkeypatch, tmp_path, caplog):
 
     get_session_laps(2025, 1, "FP2")
     assert "Loaded cached DataFrame from" in caplog.text
+
+
+def test_api_loads_only_the_session_data_it_reads(monkeypatch, tmp_path):
+    """Telemetry and weather are never read and dominate load time, so stay off.
+
+    Race control messages stay on - they are what populate a lap's Deleted flag.
+    """
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+
+    race_session = FakeRaceSession(
+        pd.DataFrame(
+            {
+                "Abbreviation": ["HAM"],
+                "Status": ["Finished"],
+                "Position": [1],
+                "ClassifiedPosition": [1],
+                "GridPosition": [2],
+                "Points": [25],
+                "TeamName": ["Mercedes"],
+            }
+        )
+    )
+    practice_session = FakeSession(
+        pd.DataFrame(
+            {
+                "Driver": ["HAM"],
+                "LapTime": [80.0],
+                "LapNumber": [1],
+                "Stint": [1],
+                "PitOutTime": [0],
+                "PitInTime": [0],
+                "Compound": ["C1"],
+                "TyreLife": [5],
+                "FreshTyre": [True],
+            }
+        )
+    )
+
+    event = FakeEvent({"R": race_session, "FP2": practice_session})
+    monkeypatch.setattr("fast_f1.api.get_event_for_race", lambda season, race: event)
+
+    get_race_results(2025, 1)
+    get_session_laps(2025, 2, "FP2")
+
+    for session in (race_session, practice_session):
+        assert session.load_kwargs is not None
+        assert session.load_kwargs["telemetry"] is False
+        assert session.load_kwargs["weather"] is False
+        assert session.load_kwargs["messages"] is True
+
+    # Race results need no laps; a laps request obviously does
+    assert race_session.load_kwargs["laps"] is False
+    assert practice_session.load_kwargs["laps"] is True
 
 
 def test_api_returns_empty_dataframe_when_race_data_is_missing(monkeypatch, tmp_path, caplog):
