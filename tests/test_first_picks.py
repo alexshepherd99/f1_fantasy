@@ -28,7 +28,8 @@ def test_get_all_combinations_small():
 			row[i] = 1
 		expected_rows.append(row)
 
-	expected_df = pd.DataFrame(expected_rows, columns=[f"c{i+1}" for i in range(4)])
+	# Selections are held as int8 to keep a season's combinations small
+	expected_df = pd.DataFrame(expected_rows, columns=[f"c{i+1}" for i in range(4)], dtype=np.int8)
 	pd.testing.assert_frame_equal(df.reset_index(drop=True), expected_df)
 
 
@@ -63,55 +64,76 @@ def test_set_combination_assets_renames_and_raises():
 		pass
 
 
+def _patch_tiny_season(monkeypatch, driver_prices, constructor_prices, drivers_per_team=2, constructors_per_team=1):
+	"""Stand up a two-constructor season so combinations stay enumerable by hand."""
+	import races.first_picks as fp
+
+	class DummyAsset:
+		def __init__(self, price):
+			self.price = price
+
+	class DummyRace:
+		def __init__(self):
+			self.drivers = {name: DummyAsset(price) for name, price in driver_prices.items()}
+			self.constructors = {name: DummyAsset(price) for name, price in constructor_prices.items()}
+
+	monkeypatch.setattr(fp, "F1_SEASON_CONSTRUCTORS", {2023: len(constructor_prices)})
+	monkeypatch.setattr(fp, "DRIVERS_PER_CONSTRUCTOR", len(driver_prices) // len(constructor_prices))
+	monkeypatch.setattr(fp, "DRIVERS_PER_TEAM", drivers_per_team)
+	monkeypatch.setattr(fp, "CONSTRUCTORS_PER_TEAM", constructors_per_team)
+	monkeypatch.setattr(fp, "load_with_derivations", lambda season: (None, None, None))
+	monkeypatch.setattr(fp, "factory_race", lambda *args: DummyRace())
+
+
 def test_get_starting_combinations_replaces_prices_and_filters(monkeypatch):
-	# Prepare a small combinations DataFrame (3 assets: two drivers, one constructor)
-		df_combs = pd.DataFrame([
-			[1, 0, 0],  # D1 only
-			[0, 1, 0],  # D2 only
-			[1, 1, 1],  # D1 + D2 + C1
-		], columns=["x", "y", "z"])
+	# Four drivers priced 10/5/4/3 and two constructors priced 8/2, picking two
+	# drivers and one constructor, gives twelve teams valued 9 to 23
+	_patch_tiny_season(
+		monkeypatch,
+		{"D1": 10.0, "D2": 5.0, "D3": 4.0, "D4": 3.0},
+		{"C1": 8.0, "C2": 2.0},
+	)
 
-		# monkeypatch get_all_team_combinations to return our small frame
-		import races.first_picks as fp
+	out = get_starting_combinations(2023, 1, 15.0, 21.0)
 
-		monkeypatch.setattr(fp, "get_all_team_combinations", lambda season_year: df_combs.copy())
+	# Selected assets carry their price, everything else is NaN
+	assert out.loc[1, "D1"] == 10.0
+	assert out.loc[1, "D2"] == 5.0
+	assert out.loc[1, "C2"] == 2.0
+	assert np.isnan(out.loc[1, "D3"])
+	assert np.isnan(out.loc[1, "C1"])
 
-		# stub load_with_derivations (not used, but function expects it)
-		monkeypatch.setattr(fp, "load_with_derivations", lambda season: (None, None, None))
+	# D1+D2+C2 = 17, D1+D3+C2 = 16, D1+D4+C1 = 21, D2+D3+C1 = 17, D2+D4+C1 = 16.
+	# The two teams worth exactly 15 are excluded by the exclusive lower bound,
+	# and the team worth exactly 21 is kept by the inclusive upper bound
+	assert sorted(out["total_value"]) == [16.0, 16.0, 17.0, 17.0, 21.0]
+	assert list(out.index) == [1, 3, 4, 6, 8]
 
-		# create dummy race object with price_old values
-		class DummyAsset:
-			def __init__(self, price):
-				self.price = price
 
-		class DummyRace:
-			def __init__(self):
-				self.drivers = {}
-				self.constructors = {}
+def test_get_starting_combinations_keeps_teams_exactly_on_the_budget(monkeypatch):
+	"""A team worth exactly the budget is affordable, whatever float noise says.
 
-		race = DummyRace()
-		race.drivers = {"D1": DummyAsset(10), "D2": DummyAsset(5)}
-		race.constructors = {"C1": DummyAsset(8)}
+	0.1 + 0.2 + 0.3 sums to 0.6000000000000001 in floating point, so without
+	rounding this team is priced out of a 0.6 budget it can afford.
+	"""
+	_patch_tiny_season(
+		monkeypatch,
+		{"D1": 0.1, "D2": 0.2, "D3": 0.4, "D4": 0.7},
+		{"C1": 0.3, "C2": 0.9},
+	)
 
-		# monkeypatch factory_race to return our dummy race
-		monkeypatch.setattr(fp, "factory_race", lambda a, b, race_num, s: race)
+	out = get_starting_combinations(2023, 1, 0.0, 0.6)
 
-		# run function with min_total_value = 5, max_total_value = 20
-		out = get_starting_combinations(2023, 1, 5.0, 20.0)
-
-		# verify values replaced correctly
-		# rows are converted: 1 -> price_old, 0 -> NaN
-		# Use reset_index for stable indexing
-		outr = out.reset_index(drop=True)
-
-		# Row 0: D1 selected -> total 10 (allowed, >5)
-		assert outr.loc[0, "D1"] == 10
-		assert np.isnan(outr.loc[0, "D2"])
-		# Row 1: D2 selected -> total 5 (should be excluded because >min_total_value required)
-		assert outr.shape[0] == 1
+	assert out.loc[0, "D1"] == 0.1
+	assert out.loc[0, "D2"] == 0.2
+	assert out.loc[0, "C1"] == 0.3
+	assert out.loc[0, "total_value"] == 0.6
 
 
 def test_get_starting_combinations_standalone():
 	# Just making sure the entire unpatched function gets called by a unit test
 	df_combinations = get_starting_combinations(2023, 1, 99.0)
-	assert df_combinations.shape == (8149, 31)
+	# 8143 verified against exact integer arithmetic on the 2023 price list;
+	# 823 teams are worth exactly 99.0 and 826 exactly 100.0, so the bounds
+	# have to fall the right side of both
+	assert df_combinations.shape == (8143, 31)
