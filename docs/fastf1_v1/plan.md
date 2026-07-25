@@ -2,6 +2,10 @@
 
 TL;DR — Build the new `fast_f1` package in the repo, formalize the existing FastF1 pipeline, preserve `external_data/` as legacy experimental code, and implement a CLI-first single-run mode plus a consolidated historical gather mode.
 
+> **Superseded 2026-07-25:** `external_data/` and `tests/test_external_data.py`
+> have been removed from the repo. References to them below record the plan as
+> it stood during the effort.
+
 ## Steps
 
 1. Keep `external_data/` and its associated tests as legacy experimental code. Use it only as a reference for the new implementation.

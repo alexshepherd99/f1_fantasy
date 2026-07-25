@@ -2,7 +2,7 @@
 
 This module provides cached access to the FastF1 API data and derivations thereof.
 
-The `external_data` sub-module within this repo contains sample experimental code that is preserved as legacy/experimental support only. The new `fast_f1` package is the production implementation target for race prediction and historical metric gathering.
+The `external_data` sub-module within this repo contains sample experimental code that is preserved as legacy/experimental support only. The new `fast_f1` package is the production implementation target for race prediction and historical metric gathering. [Superseded 2026-07-25: `external_data` has been removed from the repo — see `log.md`.]
 
 ## Purpose
 

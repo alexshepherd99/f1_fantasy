@@ -1,9 +1,8 @@
-"""FastF1 production package skeleton.
+"""FastF1 signal package.
 
-The current implementation is intentionally minimal: it preserves the
-new package boundary while keeping the legacy ``external_data`` package
-untouched. Actual FastF1 wrappers and metric computations will be added
-in later steps.
+Pulls forward-looking race signal from the FastF1 API: practice-session
+lap-time ranks combined with rolling driver/constructor points, normalised
+to 0-1 and summed into an ``AggregateRank``.
 """
 
 from fast_f1.api import (
