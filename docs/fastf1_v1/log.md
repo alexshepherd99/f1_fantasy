@@ -13,6 +13,8 @@ Execution log for the fastf1_v1 effort. Newest entries at the bottom of each sec
 - Step 7 completed: CLI, output orchestration and caching.
 - Step 8 completed: graceful handling for missing FastF1 API data and malformed payloads implemented.
 
+- 2026-07-25: legacy `external_data/` prototype and its tests removed; unported signals captured in `BACKLOG.md`.
+
 Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. Remaining verification: run the full pytest suite and commit changes when ready.
 
 ## API wrappers and caching (steps 6–7)
@@ -78,3 +80,17 @@ Notes and behaviors:
   - `tests/test_fast_f1_output.py`: updated/added `test_build_race_metrics_works_when_race_results_missing` to verify drivers are derived from practice, constructors are mapped from prior results, and `AggregateRank` equals the sum of rank columns including constructor rank.
   - `tests/test_fastf1_metrics.py`: updated `test_aggregate_metrics_sums_rank_columns` to include `ConstructorRollingPointsRank`.
 - Verification: focused tests and the `fast_f1` sub-module test set passed locally.
+
+## Legacy `external_data` removal (2026-07-25)
+
+Step 1 of the plan preserved `external_data/` as a reference implementation while `fast_f1/` was built. With `fast_f1/` complete, the prototype is no longer needed and has been removed.
+
+**Removed:** `external_data/fastf1_common.py`, `get_data.py`, `process_data.py`, `temp.py`, and `tests/test_external_data.py`. Recoverable at commit `a6616d5`.
+
+**Why it was safe:** nothing outside the package imported it — no `scripts/`, `linear/`, `races/`, `import_data/` or `fast_f1/` module referenced it, and `tests/test_external_data.py` was its only importer. `scripts/get_fastf1_data.py` already used `fast_f1` exclusively.
+
+**Test-suite effect:** 106 → 96 passing (the 10 removed tests), and 51s → 16s. Two of the removed tests (`test_practice_and_rolling_metrics_end_to_end`, `..._race_5`) called the live FastF1 API through a hardcoded cache path in `external_data/fastf1_common.py`, bypassing the autouse cache patch in `tests/conftest.py`; the suite is now fully offline.
+
+**Signals not ported:** stint/tyre pace analysis (`Compound`/`TyreLife`/`FreshTyre`), per-driver reliability ratio, and season-to-date aggregate points rank had no `fast_f1/` equivalent, so they are recorded in `BACKLOG.md` with the recovery SHA rather than silently dropped.
+
+**References updated:** `CLAUDE.md` architecture notes and the `fast_f1/__init__.py` docstring now describe the current layout. `requirements.md` and `plan.md` keep their original wording with `[Superseded 2026-07-25: …]` annotations, so the effort's history stays readable without implying the module still exists.
