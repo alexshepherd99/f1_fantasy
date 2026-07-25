@@ -22,8 +22,6 @@ There are some limitations to take into consideration:
 
 After writing the initial version of the code mostly by hand, future iterations will be written by a coding agent, thus providing an experiment ground for agentic engineering in a brownfield environment.
 
-See [copilot-instructions.md](.github/copilot-instructions.md)
-
 ## Usage scripts
 
 - **run_single_team.py** : Run all strategies for a given team in a given season, saving the results out to Excel format.  Starting race can be specified within the script, so that you can predict from a particular point within the season against your team at that time.
