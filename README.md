@@ -56,7 +56,7 @@ The remaining columns are **for your reference only and are never read by any co
 
 They exist so you can record *when* each price was captured, and so odds evolution through the weekend build-up can be reviewed later — how much a driver shortens or drifts between the pre-weekend line and the post-quali one is itself a signal worth studying.  Populate as many or as few as you like; gaps are fine.
 
-Two cautions when filling them in.  Excel will silently reformat some fractional odds as dates unless the cells are set to Text first — 7 values in Odds_Post_FP2 are currently stored this way (all in race 1), which is harmless while nothing reads the column but would need cleaning before one did.  And whichever snapshot you choose for a race, copy it into **Odds**; leaving that column stale means the strategies optimise on the wrong prices.
+Two cautions when filling them in.  Excel will silently reformat short fractional odds as dates unless the cell is set to Text first — it reads 14/1 as 14 January.  Seven values in Odds_Post_FP2 were stored that way and were repaired on 2026-07-26; those cells are now Text, but the rest of these four columns are not, so it will recur wherever you enter a price into an unformatted cell.  Setting the columns to Text prevents it.  And whichever snapshot you choose for a race, copy it into **Odds**; leaving that column stale means the strategies optimise on the wrong prices.
 
 ## Strategies
 
