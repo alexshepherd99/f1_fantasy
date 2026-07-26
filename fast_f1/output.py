@@ -49,12 +49,18 @@ def _load_driver_odds(season_year: int, race_num: int) -> dict[str, float]:
             race_num,
             qualify_driver_with_constructor=False,
         )
-    except (OSError, ValueError, KeyError) as exc:
+    except Exception as exc:
+        # Deliberately broad: the readers underneath raise types that share no
+        # useful base class - a truncated workbook gives zipfile.BadZipFile and
+        # a structurally invalid one openpyxl's InvalidFileException, neither of
+        # which derives from OSError or ValueError. Odds are an optional signal,
+        # so no failure to read them justifies losing an otherwise computable race.
         logger.warning(
-            "Could not load betting odds for season %s race %s (%s); "
+            "Could not load betting odds for season %s race %s (%s: %s); "
             "scoring the odds indicator as zero for every driver",
             season_year,
             race_num,
+            type(exc).__name__,
             exc,
         )
         return {}

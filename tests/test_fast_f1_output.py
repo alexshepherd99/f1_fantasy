@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -567,3 +569,26 @@ def test_build_race_metrics_does_not_multiply_rows_for_repeated_drivers(monkeypa
     metrics = build_race_metrics(season_year, race_num)
 
     assert len(metrics) == len(repeated)
+
+
+def test_build_race_metrics_survives_a_corrupt_odds_workbook(monkeypatch, tmp_path, caplog):
+    """A damaged spreadsheet must degrade the odds indicator, not abort the run."""
+    season_year, race_num = 2025, 1
+    _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
+
+    # A truncated workbook is the realistic corruption: still recognisably an
+    # xlsx, so pandas gets as far as unzipping it and raises BadZipFile, which
+    # derives from Exception rather than OSError/ValueError
+    corrupt = tmp_path / "f1_betting_odds.xlsx"
+    source = Path("data/f1_betting_odds.xlsx").read_bytes()
+    corrupt.write_bytes(source[: len(source) // 4])
+    monkeypatch.setattr(
+        "fast_f1.output.load_odds",
+        lambda *args, **kwargs: pd.read_excel(corrupt),
+    )
+
+    caplog.set_level("WARNING", logger="fast_f1.output")
+    metrics = build_race_metrics(season_year, race_num)
+
+    assert list(metrics["OddsRank"]) == [0.0, 0.0]
+    assert "odds" in caplog.text.lower()
