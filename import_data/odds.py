@@ -7,6 +7,18 @@ _FILE_BETTING_ODDS = "data/f1_betting_odds.xlsx"
 
 
 def odds_to_pct(odds: str) -> float:
+    """Convert fractional odds to the implied probability of the outcome.
+
+    Fractional odds ``a/b`` (stake ``b`` to win ``a``) imply a probability of
+    ``b / (a + b)``.
+
+    The implied probabilities across a race sum to slightly more than 1.0 (about
+    1.09 for the 2026 data) because bookmakers build a margin, the "overround",
+    into their prices. That margin is deliberately left in: removing it divides
+    every value by the same constant, which changes neither the argmax of the
+    linear objective in `StrategyBettingOdds` nor the min-max normalised rank in
+    `fast_f1.metrics`, so it would be a no-op for both consumers.
+    """
     if (odds is None) or (odds == ""):
         return 0.0
 
@@ -29,7 +41,7 @@ def odds_to_pct(odds: str) -> float:
     if (odds_right == 0) or (odds_left == 0):
         raise ValueError(f"odds_to_pct invalid input {odds}")
 
-    return 1 / (odds_left / odds_right)
+    return odds_right / (odds_left + odds_right)
 
 
 @functools.cache

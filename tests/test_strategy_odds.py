@@ -25,8 +25,8 @@ def test_strategy_odds_load_data():
         season_year=1900,
     )
     assert len(strat._odds_assets) == 6
-    assert strat._odds_assets["DRV_test_A@CON_test_1"] == 0.01
-    assert strat._odds_assets["CON_test_1"] == 0.05
+    assert strat._odds_assets["DRV_test_A@CON_test_1"] == pytest.approx(1 / 101, abs=0.0001)
+    assert strat._odds_assets["CON_test_1"] == pytest.approx(1 / 101 + 2 / 52, abs=0.0001)
 
 
 def test_strategy_odds_missing_assets():
