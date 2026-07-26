@@ -361,9 +361,6 @@ def test_build_race_metrics_works_when_race_results_missing(monkeypatch):
     monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", fake_select_practice_sessions_from_event)
     monkeypatch.setattr("fast_f1.output.get_session_laps", fake_get_session_laps)
     monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
-    # ALO/PER in 2026 race 6 exist in the real odds file; pin them so this test
-    # exercises the rolling/practice merge rather than live odds data
-    monkeypatch.setattr("fast_f1.output.load_odds", lambda *args, **kwargs: {})
 
     metrics = build_race_metrics(season_year, race_num)
 
@@ -592,3 +589,19 @@ def test_build_race_metrics_survives_a_corrupt_odds_workbook(monkeypatch, tmp_pa
 
     assert list(metrics["OddsRank"]) == [0.0, 0.0]
     assert "odds" in caplog.text.lower()
+
+
+def test_build_race_metrics_does_not_read_the_real_odds_spreadsheet(monkeypatch):
+    """Tests must not silently pick up live odds data.
+
+    2026 race 9 with ANT and RUS is a real, populated row set in
+    data/f1_betting_odds.xlsx, so without isolation this would score them from
+    the live file rather than from the test's own inputs.
+    """
+    season_year, race_num = 2026, 9
+    _patch_minimal_race(monkeypatch, season_year, race_num, ["ANT", "RUS"])
+
+    metrics = build_race_metrics(season_year, race_num)
+
+    assert list(metrics["OddsRank"]) == [0.0, 0.0]
+    assert list(metrics["OddsImpliedProbability"]) == [0.0, 0.0]
