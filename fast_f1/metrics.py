@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal
+from typing import Iterable, Literal
 
+import numpy as np
 import pandas as pd
 
 
@@ -195,6 +196,56 @@ def calculate_practice_performance(df_session_laps: pd.DataFrame) -> pd.DataFram
 
     df_result["Season"] = df_session_laps["Season"].iloc[0]
     df_result["Race"] = df_session_laps["Race"].iloc[0]
+    return df_result
+
+
+def calculate_odds_rank(
+    driver_odds: dict[str, float],
+    drivers: Iterable[str],
+    season_year: int,
+    race_num: int,
+) -> pd.DataFrame:
+    """Normalise betting odds into a 0-1 indicator for each driver.
+
+    ``driver_odds`` maps driver code to implied probability. Normalisation is
+    min-max over ``log`` of that probability rather than over the probability
+    itself: race-winner odds are so skewed that a linear scale collapses most of
+    the field onto zero, whereas a log scale keeps the midfield separable while
+    preserving the ordering.
+
+    Drivers absent from ``driver_odds`` score 0.0, as does every driver when no
+    odds are available for the race or when every price is identical.
+    """
+    drivers = list(drivers)
+    df_result = pd.DataFrame({"Driver": drivers})
+    df_result["OddsImpliedProbability"] = (
+        df_result["Driver"].map(driver_odds).fillna(0.0).astype(float)
+    )
+    df_result["OddsRank"] = 0.0
+
+    priced = df_result["OddsImpliedProbability"] > 0.0
+    if priced.any():
+        log_probability = np.log(df_result.loc[priced, "OddsImpliedProbability"])
+        span = log_probability.max() - log_probability.min()
+        if span > 0:
+            df_result.loc[priced, "OddsRank"] = (
+                log_probability - log_probability.min()
+            ) / span
+        else:
+            logger.info(
+                "All betting odds identical for season %s race %s; odds indicator contributes nothing",
+                season_year,
+                race_num,
+            )
+    else:
+        logger.info(
+            "No betting odds available for season %s race %s; odds indicator contributes nothing",
+            season_year,
+            race_num,
+        )
+
+    df_result["Season"] = season_year
+    df_result["Race"] = race_num
     return df_result
 
 

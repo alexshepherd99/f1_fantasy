@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 import pytest
 
@@ -7,6 +9,7 @@ from fast_f1.metrics import (
     METRIC_WEIGHTS,
     aggregate_metrics,
     calculate_constructor_rolling_points,
+    calculate_odds_rank,
     calculate_practice_performance,
     calculate_rolling_points,
     get_rolling_window_races,
@@ -171,3 +174,59 @@ def test_aggregate_metrics_defaults_unlisted_columns_to_weight_one():
     assert "RollingPointsRank" not in METRIC_WEIGHTS
     assert "FP2_MinLapTime_rank" not in METRIC_WEIGHTS
     assert aggregate_metrics(df)["AggregateRank"].iloc[0] == pytest.approx(0.75, 1e-4)
+
+
+def test_calculate_odds_rank_normalises_on_a_log_scale():
+    # Implied probabilities a decade apart should land evenly spaced, which is
+    # the point of normalising on log rather than on the raw probability
+    driver_odds = {"A": 0.5, "B": 0.1, "C": 0.01}
+
+    result = calculate_odds_rank(driver_odds, ["A", "B", "C"], season_year=2026, race_num=9)
+
+    ranks = result.set_index("Driver")["OddsRank"]
+    span = math.log(0.5) - math.log(0.01)
+    assert ranks["A"] == pytest.approx(1.0, abs=1e-6)
+    assert ranks["B"] == pytest.approx((math.log(0.1) - math.log(0.01)) / span, abs=1e-6)
+    assert ranks["C"] == pytest.approx(0.0, abs=1e-6)
+
+    # The raw probability is carried through alongside the normalised rank
+    assert result.set_index("Driver")["OddsImpliedProbability"]["B"] == pytest.approx(0.1)
+    assert set(result["Season"]) == {2026}
+    assert set(result["Race"]) == {9}
+
+
+def test_calculate_odds_rank_scores_drivers_without_odds_as_zero():
+    driver_odds = {"A": 0.5, "B": 0.05}
+
+    result = calculate_odds_rank(driver_odds, ["A", "B", "NOODDS"], season_year=2026, race_num=9)
+
+    ranks = result.set_index("Driver")["OddsRank"]
+    assert list(result["Driver"]) == ["A", "B", "NOODDS"]
+    assert ranks["NOODDS"] == 0.0
+    assert result.set_index("Driver")["OddsImpliedProbability"]["NOODDS"] == 0.0
+    # The drivers that do have odds still normalise across their own range
+    assert ranks["A"] == pytest.approx(1.0, abs=1e-6)
+    assert ranks["B"] == pytest.approx(0.0, abs=1e-6)
+
+
+def test_calculate_odds_rank_returns_zeros_when_no_odds_available():
+    result = calculate_odds_rank({}, ["A", "B"], season_year=2026, race_num=9)
+
+    assert list(result["Driver"]) == ["A", "B"]
+    assert list(result["OddsRank"]) == [0.0, 0.0]
+    assert list(result["OddsImpliedProbability"]) == [0.0, 0.0]
+
+
+def test_calculate_odds_rank_returns_zeros_when_every_price_is_equal():
+    result = calculate_odds_rank({"A": 0.2, "B": 0.2}, ["A", "B"], season_year=2026, race_num=9)
+
+    assert list(result["OddsRank"]) == [0.0, 0.0]
+
+
+def test_calculate_odds_rank_handles_no_drivers():
+    result = calculate_odds_rank({"A": 0.5}, [], season_year=2026, race_num=9)
+
+    assert result.empty
+    assert list(result.columns) == [
+        "Driver", "OddsImpliedProbability", "OddsRank", "Season", "Race"
+    ]
