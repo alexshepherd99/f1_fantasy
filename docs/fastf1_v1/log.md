@@ -15,7 +15,7 @@ Execution log for the fastf1_v1 effort. Newest entries at the bottom of each sec
 
 - 2026-07-25: legacy `external_data/` prototype and its tests removed; unported signals captured in `BACKLOG.md`.
 
-Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. Remaining verification: run the full pytest suite and commit changes when ready.
+Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. The betting odds indicator was added on 2026-07-26 (see the entry below). Full suite green at 124 tests and all work committed.
 
 - Step 12 open: centralise the empty/invalid-result cache guard into `_save_cached_dataframe` itself (`fast_f1/api.py:94-97`) rather than relying on each caller to check first. See `plan.md` step 12.
 
@@ -192,3 +192,42 @@ full race range is always walked.
 Added `test_cli_historical_mode_does_not_prompt_for_a_season` as a regression
 guard: `--season` now being meaningful in historical mode makes it easier to
 accidentally fall through into the single-race interactive prompt.
+
+## Post-change repo review (2026-07-26)
+
+A sweep of the repo after the odds work landed. Three defects found and fixed,
+each on its own commit; all were in code added that same day.
+
+1. **Odds merge could fan out.** `calculate_odds_rank` built its frame from the
+   caller's driver list without de-duplicating, so a repeated driver turned the
+   merge in `build_race_metrics` into a cartesian product — three rows in, five
+   out. Every other frame merged there comes from a `groupby` and is unique by
+   construction, so this was the sole exposed merge. Unreachable today (FastF1
+   race results carry one row per driver) but closed anyway.
+2. **The resilience handler had a hole.** `_load_driver_odds` caught
+   `(OSError, ValueError, KeyError)`, missing the realistic corruption cases: a
+   truncated workbook raises `zipfile.BadZipFile`, a structurally invalid one
+   openpyxl's `InvalidFileException`, and neither derives from those. Either
+   would have aborted a `--historical` run. Now catches `Exception` and logs the
+   type. Note the first version of the test wrote arbitrary bytes, which pandas
+   rejects with `ValueError` — already caught — so it passed against the bug;
+   truncating a real copy of the spreadsheet is what actually reproduces it.
+3. **Three tests read the live odds spreadsheet.** They passed only because they
+   use 2025, which the file does not cover. An autouse `conftest.py` fixture now
+   patches `fast_f1.output.load_odds` to return `{}`, so tests opt in to odds.
+   Patching `import_data.odds._FILE_BETTING_ODDS` does **not** work for this —
+   it is bound as `load_odds`' default argument at definition time.
+
+Also removed an unused `Literal` import in `fast_f1/metrics.py` (pre-existing).
+
+**Known and accepted, not fixed:** `_FILE_BETTING_ODDS` is a CWD-relative path.
+Running the CLI from outside the repo root now yields output with an all-zero
+odds indicator and a logged warning rather than an error — the graceful handler
+makes a wrong CWD quieter than it used to be.
+
+**Verified sound:** only two odds consumers exist (`linear/strategy_odds.py` and
+`fast_f1/output.py`); `scripts/select_odds_start.py` runs clean end to end with
+the concentration constraint honoured at 2.0/1.0/0.0; the overround figure in the
+`odds_to_pct` docstring (1.09) matches measurement (1.086); and the degenerate
+paths behave — duplicate drivers, zero or negative probability, a single priced
+driver, and odds entries for drivers not in the race.
