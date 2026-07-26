@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from fast_f1.metrics import (
+    METRIC_WEIGHTS,
     aggregate_metrics,
     calculate_constructor_rolling_points,
     calculate_practice_performance,
@@ -140,3 +141,33 @@ def test_aggregate_metrics_sums_rank_columns():
     assert list(result["Driver"]) == ["A", "B"]
     assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(2.2, 1e-4)
     assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(1.4, 1e-4)
+
+
+def test_aggregate_metrics_applies_metric_weights():
+    df = pd.DataFrame({
+        "Driver": ["A", "B"],
+        "RollingPointsRank": [1.0, 0.0],
+        "OddsRank": [0.25, 1.0],
+    })
+
+    result = aggregate_metrics(df)
+
+    # OddsRank carries double the weight of an unlisted indicator
+    assert METRIC_WEIGHTS["OddsRank"] == 2.0
+    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(1.5, 1e-4)
+    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(2.0, 1e-4)
+
+    # B outranks A only because of the weighting, so ordering must reflect it
+    assert list(result["Driver"]) == ["B", "A"]
+
+
+def test_aggregate_metrics_defaults_unlisted_columns_to_weight_one():
+    df = pd.DataFrame({
+        "Driver": ["A"],
+        "RollingPointsRank": [0.5],
+        "FP2_MinLapTime_rank": [0.25],
+    })
+
+    assert "RollingPointsRank" not in METRIC_WEIGHTS
+    assert "FP2_MinLapTime_rank" not in METRIC_WEIGHTS
+    assert aggregate_metrics(df)["AggregateRank"].iloc[0] == pytest.approx(0.75, 1e-4)

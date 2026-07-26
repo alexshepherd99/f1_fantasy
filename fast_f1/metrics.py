@@ -8,6 +8,12 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+# Relative contribution of each indicator to AggregateRank. Indicators not
+# listed here carry a weight of 1.0.
+METRIC_WEIGHTS: dict[str, float] = {
+    "OddsRank": 2.0,
+}
+
 
 def get_rolling_window_races(race_num: int, rolling_window: int = 3) -> list[int]:
     """Return the list of prior race numbers included in a rolling window."""
@@ -193,7 +199,11 @@ def calculate_practice_performance(df_session_laps: pd.DataFrame) -> pd.DataFram
 
 
 def aggregate_metrics(df: pd.DataFrame) -> pd.DataFrame:
-    """Combine independent indicators into an aggregate ranking."""
+    """Combine independent indicators into an aggregate ranking.
+
+    Each indicator contributes its normalised 0-1 value scaled by its weight in
+    ``METRIC_WEIGHTS``, defaulting to 1.0.
+    """
     if df.empty:
         return df.copy()
 
@@ -208,7 +218,7 @@ def aggregate_metrics(df: pd.DataFrame) -> pd.DataFrame:
     df["AggregateRank"] = 0.0
     for col in rank_columns:
         df[col] = df[col].fillna(0.0)
-        df["AggregateRank"] += df[col]
+        df["AggregateRank"] += METRIC_WEIGHTS.get(col, 1.0) * df[col]
 
     df = df.sort_values(by="AggregateRank", ascending=False).reset_index(drop=True)
     return df
