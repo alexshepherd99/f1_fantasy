@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+from fast_f1.metrics import METRIC_WEIGHTS
 from fast_f1.output import build_race_metrics
 
 
@@ -358,6 +359,9 @@ def test_build_race_metrics_works_when_race_results_missing(monkeypatch):
     monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", fake_select_practice_sessions_from_event)
     monkeypatch.setattr("fast_f1.output.get_session_laps", fake_get_session_laps)
     monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
+    # ALO/PER in 2026 race 6 exist in the real odds file; pin them so this test
+    # exercises the rolling/practice merge rather than live odds data
+    monkeypatch.setattr("fast_f1.output.load_odds", lambda *args, **kwargs: {})
 
     metrics = build_race_metrics(season_year, race_num)
 
@@ -375,7 +379,9 @@ def test_build_race_metrics_works_when_race_results_missing(monkeypatch):
 
     for driver in ["ALO", "PER"]:
         driver_row = metrics[metrics["Driver"] == driver].iloc[0]
-        expected_aggregate = sum(driver_row[col] for col in rank_columns)
+        expected_aggregate = sum(
+            METRIC_WEIGHTS.get(col, 1.0) * driver_row[col] for col in rank_columns
+        )
         assert driver_row["AggregateRank"] == pytest.approx(expected_aggregate)
 
 
@@ -460,3 +466,80 @@ def test_build_race_metrics_handles_first_race_with_no_prior_points(monkeypatch,
     assert not metrics.empty
     assert all(metrics["RollingPointsRank"].fillna(0.0) == 0.0)
     assert all(metrics["ConstructorRollingPointsRank"].fillna(0.0) == 0.0)
+
+
+def _patch_minimal_race(monkeypatch, season_year, race_num, drivers):
+    """Wire build_race_metrics to a two-driver race with no prior results."""
+    laps = {
+        session: pd.DataFrame(
+            {
+                "Driver": drivers,
+                "LapTime": [80.0 + i for i in range(len(drivers))],
+                "Stint": [1] * len(drivers),
+                "Season": [season_year] * len(drivers),
+                "Race": [race_num] * len(drivers),
+                "SessionType": [session] * len(drivers),
+            }
+        )
+        for session in ("FP2", "FP3")
+    }
+    current_results = pd.DataFrame(
+        {
+            "Abbreviation": drivers,
+            "Points": [25, 18],
+            "Constructor": ["Mercedes", "Red Bull"],
+            "Season": [season_year] * len(drivers),
+            "Race": [race_num] * len(drivers),
+        }
+    )
+
+    monkeypatch.setattr(
+        "fast_f1.output.get_event_for_race",
+        lambda season, race: DummyEvent({"FP2": DummySession(pd.DataFrame()), "FP3": DummySession(pd.DataFrame())}),
+    )
+    monkeypatch.setattr(
+        "fast_f1.output.select_practice_sessions_from_event", lambda event: ("FP2", "FP3")
+    )
+    monkeypatch.setattr(
+        "fast_f1.output.get_session_laps", lambda season, race, session_type: laps[session_type]
+    )
+    monkeypatch.setattr("fast_f1.output.get_race_results", lambda season, race: current_results)
+
+
+def test_build_race_metrics_includes_weighted_odds_rank(monkeypatch):
+    season_year, race_num = 2025, 1
+    _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
+    monkeypatch.setattr(
+        "fast_f1.output.load_odds", lambda *args, **kwargs: {"HAM": 0.4, "VER": 0.04}
+    )
+
+    metrics = build_race_metrics(season_year, race_num).set_index("Driver")
+
+    assert metrics.loc["HAM", "OddsRank"] == pytest.approx(1.0)
+    assert metrics.loc["VER", "OddsRank"] == pytest.approx(0.0)
+    # The raw probability is carried through for auditability
+    assert metrics.loc["HAM", "OddsImpliedProbability"] == pytest.approx(0.4)
+
+    # HAM's odds advantage must reach AggregateRank at double weight
+    other_ranks = sum(
+        metrics.loc["HAM", col]
+        for col in metrics.columns
+        if col not in ("AggregateRank", "OddsRank") and (col.endswith("Rank") or col.endswith("_rank"))
+    )
+    assert metrics.loc["HAM", "AggregateRank"] == pytest.approx(other_ranks + 2.0)
+
+
+def test_build_race_metrics_zeroes_odds_when_lookup_fails(monkeypatch, caplog):
+    season_year, race_num = 2025, 1
+    _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
+
+    def explode(*args, **kwargs):
+        raise ValueError("odds_to_pct invalid input nonsense")
+
+    monkeypatch.setattr("fast_f1.output.load_odds", explode)
+
+    caplog.set_level("WARNING", logger="fast_f1.output")
+    metrics = build_race_metrics(season_year, race_num)
+
+    assert list(metrics["OddsRank"]) == [0.0, 0.0]
+    assert "odds" in caplog.text.lower()

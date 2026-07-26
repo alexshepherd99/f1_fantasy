@@ -15,9 +15,13 @@ from fast_f1.api import (
 from fast_f1.metrics import (
     aggregate_metrics,
     calculate_constructor_rolling_points,
+    calculate_odds_rank,
     calculate_practice_performance,
     calculate_rolling_points,
 )
+
+from common import AssetType
+from import_data.odds import load_odds
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +32,32 @@ _DEFAULT_SHEET_NAME = "PracticeRollingMetrics"
 
 def _ensure_parent_directory(output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _load_driver_odds(season_year: int, race_num: int) -> dict[str, float]:
+    """Implied probabilities keyed by driver code, empty when unavailable.
+
+    Odds are a hand-maintained spreadsheet covering only part of the archive, so
+    a race without them is normal rather than exceptional. Any failure to read
+    them degrades the odds indicator to zero for the whole race instead of
+    aborting a historical run that is otherwise computable.
+    """
+    try:
+        return load_odds(
+            AssetType.DRIVER,
+            season_year,
+            race_num,
+            qualify_driver_with_constructor=False,
+        )
+    except (OSError, ValueError, KeyError) as exc:
+        logger.warning(
+            "Could not load betting odds for season %s race %s (%s); "
+            "scoring the odds indicator as zero for every driver",
+            season_year,
+            race_num,
+            exc,
+        )
+        return {}
 
 
 def build_race_metrics(
@@ -166,6 +196,14 @@ def build_race_metrics(
             on=["Driver", "Season", "Race"],
             how="left",
         )
+
+    odds_rank = calculate_odds_rank(
+        _load_driver_odds(season_year, race_num),
+        drivers=merged["Driver"],
+        season_year=season_year,
+        race_num=race_num,
+    )
+    merged = merged.merge(odds_rank, on=["Driver", "Season", "Race"], how="left")
 
     merged = aggregate_metrics(merged)
     merged["RankPosition"] = (
