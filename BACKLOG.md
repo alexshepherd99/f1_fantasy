@@ -72,6 +72,23 @@ its column assertions passed against the fallback frames, because those
 hardcode exactly the columns being asserted. That test now calls the FastF1
 API directly and no longer depends on this, but the wrappers are unchanged.
 
+## Source betting odds directly from a web page
+
+`StrategyBettingOdds` (`linear/strategy_odds.py:5,14-15`) and
+`scripts/select_odds_start.py` currently read odds from a hand-maintained
+`data/f1_betting_odds.xlsx` via `import_data/odds.py:load_odds` — there is
+no API/scraper integration anywhere in the repo. README.md notes odds are a
+spreadsheet input and that "no historical odds could be found during
+development, so it's not been back-tested," with ideal timing "after FP3
+(and obviously before quali)."
+
+Pull odds directly from a betting-odds web page instead of manual entry,
+landing in the same `Season`/`Race`/`Driver`/`Constructor`/`Odds` shape
+`load_odds` already expects (odds formats like `100/1`, `9/4`, `5:2` are
+handled by `odds_to_pct()`, `import_data/odds.py:9-32`), so
+`StrategyBettingOdds` and `select_odds_start.py` need no changes
+downstream.
+
 ## `get_race_results` downloads sessions it then discards
 
 `get_race_results` warms a session cache as a side effect

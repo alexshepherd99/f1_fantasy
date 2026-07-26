@@ -17,6 +17,8 @@ Execution log for the fastf1_v1 effort. Newest entries at the bottom of each sec
 
 Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. Remaining verification: run the full pytest suite and commit changes when ready.
 
+- Step 12 open: centralise the empty/invalid-result cache guard into `_save_cached_dataframe` itself (`fast_f1/api.py:94-97`) rather than relying on each caller to check first. See `plan.md` step 12.
+
 ## API wrappers and caching (steps 6–7)
 
 - `fast_f1/api.py`: implemented `get_race_results()` and `get_session_laps()` wrappers that persist responses to a module-level `local_cache` subdirectory so repeated requests are served from disk.

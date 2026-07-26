@@ -49,6 +49,16 @@ TL;DR — Build the new `fast_f1` package in the repo, formalize the existing Fa
     - preserve legacy `external_data` tests without modifying them
 11. Checks:
     - Carefully review requirements, plan, code, comments, test, highlighting any inconsistencies or missed requirements.
+12. Harden the cache-write path: `_save_cached_dataframe` (`fast_f1/api.py:94-97`)
+    persists whatever dataframe it's given with no emptiness/validity check of
+    its own. Today's callers happen to guard against this before calling it
+    (`get_race_results`/`get_session_laps` raise first on empty/malformed
+    results; the FP1–SQ warming loop `continue`s past empty laps), so nothing
+    empty is cached in practice — but that correctness lives at each call
+    site rather than in the cache layer, so a future or refactored wrapper
+    could silently start caching empty results. Move the check into
+    `_save_cached_dataframe` itself so "don't cache nothing" holds
+    unconditionally.
 
 ## Relevant files
 
