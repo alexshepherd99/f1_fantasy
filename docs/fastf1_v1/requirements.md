@@ -28,14 +28,45 @@ Use previous performance within the same season:
 - rolling total of points from the previous three races for the driver
 - rolling total of points from the previous three races for the driver's constructor
 
+Also use the race-winner betting odds for the driver, read from
+`data/f1_betting_odds.xlsx` via `import_data/odds.py`. Odds coverage is partial
+and expected to stay that way, so a race without odds is a normal condition, not
+an error — see "Betting odds" below.
+
 ## Combining indicators
 
 For each driver, individual indicators are normalised to the range 0–1, where 1 is best.
 
 - Lap time rank: `1 - ((driver min lap time - fastest min lap time) / (slowest min lap time - fastest min lap time))`
 - Points rank: `(driver points - lowest points) / (highest points - lowest points)`
+- Odds rank: `(log(driver p) - log(lowest p)) / (log(highest p) - log(lowest p))`
 
-The final aggregate rank is the sum of the available indicator ranks.
+The final aggregate rank is the weighted sum of the available indicator ranks.
+Weights live in `METRIC_WEIGHTS` in `fast_f1/metrics.py`; every indicator carries
+a weight of 1.0 except the odds rank, which carries 2.0.
+
+### Betting odds
+
+Fractional odds `a/b` are converted to an implied probability of `b / (a + b)`.
+
+The odds rank normalises on a **log** scale, unlike the other indicators. Race-
+winner odds are skewed enough that a linear scale puts 18 of 22 drivers within
+0.07 of zero, which would leave the indicator a near-constant everywhere except
+the front row. A log scale keeps the midfield separable and preserves the
+ordering. Drivers sharing a price share a rank; no ordering is invented between
+them.
+
+The bookmaker's overround (implied probabilities sum to roughly 1.09, not 1.0) is
+deliberately left in. Removing it divides every value by the same constant, which
+min-max normalisation is invariant to, so it would change nothing.
+
+Missing odds are scored as zero rather than raised on, at both levels:
+- a race with no odds at all scores every driver 0.0
+- a driver absent from a race that does have odds scores 0.0
+
+Any failure to read the odds — file missing, race absent, unparseable price —
+degrades the whole race's odds rank to zero with a logged warning, so a
+historical run does not abort on a race it can otherwise compute.
 
 ## FastF1 API
 
@@ -86,6 +117,7 @@ The final metric must include:
 - driver rolling points rank
 - constructor rolling points rank
 - practice lap time ranks for the selected sessions
+- driver betting odds rank, at double weight
 
 Driver and constructor rolling points are separate, independent indicators.
 

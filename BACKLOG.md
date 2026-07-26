@@ -74,20 +74,23 @@ API directly and no longer depends on this, but the wrappers are unchanged.
 
 ## Source betting odds directly from a web page
 
-`StrategyBettingOdds` (`linear/strategy_odds.py:5,14-15`) and
-`scripts/select_odds_start.py` currently read odds from a hand-maintained
-`data/f1_betting_odds.xlsx` via `import_data/odds.py:load_odds` — there is
-no API/scraper integration anywhere in the repo. README.md notes odds are a
-spreadsheet input and that "no historical odds could be found during
-development, so it's not been back-tested," with ideal timing "after FP3
-(and obviously before quali)."
+`StrategyBettingOdds` (`linear/strategy_odds.py:5,14-15`),
+`scripts/select_odds_start.py` and — since 2026-07-26 — `fast_f1`'s odds
+indicator (`fast_f1/output.py:_load_driver_odds`) all read odds from a
+hand-maintained `data/f1_betting_odds.xlsx` via
+`import_data/odds.py:load_odds` — there is no API/scraper integration
+anywhere in the repo. README.md notes odds are a spreadsheet input, with
+ideal timing "after FP3 (and obviously before quali)."
+
+Coverage is the binding constraint: the file holds 2026 races 1–11 only, so
+the fast_f1 odds indicator contributes nothing to any 2023–2025 race and
+`--historical` output is largely a constant-zero column.
 
 Pull odds directly from a betting-odds web page instead of manual entry,
 landing in the same `Season`/`Race`/`Driver`/`Constructor`/`Odds` shape
-`load_odds` already expects (odds formats like `100/1`, `9/4`, `5:2` are
-handled by `odds_to_pct()`, `import_data/odds.py:9-32`), so
-`StrategyBettingOdds` and `select_odds_start.py` need no changes
-downstream.
+`load_odds` already expects (odds formats like `100/1`, `9/4`, `5:2`, and
+odds-on prices like `10/11` are handled by `odds_to_pct()`), so all three
+consumers need no changes downstream.
 
 ## `get_race_results` downloads sessions it then discards
 

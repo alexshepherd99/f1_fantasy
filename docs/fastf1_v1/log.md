@@ -121,3 +121,61 @@ Verified equivalent before changing: for a normal weekend, a sprint session and 
 **Test-suite effect:** 96 → 101 passing — the 4 re-enabled validation tests, plus `test_api_loads_only_the_session_data_it_reads`, which pins the load flags so a future full load is caught. The fake sessions in `tests/test_fast_f1_api_cache.py` and `tests/test_fast_f1_output.py` needed `**kwargs` on their `load()` methods; without it the new call raises `TypeError`, which `get_race_results` would have swallowed into an empty frame.
 
 **Still open in `BACKLOG.md`:** the silent-failure fallbacks in `api.py` (and the `CLAUDE.md` claim that it raises `RuntimeError`), and `get_race_results` warming a session cache with four session loads that are discarded when no local cache directory is configured.
+
+## Betting odds added as a weighted indicator (2026-07-26)
+
+`AggregateRank` now includes a driver betting-odds rank at double the weight of
+every other indicator. Odds come from the existing `data/f1_betting_odds.xlsx`
+through `import_data.odds.load_odds`, not a new loader.
+
+**Two bugs in `odds_to_pct` surfaced first and were fixed on their own commits.**
+The implied probability of fractional odds `a/b` is `b/(a+b)`, not the `b/a` the
+function returned. The error was negligible at long odds (100/1 gave 0.0100
+against a true 0.0099) but large at short ones (9/4 gave 0.444 against 0.308).
+Summed across a race, `b/a` ranged from 1.25 to 2.04 over 2026 with no stable
+meaning, where `b/(a+b)` sums to 1.02–1.15 — a ~9% overround, which is what an
+outright market should look like. Separately, a guard rejected any odds-on price
+as invalid input; odds-on is how a strong favourite is priced, and it already
+appeared twice in the data (`RUS 10-11` in race 3, `ANT 4-6` in race 10), so
+`StrategyBettingOdds` could not run those two races at all.
+
+The overround is left in rather than normalised away. Dividing every value by the
+same constant changes neither the argmax of the LP objective nor a min-max
+normalised rank, so de-vigging would be a no-op for both consumers. Recorded in
+the `odds_to_pct` docstring so the question stays answered rather than reopened.
+
+**Measured effect of the formula fix on `StrategyBettingOdds`:** across 2026, team
+selection changed in 3 of the 9 races that previously solved, identically at
+`max_concentration` 999.9 and 2.0. Two were genuine and both scored better on
+actual fantasy points (+40 in race 2, +57 in race 5); the third swapped two
+Cadillac drivers priced within a rounding error of each other and flips on solver
+tie-breaking. Two races is not evidence the corrected formula picks better teams,
+but it is not evidence of harm either, and the correctness argument stands alone.
+
+**Log rather than linear normalisation.** Race-winner odds are skewed enough that
+a linear min-max puts 18 of 22 drivers within 0.07 of zero. Checked against actual
+2026 fantasy points, the odds correlate at +0.50 across the front 10 and +0.34
+across the back 12 — the bookmaker prices the back of the grid coarsely (~4.5
+distinct prices for 12 drivers, largest tie group ~5.5 drivers) but that grouping
+still carries signal, so it is worth keeping separable rather than collapsing.
+
+**On the 2x weight.** Odds alone correlate with fantasy points at 0.601 against
+0.572 for the current `AggregateRank`; blended at 2x it scores 0.580, beating
+current in 5 of 9 races with a mean delta of +0.008 (sd 0.016). At nine races,
+one season and a single bookmaker snapshot, that cannot distinguish 1x from 2x
+from 3x. 2x is a judgement call, and `METRIC_WEIGHTS` makes it a one-line change
+once coverage accrues.
+
+**Odds coverage is 2026 races 1–11 only**, so every 2023–2025 race takes the zero
+path and the indicator has no effect there. This is expected to build over time.
+
+**`data/fastf1_practice_rolling_metrics.xlsx` is deliberately left mixed.**
+`generate_historical_metrics` skips season/race pairs already present, so existing
+rows keep their unweighted `AggregateRank` and have no `OddsRank` column, while
+newly computed rows have both. Delete the file and re-run `--historical` to put
+every row on the new scheme.
+
+**Test-suite effect:** 108 → 118 passing. One pre-existing test needed pinning:
+`test_build_race_metrics_works_when_race_results_missing` used 2026 race 6 with
+drivers ALO and PER, all of which exist in the real odds spreadsheet, so it would
+have silently started reading live data through the new code path.

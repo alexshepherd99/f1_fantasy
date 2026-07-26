@@ -55,6 +55,8 @@ These strategies are contained in the **linear** module:
 - - The points-based strategies are less exposed to concentration risk in team selection (exposure to more than one constructor) because the game price is also based on performance from the last few races.  As such, the odds strategy has a concentration metric built in.  Building this in a way that could be modelled in PuLP was a bit hairy, so it has not yet been ported back into the base strategy;
 - - No historical odds could be found during development, so it's not been back-tested.
 
+Note on odds conversion (2026-07-26): fractional odds `a/b` are converted to an implied probability of `b/(a+b)`.  This previously used `b/a`, which over-weighted the front of the grid and rejected odds-on prices outright.  Correcting it changed the selected team in 3 of the 9 races of 2026 that previously solved, so team results logged below from before that date are not reproducible under the current code.  The `fast_f1` module also consumes these odds as a weighted indicator — see `docs/fastf1_v1/`.
+
 ## Modules
 
 - **import_data** : load archive data from Excel inputs, and generate the derivations for points and price for use by the strategies.
