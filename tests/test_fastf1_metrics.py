@@ -230,3 +230,14 @@ def test_calculate_odds_rank_handles_no_drivers():
     assert list(result.columns) == [
         "Driver", "OddsImpliedProbability", "OddsRank", "Season", "Race"
     ]
+
+
+def test_calculate_odds_rank_returns_one_row_per_distinct_driver():
+    # The result is merged on Driver, so a repeated driver would fan the merge
+    # out into a cartesian product rather than annotating the existing rows
+    result = calculate_odds_rank(
+        {"A": 0.5, "B": 0.1}, ["A", "A", "B"], season_year=2026, race_num=9
+    )
+
+    assert list(result["Driver"]) == ["A", "B"]
+    assert result["Driver"].is_unique

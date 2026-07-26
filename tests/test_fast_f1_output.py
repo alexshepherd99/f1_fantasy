@@ -543,3 +543,27 @@ def test_build_race_metrics_zeroes_odds_when_lookup_fails(monkeypatch, caplog):
 
     assert list(metrics["OddsRank"]) == [0.0, 0.0]
     assert "odds" in caplog.text.lower()
+
+
+def test_build_race_metrics_does_not_multiply_rows_for_repeated_drivers(monkeypatch):
+    """A driver appearing twice in results must not fan out through the odds merge."""
+    season_year, race_num = 2025, 1
+    _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
+
+    repeated = pd.DataFrame(
+        {
+            "Abbreviation": ["HAM", "HAM", "VER"],
+            "Points": [25, 25, 18],
+            "Constructor": ["Mercedes", "Mercedes", "Red Bull"],
+            "Season": [season_year] * 3,
+            "Race": [race_num] * 3,
+        }
+    )
+    monkeypatch.setattr("fast_f1.output.get_race_results", lambda season, race: repeated)
+    monkeypatch.setattr(
+        "fast_f1.output.load_odds", lambda *args, **kwargs: {"HAM": 0.4, "VER": 0.04}
+    )
+
+    metrics = build_race_metrics(season_year, race_num)
+
+    assert len(metrics) == len(repeated)

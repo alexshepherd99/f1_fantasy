@@ -215,8 +215,12 @@ def calculate_odds_rank(
 
     Drivers absent from ``driver_odds`` score 0.0, as does every driver when no
     odds are available for the race or when every price is identical.
+
+    The result is one row per distinct driver, in first-seen order. Callers merge
+    it on ``Driver``, so a repeated driver would fan that merge out into a
+    cartesian product rather than annotating the rows already there.
     """
-    drivers = list(drivers)
+    drivers = list(dict.fromkeys(drivers))
     df_result = pd.DataFrame({"Driver": drivers})
     df_result["OddsImpliedProbability"] = (
         df_result["Driver"].map(driver_odds).fillna(0.0).astype(float)
