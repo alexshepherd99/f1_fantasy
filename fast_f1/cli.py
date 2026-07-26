@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="FastF1 data collection and metric generation")
-    parser.add_argument("--season", type=int, help="Season year to process")
+    parser.add_argument("--season", type=int, help="Season year to process; with --historical, restricts the run to that season")
     parser.add_argument("--race", type=int, help="Race number to process")
     parser.add_argument("--historical", action="store_true", help="Generate historical metrics for a range of races")
     parser.add_argument("--cache-dir", type=str, help="FastF1 cache directory")
@@ -32,7 +32,10 @@ def main() -> None:
 
     if args.historical:
         current_year = datetime.datetime.now().year
-        season_years = list(range(2023, current_year + 1))
+        if args.season is not None:
+            season_years = [args.season]
+        else:
+            season_years = list(range(2023, current_year + 1))
         race_numbers = list(range(1, 23))
         output_path = Path(args.output) if args.output else DEFAULT_HISTORICAL_OUTPUT
         output_arg = str(output_path)

@@ -179,3 +179,16 @@ every row on the new scheme.
 `test_build_race_metrics_works_when_race_results_missing` used 2026 race 6 with
 drivers ALO and PER, all of which exist in the real odds spreadsheet, so it would
 have silently started reading live data through the new code path.
+
+## `--historical` accepts a season filter (2026-07-26)
+
+`--historical` hardcoded `range(2023, current_year + 1)` and silently ignored
+`--season`, so restricting a historical run to one season meant calling
+`generate_historical_metrics` directly from a `python -c` one-liner. `--season`
+now restricts the run when combined with `--historical`, and is unchanged for
+single-race mode. `--race` is deliberately not wired into historical mode; the
+full race range is always walked.
+
+Added `test_cli_historical_mode_does_not_prompt_for_a_season` as a regression
+guard: `--season` now being meaningful in historical mode makes it easier to
+accidentally fall through into the single-race interactive prompt.
