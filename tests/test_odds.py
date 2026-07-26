@@ -16,12 +16,17 @@ def test_odds_to_pct():
     assert odds_to_pct("") == 0.0
     assert odds_to_pct(None) == 0.0
 
+    # Odds-on prices, where the stake exceeds the return, are legitimate for a
+    # strong favourite and must not be rejected
+    assert odds_to_pct("1/1") == pytest.approx(0.5, abs=0.0001)
+    assert odds_to_pct("10/11") == pytest.approx(11 / 21, abs=0.0001)
+    assert odds_to_pct("4/6") == pytest.approx(6 / 10, abs=0.0001)
+    assert odds_to_pct("1/100") == pytest.approx(100 / 101, abs=0.0001)
+
     with pytest.raises(ValueError):
         odds_to_pct("0/100")
     with pytest.raises(ValueError):
         odds_to_pct("100/0")
-    with pytest.raises(ValueError):
-        odds_to_pct("1/100")
     with pytest.raises(ValueError):
         odds_to_pct("100")
     with pytest.raises(ValueError):
