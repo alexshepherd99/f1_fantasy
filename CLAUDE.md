@@ -40,7 +40,8 @@ PYTHONPATH=. venv/bin/python scripts/run_multiple_teams.py
 
 # fast_f1 CLI
 PYTHONPATH=. venv/bin/python -m fast_f1.cli --season 2026 --race 10
-PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical
+PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical               # all seasons 2023 onwards
+PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical --season 2026 # just one season
 ```
 
 There is no lint/format tooling configured in this repo (no ruff/black/flake8 config) — just PEP 8 by convention.
