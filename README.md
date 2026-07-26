@@ -41,7 +41,22 @@ If updating race data in the middle of a season, drivers and constructors will h
 
 **data/test_expected_values.xlsx** has some pre-computed values of the derivation calculations, to support unit testing.
 
-**f1_betting_odds.xlsx** and **test_betting_odds.xlsx** are used by the betting odds strategy, see below.  Odds input format is 100/1, 9/4, 5:2, 4-3.
+**f1_betting_odds.xlsx** and **test_betting_odds.xlsx** are used by the betting odds strategy and by the `fast_f1` odds indicator, see below.  Odds input format is 100/1, 9/4, 5:2, 4-3.  Odds-on prices, where the stake exceeds the return (10/11, 4/6), are valid and are how a strong favourite is priced.  Fractional odds `a/b` are converted to an implied probability of `b/(a+b)`.
+
+**Odds** is the only column any code reads.  It should hold the odds you actually want the strategies to optimise on, so populate it with whichever snapshot you consider best for that race — see the betting odds strategy below for the recommended timing.
+
+The remaining columns are **for your reference only and are never read by any code**:
+
+| Column | Purpose |
+| --- | --- |
+| Odds_Pre_Weekend | odds before the weekend starts, i.e. the bookies' model with no track running |
+| Odds_Post_FP2 | odds after FP2, once long-run pace is visible |
+| Odds_Pre_Quali | odds after FP3 but before qualifying |
+| Odds_Post_Quali | odds once the grid is known |
+
+They exist so you can record *when* each price was captured, and so odds evolution through the weekend build-up can be reviewed later — how much a driver shortens or drifts between the pre-weekend line and the post-quali one is itself a signal worth studying.  Populate as many or as few as you like; gaps are fine.
+
+Two cautions when filling them in.  Excel will silently reformat some fractional odds as dates unless the cells are set to Text first — 7 values in Odds_Post_FP2 are currently stored this way (all in race 1), which is harmless while nothing reads the column but would need cleaning before one did.  And whichever snapshot you choose for a race, copy it into **Odds**; leaving that column stale means the strategies optimise on the wrong prices.
 
 ## Strategies
 
