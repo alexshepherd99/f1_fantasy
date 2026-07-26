@@ -42,7 +42,20 @@ def odds_to_pct(odds: str) -> float:
 
 
 @functools.cache
-def load_odds(ass_typ: AssetType, season_year: int, race_num: int, fn: str=_FILE_BETTING_ODDS) -> dict[str, float]:
+def load_odds(
+    ass_typ: AssetType,
+    season_year: int,
+    race_num: int,
+    fn: str=_FILE_BETTING_ODDS,
+    qualify_driver_with_constructor: bool=True,
+) -> dict[str, float]:
+    """Load implied probabilities for one race, keyed by asset.
+
+    ``qualify_driver_with_constructor`` selects the driver key format: ``True``
+    gives the repo-wide ``DRIVERCODE@CONSTRUCTOR`` identifier, ``False`` gives
+    the bare driver code for callers such as `fast_f1` that key on the FastF1
+    abbreviation. It has no effect for constructors.
+    """
     # Load and filter
     df_all = pd.read_excel(fn)
     df_all = df_all[df_all["Season"] == season_year]
@@ -58,7 +71,10 @@ def load_odds(ass_typ: AssetType, season_year: int, race_num: int, fn: str=_FILE
         df_all = df_all.groupby("Constructor").sum().reset_index()
     elif ass_typ == AssetType.DRIVER:
         df_all = df_all[~df_all["Driver"].isna()]
-        df_all["Driver"] = df_all["Driver"].astype(str) + "@" + df_all["Constructor"].astype(str)
+        if qualify_driver_with_constructor:
+            df_all["Driver"] = df_all["Driver"].astype(str) + "@" + df_all["Constructor"].astype(str)
+        else:
+            df_all["Driver"] = df_all["Driver"].astype(str)
 
     # Convert to dictionary
     df_all = df_all[[ass_typ.value, "Odds"]]

@@ -68,3 +68,30 @@ def test_load_odds():
     }
     for k in dict_con_exp.keys():
         assert pytest.approx(dict_con[k], 0.001) == dict_con_exp[k]
+
+
+def test_load_odds_driver_code_only():
+    # Callers keying on the bare driver code, such as fast_f1 which uses the
+    # FastF1 abbreviation, can opt out of the DRIVER@CONSTRUCTOR identifier
+    dict_drv = load_odds(
+        ass_typ=AssetType.DRIVER,
+        season_year=1900,
+        race_num=1,
+        fn=_TEST_ODDS_FILE,
+        qualify_driver_with_constructor=False,
+    )
+    assert set(dict_drv) == {"DRV_test_A", "DRV_test_B", "DRV_test_C", "DRV_test_D"}
+    assert dict_drv["DRV_test_A"] == pytest.approx(1 / 101, abs=0.0001)
+    assert dict_drv["DRV_test_D"] == pytest.approx(4 / 12, abs=0.0001)
+
+    # Constructors have no driver key to qualify, so the flag makes no difference
+    dict_con = load_odds(
+        ass_typ=AssetType.CONSTRUCTOR,
+        season_year=1900,
+        race_num=1,
+        fn=_TEST_ODDS_FILE,
+        qualify_driver_with_constructor=False,
+    )
+    assert dict_con == load_odds(
+        ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1, fn=_TEST_ODDS_FILE
+    )
