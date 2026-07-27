@@ -69,13 +69,13 @@ TL;DR — Build the new `fast_f1` package in the repo, formalize the existing Fa
 11. Checks:
     - Carefully review requirements, plan, code, comments, test, highlighting any inconsistencies or missed requirements.
 
-    > **Open as of 2026-07-27** — the only step of this plan not complete. The
-    > "Post-change repo review (2026-07-26)" entry in `log.md` did a sweep of
-    > this kind and found three defects, but it predates the schedule caching,
-    > the per-season round derivation, the removal of `get_fastf1_data.py` and
-    > `scratch.py`, and the `SessionDataUnavailable` contract — so it does not
-    > discharge this step for the effort as it now stands. A fresh pass is
-    > needed before calling the effort done.
+    > **Completed 2026-07-27.** A fresh pass over `requirements.md`, this plan,
+    > `log.md`, all seven `fast_f1` modules, the seven test files, `conftest.py`,
+    > `CLAUDE.md` and `BACKLOG.md`. No requirement was found unimplemented.
+    > Seven findings, all fixed on their own commits — two code defects (the
+    > single-race CLI not exiting cleanly on a nonexistent round or season, and
+    > a practice session with no timed laps crashing with `TypeError`), three
+    > doc/code inconsistencies, and two cleanups. See the log entry for detail.
 12. Harden the cache-write path: `_save_cached_dataframe` (`fast_f1/api.py:94-97`)
     persists whatever dataframe it's given with no emptiness/validity check of
     its own. Today's callers happen to guard against this before calling it

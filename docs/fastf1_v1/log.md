@@ -17,10 +17,10 @@ Execution log for the fastf1_v1 effort. Newest entries at the bottom of each sec
 - 2026-07-27: step 9's "local cache used for every API call" completed — the event schedule was the last uncached call and is now cached per season (see the entry below).
 - Steps 9 and 10 completed: all step 9 bullets audited on 2026-07-27, the last outstanding one (race availability per season) implemented; step 10's `external_data` bullet is obsolete since that prototype was removed on 2026-07-25.
 
-Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. The betting odds indicator was added on 2026-07-26 (see the entry below). Full suite green at 133 tests and all work committed.
+Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. The betting odds indicator was added on 2026-07-26 (see the entry below). Full suite green at 138 tests and all work committed.
 
 - Step 12 completed 2026-07-27: the empty/invalid-result cache guard now lives in `_save_cached_dataframe` itself rather than at each caller.
-- Step 11 open: the consistency review across requirements, plan, code, comments and tests. The 2026-07-26 sweep below predates the day's changes, so a fresh pass is still owed. This is the only incomplete step.
+- Step 11 completed 2026-07-27: the consistency review across requirements, plan, code, comments and tests (see the entry below). **Every step of the plan is now complete.**
 
 ## API wrappers and caching (steps 6–7)
 
@@ -470,3 +470,90 @@ for missing data and now raise `SessionDataUnavailable`, and the
 empty-schedule test expects the new type from `get_event_for_race`. Verified
 beyond the fakes by running `--season 2025 --race 1` against the live API,
 which still returns a full 20-driver ranking.
+
+## Step 11: the consistency review (2026-07-27)
+
+The last open step. A pass over `requirements.md`, `plan.md`, this log, all
+seven `fast_f1` modules, the seven test files, `conftest.py`, `CLAUDE.md` and
+`BACKLOG.md`. The 2026-07-26 sweep above did the same job but predated the
+schedule caching, the per-season round derivation, the removal of
+`get_fastf1_data.py` and the `SessionDataUnavailable` contract, so it could not
+discharge the step for the effort as it now stands.
+
+**No requirement was found unimplemented.** The three rank formulas match the
+code, as do the 107% filter, sprint/normal detection, the cache prompt and
+persistence, `local_cache` on every API call, resumable historical mode, odds
+degrading to zero at both levels, and constructor points computed but unweighted.
+
+Seven findings, each fixed on its own commit.
+
+**Two code defects, both reproduced before fixing.**
+
+1. *The single-race CLI did not exit cleanly on a nonexistent round or season.*
+   `cli.py` caught only `RuntimeError`, but `get_event_for_race` raises
+   `SessionDataUnavailable` — which subclasses `Exception`, not `RuntimeError` —
+   and `get_event_schedule` raises `ValueError`. So the two most likely user
+   errors, a mistyped season or race, printed a stack trace against a
+   requirement asking for a clean exit. Fixed by catching the three types
+   explicitly rather than by making `SessionDataUnavailable` a `RuntimeError`
+   subclass: that would also have made `generate_historical_metrics` skip on it,
+   undoing the 2026-07-27 decision that a real failure aborts a run rather than
+   writing a silent gap.
+2. *A practice session with no timed lap crashed with `TypeError`.* A session
+   red-flagged before anyone sets a time still returns lap rows, so
+   `build_race_metrics`' emptiness guard did not catch it; the 107% threshold
+   was then derived from a `NaT` and the rank arithmetic failed. Because
+   `generate_historical_metrics` catches only `RuntimeError`, that would have
+   aborted a whole historical run over one washed-out session. The guard was
+   added next to the existing emptiness check so it raises the `RuntimeError`
+   historical mode already handles. Low likelihood, but the blast radius is what
+   made it worth closing.
+
+**Three doc/code inconsistencies.**
+
+3. `requirements.md`'s error-behavior section still said every wrapper logs and
+   returns an empty DataFrame rather than crash — the pre-2026-07-27 contract.
+   `CLAUDE.md` was corrected in that change and `requirements.md` was not, so
+   the spec and the code disagreed on the contract most likely to be read
+   before touching `api.py`.
+4. `CLAUDE.md` attributed `RuntimeError` to both `weekend.py` and `metrics.py`.
+   `metrics.py` raises only `ValueError`. The distinction is not cosmetic:
+   `generate_historical_metrics` catches `RuntimeError` to skip a race, so the
+   two types behave differently for a caller.
+5. `plan.md`'s "Relevant files" listed five files deleted during the effort as
+   though they still existed. Filenames kept and annotated with a deletion date
+   and a recovery SHA — both verified to still hold the files — rather than
+   dropped, so the record of what the effort touched stays complete.
+
+**Two cleanups.**
+
+6. `build_race_metrics` re-derived the rolling window inline while
+   `_calculate_rolling_points` used `get_rolling_window_races`, so the races
+   fetched and the races scored were defined twice. Worth noting *how* this was
+   verified: mutating the helper's window left every output test green, because
+   none pinned which prior races were requested — the deduplication would have
+   been untested. A test that does pin it was added and confirmed to fail both
+   ways, on a shifted helper window and on a reinlined local one.
+7. `build_race_metrics` re-sorted by `AggregateRank` when `aggregate_metrics`
+   had already sorted and reset the index, and guarded `RankPosition` with a
+   `fillna(-inf)` that could never fire. Checked equivalent on a frame with
+   ties, where both the ordering and `method="first"` tie-breaking are
+   observable.
+
+**Test-suite effect:** 133 → 138 passing.
+
+**Verified beyond the suite.** Single-race mode for 2025 race 1 returns the
+full 20-driver ranking from cache; race 2 is correctly detected as a sprint
+weekend and scored from FP1 + SprintQualifying; `--season 2025 --race 99` now
+logs and exits 1 instead of raising; and `--historical --season 2026` against a
+scratch copy skips races 1–11 as already present and moves on to 12, confirming
+resume. The walk through rounds 12–22 was not watched to completion — it was
+cut off at a 550s timeout while fetching round 12 live — so that part rests on
+the 2026-07-27 run recorded above rather than on a fresh observation. `data/`
+was left byte-identical throughout.
+
+**Left open deliberately:** the two live `BACKLOG.md` items touching this module
+— `get_race_results` warming four session loads that are discarded when no local
+cache is configured, and threading the odds file path through `fast_f1.output`
+instead of patching `load_odds`. Both are real, both are recorded, and neither
+is a fastf1_v1 requirement.
