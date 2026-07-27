@@ -19,6 +19,7 @@ from fast_f1.metrics import (
     calculate_odds_rank,
     calculate_practice_performance,
     calculate_rolling_points,
+    get_rolling_window_races,
 )
 
 from common import AssetType
@@ -91,7 +92,7 @@ def build_race_metrics(
             raise RuntimeError(msg)
         practice_dfs.append(calculate_practice_performance(session_laps))
 
-    previous_race_numbers = [r for r in range(race_num - rolling_window, race_num) if r > 0]
+    previous_race_numbers = get_rolling_window_races(race_num, rolling_window)
     previous_results = pd.DataFrame()
     if not previous_race_numbers:
         if race_num == 1:

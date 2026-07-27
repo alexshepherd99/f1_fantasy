@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from fast_f1.metrics import METRIC_WEIGHTS
+from fast_f1.metrics import METRIC_WEIGHTS, get_rolling_window_races
 from fast_f1.output import build_race_metrics, generate_historical_metrics
 
 
@@ -502,6 +502,53 @@ def test_build_race_metrics_treats_a_session_with_no_timed_laps_as_missing(monke
         build_race_metrics(season_year, race_num)
 
     assert "FP2" in caplog.text
+
+
+def test_build_race_metrics_fetches_exactly_the_rolling_window_races(monkeypatch):
+    """The races fetched must be the window metrics.py scores over.
+
+    build_race_metrics chooses which prior races to fetch and
+    _calculate_rolling_points chooses which to sum. They are only ever right
+    together, so this pins the two to one definition.
+    """
+    season_year, race_num = 2025, 4
+    requested: list[int] = []
+
+    laps = pd.DataFrame(
+        {
+            "Driver": ["HAM", "VER"],
+            "LapTime": [80.0, 81.0],
+            "Stint": [1, 1],
+            "Season": [season_year] * 2,
+            "Race": [race_num] * 2,
+            "SessionType": ["FP2"] * 2,
+        }
+    )
+
+    def fake_get_race_results(season, race):
+        requested.append(race)
+        return pd.DataFrame(
+            {
+                "Abbreviation": ["HAM", "VER"],
+                "Points": [25, 18],
+                "Constructor": ["Mercedes", "Red Bull"],
+                "Season": [season] * 2,
+                "Race": [race] * 2,
+            }
+        )
+
+    monkeypatch.setattr(
+        "fast_f1.output.get_event_for_race",
+        lambda season, race: DummyEvent({"FP2": DummySession(pd.DataFrame()), "FP3": DummySession(pd.DataFrame())}),
+    )
+    monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", lambda event: ("FP2", "FP3"))
+    monkeypatch.setattr("fast_f1.output.get_session_laps", lambda season, race, session_type: laps)
+    monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
+
+    build_race_metrics(season_year, race_num, rolling_window=3)
+
+    prior_races = [race for race in requested if race != race_num]
+    assert prior_races == get_rolling_window_races(race_num, 3) == [1, 2, 3]
 
 
 def _patch_minimal_race(monkeypatch, season_year, race_num, drivers):
