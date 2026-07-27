@@ -216,11 +216,10 @@ def build_race_metrics(
     )
     merged = merged.merge(odds_rank, on=["Driver", "Season", "Race"], how="left")
 
+    # aggregate_metrics returns the frame sorted by AggregateRank descending,
+    # which is also what `method="first"` needs to break ties in that order.
     merged = aggregate_metrics(merged)
-    merged["RankPosition"] = (
-        merged["AggregateRank"].fillna(float("-inf")).rank(method="first", ascending=False).astype(int)
-    )
-    merged = merged.sort_values(by="AggregateRank", ascending=False).reset_index(drop=True)
+    merged["RankPosition"] = merged["AggregateRank"].rank(method="first", ascending=False).astype(int)
     return merged
 
 
