@@ -149,3 +149,45 @@ noise on every run — use a real fixture file.
 Raised 2026-07-27 while checking whether `agentic`'s tightened test-first
 and mocking guidance required changes here. No documentation change was
 needed; this is the one code-level gap it surfaced.
+
+## No test exercises any script's `__main__` block
+
+Tests reach into `scripts/` for individual functions — `run_multiple_teams`,
+`run_single_team` (`tests/test_run_batch.py:9-10`), `check_run_ppm`
+(`tests/test_derivations.py:11`) and `select_starting_team`
+(`tests/test_select_starting_team.py:1`) — but a `__main__` block never runs on
+import, so the wiring inside one is exercised by nothing. That is true of all
+seven scripts, including the four whose functions are covered. Three have no
+test importing them at all: `batch_results_xl.py`, `select_odds_start.py` and
+`scratch.py`.
+
+The gap is not theoretical. `scripts/get_fastf1_data.py` was deleted on
+2026-07-27 (recoverable at `1282518~1`) after drifting twice without a single
+red test: its season list stopped at 2025, and it still passed a `race_numbers`
+argument that had been removed from `generate_historical_metrics` hours
+earlier, so it would have raised `TypeError` on its first real call. Both
+defects sat in its `__main__` block and were found by grepping for callers.
+
+Two live instances of the same shape:
+
+- `batch_results_xl.py:7` imports `_FILE_BATCH_RESULTS_PARQET` and
+  `_FILE_BATCH_RESULTS_EXCEL` from `scripts.run_multiple_teams` — private
+  names, across module boundaries. Renaming either breaks the script and
+  nothing fails.
+- `select_odds_start.py:73` hardcodes `select_odds_start_for_season(2026)` in
+  its `__main__` block, the same stale-constant shape that made
+  `get_fastf1_data.py` wrong.
+
+Worth deciding the standard rather than patching case by case: either keep
+`__main__` blocks to a single call into a tested function so there is nothing
+in them to drift, or add an import smoke test over `scripts/` that would at
+least catch a broken signature or a renamed import. The first is cheaper and
+matches what `fast_f1/cli.py` already does.
+
+`scripts/scratch.py` is separate and simpler — four lines inserting a
+hardcoded `/workspaces/f1_fantasy` onto `sys.path`, a devcontainer path that
+does not exist on the current machine. It looks like straightforward deletion.
+
+Raised 2026-07-27, immediately after deleting `get_fastf1_data.py`, when the
+question "what else is unprotected in the same way" turned out to have a
+concrete answer.
