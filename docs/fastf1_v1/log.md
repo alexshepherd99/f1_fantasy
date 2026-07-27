@@ -268,10 +268,11 @@ odds (mean 0.90). Almost everything it says is already being said twice.
 So this is a simplification at no measurable cost, not an accuracy improvement,
 and it should not be written up as one.
 
-**`data/fastf1_practice_rolling_metrics.xlsx` was not regenerated**, so its
-`AggregateRank` and `RankPosition` columns still hold values under the old
-weights. Delete the file and re-run `--historical --season 2026` to restate them;
-the component rank columns it stores are unaffected either way.
+**`data/fastf1_practice_rolling_metrics.xlsx` was regenerated** by deleting it and
+re-running `--historical --season 2026`. Same 242 rows over races 1–11, same
+columns; all 33 component columns come back byte-identical and only
+`AggregateRank` and `RankPosition` move, which is the whole intended effect.
+Races 12–22 were walked and skipped — no practice data published yet.
 
 **Test-suite effect:** 124 → 125 passing. `test_aggregate_metrics_applies_metric_weights`
 split into one test per half of the change, and
