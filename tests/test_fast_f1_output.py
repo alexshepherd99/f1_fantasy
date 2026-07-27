@@ -467,6 +467,43 @@ def test_build_race_metrics_handles_first_race_with_no_prior_points(monkeypatch,
     assert all(metrics["ConstructorRollingPointsRank"].fillna(0.0) == 0.0)
 
 
+def test_build_race_metrics_treats_a_session_with_no_timed_laps_as_missing(monkeypatch, caplog):
+    """Laps with no lap time are as unusable as no laps at all.
+
+    A session red-flagged before anyone set a time still returns lap rows, so
+    the empty-frame guard does not catch it. The 107% threshold is then derived
+    from a NaT and the rank arithmetic raises TypeError, which
+    generate_historical_metrics does not catch - one washed-out practice
+    session would abort a whole historical run instead of skipping one race.
+    """
+    season_year, race_num = 2025, 4
+    drivers = ["HAM", "VER"]
+    untimed_laps = pd.DataFrame(
+        {
+            "Driver": drivers,
+            "LapTime": [pd.NaT, pd.NaT],
+            "Stint": [1, 1],
+            "Season": [season_year] * 2,
+            "Race": [race_num] * 2,
+            "SessionType": ["FP2"] * 2,
+        }
+    )
+
+    monkeypatch.setattr(
+        "fast_f1.output.get_event_for_race",
+        lambda season, race: DummyEvent({"FP2": DummySession(pd.DataFrame()), "FP3": DummySession(pd.DataFrame())}),
+    )
+    monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", lambda event: ("FP2", "FP3"))
+    monkeypatch.setattr("fast_f1.output.get_session_laps", lambda season, race, session_type: untimed_laps)
+    monkeypatch.setattr("fast_f1.output.get_race_results", lambda season, race: pd.DataFrame())
+
+    caplog.set_level("ERROR", logger="fast_f1.output")
+    with pytest.raises(RuntimeError, match="Required practice session data missing"):
+        build_race_metrics(season_year, race_num)
+
+    assert "FP2" in caplog.text
+
+
 def _patch_minimal_race(monkeypatch, season_year, race_num, drivers):
     """Wire build_race_metrics to a two-driver race with no prior results."""
     laps = {

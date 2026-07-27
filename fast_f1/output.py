@@ -79,7 +79,10 @@ def build_race_metrics(
     practice_dfs: list[pd.DataFrame] = []
     for session_code in practice_session_codes:
         session_laps = get_session_laps(season_year, race_num, session_code)
-        if session_laps.empty:
+        # A session stopped before anyone set a time still returns lap rows, so
+        # emptiness alone does not cover it - and every rank here is derived
+        # from a lap time.
+        if session_laps.empty or not session_laps["LapTime"].notna().any():
             msg = (
                 f"Required practice session data missing for season {season_year} "
                 f"race {race_num}: {session_code}"
