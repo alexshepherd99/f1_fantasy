@@ -72,17 +72,43 @@ These strategies are contained in the **linear** module:
 
 Note on odds conversion (2026-07-26): fractional odds `a/b` are converted to an implied probability of `b/(a+b)`.  This previously used `b/a`, which over-weighted the front of the grid and rejected odds-on prices outright.  Correcting it changed the selected team in 3 of the 9 races of 2026 that previously solved, so team results logged below from before that date are not reproducible under the current code.  The `fast_f1` module also consumes these odds as a weighted indicator — see `docs/fastf1_v1/`.
 
+## FastF1 signal
+
+The **fast_f1** module is a separate experiment from the strategies above: rather than optimising a team from fantasy points and prices, it tries to predict how a race will go using data available before it starts.  It combines practice lap time ranks (FP2 + FP3 on a normal weekend, FP1 + Sprint Qualifying on a sprint weekend, ignoring laps slower than 107% of the session best), a rolling total of driver points over the previous three races, and the betting odds described above.  Each is normalised to 0-1 and summed into an AggregateRank.
+
+Constructor rolling points are calculated and written out too, but carry zero weight in the aggregate — they turned out to be almost entirely redundant with the driver indicators, correlating 0.80-0.98 with driver rolling points within a race.  The weights live in one dict in `fast_f1/metrics.py` if you want to put it back.
+
+It is not wired into any strategy.  It is a standalone signal, and whether it is worth feeding into team selection is still an open question.
+
+Two modes:
+
+```bash
+# one race, writes to outputs/
+PYTHONPATH=. venv/bin/python -m fast_f1.cli --season 2026 --race 10
+
+# every race from 2023 onwards, or one season, writes to data/
+PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical
+PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical --season 2026
+```
+
+Historical mode skips season/race pairs already in the output file, so it can be interrupted and resumed; delete the file to regenerate from scratch.  Results land in **data/fastf1_practice_rolling_metrics.xlsx**.
+
+On first run it will ask where to keep the FastF1 API cache and remember the answer.  The cache is large and lives outside the repo, and the file recording your choice is not committed.
+
+Full spec, plan and development log are in `docs/fastf1_v1/`.
+
 ## Modules
 
 - **import_data** : load archive data from Excel inputs, and generate the derivations for points and price for use by the strategies.
 - **races** : class representations for assets, teams, races, seasons.
 - **linear** : linear programming strategies.
+- **fast_f1** : FastF1 API access and the predictive indicators derived from it, see above.
 
 ## Links
 
 - https://fantasy.formula1.com/en/
 - https://f1fantasytools.com/statistics
-- https://docs.fastf1.dev/index.html (Free API with more data than you can shake a chequered flag at!  Not currently used by any of the strategies in this module, but definite potential to develop some forward-looking indicators.)
+- https://docs.fastf1.dev/index.html (Free API with more data than you can shake a chequered flag at!  Used by the fast_f1 module for the forward-looking indicators described above, though not yet by any of the team selection strategies.)
 
 ## 2026 team
 
