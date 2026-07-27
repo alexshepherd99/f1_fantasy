@@ -19,6 +19,15 @@ from fast_f1.weekend import determine_practice_sessions
 
 logger = logging.getLogger(__name__)
 
+
+class SessionDataUnavailable(Exception):
+    """The FastF1 API genuinely has no data for a requested race or session.
+
+    Distinct from a failed request: a race that has not run yet, a session a
+    weekend does not hold, and a round outside a season all raise this, while
+    network errors, schema changes and bugs propagate to the caller instead.
+    """
+
 # Session codes that might be available on any weekend
 _KNOWN_SESSION_CODES = ["FP1", "FP2", "FP3", "SQ", "SS", "Q", "R"]
 # Friendly names for known session codes
@@ -81,8 +90,21 @@ def get_event_for_race(season_year: int, race_num: int) -> Any:
 
     event_rows = schedule[schedule["RoundNumber"] == race_num]
     if event_rows.empty:
-        raise ValueError(f"No event found for season {season_year}, race {race_num}")
+        raise SessionDataUnavailable(f"No event found for season {season_year}, race {race_num}")
     return event_rows.iloc[0]
+
+
+def _get_session(event: Any, session_code: str) -> Any:
+    """Return one session of an event, as a missing-data condition when absent.
+
+    A weekend simply not holding a session is data we do not have, not a
+    failure, so it is translated at this one call rather than by catching
+    broadly further out.
+    """
+    try:
+        return event.get_session(session_code)
+    except Exception as exc:
+        raise SessionDataUnavailable(f"Session {session_code} is not available for this event") from exc
 
 
 def _load_session(session: Any, *, laps: bool) -> None:
@@ -193,69 +215,12 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
 
     try:
         event = get_event_for_race(season_year, race_num)
-        race = event.get_session("R")
+        race = _get_session(event, "R")
         _load_session(race, laps=False)
         results = getattr(race, "results", pd.DataFrame())
         if not isinstance(results, pd.DataFrame) or results.empty:
-            raise ValueError("Race results are unavailable or malformed")
-
-        columns = [
-            "Abbreviation",
-            "Status",
-            "Position",
-            "ClassifiedPosition",
-            "GridPosition",
-            "Points",
-        ]
-        if "TeamName" in results.columns:
-            columns.append("TeamName")
-        results = results[[col for col in columns if col in results.columns]].copy()
-        results["Constructor"] = results.get("TeamName")
-        results["Season"] = season_year
-        results["Race"] = race_num
-        if cache_path is not None:
-            _save_cached_dataframe(results, cache_path)
-        # Also attempt to cache common practice/session laps when the event
-        # object is available so subsequent calls can be served from disk
-        # without reloading the FastF1 event. This helps tests and offline
-        # workflows that expect session caches to be present after a single
-        # event load.
-        for sess_code in ("FP1", "FP2", "FP3", "SQ"):
-            try:
-                sess = event.get_session(sess_code)
-                _load_session(sess, laps=True)
-                laps = getattr(sess, "laps", pd.DataFrame())
-                if not isinstance(laps, pd.DataFrame) or laps.empty:
-                    continue
-                cols = [
-                    "Driver",
-                    "LapTime",
-                    "LapNumber",
-                    "Stint",
-                    "PitOutTime",
-                    "PitInTime",
-                    "Compound",
-                    "TyreLife",
-                    "FreshTyre",
-                ]
-                available = [c for c in cols if c in laps.columns]
-                if not available:
-                    continue
-                session_laps = laps[available].copy()
-                session_laps["Season"] = season_year
-                session_laps["Race"] = race_num
-                session_laps["SessionType"] = sess_code
-                sess_cache = _get_cache_file_path("session_laps", season_year, race_num, sess_code)
-                if sess_cache is not None:
-                    try:
-                        _save_cached_dataframe(session_laps, sess_cache)
-                    except Exception:
-                        logger.debug("Failed to cache session %s for %s %s", sess_code, season_year, race_num)
-            except Exception as exc:
-                logger.debug("Ignoring unavailable practice session %s for %s %s: %s", sess_code, season_year, race_num, exc)
-                continue
-        return results
-    except Exception as exc:
+            raise SessionDataUnavailable("Race results are unavailable or malformed")
+    except (SessionDataUnavailable, SessionNotAvailableError) as exc:
         logger.warning(
             "Could not load race results for season %s race %s: %s",
             season_year,
@@ -263,6 +228,66 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
             exc,
         )
         return _empty_race_results_dataframe()
+
+    columns = [
+        "Abbreviation",
+        "Status",
+        "Position",
+        "ClassifiedPosition",
+        "GridPosition",
+        "Points",
+    ]
+    if "TeamName" in results.columns:
+        columns.append("TeamName")
+    results = results[[col for col in columns if col in results.columns]].copy()
+    results["Constructor"] = results.get("TeamName")
+    results["Season"] = season_year
+    results["Race"] = race_num
+    if cache_path is not None:
+        _save_cached_dataframe(results, cache_path)
+
+    _warm_practice_session_cache(event, season_year, race_num)
+    return results
+
+
+def _warm_practice_session_cache(event: Any, season_year: int, race_num: int) -> None:
+    """Cache the weekend's practice laps while the event object is already loaded.
+
+    Best-effort only: a session that will not load costs a later
+    ``get_session_laps`` call nothing but a cache miss, so every failure here
+    is logged and stepped over rather than raised.
+    """
+    for sess_code in ("FP1", "FP2", "FP3", "SQ"):
+        try:
+            sess = _get_session(event, sess_code)
+            _load_session(sess, laps=True)
+            laps = getattr(sess, "laps", pd.DataFrame())
+            if not isinstance(laps, pd.DataFrame) or laps.empty:
+                continue
+            cols = [
+                "Driver",
+                "LapTime",
+                "LapNumber",
+                "Stint",
+                "PitOutTime",
+                "PitInTime",
+                "Compound",
+                "TyreLife",
+                "FreshTyre",
+            ]
+            available = [c for c in cols if c in laps.columns]
+            if not available:
+                continue
+            session_laps = laps[available].copy()
+            session_laps["Season"] = season_year
+            session_laps["Race"] = race_num
+            session_laps["SessionType"] = sess_code
+            sess_cache = _get_cache_file_path("session_laps", season_year, race_num, sess_code)
+            if sess_cache is not None:
+                _save_cached_dataframe(session_laps, sess_cache)
+        except Exception as exc:
+            logger.debug("Ignoring unavailable practice session %s for %s %s: %s", sess_code, season_year, race_num, exc)
+            continue
 
 
 def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.DataFrame:
@@ -275,12 +300,12 @@ def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.D
 
     try:
         event = get_event_for_race(season_year, race_num)
-        session = event.get_session(session_type)
+        session = _get_session(event, session_type)
         _load_session(session, laps=True)
         session_laps = getattr(session, "laps", pd.DataFrame())
         if not isinstance(session_laps, pd.DataFrame) or session_laps.empty:
-            raise ValueError("Session laps are unavailable or malformed")
-    except Exception as exc:
+            raise SessionDataUnavailable("Session laps are unavailable or malformed")
+    except (SessionDataUnavailable, SessionNotAvailableError) as exc:
         logger.warning(
             "Could not load session laps for season %s race %s session %s: %s",
             season_year,

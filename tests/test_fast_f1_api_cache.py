@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from fast_f1.api import (
+    SessionDataUnavailable,
     _save_cached_dataframe,
     get_event_for_race,
     get_race_numbers_for_season,
@@ -249,7 +250,7 @@ def test_api_does_not_cache_an_empty_event_schedule(monkeypatch, tmp_path):
         lambda season_year, include_testing=False: pd.DataFrame(columns=["RoundNumber"]),
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(SessionDataUnavailable):
         get_event_for_race(2025, 1)
     assert not (tmp_path / "local_cache" / "event_schedule_2025.pkl").exists()
 
@@ -280,7 +281,7 @@ def test_api_returns_empty_dataframe_when_race_data_is_missing(monkeypatch, tmp_
 
     monkeypatch.setattr(
         "fast_f1.api.get_event_for_race",
-        lambda season, race: (_ for _ in ()).throw(RuntimeError("Event unavailable")),
+        lambda season, race: (_ for _ in ()).throw(SessionDataUnavailable("Event unavailable")),
     )
 
     result = get_race_results(2025, 99)
@@ -293,7 +294,7 @@ def test_api_returns_empty_dataframe_when_session_data_is_missing(monkeypatch, t
 
     monkeypatch.setattr(
         "fast_f1.api.get_event_for_race",
-        lambda season, race: (_ for _ in ()).throw(RuntimeError("Event unavailable")),
+        lambda season, race: (_ for _ in ()).throw(SessionDataUnavailable("Event unavailable")),
     )
 
     result = get_session_laps(2025, 99, "FP2")
@@ -326,3 +327,23 @@ def test_cache_layer_itself_refuses_to_write_an_empty_dataframe(tmp_path):
     _save_cached_dataframe(pd.DataFrame(), cache_path)
 
     assert not cache_path.exists()
+
+
+def test_api_lets_an_unexpected_failure_propagate(monkeypatch, tmp_path):
+    """A broken call must not look like a race with no data.
+
+    Returning the empty frame here would tell the caller "nothing to report"
+    when the truth is that the request never completed.
+    """
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+
+    def fail(*args, **kwargs):
+        raise ConnectionError("network down")
+
+    monkeypatch.setattr("fast_f1.api.get_event_for_race", fail)
+
+    with pytest.raises(ConnectionError):
+        get_race_results(2025, 1)
+
+    with pytest.raises(ConnectionError):
+        get_session_laps(2025, 1, "FP2")

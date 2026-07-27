@@ -413,3 +413,59 @@ cache write.
 appears — red first, on the pickle existing.
 `test_api_does_not_cache_an_empty_event_schedule` still passes, now satisfied
 by the cache layer rather than the guard it was originally written against.
+
+## `api.py` no longer hides failures as missing data (2026-07-27)
+
+Closes the `BACKLOG.md` item *Silent-failure fallbacks in `fast_f1/api.py`*,
+which is removed with this entry.
+
+`get_race_results` and `get_session_laps` each wrapped everything —  event
+lookup, session load, column munging, caching — in one `except Exception` that
+returned a well-formed empty frame. A network outage, a session a weekend does
+not hold, and a `KeyError` in our own munging were therefore indistinguishable
+to the caller, and any test asserting on columns alone was satisfied by the
+fallback.
+
+**What "no data" now means.** A new `SessionDataUnavailable` marks the three
+conditions where the API genuinely has nothing: a round outside the season, a
+session the weekend does not hold, and results that are absent or malformed.
+Only that (plus FastF1's own `SessionNotAvailableError`) is caught and turned
+into an empty frame. Everything else propagates.
+
+Three structural points fell out of it:
+
+- `event.get_session(...)` is wrapped by `_get_session`, which translates its
+  failure into `SessionDataUnavailable` at that one call. Catching broadly
+  further out is what caused the conflation in the first place; translating
+  locally, where the only real failure mode is "this session does not exist",
+  keeps the narrow contract without pretending we can classify arbitrary
+  errors.
+- Column munging and caching moved *out* of the `try`. They were never
+  operations whose failure means "no data", and leaving them inside meant a bug
+  in our own code returned an empty frame.
+- The FP1–SQ warming loop moved into `_warm_practice_session_cache`. It keeps
+  its broad `except Exception: continue`, which is correct there and only
+  there: warming is best-effort, and a session that will not load costs a later
+  `get_session_laps` nothing but a cache miss.
+
+**The trade-off, stated plainly.** `generate_historical_metrics` catches only
+`RuntimeError`, so a genuine network failure now aborts a `--historical` run
+instead of silently skipping the race and writing a gap into the output file.
+That is the intended direction — a run that stops is recoverable, a run that
+quietly produces incomplete data is not — but it does make long runs less
+tolerant of a transient blip. Left as is rather than widened, because catching
+it again in the loop would restore the behaviour just removed.
+
+**`CLAUDE.md` corrected.** It claimed `api.py` "raises `RuntimeError` (never
+returns `None`) when required session data is missing", which was true of the
+`weekend.py`/`metrics.py` paths but never of these two wrappers. It now
+describes the actual split.
+
+**Test-suite effect:** 132 → 133 passing. The new test asserts a
+`ConnectionError` from the event lookup reaches the caller; it was red first
+with `DID NOT RAISE`, the old code having swallowed it. Three existing tests
+changed because the contract did: two raised a bare `RuntimeError` to stand in
+for missing data and now raise `SessionDataUnavailable`, and the
+empty-schedule test expects the new type from `get_event_for_race`. Verified
+beyond the fakes by running `--season 2025 --race 1` against the live API,
+which still returns a full 20-driver ranking.

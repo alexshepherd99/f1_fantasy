@@ -52,26 +52,6 @@ collapses most of it — and move it up to `StrategyBase`, where
 concentration for free; leaving `max_concentration` at its permissive
 default keeps the other strategies' behaviour unchanged.
 
-## Silent-failure fallbacks in `fast_f1/api.py`
-
-`get_race_results` (`fast_f1/api.py:207-214`) and `get_session_laps`
-(`:232-240`) catch every exception and return the empty frames from
-`_empty_race_results_dataframe()` / `_empty_session_laps_dataframe()`, so a
-network outage, a missing session and an upstream schema change all surface
-identically as a well-formed empty DataFrame. Callers can't tell "no data"
-from "the call failed", and any caller asserting on columns alone is
-satisfied by the fallback.
-
-Note CLAUDE.md claims `api.py` "raises `RuntimeError` (never returns `None`)
-when required session data is missing" — that holds for the
-`weekend.py`/`metrics.py` paths but not for these two functions. Decide
-which behaviour is meant, then align code and docs.
-
-Found while re-enabling `tests/test_fastf1_api_validation.py` (2026-07-25):
-its column assertions passed against the fallback frames, because those
-hardcode exactly the columns being asserted. That test now calls the FastF1
-API directly and no longer depends on this, but the wrappers are unchanged.
-
 ## Source betting odds directly from a web page
 
 `StrategyBettingOdds` (`linear/strategy_odds.py:5,14-15`),
@@ -94,17 +74,17 @@ consumers need no changes downstream.
 
 ## `get_race_results` downloads sessions it then discards
 
-`get_race_results` warms a session cache as a side effect
-(`fast_f1/api.py:172-205`), loading FP1/FP2/FP3/SQ in full after the race.
-When no local cache directory is configured `_get_local_cache_path()`
-returns `None`, nothing is written and those four loads are pure waste — in
-the validation test that was ~19s of a 27s run. Skip the warming when there
-is nowhere to write it.
+`get_race_results` warms a session cache as a side effect, loading
+FP1/FP2/FP3/SQ in full after the race — since 2026-07-27 in
+`_warm_practice_session_cache` (`fast_f1/api.py:253`). When no local cache
+directory is configured `_get_local_cache_path()` returns `None`, nothing is
+written and those four loads are pure waste — in the validation test that was
+~19s of a 27s run. Skip the warming when there is nowhere to write it.
 
-Worth reviewing the loads themselves at the same time: `session.load()`
-defaults to pulling car telemetry, position data, weather and race control
-messages, none of which we read. `load(laps=True, telemetry=False,
-weather=False, messages=False)` cut a session load from ~4.2s to ~1.5s.
+The related concern about the loads themselves is already resolved: `_load_session`
+(`fast_f1/api.py:110`) passes `telemetry=False, weather=False` as of 2026-07-25,
+which cut a session load from ~4.2s to ~1.5s. `messages=True` is kept
+deliberately — it is what populates a lap's `Deleted` flag.
 
 ## Thread the odds file path through `fast_f1.output` instead of patching `load_odds`
 
