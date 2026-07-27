@@ -5,6 +5,10 @@ TL;DR — Build the new `fast_f1` package in the repo, formalize the existing Fa
 > **Superseded 2026-07-25:** `external_data/` and `tests/test_external_data.py`
 > have been removed from the repo. References to them below record the plan as
 > it stood during the effort.
+>
+> **Superseded 2026-07-27:** `scripts/get_fastf1_data.py` has been removed too —
+> it was a narrower duplicate of `python -m fast_f1.cli --historical`. Its
+> timestamped logging moved to that CLI's entrypoint.
 
 ## Steps
 

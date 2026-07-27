@@ -6,6 +6,7 @@ import logging
 import sys
 from pathlib import Path
 
+from common import setup_logging
 from fast_f1.cache import setup_fastf1_cache
 from fast_f1.output import (
     DEFAULT_HISTORICAL_OUTPUT,
@@ -73,5 +74,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    setup_logging()
     main()

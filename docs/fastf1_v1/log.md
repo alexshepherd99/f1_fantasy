@@ -366,3 +366,31 @@ reinstating `range(1, 23)` fails both walk tests, and a dense
 `range(1, max + 1)` fails the round-gap test on `At index 2 diff: (2025, 3) !=
 (2025, 5)`. The gap test — a season listing rounds 1, 2, 5 must be walked as
 1, 2, 5 — was requested during review and covers a schedule with a hole in it.
+
+## `scripts/get_fastf1_data.py` removed (2026-07-27)
+
+The script was a narrower duplicate of `python -m fast_f1.cli --historical`:
+same output file, same cache setup, but a hardcoded `[2023, 2024, 2025]` where
+the CLI walks 2023 to the current year. Its only other content was a
+`load_existing_metrics` stub that raised `NotImplementedError` pointing at
+`fast_f1.output`.
+
+It had drifted silently twice — the season list stopped at 2025, and it was
+still passing the `race_numbers` argument removed earlier today, so it would
+have failed with a `TypeError` on its first real call. Nothing imports it, so
+no test covered either defect; both were found by grepping for callers. That is
+the standing cost of a second entrypoint no test exercises, and the reason to
+delete rather than repair it.
+
+The one thing worth keeping was its logging: `common.setup_logging()` formats
+INFO lines with a timestamp, where `fast_f1/cli.py` used a bare
+`logging.basicConfig(level=logging.INFO)`. The CLI entrypoint now calls
+`setup_logging()` instead. `common` is stdlib-only and already an indirect
+dependency of `fast_f1` through `import_data.odds`, so this adds no new
+coupling.
+
+Verified by running `python -m fast_f1.cli` with no arguments: the cache-setup
+lines come out as `2026-07-27 19:50:02+0100 INFO: FastF1 cache enabled at: …`,
+and the run then stops on the existing "both --season and --race are required"
+guard. Suite unchanged at 131 passing — nothing imported the script, so nothing
+moved.
