@@ -105,3 +105,47 @@ Worth reviewing the loads themselves at the same time: `session.load()`
 defaults to pulling car telemetry, position data, weather and race control
 messages, none of which we read. `load(laps=True, telemetry=False,
 weather=False, messages=False)` cut a session load from ~4.2s to ~1.5s.
+
+## Thread the odds file path through `fast_f1.output` instead of patching `load_odds`
+
+`tests/conftest.py:12-26` autouse-patches `fast_f1.output.load_odds` to
+return `{}` so metric tests never read the real
+`data/f1_betting_odds.xlsx`. That patches a first-party function we own,
+which `agentic`'s `coding-standards` skill says to avoid where a real call
+is practical — prefer making the boundary injectable.
+
+The boundary is already injectable one level down: `load_odds` takes
+`fn: str = _FILE_BETTING_ODDS` (`import_data/odds.py:45-49`), and both
+`linear/strategy_odds.py:14-15` and `tests/test_odds.py` pass it a fixture
+path. Only `fast_f1` skips it — `_load_driver_odds`
+(`fast_f1/output.py:37,45-52`) calls `load_odds` without `fn`, so it always
+resolves to the real workbook and the sole remaining lever is patching the
+function.
+
+Thread the path instead: add an odds-file parameter to `_load_driver_odds`
+and to `build_race_metrics` (`fast_f1/output.py:69`, which calls it at
+:207), defaulting to the real file so production callers are unchanged.
+Tests then pass `data/test_betting_odds.xlsx` — the fixture workbook
+`tests/test_strategy_odds.py:7` already uses — and the autouse fixture and
+the four per-test re-patches in `tests/test_fast_f1_output.py`
+(:512, :538, :563, :583) can point at fixture files or a stub path rather
+than replacing the loader.
+
+Note the conftest docstring (:21-23) justifies the patch by arguing that
+rebinding `import_data.odds._FILE_BETTING_ODDS` has no effect because it is
+bound as a default argument at definition time. That is correct, but it
+rules out patching the *constant* while overlooking the parameter that
+constant defaults to, which is the injection point that already exists.
+Update or drop that paragraph with the change.
+
+Two things to watch. The autouse fixture applies suite-wide, so the
+migration has to cover every test that transitively reaches
+`build_race_metrics`, not just the odds tests. And pointing at a
+nonexistent path is not equivalent to the current stub: `_load_driver_odds`
+catches broadly and degrades to `{}` with a warning
+(`fast_f1/output.py:52-66`), so tests would still pass but emit warning
+noise on every run — use a real fixture file.
+
+Raised 2026-07-27 while checking whether `agentic`'s tightened test-first
+and mocking guidance required changes here. No documentation change was
+needed; this is the one code-level gap it surfaced.
