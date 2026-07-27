@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from common import setup_logging
+from fast_f1.api import SessionDataUnavailable
 from fast_f1.cache import setup_fastf1_cache
 from fast_f1.output import (
     DEFAULT_HISTORICAL_OUTPUT,
@@ -55,7 +56,7 @@ def main() -> None:
     output_arg = str(output_path) if output_path is not None else None
     try:
         path, dataframe = generate_single_race_prediction(args.season, args.race, output_path=output_arg)
-    except RuntimeError as exc:
+    except (RuntimeError, ValueError, SessionDataUnavailable) as exc:
         logger.error(
             "Failed to generate metrics for season %s race %s: %s",
             args.season,
