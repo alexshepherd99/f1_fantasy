@@ -128,8 +128,8 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | 8 | Max P2PM | Free transfer, 3x Boost | ANT,HAM,COL,HUL,LAW | VRB,MER | 114.4 | 296 | 1824 |
 | 9 | Max P2PM | Auto pilot | ANT,HAM,HAD,HUL,LIN | VRB,MER | 115.7 | 270 | 2094 |
 | 10 | Max P2PM | | RUS,HAM,HAD,HUL,LIN | VRB,FER | 118.0 | 166 | 2260 |
-| 11 | Max P2PM | | COL,HAM,HAD,HUL,LIN | MER,FER | 120.1 | | |
-| 12 | Max P2PM | | | | | | |
+| 11 | Max P2PM | | COL,HAM,HAD,HUL,LIN | MER,FER | 120.1 | 223 | 2483 |
+| 12 | Max P2PM | | COL,HAM,HAD,LEC,LIN | VRB,FER | 122.2 | | |
 | 13 | Max P2PM | | | | | | |
 | 14 | Max P2PM | | | | | | |
 | 15 | Max P2PM | | | | | | |
