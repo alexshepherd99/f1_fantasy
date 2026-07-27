@@ -130,10 +130,28 @@ without re-deriving the indicator.
 
 - If required session data is unavailable, the module raises `RuntimeError` with a logged error message (e.g., missing FP2/FP3 for normal weekends).
 - If constructor or driver rolling points data is missing, fail gracefully with a logged error message and stop execution.
-- If FastF1 API event, session, or result data is unavailable or malformed, the wrapper functions should log the failure and return an empty DataFrame rather than crash.
-- Single-race CLI mode should exit cleanly with an error status if required metrics cannot be built due to missing FastF1 data.
+- `fast_f1/api.py` separates "the API has no data" from "the call failed", and
+  only the former degrades to an empty DataFrame. [Revised 2026-07-27; this
+  bullet previously read "If FastF1 API event, session, or result data is
+  unavailable or malformed, the wrapper functions should log the failure and
+  return an empty DataFrame rather than crash", which described every wrapper
+  and every failure.] Specifically:
+  - `SessionDataUnavailable` marks the three conditions where the API genuinely
+    lacks data: a round outside the season, a session the weekend does not
+    hold, and results that are absent or malformed.
+  - `get_race_results` and `get_session_laps` catch that (and FastF1's own
+    `SessionNotAvailableError`), log it, and return an empty but well-formed
+    DataFrame. Anything else — network errors, schema changes, bugs in our own
+    column munging — propagates to the caller rather than being disguised as
+    missing data.
+  - `get_event_schedule` raises `ValueError` and `get_event_for_race` raises
+    `SessionDataUnavailable`; neither returns an empty frame.
+- Single-race CLI mode should exit cleanly with an error status if required metrics cannot be built due to missing FastF1 data. It catches `RuntimeError`, `ValueError` and `SessionDataUnavailable` to cover the wrapper contract above.
 - All errors are logged before raising or stopping to provide debugging context.
 - Callers should catch `RuntimeError` when required data is unavailable and handle gracefully (e.g., prompt user to retry or wait for data).
+- `generate_historical_metrics` deliberately catches only `RuntimeError`, so a
+  genuine failure aborts the run rather than writing a silent gap into the
+  output file.
 
 ## Testing
 
