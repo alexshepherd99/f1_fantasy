@@ -157,9 +157,8 @@ Tests reach into `scripts/` for individual functions — `run_multiple_teams`,
 (`tests/test_derivations.py:11`) and `select_starting_team`
 (`tests/test_select_starting_team.py:1`) — but a `__main__` block never runs on
 import, so the wiring inside one is exercised by nothing. That is true of all
-seven scripts, including the four whose functions are covered. Three have no
-test importing them at all: `batch_results_xl.py`, `select_odds_start.py` and
-`scratch.py`.
+six scripts, including the four whose functions are covered. Two have no
+test importing them at all: `batch_results_xl.py` and `select_odds_start.py`.
 
 The gap is not theoretical. `scripts/get_fastf1_data.py` was deleted on
 2026-07-27 (recoverable at `1282518~1`) after drifting twice without a single
@@ -184,9 +183,9 @@ in them to drift, or add an import smoke test over `scripts/` that would at
 least catch a broken signature or a renamed import. The first is cheaper and
 matches what `fast_f1/cli.py` already does.
 
-`scripts/scratch.py` is separate and simpler — four lines inserting a
-hardcoded `/workspaces/f1_fantasy` onto `sys.path`, a devcontainer path that
-does not exist on the current machine. It looks like straightforward deletion.
+`scripts/scratch.py` was raised alongside this and is already resolved —
+deleted 2026-07-27, having been four lines putting a hardcoded
+`/workspaces/f1_fantasy` on `sys.path` that nothing imported.
 
 Raised 2026-07-27, immediately after deleting `get_fastf1_data.py`, when the
 question "what else is unprotected in the same way" turned out to have a
