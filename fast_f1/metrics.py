@@ -11,8 +11,14 @@ logger = logging.getLogger(__name__)
 
 # Relative contribution of each indicator to AggregateRank. Indicators not
 # listed here carry a weight of 1.0.
+#
+# Constructor rolling points are still computed and reported, but contribute
+# nothing to the aggregate: the indicator carries real signal on its own yet is
+# almost entirely redundant with the driver indicators it sits alongside
+# (correlating 0.80-0.98 per race with driver rolling points and 0.80-0.96 with
+# odds over 2026). See docs/fastf1_v1/log.md for the measurements.
 METRIC_WEIGHTS: dict[str, float] = {
-    "OddsRank": 2.0,
+    "ConstructorRollingPointsRank": 0.0,
 }
 
 

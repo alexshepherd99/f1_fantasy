@@ -231,3 +231,52 @@ the concentration constraint honoured at 2.0/1.0/0.0; the overround figure in th
 `odds_to_pct` docstring (1.09) matches measurement (1.086); and the degenerate
 paths behave — duplicate drivers, zero or negative probability, a single priced
 driver, and odds entries for drivers not in the race.
+
+## Odds weight cut to 1.0, constructor weight to 0.0 (2026-07-27)
+
+`METRIC_WEIGHTS` now holds a single entry, `ConstructorRollingPointsRank: 0.0`.
+Odds drop from 2.0 to the 1.0 default, so every indicator that counts, counts
+equally. Constructor rolling points are still computed, merged and written to the
+output — only their aggregate weight is zero, so raising it again is a one-line
+change with no re-derivation.
+
+**Assessed before changing, on 2026 races 1–10** (race 11 has no fantasy points
+yet). Aggregates were recomputed offline from the component rank columns already
+in `data/fastf1_practice_rolling_metrics.xlsx` and scored against actual fantasy
+points from the archive; no FastF1 calls were involved.
+
+| mean over 10 races | odds 2, cons 1 | odds 1, cons 1 | odds 2, cons 0 | odds 1, cons 0 |
+| --- | --- | --- | --- | --- |
+| Pearson | 0.629 | 0.627 | 0.624 | 0.620 |
+| Spearman | 0.581 | 0.587 | 0.574 | 0.572 |
+| top-3 hit rate | 0.500 | 0.500 | 0.500 | 0.467 |
+| top-5 hit rate | 0.620 | 0.640 | 0.660 | 0.660 |
+
+New against old: Pearson −0.009 (sd 0.023), Spearman −0.009 (sd 0.025), top-3
+−0.033, top-5 +0.040. Each delta is a fraction of its own race-to-race spread, so
+none is distinguishable from noise at ten races — the same limit the original 2x
+decision ran into. The top-3 delta is one race (race 7) moving a measure that only
+steps in thirds. Output does move: 6–10 of 22 drivers change position per race,
+largest shift 4 places, and the top-5 set changes in 4 of 10 races.
+
+**Why drop the constructor indicator when it is not weak.** Standalone it
+correlates 0.596 with fantasy points — better than driver rolling points at 0.532.
+It goes because it is redundant, not because it is uninformative: within a race it
+correlates 0.80–0.98 with driver rolling points (mean 0.89) and 0.80–0.96 with
+odds (mean 0.90). Almost everything it says is already being said twice.
+
+So this is a simplification at no measurable cost, not an accuracy improvement,
+and it should not be written up as one.
+
+**`data/fastf1_practice_rolling_metrics.xlsx` was not regenerated**, so its
+`AggregateRank` and `RankPosition` columns still hold values under the old
+weights. Delete the file and re-run `--historical --season 2026` to restate them;
+the component rank columns it stores are unaffected either way.
+
+**Test-suite effect:** 124 → 125 passing. `test_aggregate_metrics_applies_metric_weights`
+split into one test per half of the change, and
+`test_build_race_metrics_includes_weighted_odds_rank` became
+`..._includes_odds_rank_at_parity_weight`. Both new metrics tests first went red on
+an assertion about `METRIC_WEIGHTS` itself — a `KeyError`, which proves nothing —
+so the dict assertions were moved after the behavioural ones and the tests re-run
+to fail on the aggregate value instead.

@@ -43,7 +43,9 @@ For each driver, individual indicators are normalised to the range 0–1, where 
 
 The final aggregate rank is the weighted sum of the available indicator ranks.
 Weights live in `METRIC_WEIGHTS` in `fast_f1/metrics.py`; every indicator carries
-a weight of 1.0 except the odds rank, which carries 2.0.
+a weight of 1.0 except the constructor rolling points rank, which carries 0.0 —
+it is computed and reported but excluded from the aggregate as near-redundant
+with the driver indicators (see `log.md`, 2026-07-27).
 
 ### Betting odds
 
@@ -117,9 +119,12 @@ The final metric must include:
 - driver rolling points rank
 - constructor rolling points rank
 - practice lap time ranks for the selected sessions
-- driver betting odds rank, at double weight
+- driver betting odds rank
 
 Driver and constructor rolling points are separate, independent indicators.
+Constructor rolling points must keep being calculated and written to the output
+even though their aggregate weight is zero, so the weight can be raised again
+without re-deriving the indicator.
 
 ## Error behavior
 

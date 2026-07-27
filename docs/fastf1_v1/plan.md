@@ -27,7 +27,7 @@ TL;DR — Build the new `fast_f1` package in the repo, formalize the existing Fa
    - driver rolling points over the previous three races
    - constructor rolling points over the previous three races
    - practice session performance ranks
-   - aggregate rank as the weighted sum of independent indicators (see `METRIC_WEIGHTS`; odds count double, everything else 1.0)
+   - aggregate rank as the weighted sum of independent indicators (see `METRIC_WEIGHTS`; constructor rolling points count zero, everything else 1.0)
 6. Add API validation tests for FastF1 wrappers:
    - one API validation test per FastF1 wrapper to confirm columns/types
 7. Create script entrypoints:

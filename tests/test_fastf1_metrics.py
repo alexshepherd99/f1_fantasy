@@ -135,18 +135,34 @@ def test_aggregate_metrics_sums_rank_columns():
     df = pd.DataFrame({
         "Driver": ["A", "B"],
         "RollingPointsRank": [1.0, 0.0],
-        "ConstructorRollingPointsRank": [0.2, 0.4],
         "FP2_MinLapTime_rank": [0.5, 1.0],
         "FP3_MinLapTime_rank": [0.5, 0.0],
     })
 
     result = aggregate_metrics(df)
     assert list(result["Driver"]) == ["A", "B"]
-    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(2.2, 1e-4)
-    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(1.4, 1e-4)
+    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(2.0, 1e-4)
+    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(1.0, 1e-4)
 
 
-def test_aggregate_metrics_applies_metric_weights():
+def test_aggregate_metrics_excludes_zero_weighted_constructor_rank():
+    df = pd.DataFrame({
+        "Driver": ["A", "B"],
+        "RollingPointsRank": [1.0, 0.0],
+        "ConstructorRollingPointsRank": [0.0, 1.0],
+    })
+
+    result = aggregate_metrics(df)
+
+    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(1.0, 1e-4)
+    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(0.0, 1e-4)
+
+    # B leads on constructor rank alone, so ordering proves it carries no weight
+    assert list(result["Driver"]) == ["A", "B"]
+    assert METRIC_WEIGHTS["ConstructorRollingPointsRank"] == 0.0
+
+
+def test_aggregate_metrics_weights_odds_like_any_other_indicator():
     df = pd.DataFrame({
         "Driver": ["A", "B"],
         "RollingPointsRank": [1.0, 0.0],
@@ -155,13 +171,12 @@ def test_aggregate_metrics_applies_metric_weights():
 
     result = aggregate_metrics(df)
 
-    # OddsRank carries double the weight of an unlisted indicator
-    assert METRIC_WEIGHTS["OddsRank"] == 2.0
-    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(1.5, 1e-4)
-    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(2.0, 1e-4)
+    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(1.25, 1e-4)
+    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(1.0, 1e-4)
 
-    # B outranks A only because of the weighting, so ordering must reflect it
-    assert list(result["Driver"]) == ["B", "A"]
+    # At parity weight A's points lead outweighs B's odds lead
+    assert list(result["Driver"]) == ["A", "B"]
+    assert "OddsRank" not in METRIC_WEIGHTS
 
 
 def test_aggregate_metrics_defaults_unlisted_columns_to_weight_one():

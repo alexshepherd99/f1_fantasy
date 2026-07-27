@@ -505,7 +505,7 @@ def _patch_minimal_race(monkeypatch, season_year, race_num, drivers):
     monkeypatch.setattr("fast_f1.output.get_race_results", lambda season, race: current_results)
 
 
-def test_build_race_metrics_includes_weighted_odds_rank(monkeypatch):
+def test_build_race_metrics_includes_odds_rank_at_parity_weight(monkeypatch):
     season_year, race_num = 2025, 1
     _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
     monkeypatch.setattr(
@@ -519,13 +519,14 @@ def test_build_race_metrics_includes_weighted_odds_rank(monkeypatch):
     # The raw probability is carried through for auditability
     assert metrics.loc["HAM", "OddsImpliedProbability"] == pytest.approx(0.4)
 
-    # HAM's odds advantage must reach AggregateRank at double weight
+    # HAM's odds advantage must reach AggregateRank at the same weight as every
+    # other indicator
     other_ranks = sum(
-        metrics.loc["HAM", col]
+        METRIC_WEIGHTS.get(col, 1.0) * metrics.loc["HAM", col]
         for col in metrics.columns
         if col not in ("AggregateRank", "OddsRank") and (col.endswith("Rank") or col.endswith("_rank"))
     )
-    assert metrics.loc["HAM", "AggregateRank"] == pytest.approx(other_ranks + 2.0)
+    assert metrics.loc["HAM", "AggregateRank"] == pytest.approx(other_ranks + 1.0)
 
 
 def test_build_race_metrics_zeroes_odds_when_lookup_fails(monkeypatch, caplog):
