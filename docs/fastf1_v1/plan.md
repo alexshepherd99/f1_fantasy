@@ -79,6 +79,11 @@ TL;DR — Build the new `fast_f1` package in the repo, formalize the existing Fa
     `_save_cached_dataframe` itself so "don't cache nothing" holds
     unconditionally.
 
+    > **Completed 2026-07-27.** `_save_cached_dataframe` now returns early for
+    > anything that is not a non-empty DataFrame. `get_event_schedule`'s
+    > call-site guard was dropped as redundant; the remaining call sites keep
+    > their checks because those drive raising or skipping, not caching.
+
 ## Relevant files
 
 - `docs/fastf1_v1/requirements.md`

@@ -58,7 +58,7 @@ def get_event_schedule(season_year: int) -> pd.DataFrame:
         )
         raise ValueError(f"Could not load event schedule for season {season_year}") from exc
 
-    if cache_path is not None and isinstance(schedule, pd.DataFrame) and not schedule.empty:
+    if cache_path is not None:
         _save_cached_dataframe(schedule, cache_path)
     return schedule
 
@@ -124,6 +124,15 @@ def _load_cached_dataframe(cache_path: Path) -> pd.DataFrame | None:
 
 
 def _save_cached_dataframe(df: pd.DataFrame, cache_path: Path) -> None:
+    """Cache a dataframe, refusing anything empty or malformed.
+
+    The guard lives here rather than at each call site so that "don't cache
+    nothing" holds for every wrapper, including ones written later.
+    """
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        logger.debug("Refusing to cache an empty or invalid result to %s", cache_path)
+        return
+
     try:
         df.to_pickle(cache_path)
         logger.debug("Saved cached dataframe to %s", cache_path)

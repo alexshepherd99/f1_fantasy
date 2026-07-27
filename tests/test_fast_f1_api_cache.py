@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from fast_f1.api import (
+    _save_cached_dataframe,
     get_event_for_race,
     get_race_numbers_for_season,
     get_race_results,
@@ -311,3 +312,17 @@ def test_api_returns_the_race_numbers_a_season_actually_scheduled(monkeypatch, t
     )
 
     assert get_race_numbers_for_season(2024) == [1, 2, 3]
+
+
+def test_cache_layer_itself_refuses_to_write_an_empty_dataframe(tmp_path):
+    """The "don't cache nothing" guard belongs to the cache layer.
+
+    Every caller happens to check before calling today, so the guarantee holds
+    by convention rather than construction; a new or refactored wrapper would
+    silently start caching empty results.
+    """
+    cache_path = tmp_path / "empty.pkl"
+
+    _save_cached_dataframe(pd.DataFrame(), cache_path)
+
+    assert not cache_path.exists()

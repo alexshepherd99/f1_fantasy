@@ -19,7 +19,7 @@ Execution log for the fastf1_v1 effort. Newest entries at the bottom of each sec
 
 Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. The betting odds indicator was added on 2026-07-26 (see the entry below). Full suite green at 131 tests and all work committed.
 
-- Step 12 open: centralise the empty/invalid-result cache guard into `_save_cached_dataframe` itself (`fast_f1/api.py:94-97`) rather than relying on each caller to check first. See `plan.md` step 12.
+- Step 12 completed 2026-07-27: the empty/invalid-result cache guard now lives in `_save_cached_dataframe` itself rather than at each caller.
 
 ## API wrappers and caching (steps 6–7)
 
@@ -394,3 +394,22 @@ lines come out as `2026-07-27 19:50:02+0100 INFO: FastF1 cache enabled at: …`,
 and the run then stops on the existing "both --season and --race are required"
 guard. Suite unchanged at 131 passing — nothing imported the script, so nothing
 moved.
+
+## Step 12: the cache layer now refuses empty results itself (2026-07-27)
+
+`_save_cached_dataframe` persisted whatever it was handed. Nothing empty was
+reaching it, because all four callers checked first — but that made "don't
+cache nothing" a convention held by every call site rather than a property of
+the cache layer, and the fourth call site had only just been added.
+
+The guard moved into `_save_cached_dataframe`, which now returns early for
+anything that is not a non-empty DataFrame. `get_event_schedule`'s call-site
+check was dropped as redundant. The other three keep theirs: those checks
+decide whether to raise or skip the race, and only incidentally prevent a
+cache write.
+
+**Test-suite effect:** 131 → 132 passing. The new test calls
+`_save_cached_dataframe` directly with an empty frame and asserts no file
+appears — red first, on the pickle existing.
+`test_api_does_not_cache_an_empty_event_schedule` still passes, now satisfied
+by the cache layer rather than the guard it was originally written against.
