@@ -44,9 +44,24 @@ TL;DR — Build the new `fast_f1` package in the repo, formalize the existing Fa
    - ensure the local cache is used for every API call
    - historical API runs should handle season parameter, and only default to all if not specified
    - historical API runs should check which races are available within a given season
+
+    > **Completed 2026-07-27.** Cache hits log at INFO from
+    > `_load_cached_dataframe`; every `_save_cached_dataframe` call site guards
+    > against caching an empty result (step 12 below centralises that guard);
+    > cache use is covered by tests in `tests/test_fast_f1_api_cache.py`; the
+    > event schedule was the last uncached API call and is now cached per
+    > season; `--season` restricts a historical run; and race availability is
+    > derived from each season's schedule instead of a hardcoded `range(1, 23)`.
+
 10. Add tests:
     - offline unit tests for logic functions
     - preserve legacy `external_data` tests without modifying them
+
+    > **Completed 2026-07-27.** The offline unit tests are in place — the suite
+    > runs without network access apart from `tests/test_fastf1_api_validation.py`,
+    > which reaches the API deliberately. The `external_data` bullet is obsolete:
+    > that prototype and its tests were removed on 2026-07-25 (see the banner
+    > above), so there is nothing left to preserve.
 11. Checks:
     - Carefully review requirements, plan, code, comments, test, highlighting any inconsistencies or missed requirements.
 12. Harden the cache-write path: `_save_cached_dataframe` (`fast_f1/api.py:94-97`)

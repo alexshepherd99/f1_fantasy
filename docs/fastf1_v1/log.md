@@ -15,8 +15,9 @@ Execution log for the fastf1_v1 effort. Newest entries at the bottom of each sec
 
 - 2026-07-25: legacy `external_data/` prototype and its tests removed; unported signals captured in `BACKLOG.md`.
 - 2026-07-27: step 9's "local cache used for every API call" completed — the event schedule was the last uncached call and is now cached per season (see the entry below).
+- Steps 9 and 10 completed: all step 9 bullets audited on 2026-07-27, the last outstanding one (race availability per season) implemented; step 10's `external_data` bullet is obsolete since that prototype was removed on 2026-07-25.
 
-Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. The betting odds indicator was added on 2026-07-26 (see the entry below). Full suite green at 124 tests and all work committed.
+Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. The betting odds indicator was added on 2026-07-26 (see the entry below). Full suite green at 131 tests and all work committed.
 
 - Step 12 open: centralise the empty/invalid-result cache guard into `_save_cached_dataframe` itself (`fast_f1/api.py:94-97`) rather than relying on each caller to check first. See `plan.md` step 12.
 
@@ -322,3 +323,46 @@ an empty frame by both wrappers (`BACKLOG.md`, *Silent-failure fallbacks*), and
 plan step 12's move of the empty-guard into `_save_cached_dataframe` itself —
 this change adds a fourth call site that guards before calling rather than
 relying on the cache layer.
+
+## Steps 9 and 10 audited; historical mode walks real rounds (2026-07-27)
+
+An audit of every step 9 and 10 bullet against the code. Six of the eight were
+already satisfied — cache-hit logging, the empty-result guards, tests proving
+cached results are used, the schedule caching done earlier the same day,
+`--season` restricting a historical run, and the offline unit tests. One was
+obsolete: step 10's "preserve legacy `external_data` tests without modifying
+them" cannot apply now that the prototype and its tests were removed on
+2026-07-25.
+
+**One bullet was genuinely outstanding, and it was hiding a bug.** "Historical
+API runs should check which races are available within a given season" was
+never implemented: `cli.py` hardcoded `race_numbers = list(range(1, 23))` and
+`generate_historical_metrics` applied that one list to every season. Actual
+round counts are 2023 → 22, **2024 → 24, 2025 → 24**, 2026 → 22, so rounds 23
+and 24 of 2024 and 2025 — four races — could never enter the output file.
+
+A latent crash sat behind it: `get_event_for_race` raises `ValueError` for a
+round that does not exist, `build_race_metrics` calls it uncaught, and
+`generate_historical_metrics` only catches `RuntimeError`. Simply widening the
+hardcoded range would have crashed on the first over-long season; the 22 was
+masking it.
+
+`get_race_numbers_for_season` now derives the rounds from the season's
+schedule, which the previous change already made cheap by caching it.
+`generate_historical_metrics` loses its `race_numbers` parameter outright
+rather than keeping it as an override — one race list shared across seasons is
+the defect, not a feature. `scripts/get_fastf1_data.py` passed that argument
+too and was updated; nothing in the test suite imports that script, so it was
+found by grepping for callers rather than by a red test.
+
+The uncaught-`ValueError` path was deliberately left alone: rounds now come
+from the schedule, so a nonexistent round is never requested, and changing the
+exception contract overlaps the backlog's silent-failure item.
+
+**Test-suite effect:** 128 → 131 passing. The new tests' first red was
+signature-level (`TypeError`/`ImportError`), which demonstrates nothing about
+behaviour, so all three assertions were confirmed by mutation instead:
+reinstating `range(1, 23)` fails both walk tests, and a dense
+`range(1, max + 1)` fails the round-gap test on `At index 2 diff: (2025, 3) !=
+(2025, 5)`. The gap test — a season listing rounds 1, 2, 5 must be walked as
+1, 2, 5 — was requested during review and covers a schedule with a hole in it.
