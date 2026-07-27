@@ -94,14 +94,17 @@ TL;DR — Build the new `fast_f1` package in the repo, formalize the existing Fa
 
 ## Relevant files
 
+Files deleted during this effort are kept in the list and marked, so the record
+of what the effort touched stays readable.
+
 - `docs/fastf1_v1/requirements.md`
 - `docs/fastf1_v1/plan.md`
 - `docs/fastf1_v1/log.md`
-- `scripts/get_fastf1_data.py`
-- `external_data/fastf1_common.py`
-- `external_data/get_data.py`
-- `external_data/process_data.py`
-- `tests/test_external_data.py`
+- `scripts/get_fastf1_data.py` — **deleted 2026-07-27**, a narrower duplicate of `python -m fast_f1.cli --historical` (recoverable at `1282518~1`)
+- `external_data/fastf1_common.py` — **deleted 2026-07-25** with the rest of the legacy prototype (recoverable at `a6616d5`)
+- `external_data/get_data.py` — **deleted 2026-07-25** (recoverable at `a6616d5`)
+- `external_data/process_data.py` — **deleted 2026-07-25** (recoverable at `a6616d5`)
+- `tests/test_external_data.py` — **deleted 2026-07-25**, the prototype's only tests (recoverable at `a6616d5`)
 
 ## Verification
 
