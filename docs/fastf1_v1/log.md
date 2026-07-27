@@ -17,9 +17,10 @@ Execution log for the fastf1_v1 effort. Newest entries at the bottom of each sec
 - 2026-07-27: step 9's "local cache used for every API call" completed — the event schedule was the last uncached call and is now cached per season (see the entry below).
 - Steps 9 and 10 completed: all step 9 bullets audited on 2026-07-27, the last outstanding one (race availability per season) implemented; step 10's `external_data` bullet is obsolete since that prototype was removed on 2026-07-25.
 
-Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. The betting odds indicator was added on 2026-07-26 (see the entry below). Full suite green at 131 tests and all work committed.
+Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. The betting odds indicator was added on 2026-07-26 (see the entry below). Full suite green at 133 tests and all work committed.
 
 - Step 12 completed 2026-07-27: the empty/invalid-result cache guard now lives in `_save_cached_dataframe` itself rather than at each caller.
+- Step 11 open: the consistency review across requirements, plan, code, comments and tests. The 2026-07-26 sweep below predates the day's changes, so a fresh pass is still owed. This is the only incomplete step.
 
 ## API wrappers and caching (steps 6–7)
 
