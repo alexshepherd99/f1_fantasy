@@ -63,6 +63,19 @@ def get_event_schedule(season_year: int) -> pd.DataFrame:
     return schedule
 
 
+def get_race_numbers_for_season(season_year: int) -> list[int]:
+    """Return the round numbers a season scheduled, in ascending order.
+
+    Season length varies - 2024 and 2025 ran 24 rounds where 2023 and 2026 ran
+    22 - so callers walking a whole season must ask rather than assume.
+
+    Raises:
+        ValueError: If the schedule cannot be loaded.
+    """
+    schedule = get_event_schedule(season_year)
+    return sorted(int(round_number) for round_number in schedule["RoundNumber"] if int(round_number) > 0)
+
+
 def get_event_for_race(season_year: int, race_num: int) -> Any:
     schedule = get_event_schedule(season_year)
 

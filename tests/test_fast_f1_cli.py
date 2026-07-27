@@ -46,8 +46,8 @@ def test_cli_historical_mode(monkeypatch, tmp_path):
         called["cache"] = (cache_dir, interactive)
         return tmp_path, tmp_path / "local_cache"
 
-    def fake_generate_historical_metrics(season_years, race_numbers, output_path=None):
-        called["historical"] = (tuple(season_years), tuple(race_numbers), output_path)
+    def fake_generate_historical_metrics(season_years, output_path=None):
+        called["historical"] = (tuple(season_years), output_path)
         return pd.DataFrame()
 
     monkeypatch.setattr(cli, "setup_fastf1_cache", fake_setup_fastf1_cache)
@@ -56,7 +56,7 @@ def test_cli_historical_mode(monkeypatch, tmp_path):
     cli.main()
 
     assert called["cache"][1] is True
-    assert called["historical"][2] == str(tmp_path / "historical.xlsx")
+    assert called["historical"][1] == str(tmp_path / "historical.xlsx")
     assert called["historical"][0][0] == 2023
 
 
@@ -70,8 +70,8 @@ def test_cli_historical_mode_restricted_to_one_season(monkeypatch, tmp_path):
     def fake_setup_fastf1_cache(cache_dir=None, interactive=True):
         return tmp_path, tmp_path / "local_cache"
 
-    def fake_generate_historical_metrics(season_years, race_numbers, output_path=None):
-        called["historical"] = (tuple(season_years), tuple(race_numbers), output_path)
+    def fake_generate_historical_metrics(season_years, output_path=None):
+        called["historical"] = (tuple(season_years), output_path)
         return pd.DataFrame()
 
     monkeypatch.setattr(cli, "setup_fastf1_cache", fake_setup_fastf1_cache)
@@ -79,10 +79,9 @@ def test_cli_historical_mode_restricted_to_one_season(monkeypatch, tmp_path):
 
     cli.main()
 
-    # Only the requested season is walked, and the full race range is kept
+    # Only the requested season is walked; its race range comes from the schedule
     assert called["historical"][0] == (2026,)
-    assert called["historical"][1][0] == 1
-    assert called["historical"][2] == str(tmp_path / "historical.xlsx")
+    assert called["historical"][1] == str(tmp_path / "historical.xlsx")
 
 
 def test_cli_historical_mode_does_not_prompt_for_a_season(monkeypatch, tmp_path):
@@ -93,7 +92,7 @@ def test_cli_historical_mode_does_not_prompt_for_a_season(monkeypatch, tmp_path)
     def fake_setup_fastf1_cache(cache_dir=None, interactive=True):
         return tmp_path, tmp_path / "local_cache"
 
-    def fake_generate_historical_metrics(season_years, race_numbers, output_path=None):
+    def fake_generate_historical_metrics(season_years, output_path=None):
         called["historical"] = tuple(season_years)
         return pd.DataFrame()
 

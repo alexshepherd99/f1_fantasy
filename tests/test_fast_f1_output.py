@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from fast_f1.metrics import METRIC_WEIGHTS
-from fast_f1.output import build_race_metrics
+from fast_f1.output import build_race_metrics, generate_historical_metrics
 
 
 class DummySession:
@@ -606,3 +606,55 @@ def test_build_race_metrics_does_not_read_the_real_odds_spreadsheet(monkeypatch)
 
     assert list(metrics["OddsRank"]) == [0.0, 0.0]
     assert list(metrics["OddsImpliedProbability"]) == [0.0, 0.0]
+
+
+def test_historical_metrics_walks_the_rounds_each_season_actually_has(monkeypatch, tmp_path):
+    """Seasons differ in length, so the race range cannot be one hardcoded list.
+
+    2024 and 2025 ran 24 rounds where 2023 and 2026 ran 22; a shared range
+    either misses real races or asks for rounds that never existed.
+    """
+    scheduled_rounds = {2024: [1, 2, 3], 2025: [1, 2]}
+    monkeypatch.setattr(
+        "fastf1.get_event_schedule",
+        lambda season_year, include_testing=False: pd.DataFrame(
+            {"RoundNumber": scheduled_rounds[season_year]}
+        ),
+    )
+
+    attempted: list[tuple[int, int]] = []
+
+    def fake_build_race_metrics(season_year, race_num, *args, **kwargs):
+        attempted.append((season_year, race_num))
+        raise RuntimeError("No data published for this race")
+
+    monkeypatch.setattr("fast_f1.output.build_race_metrics", fake_build_race_metrics)
+
+    generate_historical_metrics([2024, 2025], output_path=tmp_path / "historical.xlsx")
+
+    assert attempted == [(2024, 1), (2024, 2), (2024, 3), (2025, 1), (2025, 2)]
+
+
+def test_historical_metrics_walks_over_a_gap_in_the_round_numbers(monkeypatch, tmp_path):
+    """A missing round is stepped over, not stopped at and not invented.
+
+    Rounds are taken from the schedule as they are, so a season listing 1, 2, 5
+    is walked as 1, 2, 5 - asking for the absent 3 and 4 would raise a
+    ValueError that the historical loop does not catch.
+    """
+    monkeypatch.setattr(
+        "fastf1.get_event_schedule",
+        lambda season_year, include_testing=False: pd.DataFrame({"RoundNumber": [1, 2, 5]}),
+    )
+
+    attempted: list[tuple[int, int]] = []
+
+    def fake_build_race_metrics(season_year, race_num, *args, **kwargs):
+        attempted.append((season_year, race_num))
+        raise RuntimeError("No data published for this race")
+
+    monkeypatch.setattr("fast_f1.output.build_race_metrics", fake_build_race_metrics)
+
+    generate_historical_metrics([2025], output_path=tmp_path / "historical.xlsx")
+
+    assert attempted == [(2025, 1), (2025, 2), (2025, 5)]

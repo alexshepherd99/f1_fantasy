@@ -8,6 +8,7 @@ import pandas as pd
 
 from fast_f1.api import (
     get_event_for_race,
+    get_race_numbers_for_season,
     get_race_results,
     get_session_laps,
     select_practice_sessions_from_event,
@@ -261,9 +262,13 @@ def generate_single_race_prediction(
 
 def generate_historical_metrics(
     season_years: Iterable[int],
-    race_numbers: Iterable[int],
     output_path: Path | str = DEFAULT_HISTORICAL_OUTPUT,
 ) -> pd.DataFrame:
+    """Build metrics for every scheduled race of each season, resuming where left off.
+
+    Each season is walked over the rounds it actually scheduled, so seasons of
+    differing length are all covered in full.
+    """
     path = Path(output_path)
     existing_metrics = load_existing_metrics(path)
     existing_keys = set()
@@ -273,7 +278,7 @@ def generate_historical_metrics(
     updated = existing_metrics.copy()
 
     for season_year in season_years:
-        for race_num in race_numbers:
+        for race_num in get_race_numbers_for_season(season_year):
             if (season_year, race_num) in existing_keys:
                 logger.info("Skipping existing metrics for season %s race %s", season_year, race_num)
                 continue

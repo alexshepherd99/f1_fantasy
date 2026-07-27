@@ -36,12 +36,11 @@ def main() -> None:
             season_years = [args.season]
         else:
             season_years = list(range(2023, current_year + 1))
-        race_numbers = list(range(1, 23))
         output_path = Path(args.output) if args.output else DEFAULT_HISTORICAL_OUTPUT
         output_arg = str(output_path)
 
         logger.info("Generating historical metrics for %s seasons", len(season_years))
-        generate_historical_metrics(season_years, race_numbers, output_path=output_arg)
+        generate_historical_metrics(season_years, output_path=output_arg)
         logger.info("Historical metrics generation complete: %s", output_arg)
         return
 

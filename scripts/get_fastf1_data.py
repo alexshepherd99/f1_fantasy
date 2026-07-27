@@ -21,6 +21,5 @@ if __name__ == "__main__":
     setup_fastf1_cache()
     generate_historical_metrics(
         season_years=[2023, 2024, 2025],
-        race_numbers=[x for x in range(1, 23)],
         output_path=_FILE_FASTF1_METRICS,
     )

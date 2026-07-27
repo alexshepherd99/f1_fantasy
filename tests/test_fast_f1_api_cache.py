@@ -5,7 +5,12 @@ import logging
 import pandas as pd
 import pytest
 
-from fast_f1.api import get_event_for_race, get_race_results, get_session_laps
+from fast_f1.api import (
+    get_event_for_race,
+    get_race_numbers_for_season,
+    get_race_results,
+    get_session_laps,
+)
 from fast_f1.cache import setup_fastf1_cache
 
 
@@ -293,3 +298,16 @@ def test_api_returns_empty_dataframe_when_session_data_is_missing(monkeypatch, t
     result = get_session_laps(2025, 99, "FP2")
     assert result.empty
     assert "Could not load session laps for season 2025 race 99 session FP2" in caplog.text
+
+
+def test_api_returns_the_race_numbers_a_season_actually_scheduled(monkeypatch, tmp_path):
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+
+    monkeypatch.setattr(
+        "fastf1.get_event_schedule",
+        lambda season_year, include_testing=False: pd.DataFrame(
+            {"RoundNumber": [2, 1, 3], "EventName": ["b", "a", "c"]}
+        ),
+    )
+
+    assert get_race_numbers_for_season(2024) == [1, 2, 3]
