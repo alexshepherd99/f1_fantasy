@@ -14,6 +14,7 @@ Execution log for the fastf1_v1 effort. Newest entries at the bottom of each sec
 - Step 8 completed: graceful handling for missing FastF1 API data and malformed payloads implemented.
 
 - 2026-07-25: legacy `external_data/` prototype and its tests removed; unported signals captured in `BACKLOG.md`.
+- 2026-07-27: step 9's "local cache used for every API call" completed — the event schedule was the last uncached call and is now cached per season (see the entry below).
 
 Overall: CLI, output, API wrappers, caching, graceful missing-data handling, and targeted unit tests implemented and verified locally. Cache hit logging added and covered by regression tests. The betting odds indicator was added on 2026-07-26 (see the entry below). Full suite green at 124 tests and all work committed.
 
@@ -281,3 +282,43 @@ split into one test per half of the change, and
 an assertion about `METRIC_WEIGHTS` itself — a `KeyError`, which proves nothing —
 so the dict assertions were moved after the behavioural ones and the tests re-run
 to fail on the aggregate value instead.
+
+## The event schedule is now served from `local_cache` (2026-07-27)
+
+Plan step 9's "ensure the local cache is used for every API call" had one gap
+left: `fastf1.get_event_schedule`, called by `get_event_for_race`
+(`fast_f1/api.py`). Session loads were already cached — `get_race_results` and
+`get_session_laps` both return from `local_cache` before touching the API — but
+the schedule behind them was refetched every time. `build_race_metrics` calls
+`get_event_for_race` once per race and both wrappers call it again on a cache
+miss, so a `--historical` run over 2023–2026 refetched the schedule 88+ times.
+`event.get_session(code)` reads session metadata off the already-fetched
+schedule row and is not a separate network call, so nothing else was uncovered.
+
+A new `get_event_schedule(season_year)` wrapper caches to
+`event_schedule_{season}.pkl` and `get_event_for_race` filters the round out of
+it. **Keyed per season, not per race** — a schedule covers the whole season, so
+one fetch serves every race in it. **No staleness handling**, matching the
+existing wrappers, which never expire either; a stale in-progress season is
+cleared by deleting the file. `_get_cache_file_path` was generalised to
+`(prefix, *key_parts)` to express a season-only key; both existing call sites
+already passed their parts positionally and are unchanged.
+
+The design's one real risk was whether a FastF1 `EventSchedule` survives
+pickling, since it is a `DataFrame` subclass whose rows are `Event` objects
+carrying a `year` in `_metadata`. Checked against the live API before writing
+any code, and again end-to-end afterwards: the subclass, `year`, and
+`.iloc[0].get_session("R")` all round-trip intact.
+
+**Test-suite effect:** 125 → 128 passing. The two caching tests were watched
+fail first — no pickle written, and the second lookup refetching. The third,
+"an empty schedule is not cached", would have passed vacuously before the
+implementation existed (nothing was cached at all), so it was written after and
+verified by mutation instead: dropping the `not schedule.empty` guard makes it
+fail.
+
+**Not fixed, still open:** `get_event_for_race`'s `ValueError` is swallowed into
+an empty frame by both wrappers (`BACKLOG.md`, *Silent-failure fallbacks*), and
+plan step 12's move of the empty-guard into `_save_cached_dataframe` itself —
+this change adds a fourth call site that guards before calling rather than
+relying on the cache layer.

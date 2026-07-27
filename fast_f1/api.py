@@ -34,7 +34,20 @@ _SESSION_CODE_NAMES = {
 _SESSION_NAME_TO_CODE = {name: code for code, name in _SESSION_CODE_NAMES.items()}
 
 
-def get_event_for_race(season_year: int, race_num: int) -> Any:
+def get_event_schedule(season_year: int) -> pd.DataFrame:
+    """Return a season's event schedule, served from ``local_cache`` when present.
+
+    A schedule covers a whole season, so one fetch serves every race in it.
+
+    Raises:
+        ValueError: If the schedule cannot be loaded.
+    """
+    cache_path = _get_cache_file_path("event_schedule", season_year)
+    if cache_path is not None:
+        cached_schedule = _load_cached_dataframe(cache_path)
+        if cached_schedule is not None:
+            return cached_schedule
+
     try:
         schedule = fastf1.get_event_schedule(season_year, include_testing=False)
     except Exception as exc:
@@ -44,6 +57,14 @@ def get_event_for_race(season_year: int, race_num: int) -> Any:
             exc,
         )
         raise ValueError(f"Could not load event schedule for season {season_year}") from exc
+
+    if cache_path is not None and isinstance(schedule, pd.DataFrame) and not schedule.empty:
+        _save_cached_dataframe(schedule, cache_path)
+    return schedule
+
+
+def get_event_for_race(season_year: int, race_num: int) -> Any:
+    schedule = get_event_schedule(season_year)
 
     event_rows = schedule[schedule["RoundNumber"] == race_num]
     if event_rows.empty:
@@ -68,16 +89,14 @@ def _get_local_cache_path() -> Path | None:
     return local_cache_dir
 
 
-def _get_cache_file_path(prefix: str, season_year: int, race_num: int, session_type: str | None = None) -> Path | None:
+def _get_cache_file_path(prefix: str, *key_parts: object) -> Path | None:
+    """Return the ``local_cache`` path for a response keyed by ``prefix`` and ``key_parts``."""
     local_cache_dir = _get_local_cache_path()
     if local_cache_dir is None:
         return None
 
-    file_name = f"{prefix}_{season_year}_{race_num}"
-    if session_type:
-        file_name += f"_{session_type}"
-    file_name += ".pkl"
-    return local_cache_dir / file_name
+    file_name = "_".join([prefix, *(str(part) for part in key_parts)])
+    return local_cache_dir / f"{file_name}.pkl"
 
 
 def _load_cached_dataframe(cache_path: Path) -> pd.DataFrame | None:

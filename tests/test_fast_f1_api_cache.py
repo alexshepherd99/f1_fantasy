@@ -3,9 +3,19 @@ from __future__ import annotations
 import logging
 
 import pandas as pd
+import pytest
 
-from fast_f1.api import get_race_results, get_session_laps
+from fast_f1.api import get_event_for_race, get_race_results, get_session_laps
 from fast_f1.cache import setup_fastf1_cache
+
+
+def _event_schedule() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "RoundNumber": [1, 2],
+            "EventName": ["Australian Grand Prix", "Chinese Grand Prix"],
+        }
+    )
 
 
 class FakeSession:
@@ -197,6 +207,66 @@ def test_api_loads_only_the_session_data_it_reads(monkeypatch, tmp_path):
     # Race results need no laps; a laps request obviously does
     assert race_session.load_kwargs["laps"] is False
     assert practice_session.load_kwargs["laps"] is True
+
+
+def test_api_caches_the_event_schedule_once_per_season(monkeypatch, tmp_path):
+    """One schedule fetch serves every race in that season."""
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+
+    fetches = []
+
+    def fake_get_event_schedule(season_year, include_testing=False):
+        fetches.append(season_year)
+        return _event_schedule()
+
+    monkeypatch.setattr("fastf1.get_event_schedule", fake_get_event_schedule)
+
+    first_event = get_event_for_race(2025, 1)
+    assert first_event["EventName"] == "Australian Grand Prix"
+    assert (tmp_path / "local_cache" / "event_schedule_2025.pkl").exists()
+
+    monkeypatch.setattr(
+        "fastf1.get_event_schedule",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("Should not be called")),
+    )
+    assert get_event_for_race(2025, 1)["EventName"] == "Australian Grand Prix"
+    assert get_event_for_race(2025, 2)["EventName"] == "Chinese Grand Prix"
+    assert fetches == [2025]
+
+
+def test_api_does_not_cache_an_empty_event_schedule(monkeypatch, tmp_path):
+    """An empty schedule is a failed fetch, not a season with no races."""
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+
+    monkeypatch.setattr(
+        "fastf1.get_event_schedule",
+        lambda season_year, include_testing=False: pd.DataFrame(columns=["RoundNumber"]),
+    )
+
+    with pytest.raises(ValueError):
+        get_event_for_race(2025, 1)
+    assert not (tmp_path / "local_cache" / "event_schedule_2025.pkl").exists()
+
+
+def test_api_logs_event_schedule_cache_hits(monkeypatch, tmp_path, caplog):
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+
+    monkeypatch.setattr(
+        "fastf1.get_event_schedule",
+        lambda season_year, include_testing=False: _event_schedule(),
+    )
+
+    # Prime the cache with an initial call.
+    get_event_for_race(2025, 1)
+
+    monkeypatch.setattr(
+        "fastf1.get_event_schedule",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("Should not be called")),
+    )
+    caplog.set_level(logging.INFO, logger="fast_f1.api")
+
+    get_event_for_race(2025, 1)
+    assert "Loaded cached DataFrame from" in caplog.text
 
 
 def test_api_returns_empty_dataframe_when_race_data_is_missing(monkeypatch, tmp_path, caplog):

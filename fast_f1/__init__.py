@@ -10,6 +10,7 @@ aggregate — see ``metrics.METRIC_WEIGHTS``.
 from fast_f1.api import (
     get_available_sessions_from_event,
     get_event_for_race,
+    get_event_schedule,
     get_race_results,
     get_session_laps,
     select_practice_sessions_from_available,
@@ -30,6 +31,7 @@ __all__ = [
     "select_practice_sessions_from_event",
     "select_practice_sessions_from_available",
     "get_event_for_race",
+    "get_event_schedule",
     "get_race_results",
     "get_session_laps",
     "generate_single_race_prediction",
