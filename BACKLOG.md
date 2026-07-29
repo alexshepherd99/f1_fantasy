@@ -195,7 +195,7 @@ should be copied, not its hardcoded-default habit. A
 `data/test_fastf1_metrics.xlsx` fixture will be needed, as
 `tests/test_strategy_odds.py` has for odds.
 
-Four things to settle before writing any of it.
+Five things to settle before writing any of it.
 
 - **Constructor identifiers do not match.** Drivers do: `fast_f1` writes the
   bare FastF1 abbreviation (`ALO`) and `load_odds` already has a
@@ -233,6 +233,17 @@ Four things to settle before writing any of it.
   odds could be found during development, so it's not been back-tested" — and it
   means a good back-test result understates the live strategy while a bad one is
   not conclusive against it. Say which is being measured when reporting.
+- **Bias the objective towards getting P1 right.** A plain "maximise summed
+  `AggregateRank`" objective treats a unit of rank at the front of the field the
+  same as a unit at the back, but the fantasy scoring does not: P1 pays the most,
+  and doubly so once the DRS x2 multiplier lands on that driver (`races/team.py`
+  applies it to the highest-priced driver by default, and `StrategyMaxP2PM`
+  overrides `get_drs_driver()` to move it). Weight the top of the field
+  explicitly — either transform `AggregateRank` so the gap between 1st and 2nd
+  is worth more than the gap between 10th and 11th, or add a bonus term on
+  whichever driver the strategy nominates for DRS. Whatever the form, it needs
+  a coefficient that can be tuned and back-tested at zero, so the unbiased
+  objective stays available as the comparison case.
 
 One game mechanic to note: `AggregateRank` needs FP2+FP3 (or FP1+Sprint
 Qualifying) to have run, so this strategy cannot pick a team before practice.
@@ -241,3 +252,64 @@ That matches the odds strategy's recommended timing and rules out using it for
 
 Raised 2026-07-27, on completing `docs/fastf1_v1/` — the module works and is
 unused, which is the whole point of the next step rather than a defect in it.
+
+## Regress the FastF1 indicator against rolling points, both versus finishing position
+
+Before building *Build a strategy on the FastF1 indicators* above, establish
+whether the new signal actually carries more information than the rolling points
+total already in use. Two regressions against actual finishing position — rolling
+three-race driver points versus position, and `AggregateRank` versus position —
+and compare the fits.
+
+Every column needed is already in `data/fastf1_practice_rolling_metrics.xlsx`, so
+this is a single-file read with no join, no LP run and no re-fetch:
+
+- `RollingPoints` — the three-race rolling driver points total, and
+  `RollingPointsRank`, its 0–1 normalisation.
+- `AggregateRank` — the weighted sum of all the indicators, and `RankPosition`,
+  its integer rank within the race.
+- `Position` — the actual finish, merged in from `get_race_results` by
+  `build_race_metrics` (`fast_f1/output.py:139`, `fast_f1/api.py:204`) alongside
+  `ClassifiedPosition`, `GridPosition`, `Status` and `Points`. Populated on every
+  row of the 342 the file held at `7dad240`.
+
+That deliberately avoids running `StrategyMaxP2PM` and comparing team outcomes:
+the LP, transfer mechanics and budget constraints all sit between a signal and a
+finishing position, and the question here is only which per-driver signal ranks
+the field better. If the two separate clearly there is no need for the fuller
+strategy-output comparison; if they do not, the strategy back-test is where to
+look next.
+
+Points to settle:
+
+- **The two signals are not independent.** `RollingPointsRank` is a component of
+  `AggregateRank`, at weight 1.0 (`fast_f1/metrics.py:METRIC_WEIGHTS`), so this
+  compares the aggregate against one of its own inputs rather than against a
+  rival. That is still the question worth answering — does adding practice pace
+  and odds beat rolling points alone — but it means the aggregate is expected to
+  fit at least as well, and the size of the improvement is the result, not its
+  sign. Regressing against the practice ranks alone would give a genuinely
+  independent comparison if the marginal one comes out ambiguous.
+- **Rolling points here are championship points, not fantasy points.**
+  `fast_f1`'s `RollingPoints` accumulates the `Points` column from the FastF1
+  results, not the fantasy scoring in `data/f1_fantasy_archive.xlsx`, and P2PM
+  divides by price on top of that. So this is a proxy for what `StrategyMaxP2PM`
+  optimises, not the thing itself. Good enough to rank drivers; say so when
+  reporting rather than calling it a P2PM comparison.
+- **Rank correlation, not least squares.** Both signals and the target are
+  ordinal within a race, and `Position` is bounded and discrete with retirements
+  classified at the back. Spearman or Kendall per race, aggregated across races,
+  fits better than pooling raw values into an OLS fit.
+- **The sample is too small until `--historical` has run.**
+  `data/fastf1_practice_rolling_metrics.xlsx` holds 342 rows covering 2023 races
+  1–6 and 2026 races 1–11 — enough to write and sanity-check the regression
+  against, not enough to conclude anything from. A full
+  `python -m fast_f1.cli --historical` run fills in 2023–2025 and is a
+  prerequisite here just as it is for the strategy back-test; it is the long pole
+  for both. The run is resumable and skips season/race pairs already present, so
+  the existing rows are not recomputed.
+- **Odds coverage limits what is being compared.** Outside 2026 races 1–11 the
+  `OddsRank` component of `AggregateRank` is a constant zero, so a historical
+  regression measures the practice and rolling-points indicators only.
+
+Raised 2026-07-29.
