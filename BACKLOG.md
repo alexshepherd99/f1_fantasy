@@ -315,3 +315,29 @@ Points to settle:
   regression measures the practice and rolling-points indicators only.
 
 Raised 2026-07-29.
+
+## Optimise rolling points directly, and model DRS inside the objective
+
+See `docs/max_points_v1/proposal.md` for the full write-up.
+
+`StrategyMaxP2PM` optimises `pts₃²/price₃`, bundling a points forecast with a
+price penalty. But the LP already carries a hard budget cap, so the divisor
+penalises expensive assets twice. Add a `StrategyMaxPoints` that optimises the
+three-race rolling points total directly — the derivation is already computed and
+threaded into `derivs_assets` — and back-test whether dropping the divisor wins.
+
+Separately and more structurally: no strategy models the DRS x2 boost in its
+objective. `Team.get_drs_points()` doubles the nominated driver *after* the team is
+chosen, so selection is DRS-blind. Adding a DRS assignment binary with
+`Σ y_i = 1` and `y_i ≤ x_i` puts it in the objective without needing a `max`
+operator, and changes which team gets picked rather than only which driver gets
+nominated. The proposal also covers a `y_i ≤ x_i` omission that would let an
+unowned driver's points be scored, tunable coefficients for the failure modes a
+pure points objective introduces, a tuning protocol, and why the sweep must reuse
+`run_multiple_teams.py` rather than fork it.
+
+Independent of the two FastF1 items above — those ask whether a different *signal*
+is better; this asks whether the *objective shape* around the current signal is
+right. No data prerequisite.
+
+Raised 2026-07-30.
