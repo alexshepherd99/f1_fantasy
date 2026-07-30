@@ -20,23 +20,6 @@ signals in it have no `fast_f1/` equivalent and may be worth porting:
 - **Season aggregate points rank** — cumulative season-to-date points per
   driver, dense-ranked per race; broader than `fast_f1`'s 3-race window.
 
-## Simplify in-season data capture
-
-Points and prices for each race are currently entered by hand into
-`data/f1_fantasy_archive.xlsx`, which holds wide-format Points/Price sheets
-per season with a column per race. Editing that layout race-by-race is
-fiddly and easy to get wrong — in particular the null-vs-zero convention
-(non-participants need both points and price null; expected participants
-with a known price but no result yet need points `0`) that
-`import_data/import_history.py` validates against.
-
-Replace the manual step with a helper script that takes one race's worth of
-points and prices and writes them into the archive, applying the
-null/zero convention itself. That likely needs the workbook simplifying
-first — a tidy long-format layout would be a much easier write target than
-the current wide sheets, but `import_data/import_history.py` melts the wide
-format today, so the loader and its integrity checks change with it.
-
 ## Lift concentration calculation into `StrategyBase`
 
 `StrategyBettingOdds.get_problem()` (`linear/strategy_odds.py:36-88`) builds
