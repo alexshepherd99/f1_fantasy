@@ -109,6 +109,18 @@ Five chunks, in dependency order. Each is a commit or a small run of them.
    them against the expected roster for that season/race, applies the layout
    rules, re-runs the integrity checks, and only then saves.
 
+   **Show the previous value when asking for each one** (added 2026-07-30).
+   When the writer prompts for a driver's or constructor's price or points for
+   a race, it displays the value already held for that asset — so a typo, a
+   misread row, or a driver entered against the wrong seat stands out at the
+   moment of entry rather than at the next integrity check. Two things this
+   settles: "previous" needs defining (the prior race's value is the useful
+   cross-check for both price and points; the *current* race's value also
+   matters on a second pass, where price was entered pre-race and points are
+   being added after), and a per-asset prompt showing context implies an
+   interactive loop rather than one pasted block — see the paste-format
+   question below, which this narrows.
+
 ## Open questions
 
 - **Row order and stability in the CSV.** A git-diffable store only pays off if
@@ -116,9 +128,13 @@ Five chunks, in dependency order. Each is a commit or a small run of them.
   (season, race, constructor, driver — or season, race appended in place) and
   stable formatting of prices, so the writer never reflows rows it did not
   touch. Settle this with the schema in chunk 2.
-- **What does a paste look like?** Column order, separator, and how a driver
-  is identified (bare `NOR`, or `NOR@MCL`). Determines how much validation the
-  writer does versus how much typing it saves.
+- **What does a paste look like — and is it a paste at all?** Column order,
+  separator, and how a driver is identified (bare `NOR`, or `NOR@MCL`).
+  Determines how much validation the writer does versus how much typing it
+  saves. Now partly answered by the previous-value cross-check in chunk 5: a
+  prompt-per-asset loop gives somewhere to show that context, a single pasted
+  block does not. A hybrid stays open — paste a block, then confirm it back
+  row by row with previous values alongside.
 - **One write per race or two?** Prices are known before a race, points after.
   If the writer only appends, the second pass has nowhere to go — it likely
   needs to update an existing race's rows, not just add them.

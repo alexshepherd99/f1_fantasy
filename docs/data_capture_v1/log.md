@@ -38,3 +38,14 @@ the schema.
 
 `plan.md` deferred until the remaining open questions in `requirements.md` are
 answered — chiefly the schema and the paste format.
+
+## 2026-07-30 — Writer shows previous values
+
+Added to chunk 5: when the writer asks for a price or points, it shows the
+value already held for that asset as a cross-check, so an entry error is
+caught at the keyboard rather than by the integrity check afterwards.
+
+This narrows the still-open paste-format question rather than settling it — a
+per-asset prompt has somewhere to display previous values, a single pasted
+block does not, and a paste-then-confirm-row-by-row hybrid would keep both.
+
