@@ -13,14 +13,19 @@ This repo pulls in reusable agents, skills, and conventions from the
 See its `learning/CONVENTIONS.md` for settled decisions and
 `skills/`/`agents/` for what's available.
 
+Start sessions with `./claude.sh` — it mounts `agentic` so the skills
+below actually load. If `how-we-work` is not in your available skills,
+this session was started without it: say so and ask to relaunch.
+
 Apply these shared skills as a matter of course:
 - **`how-we-work`** — the working discipline for any task; consult it at
   the very start of a piece of work, before planning or code.
 - **`coding-standards`** — how code here should be written; consult it
   before writing, modifying, or reviewing code.
 
-Propose changes to `agentic` by drafting text in this session — actual
-edits happen from a session whose working directory is `agentic` itself.
+Propose changes to `agentic` with the **`propose-shared-change`**
+skill — it defines how a draft crosses from this session to one
+that can write to `agentic`.
 
 ## Commands
 
