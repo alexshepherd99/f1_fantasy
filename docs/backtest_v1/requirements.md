@@ -1,6 +1,6 @@
 # backtest_v1 — Requirements
 
-**Status**: draft for review, 2026-09-13. Open questions at the end.
+**Status**: agreed 2026-09-13. Implementation plan in `plan.md`.
 
 A new back-testing framework: compare each strategy against `StrategyMaxP2PM` on a
 fixed random sample of starting teams rather than every combination, and judge
@@ -122,7 +122,10 @@ Success considers both absolute points and average improvement over P2PM
 
 - A strategy **beats P2PM** only if its mean paired delta is positive in every
   season.
-- Strategies are ranked by mean paired % delta.
+- Strategies are ranked by mean paired % delta. [Superseded 2026-09-13: the
+  ranking is within each season only; there is no sensible way to compare
+  performance across seasons. The every-season verdict above checks sign, not
+  size, so it stays.]
 - Absolute mean season points are reported alongside the ranking.
 
 ### R9 — Output
@@ -133,7 +136,9 @@ Success considers both absolute points and average improvement over P2PM
 ### R10 — Operation
 
 - A CLI covering seasons, sample size, seed, strategies and output path, with
-  defaults for all of them.
+  defaults for all of them. [Superseded 2026-09-13: strategies have no default
+  and must be named explicitly, because Zero-stop and Max budget are no longer
+  planned for use.]
 - `__main__` is a single call into a tested function.
 
 ### R11 — Testing
@@ -204,5 +209,7 @@ Agreed 2026-09-13:
   same as `scripts/` (*Scope*).
 - **Conflicting `max_points_v1` passages:** replaced with pointers to this
   document (*Relationship to `max_points_v1`*).
+- **Ranking:** within each season only (R8).
+- **Strategies:** named explicitly on each run, with no default (R10).
 
 No open questions remain.
