@@ -25,6 +25,8 @@ it by both absolute season points and paired improvement over P2PM.
 - A new top-level package `backtest/`, run as `python -m backtest.cli`.
 - **No changes to any file in `scripts/`.** Importing from them is allowed.
   `scripts/run_multiple_teams.py` and its results file stay as they are.
+- **No changes to `races/`, `linear/` or `import_data/` either** (agreed
+  2026-09-13). Anything they lack is worked around inside `backtest/`.
 - Reuse existing helpers rather than re-implementing them:
   `helpers.load_with_derivations`, `races.first_picks.get_starting_combinations`,
   `races.season.factory_season` / `factory_race`, `races.team.factory_team_row`,
@@ -74,7 +76,8 @@ it by both absolute season points and paired improvement over P2PM.
 - Constraint: `run_for_team` names the strategy through
   `get_strat_display_name` → `strategy.__name__`, and a `functools.partial` has
   no `__name__`. Parameterised variants therefore need to be something that does
-  have one, such as a subclass. The mechanism is left to `plan.md`.
+  have one, such as a subclass defined in `backtest/`, since `linear/` is off
+  limits. The mechanism is left to `plan.md`.
 
 ### R5 — Results store
 
@@ -104,6 +107,9 @@ For each strategy and each season:
   in %, median delta, lower-decile delta, and win rate (the share of starting
   teams beating P2PM).
 - **Across seasons:** whether the mean delta has the same sign in every season.
+
+The headline improvement is the mean paired % delta, matching the R8 ranking,
+with the mean points delta beside it (agreed 2026-09-13).
 
 Seasons are reported separately, never pooled into one headline. The effective
 replication unit is the season, so n=3. Pairing removes starting-team noise but
@@ -176,7 +182,8 @@ Pairing used the starting team as the key, with each strategy compared against
 
 The proposal's *Back-test harness: reuse, do not fork* section and its commit
 step 1 (parameterise `run_multiple_teams.py`) conflict with the decision not to
-touch `scripts/`. The drift risk it names is still handled here, because R3
+touch `scripts/`. On 2026-09-13 both were replaced in the proposal with pointers
+to this document, as was the matching line in its BACKLOG entry. The drift risk it names is still handled here, because R3
 reuses `run_for_team` rather than forking it. Of the three defects it lists in
 `run_multiple_teams.py`, the hardcoded write path and the module-constant
 `_SUB_STRAT` are avoided by not using that script. The `__name__` one still
@@ -191,17 +198,11 @@ Agreed 2026-09-13:
 - **2026:** left out by default while in progress (R6).
 - **Sample size:** N=500 per season, fixed seed (R1).
 - **Named variants:** in v1 (R4).
+- **Headline improvement:** the mean paired % delta, with the mean points delta
+  beside it (R7).
+- **Other modules:** `races/`, `linear/` and `import_data/` are off limits, the
+  same as `scripts/` (*Scope*).
+- **Conflicting `max_points_v1` passages:** replaced with pointers to this
+  document (*Relationship to `max_points_v1`*).
 
-## Open questions
-
-Each carries a working assumption until answered:
-
-1. **Improvement measure.** Should the headline improvement be in points or in
-   %, and mean or median? *Assumed: mean, reported in both points and %; ranking
-   uses % per R8.*
-2. **Non-script modules.** Are small changes to `races/`, `linear/` or
-   `import_data/` acceptable if the plan needs them? *Assumed: not without
-   asking first.*
-3. **`max_points_v1` proposal.** Should its *reuse, do not fork* section and
-   commit step 1 be annotated in place as superseded by this effort? *Assumed:
-   yes, as a separate commit.*
+No open questions remain.
