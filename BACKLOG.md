@@ -316,8 +316,8 @@ chosen, so selection is DRS-blind. Adding a DRS assignment binary with
 operator, and changes which team gets picked rather than only which driver gets
 nominated. The proposal also covers a `y_i ≤ x_i` omission that would let an
 unowned driver's points be scored, tunable coefficients for the failure modes a
-pure points objective introduces, a tuning protocol, and why the sweep must reuse
-`run_multiple_teams.py` rather than fork it.
+pure points objective introduces, and a tuning protocol. Back-testing is covered
+by `docs/backtest_v1/requirements.md`.
 
 Independent of the two FastF1 items above — those ask whether a different *signal*
 is better; this asks whether the *objective shape* around the current signal is

@@ -213,59 +213,15 @@ the key.
 
 **What to report** — moved to `docs/backtest_v1/requirements.md` (R7).
 
-## Back-test harness: reuse, do not fork
+## Back-test harness
 
-The point of tuning is to compare tuned against neutral against P2PM. If the tuned
-numbers come from a different simulation path than the baseline numbers, the
-comparison silently measures the two engines as well as the two settings. Two
-back-test implementations will drift — transfer carryover, the
-`bonus_free_transfer` rule, the race-1 skip, the DRS fallback — and each difference
-lands directly on the number being read. That risk exceeds the inconvenience of
-parameterising what exists.
-
-**Coefficients already thread through untouched.** `factory_strategy` calls
-`strategy(**kwargs)` (`linear/strategy_factory.py:39`) and `run_for_team` passes
-`strategy` along, so `functools.partial(StrategyMaxPoints, drs_weight=1.0,
-constructor_scale=0.8)` works with no change to either. The precedent exists:
-`StrategyBettingOdds.__init__(self, *args, fn_odds=..., **kwargs)`
-(`linear/strategy_odds.py:10`) takes an extra keyword with a default that
-`factory_strategy` never supplies.
-
-Three things in `scripts/run_multiple_teams.py` need changing regardless:
-
-1. **`write_batch_results` hardcodes its output path** (:45) while
-   `open_batch_results_file(fn)` takes a parameter. Point tuning at a separate
-   results file and it would read the tuning file and **write into the main
-   back-test results**. A latent bug today; an active one the moment a second
-   output file exists.
-2. **`strategy.__name__` breaks under a partial.** `get_strat_display_name`
-   (`scripts/run_single_team.py:91`) and through it `get_starting_key` (:78) both
-   reach for `__name__`, which `functools.partial` lacks. Pass an explicit label
-   instead — which is wanted anyway, to carry coefficient values into the sim key.
-3. **`_SUB_STRAT` is a module constant, not a parameter**, so
-   `run_strategy_for_season` cannot be told a different one.
-
-None of that is a rewrite, and the existing parquet is a free regression oracle:
-after the refactor, re-running at current defaults should skip every sim key it
-already holds.
-
-**What genuinely deserves to be new** is the sweep driver and the analysis —
-iterating settings, building the partial and the label, holding a fixed-seed
-subsample constant across settings, then reading the parquet back for paired
-deltas, win rates, median and lower decile grouped by season. That is analysis over
-results rather than simulation, and does not belong inside
-`run_multiple_teams.py`.
-
-Watch the backlog item *No test exercises any script's `__main__` block*: a sweep
-script is a natural place to hardcode a season list or coefficient grid that then
-goes stale. Keep its `__main__` to a single call into a tested function, the
-pattern `fast_f1/cli.py` already uses.
+Moved to `docs/backtest_v1/requirements.md` on 2026-09-13. That effort builds a
+new `backtest/` package rather than changing `run_multiple_teams.py`, while
+reusing `run_for_team` as the single simulation engine (R3, R4, R5, R10).
 
 ## Suggested commit order
 
-1. Parameterise `write_batch_results`, `run_strategy_for_season` (output path,
-   sub-strategy tag, optional combination subsample) and the display name.
-   Behaviour-neutral; the existing parquet proves it.
+1. The back-test harness — moved to `docs/backtest_v1/requirements.md`.
 2. `StrategyMaxPoints` at neutral defaults — the control, and a direct test of the
    "divisor double-penalises price" hypothesis.
 3. Add DRS to the objective. The highest-value structural change, and cheap.
