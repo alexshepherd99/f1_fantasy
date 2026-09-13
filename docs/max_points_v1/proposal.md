@@ -1,6 +1,7 @@
 # max_points_v1 — Proposal
 
-**Status**: proposed, not started. Raised 2026-07-30.
+**Status**: proposed, not started. Raised 2026-07-30. Back-test requirements
+moved to `docs/backtest_v1/requirements.md` on 2026-09-13.
 
 Build a team selection strategy that optimises the three-race rolling *points*
 total directly, rather than the points-per-price ratio `StrategyMaxP2PM` uses,
@@ -174,22 +175,11 @@ hard cap with no cost to using it, so the strategy churns on indicator noise).
 
 ## Tuning the coefficients
 
-**What makes this tractable.** `run_multiple_teams.py` runs every starting
-combination above £99.5, so a coefficient setting yields a *distribution* of season
-outcomes, not a point estimate. Those are **paired** — the same starting team under
-two settings faces identical races and prices. Compare per-team deltas, not
-mean-vs-mean; pairing cancels the variance from "which team you happened to start
-with", which otherwise swamps any coefficient effect. Report the fraction of
-starting teams where the tuned setting wins, and the median delta.
+**Paired comparison and its limits** — per-team deltas against a baseline, the
+season as the unit of replication, and requiring the same sign in every season:
+moved to `docs/backtest_v1/requirements.md` (R2, R7, R8). One tuning-specific
+consequence stays here:
 
-**What limits it.** Those paired samples are not independent trials — they share
-the same three seasons of race results. Pairing kills *selection* noise and does
-nothing to *season* noise. The effective unit of replication is the season, n=3.
-So:
-
-- **Require sign consistency across 2023/2024/2025** before believing anything. A
-  coefficient that helps in 2024 and hurts either side is regime-specific or noise,
-  however many starting teams agree with it.
 - **Prefer plateaus to peaks.** Flat across α ∈ [0.7, 1.3] with a mild peak at 0.9
   → take 1.0. A sharp spike is fitted to three seasons and will not survive 2027.
   The shape of the sweep is more informative than its argmax.
@@ -210,31 +200,18 @@ will do, and with n=3 seasons it would be fitting noise. Leave-one-season-out
 wanted — weak at n=3, but the difference between "we tuned it" and "we tuned it
 and checked it generalised once".
 
-**Cost management.** A full back-test is hours, so per grid point is untenable.
-Run only the strategy under test. Subsample starting teams to a few hundred with a
-**fixed seed, the same sample for every setting** — pairing is the whole value and
-is lost if the sample moves. `load_with_derivations` is `functools.cache`d and the
+**Cost management** — a fixed-seed sample of starting teams shared by every
+setting, and periodic results writes: moved to `docs/backtest_v1/requirements.md`
+(R1, R5). Tuning-specific: `load_with_derivations` is `functools.cache`d and the
 derivations do not depend on the coefficients, so run all grid points for a season
-inside one process. Keep the append-every-100 parquet write; it is what holds this
-inside the box's available memory.
+inside one process.
 
-**The trap.** `get_starting_key()` (`scripts/run_multiple_teams.py:26`) builds the
-sim key from strategy name, sub-strategy tag, season and team — **coefficient
-values are not in it** — and `run_strategy_for_season` skips any key already in the
-parquet (:80). Sweep at α=1.0, re-run at α=0.8, and every sim is skipped as already
-done: a clean run, a full results file, and a comparison of the setting against
-itself. Silent, and it would read as "no effect", which is exactly the answer one
-might half expect. `_SUB_STRAT` is free text already threaded into the key
-(currently `"unlimited_chip_4"`); encode the coefficient values there. Do this
-before the first sweep, not after.
+**The trap** — coefficient values missing from the results key, so a re-run at a
+new setting is silently skipped as already done: moved to
+`docs/backtest_v1/requirements.md` (R4, R5), where each variant's name is part of
+the key.
 
-**What to report.** Not just the mean — a real season is one draw from this
-distribution. Median paired delta and win rate across starting teams, the lower
-decile (concentration risk shows up here and nowhere else), and each season
-separately, never pooled into one headline. The LP is deterministic given its
-inputs, so there is no run-to-run spread to compare a delta against; the relevant
-spread is across seasons and starting teams, and a delta smaller than the
-between-season spread is not evidence.
+**What to report** — moved to `docs/backtest_v1/requirements.md` (R7).
 
 ## Back-test harness: reuse, do not fork
 
@@ -293,7 +270,8 @@ pattern `fast_f1/cli.py` already uses.
    "divisor double-penalises price" hypothesis.
 3. Add DRS to the objective. The highest-value structural change, and cheap.
 4. Add the tunable coefficients, all defaulting neutral.
-5. The sweep driver and the paired-delta analysis.
+5. The sweep driver. (The paired-delta analysis moved to
+   `docs/backtest_v1/requirements.md`, R7 and R9.)
 
 ## Open questions
 
