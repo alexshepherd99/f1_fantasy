@@ -40,9 +40,11 @@ it by both absolute season points and paired improvement over P2PM.
 - The sample is seeded and reproducible: the same seed and archive data give the
   same teams. N and the seed are parameters. Default N=500, agreed 2026-09-13
   (see *Evidence*).
-- Every strategy, the baseline included, runs on **the same sample**. The
-  comparison is paired, and a sample that differs between strategies breaks the
-  pairing.
+- Each season gets its own sample, because drivers and constructors change
+  between seasons.
+- Within a season, every strategy, the baseline included, runs on **the same
+  sample**. The comparison is paired, and a sample that differs between
+  strategies breaks the pairing.
 - If N is at least the number of combinations, run them all. Full enumeration
   stays available.
 
