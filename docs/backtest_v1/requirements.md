@@ -2,7 +2,8 @@
 
 **Status**: agreed 2026-09-13; under refinement from 2026-09-18, with more
 expected. Implementation plan in `plan.md`, which has **not** yet been brought
-in line with the 2026-09-18 changes.
+in line with the 2026-09-18 changes. [Superseded 2026-09-18: `plan.md` has
+since been refined for the value bands and the R12 ledger.]
 
 A new back-testing framework: compare each strategy against `StrategyMaxP2PM` on a
 fixed random sample of starting teams rather than every combination, and judge
@@ -221,7 +222,7 @@ that is duplicated logic to maintain and a place the two can drift apart.
 
 | Date | What was needed | What `backtest/` does instead | Cost |
 |---|---|---|---|
-| 2026-09-18 | Sampling within value bands (R1) | Three calls to `get_starting_combinations`, which already takes `min_total_value` and `max_total_value` with exactly the exclusive/inclusive bounds the bands need | **None.** No replication at all. |
+| 2026-09-18 | Sampling within value bands (R1) | Three calls to `get_starting_combinations`, which already takes `min_total_value` and `max_total_value` with exactly the exclusive/inclusive bounds the bands need. [Superseded 2026-09-18: one call over `(90, 100]`, with the bands cut out by `pd.cut`, whose default bounds match that function's — see `plan.md`, *Sample*.] | **None.** No replication at all. |
 | 2026-09-13 | Named, parameterised strategy variants (R4) | Synthetic subclasses built in `backtest/variants.py`, because `run_for_team` names a strategy by `__name__` and a `functools.partial` has none | **Moderate.** A keyword argument on the strategy classes would remove the mechanism entirely. |
 | 2026-09-13 | A results store at an injectable path (R5) | Reimplements the append-and-flush loop, because `scripts.run_multiple_teams.write_batch_results` hardcodes its output path. `open_batch_results_file` and `get_starting_key` are reused unchanged | **Small.** One short function, duplicating a known-buggy original. |
 
