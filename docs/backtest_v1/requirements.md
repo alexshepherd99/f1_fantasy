@@ -31,7 +31,11 @@ it by both absolute season points and paired improvement over P2PM.
 - **No changes to `races/`, `linear/` or `import_data/` either** (agreed
   2026-09-13). Anything they lack is worked around inside `backtest/`. Each such
   workaround is called out and logged, so the cost of this decision stays
-  visible (R12, added 2026-09-18).
+  visible (R12, added 2026-09-18). [One exception, agreed 2026-09-18:
+  `StrategyBase.get_team_selection_dict` in `linear/strategy_base.py` now
+  iterates its assets in sorted order rather than hash order, making
+  simulations reproducible across processes (commit `534d1a9`; see `log.md`,
+  *Verification* 3). The rule otherwise stands.]
 - Reuse existing helpers rather than re-implementing them:
   `helpers.load_with_derivations`, `races.first_picks.get_starting_combinations`,
   `races.season.factory_season` / `factory_race`, `races.team.factory_team_row`,

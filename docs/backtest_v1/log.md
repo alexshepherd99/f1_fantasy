@@ -581,3 +581,47 @@ alone: for example, Zero-stop's `(BOT,GAS,PER,RUS,ZHO)(FER,MER)` in 2024 gave
   the challenger and baseline both come from the store.
 - The fix belongs in `linear/`, which is out of bounds here (*Scope*). Pending
   a decision; see the session.
+
+## Hash-order fix in `linear/` (2026-09-18)
+
+**Decision:** fix it at the source, as the one agreed exception to the
+untouched-modules rule, kept to the single function. The alternatives were a
+`backtest/`-only workaround (re-launching the CLI with a fixed
+`PYTHONHASHSEED`) or documenting the variation. The constraint on the fix: the
+algorithm is in live use for 2026, updating the team every race, so it must not
+change a live selection.
+
+**Change** (`534d1a9`): `get_team_selection_dict` iterates `sorted(all_assets)`
+instead of the set. Nothing else in `linear/` or `races/` iterates a set of
+assets. `strategy_factory.py` also builds a set, of derivation names, but it
+only orders the keys of a dict read by name, so it was left alone.
+
+**Test first.** A new test asserts the returned order is sorted, over 20 realistic
+driver codes, so that hash order cannot pass it by chance. It failed first on
+order, `TSU@VRB` against `ALB@WIL`. The existing test compared dictionaries,
+which ignores order, so it could not have caught this.
+
+**Regression checks**, beyond the suite (219 green before, 220 after):
+
+- **Live configuration.** `scripts/run_single_team.py`'s current settings — 2026
+  from race 13, the current team and unused budget — replayed as its
+  `__main__` does, through a probe that imports them and writes no output file
+  (running `__main__` would overwrite `outputs/f1_fantasy_results_single.xlsx`,
+  which was checked untouched). Under six hash seeds before the fix it gave one
+  outcome; after the fix, under the same six, it gave the same outcome: race 14
+  ANT, BOR, HUL, LAW and NOR, with AUD and MER, DRS on ANT.
+- **A full 2026 P2PM season** from race 1 with the original starting line-up:
+  all 14 races identical by value before and after — line-ups, DRS picks,
+  points, budget and moves. Before the fix, two seeds out of six gave `-0.0`
+  instead of `0.0` for one race's unused budget, a signed zero from the solver;
+  equal in value, and at first misread here as a second outcome, because the
+  runs were compared by checksum rather than by value.
+- **The fix does its job.** Two of Verification 3's mismatched teams, rerun under
+  six to eight hash seeds, now give one value each: Zero-stop's
+  `(BOT,GAS,PER,RUS,ZHO)(FER,MER)` 3,896 under every seed, where it had
+  flipped between 3,896 and 3,931.
+
+**Consequences.** Existing result files, the January batch file included, were
+produced under random hash orders; re-running a few control teams can give
+today's value or a different one, as Verification 3 showed. The
+Verification 2 store was also produced before the fix.
