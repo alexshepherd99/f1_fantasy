@@ -12,6 +12,8 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 5 completed 2026-09-18: `backtest/metrics.py`, `pair_with_baseline`, in
   three commits.
 - Step 6 completed 2026-09-18: `backtest/metrics.py`, `season_summary`.
+- Step 7 completed 2026-09-18: `backtest/metrics.py`, `rank_challengers` and
+  `verdict`.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -288,5 +290,59 @@ test could not tell the two apart. A test on edges `(5, 10, 100)`, whose labels
 sort the wrong way as text, was added; it then also went uncaught once more, but
 only because the mutation harness filtered tests by name and missed it — rerun
 unfiltered, it fails as it should.
+
+R12: no new entry.
+
+## Step 7 — `rank_challengers` and `verdict` (2026-09-18)
+
+Suite green at 191 before starting, 198 after.
+
+Agreed in session, changing plan step 7 (`plan.md` annotated):
+
+- **Two functions, and no `paired` argument.** The summary's `pooled` row is
+  already the per-team figure (step 6 pins +50 pooled against −25 averaged), so
+  the verdict reads it rather than computing it a second way that could drift.
+  That fixture is also run end to end, `season_summary` → `verdict`.
+- **`rank_challengers(summary, baseline_label)`** adds a nullable integer `rank`:
+  1 is the highest mean % delta within each (season, band), pooled rows ranked
+  among themselves as the per-season ranking, ties sharing the best rank
+  (`method="min"`), the baseline unranked.
+- **`verdict(summary, baseline_label)`** gives per challenger `seasons`,
+  `seasons_positive`, `beats_baseline` and `consistent_sign`. It beats the
+  baseline only if its pooled mean delta is positive in every season of the
+  summary, so a missing season fails it. `consistent_sign` is R7's separate
+  "same sign in every season", true when consistently negative too; zero has no
+  sign. The plan had dropped it.
+- Named `beats_baseline` rather than `beats_p2pm`, the baseline label being a
+  parameter.
+
+**How it failed first.** A stub ranking across the whole summary, and judging by
+averaging band rows while ignoring zeros and missing seasons, failed 3 of 6 on
+behaviour. The tie, unranked-baseline, row-order and column tests passed, as the
+stub had those properties, so they were confirmed by mutation.
+
+**Mutations.** Twelve in all, each caught in the end: ranking across everything;
+within season only; ascending; dense; the baseline ranked; ranking by points
+rather than % delta; the verdict read from any band; zero counted positive; zero
+counted negative; seasons counted per label rather than across the summary;
+`consistent_sign` meaning positive only; the baseline included in the verdict.
+
+Three went uncaught on the first pass:
+
+- **Points versus % delta** — the fixture ordered both the same way. A test
+  where they disagree was added.
+- **Zero counted negative** — no label mixed a negative season with a zero one.
+  `NegZero` (−10, 0) was added, expecting `consistent_sign` False.
+- **Verdict read from any band** — a defect in the harness, not the tests. The
+  replacement left an unbalanced bracket, so the module failed to import, and
+  the harness counted only `FAILED` lines, not collection errors. The mutation
+  was corrected and the harness now flags any run that does not complete. The
+  same harness served steps 1–6: a mutation there only ever counted as caught
+  when named tests failed, and each uncaught one was investigated by hand, so
+  none of those results is affected.
+
+Also simplified during the step: an explicit "has every season" guard was
+dropped, being implied by `seasons_positive` equalling the summary's season
+count.
 
 R12: no new entry.

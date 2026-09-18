@@ -225,6 +225,13 @@ reason, then implement. Where the first failure can only be an `ImportError` or
    - **the verdict is computed from the paired rows, not from the band means**:
      a fixture with unequal band sizes after pairing, where averaging the three
      band means gives a different sign from the pooled mean, pins this down.
+
+   [Superseded 2026-09-18: split into `rank_challengers(summary,
+   baseline_label)` and `verdict(summary, baseline_label)`, with no `paired`
+   argument. The summary's `pooled` row is already computed from the paired
+   rows (step 6), so the verdict reads it rather than recomputing it, and the
+   opposite-sign fixture is run end to end through `season_summary`. `verdict`
+   also reports R7's `consistent_sign`, which this list had left out.]
 8. **`run_backtest(seasons, n, seed, strategies, band_edges, store_path,
    summary_path)`** — ties steps 1–7 together, prepends the baseline if it isn't
    given, writes the summary CSV and logs it. Test: one season, two teams per

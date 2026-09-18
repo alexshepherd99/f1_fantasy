@@ -108,3 +108,55 @@ def season_summary(paired: pd.DataFrame, band_edges: Sequence[float]) -> pd.Data
     band_order = pd.Categorical(summary["band"], categories=band_labels(band_edges) + [POOLED_BAND], ordered=True)
     summary = summary.assign(_band_order=band_order).sort_values(["season", "label", "_band_order"])
     return summary[["label", "season", "band"] + list(_SUMMARY_METRICS)].reset_index(drop=True)
+
+
+def rank_challengers(summary: pd.DataFrame, baseline_label: str) -> pd.DataFrame:
+    """Rank the challengers by mean paired % delta within each season and band.
+
+    Rank 1 is the highest mean % delta. Pooled rows are ranked among themselves,
+    giving the per-season ranking. Nothing is ranked across seasons or across
+    bands. Ties share the best rank of the tie, and the baseline is unranked.
+
+    Args:
+        summary: Output of `season_summary`.
+        baseline_label: Label of the baseline strategy.
+
+    Returns:
+        The summary, rows and order unchanged, with a nullable integer `rank`.
+    """
+    challengers = summary[summary["label"] != baseline_label]
+    ranks = challengers.groupby(["season", "band"])["mean_delta_pct"].rank(ascending=False, method="min")
+    return summary.assign(rank=ranks.astype("Int64"))
+
+
+def verdict(summary: pd.DataFrame, baseline_label: str) -> pd.DataFrame:
+    """Judge each challenger against the baseline across seasons (R7, R8).
+
+    Reads each season's pooled row, whose mean delta is computed from the
+    paired per-team rows. A challenger beats the baseline only if that mean
+    delta is positive in every season of the summary, so a season it has no
+    results for counts against it. `consistent_sign` is R7's separate check
+    that the mean delta has one sign in every season, positive or negative;
+    zero has no sign.
+
+    Args:
+        summary: Output of `season_summary`.
+        baseline_label: Label of the baseline strategy.
+
+    Returns:
+        One row per challenger with `seasons` (those it has results for),
+        `seasons_positive`, `beats_baseline` and `consistent_sign`.
+    """
+    all_seasons = summary["season"].nunique()
+    pooled = summary[(summary["band"] == POOLED_BAND) & (summary["label"] != baseline_label)]
+    by_label = pooled.groupby("label")["mean_delta"]
+
+    result = pd.DataFrame({
+        "seasons": by_label.count(),
+        "seasons_positive": by_label.agg(lambda d: (d > 0).sum()),
+        "seasons_negative": by_label.agg(lambda d: (d < 0).sum()),
+    })
+    # Counting against every season of the summary, not those the label has
+    result["beats_baseline"] = result["seasons_positive"] == all_seasons
+    result["consistent_sign"] = result["beats_baseline"] | (result["seasons_negative"] == all_seasons)
+    return result.reset_index()[["label", "seasons", "seasons_positive", "beats_baseline", "consistent_sign"]]

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from backtest.metrics import pair_with_baseline, season_summary
+from backtest.metrics import pair_with_baseline, rank_challengers, season_summary, verdict
 
 _BASE = "Base"
 _EDGES = (90.0, 95.0, 99.5, 100.0)
@@ -249,3 +249,99 @@ def test_bands_are_ordered_by_edge_not_by_label_text():
     summary = season_summary(paired, (5.0, 10.0, 100.0))
 
     assert list(summary["band"]) == ["(5, 10]", "(10, 100]", "pooled"]
+
+
+def _summary(rows: list[tuple]) -> pd.DataFrame:
+    """Summary rows as (label, season, band, mean_delta, mean_delta_pct)."""
+    return pd.DataFrame(rows, columns=["label", "season", "band", "mean_delta", "mean_delta_pct"])
+
+
+def _ranks(ranked: pd.DataFrame) -> dict:
+    return {(r.label, r.season, r.band): r.rank for r in ranked.itertuples()}
+
+
+def test_challengers_ranked_by_mean_percent_delta_within_each_season_and_band():
+    # A wins band A but loses band C and the pooled row; in 2024 it wins the pooled row
+    ranked = rank_challengers(_summary([
+        ("A", 2023, _BAND_A, 50, 5.0), ("B", 2023, _BAND_A, 30, 3.0),
+        ("A", 2023, _BAND_C, -20, -2.0), ("B", 2023, _BAND_C, 40, 4.0),
+        ("A", 2023, "pooled", 10, 1.0), ("B", 2023, "pooled", 20, 2.0),
+        ("A", 2024, "pooled", 30, 3.0), ("B", 2024, "pooled", 20, 2.0),
+    ]), _BASE)
+
+    assert _ranks(ranked) == {
+        ("A", 2023, _BAND_A): 1, ("B", 2023, _BAND_A): 2,
+        ("A", 2023, _BAND_C): 2, ("B", 2023, _BAND_C): 1,
+        ("A", 2023, "pooled"): 2, ("B", 2023, "pooled"): 1,
+        ("A", 2024, "pooled"): 1, ("B", 2024, "pooled"): 2,
+    }
+
+
+def test_ranked_by_percent_delta_not_points_delta():
+    # A gains more points, B more per cent, as against a lower-scoring baseline
+    ranked = rank_challengers(_summary([("A", 2023, "pooled", 100, 1.0), ("B", 2023, "pooled", 50, 2.0)]), _BASE)
+    assert _ranks(ranked) == {("A", 2023, "pooled"): 2, ("B", 2023, "pooled"): 1}
+
+
+def test_ties_share_a_rank_and_the_baseline_is_unranked():
+    ranked = rank_challengers(_summary([
+        (_BASE, 2023, "pooled", 0, 0.0),
+        ("A", 2023, "pooled", 10, 1.0), ("B", 2023, "pooled", 10, 1.0), ("C", 2023, "pooled", -10, -1.0),
+    ]), _BASE)
+
+    ranks = _ranks(ranked)
+    assert pd.isna(ranks[_BASE, 2023, "pooled"])
+    assert {k: v for k, v in ranks.items() if k[0] != _BASE} == {
+        ("A", 2023, "pooled"): 1, ("B", 2023, "pooled"): 1, ("C", 2023, "pooled"): 3,
+    }
+
+
+def test_ranking_keeps_the_summary_rows_and_order():
+    summary = _summary([("B", 2023, "pooled", 10, 1.0), (_BASE, 2023, "pooled", 0, 0.0), ("A", 2023, "pooled", 20, 2.0)])
+
+    ranked = rank_challengers(summary, _BASE)
+
+    pd.testing.assert_frame_equal(ranked.drop(columns="rank"), summary)
+
+
+def _verdicts(summary: pd.DataFrame) -> dict:
+    return {r.label: r for r in verdict(summary, _BASE).itertuples()}
+
+
+def test_verdict_needs_a_positive_pooled_delta_in_every_season():
+    verdicts = _verdicts(_summary([
+        (_BASE, 2023, "pooled", 0, 0.0), (_BASE, 2024, "pooled", 0, 0.0),
+        # A band row below zero does not count against a positive pooled row
+        ("Always", 2023, _BAND_A, -100, -5.0),
+        ("Always", 2023, "pooled", 10, 1.0), ("Always", 2024, "pooled", 5, 0.5),
+        ("OneBad", 2023, "pooled", 10, 1.0), ("OneBad", 2024, "pooled", -5, -0.5),
+        ("Zero", 2023, "pooled", 10, 1.0), ("Zero", 2024, "pooled", 0, 0.0),
+        ("AllNeg", 2023, "pooled", -10, -1.0), ("AllNeg", 2024, "pooled", -5, -0.5),
+        ("NegZero", 2023, "pooled", -10, -1.0), ("NegZero", 2024, "pooled", 0, 0.0),
+        ("Missing", 2023, "pooled", 10, 1.0),
+    ]))
+
+    assert set(verdicts) == {"Always", "OneBad", "Zero", "AllNeg", "NegZero", "Missing"}
+    got = {label: (v.seasons, v.seasons_positive, v.beats_baseline, v.consistent_sign) for label, v in verdicts.items()}
+    assert got == {
+        "Always": (2, 2, True, True),
+        "OneBad": (2, 1, False, False),
+        "Zero": (2, 1, False, False),
+        "AllNeg": (2, 0, False, True),
+        "NegZero": (2, 0, False, False),  # zero has no sign
+        "Missing": (1, 1, False, False),
+    }
+
+
+def test_verdict_follows_the_pooled_mean_not_the_average_of_band_means():
+    # Step 6's fixture: pooled mean delta +50, average of the band means -25
+    summary = season_summary(_summary_fixture(), _EDGES)
+
+    assert _verdicts(summary)["Chal"].beats_baseline
+
+
+def test_verdict_columns():
+    summary = _summary([(_BASE, 2023, "pooled", 0, 0.0), ("A", 2023, "pooled", 10, 1.0)])
+    assert list(verdict(summary, _BASE).columns) == [
+        "label", "seasons", "seasons_positive", "beats_baseline", "consistent_sign",
+    ]
