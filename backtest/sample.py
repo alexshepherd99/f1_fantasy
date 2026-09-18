@@ -24,6 +24,11 @@ def _validate_band_edges(band_edges: Sequence[float]) -> None:
         raise ValueError(f"Band edges must be at least two strictly increasing values, got {band_edges}")
 
 
+def assign_bands(values: pd.Series, band_edges: Sequence[float]) -> pd.Series:
+    """Label each value with its `(min, max]` band, or NaN if it is in none."""
+    return pd.cut(values, list(band_edges), labels=band_labels(band_edges)).astype(object)
+
+
 def sample_starting_teams(
     season: int,
     n: int,
@@ -52,11 +57,10 @@ def sample_starting_teams(
     _validate_band_edges(band_edges)
 
     combinations = get_starting_combinations(season, STARTING_RACE, band_edges[0], band_edges[-1])
-    labels = band_labels(band_edges)
-    combinations["band"] = pd.cut(combinations["total_value"], list(band_edges), labels=labels).astype(str)
+    combinations["band"] = assign_bands(combinations["total_value"], band_edges)
 
     samples = []
-    for label in labels:
+    for label in band_labels(band_edges):
         band = combinations[combinations["band"] == label]
         samples.append(band if len(band) <= n else band.sample(n, random_state=seed))
 
