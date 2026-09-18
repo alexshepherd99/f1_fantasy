@@ -8,6 +8,7 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 1 completed 2026-09-18: `backtest/sample.py`, `sample_starting_teams`.
 - Step 2 completed 2026-09-18: `backtest/variants.py`, `make_variant`.
 - Step 3 completed 2026-09-18: `backtest/runner.py`, `append_results`.
+- Step 4 completed 2026-09-18: `backtest/runner.py`, `simulate_sample`.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -134,3 +135,58 @@ mutation.
 - No-rows guard dropped — both no-rows tests fail.
 
 R12: no new entry. The existing results-store row is annotated.
+
+## Step 4 — `simulate_sample` (2026-09-18)
+
+Suite green at 168 before starting, 173 after.
+
+- `simulate_sample(season, sample, strategies, store_path, flush_every)` loads
+  the season once, builds a fresh `Team` per (strategy, team) with
+  `factory_team_row`, keys it with `get_starting_key`, skips keys already
+  stored, simulates the rest through `run_for_team` from the starting race, and
+  flushes through `append_results` every `flush_every` simulations and at the
+  end. Strategies run in the order given; putting the baseline first is
+  `run_backtest`'s job (step 8).
+- **The sample's value is stored as `sampled_value`** (agreed in session, option
+  1 of 3). `run_for_team`'s final row already carries `total_value` — the
+  team's end-of-season valuation — so carrying the sample's value under that
+  name would have overwritten it. Its `starting_value` was rejected as the
+  banding value: checked on 600 sampled 2023 teams, 190 differ from the sampled
+  value by float noise (at most 1.4e-14), enough to move a team sitting exactly
+  on an edge into the neighbouring band. `plan.md` is annotated.
+- `STARTING_RACE` in `backtest/sample.py` is now public, so sampling and
+  simulation share one starting race.
+- **Bug caught by the tests during implementation:** the first version took
+  `str(team)` for the `team` column after `run_for_team`, which mutates the team
+  to its end-of-season line-up. The key was right, being computed before the
+  run; the column was not. The starting team's string is now taken first.
+- **Flush test by crash injection** (agreed in session): `run_for_team` is
+  wrapped to call through to the real engine but raise on the 5th call, with
+  `flush_every=2`, and 4 rows must already be on disk. This patches a
+  first-party function, which the standards discourage, because nothing real
+  stands in for a process dying mid-run. The re-run test likewise replaces it
+  with one that fails if called at all.
+- Tests run 2023, two teams per band, with P2PM and Zero-stop: 12 simulations
+  shared through a module-scoped fixture, about 11 seconds for the file.
+
+**How it failed first.** A stub modelled on `run_strategy_for_season` — no skip,
+one write at the end, only `sim_key` added — failed 4 of 5 on behaviour: the
+carried columns were missing, a re-run called the engine again, and nothing was
+on disk after the crash. The direct-`run_for_team` match passed, since the stub
+runs the same engine, so it was confirmed by mutation.
+
+**Mutations**, each against the finished implementation, and each caught:
+
+- `team` taken after the run — the row test fails.
+- Skip dropped — the re-run test fails.
+- No periodic flush, and flushing one simulation late — the crash test fails.
+- `sampled_value` taken from the engine's `starting_value` — the row test fails,
+  which is the float-noise difference above.
+- `band` dropped — the row test fails.
+- The first race's row kept instead of the last — the direct-match test fails.
+- Label taken from the base class — the row and direct-match tests fail.
+
+The old results file was checked byte-identical after the mutation run.
+
+R12: no new entry. Every call into `scripts/`, `races/` and `helpers` is reused
+unchanged.

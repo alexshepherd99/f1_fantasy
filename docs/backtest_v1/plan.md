@@ -94,7 +94,12 @@ names its rows by the label, via `__name__`, with no change to it.
 3. Keep the final row, plus `sim_key`, `label`, `team`, `total_value` and `band`
    (the last two added 2026-09-18, R5). Both are carried from the sample frame
    rather than recomputed, so a stored row always records the band it was drawn
-   for.
+   for. [Superseded 2026-09-18, step 4: the sample's value is stored as
+   `sampled_value`. `run_for_team`'s row already has a `total_value`, the team's
+   end-of-season valuation, which is kept as it is. Its `starting_value` is not
+   used for banding either: it is an unrounded sum, off by float noise on about
+   a third of sampled 2023 teams, which can flip a team sitting on an edge.
+   Wherever the band is derived from `total_value` below, read `sampled_value`.]
 4. Skip keys already in the store, and append to it every `flush_every` sims
    (default 100).
 

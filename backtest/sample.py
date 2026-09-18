@@ -8,7 +8,7 @@ import pandas as pd
 from races.first_picks import get_starting_combinations
 
 # Starting teams are drawn as they stand before the first race
-_STARTING_RACE = 1
+STARTING_RACE = 1
 
 DEFAULT_BAND_EDGES = (90.0, 95.0, 99.5, 100.0)
 
@@ -51,7 +51,7 @@ def sample_starting_teams(
     """
     _validate_band_edges(band_edges)
 
-    combinations = get_starting_combinations(season, _STARTING_RACE, band_edges[0], band_edges[-1])
+    combinations = get_starting_combinations(season, STARTING_RACE, band_edges[0], band_edges[-1])
     labels = band_labels(band_edges)
     combinations["band"] = pd.cut(combinations["total_value"], list(band_edges), labels=labels).astype(str)
 

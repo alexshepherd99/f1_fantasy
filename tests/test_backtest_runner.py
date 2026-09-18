@@ -1,8 +1,20 @@
 import pandas as pd
 import pandas.testing as pdt
+import pytest
 
-from backtest.runner import append_results
-from scripts.run_multiple_teams import open_batch_results_file
+import backtest.runner as runner_module
+from backtest.runner import append_results, simulate_sample
+from backtest.sample import sample_starting_teams
+from helpers import load_with_derivations
+from linear.strategy_p2pm import StrategyMaxP2PM
+from linear.strategy_zero_stop import StrategyZeroStop
+from races.season import factory_season
+from races.team import factory_team_row
+from scripts.run_multiple_teams import get_starting_key, open_batch_results_file
+from scripts.run_single_team import run_for_team
+
+_SEASON = 2023
+_STRATEGIES = [StrategyMaxP2PM, StrategyZeroStop]
 
 
 def _rows(labels: list[str]) -> list[dict]:
@@ -68,3 +80,93 @@ def test_appending_no_rows_to_a_missing_file_creates_nothing(tmp_path):
     append_results(open_batch_results_file(str(path)), [], str(path))
 
     assert not path.exists()
+
+
+@pytest.fixture(scope="module")
+def season():
+    return factory_season(*load_with_derivations(season=_SEASON), _SEASON)
+
+
+@pytest.fixture(scope="module")
+def sample():
+    # Two teams per band, six in all
+    return sample_starting_teams(_SEASON, 2, seed=1)
+
+
+@pytest.fixture(scope="module")
+def simulated(sample, tmp_path_factory):
+    """Simulate the sample once for the tests that only read the outcome."""
+    path = str(tmp_path_factory.mktemp("simulated") / "results.parquet")
+    store = simulate_sample(_SEASON, sample, _STRATEGIES, path, flush_every=100)
+    return path, store
+
+
+def _team(row, season):
+    return factory_team_row(row.drop(["total_value", "band"]).to_dict(), season.races[1])
+
+
+def test_one_row_per_label_and_team_carrying_the_sample(simulated, sample, season):
+    path, store = simulated
+
+    expected = {}
+    for strategy in _STRATEGIES:
+        for _, row in sample.iterrows():
+            team = _team(row, season)
+            key = get_starting_key(strategy.__name__, _SEASON, team)
+            expected[key] = (strategy.__name__, str(team), row["total_value"], row["band"])
+
+    assert len(store) == len(expected) == 12
+    actual = {
+        r.sim_key: (r.label, r.team, r.sampled_value, r.band)
+        for r in store.itertuples()
+    }
+    assert actual == expected
+    pdt.assert_frame_equal(open_batch_results_file(path), store)
+
+
+def test_rows_keep_the_engines_own_values(simulated):
+    _, store = simulated
+    # total_value stays the engine's end-of-season valuation, not the sampled one
+    assert (store["total_value"] != store["sampled_value"]).any()
+    assert (store["race"] == store["race"].max()).all()
+
+
+def test_matches_a_direct_run_for_team(simulated, sample, season):
+    _, store = simulated
+    row = sample.iloc[0]
+
+    direct = run_for_team(StrategyZeroStop, _team(row, season), season, _SEASON, 1)[-1]
+
+    key = get_starting_key("StrategyZeroStop", _SEASON, _team(row, season))
+    stored = store.set_index("sim_key").loc[key]
+    assert stored["total_points"] == direct["total_points"]
+    assert stored["D1"] == direct["D1"]
+
+
+def test_rerun_simulates_nothing(simulated, sample, monkeypatch):
+    path, store = simulated
+
+    def fail(*args, **kwargs):
+        raise AssertionError("run_for_team called on a re-run")
+
+    monkeypatch.setattr(runner_module, "run_for_team", fail)
+    rerun = simulate_sample(_SEASON, sample, _STRATEGIES, path, flush_every=100)
+
+    pdt.assert_frame_equal(rerun, store)
+
+
+def test_work_flushed_before_a_crash_survives(sample, tmp_path, monkeypatch):
+    path = str(tmp_path / "results.parquet")
+    calls = []
+
+    def crash_on_fifth(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 5:
+            raise RuntimeError("simulated crash")
+        return run_for_team(*args, **kwargs)
+
+    monkeypatch.setattr(runner_module, "run_for_team", crash_on_fifth)
+    with pytest.raises(RuntimeError, match="simulated crash"):
+        simulate_sample(_SEASON, sample.head(3), _STRATEGIES, path, flush_every=2)
+
+    assert len(open_batch_results_file(path)) == 4
