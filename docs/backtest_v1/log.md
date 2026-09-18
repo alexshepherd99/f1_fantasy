@@ -23,6 +23,32 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - *Verification* 3 passed 2026-09-18: P2PM 57/57 exact against January; every
   control mismatch traced to per-process hash ordering in `linear/`, a
   reproducibility issue awaiting a decision. *Verification* 4 not yet run.
+  [2026-09-18: fixed in `linear/` as an agreed exception, `534d1a9`; see
+  *Hash-order fix* below.]
+
+**Next — *Verification* 4, the full default run** (handoff, 2026-09-18). The
+Verification 2 files were deleted after the hash-order fix, so
+`outputs/backtest_v1_*` is empty and the run starts clean:
+
+```
+PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyMaxBudget StrategyZeroStop
+```
+
+- 13,500 simulations, roughly 80–90 minutes if Verification 2's 0.37 s each
+  holds. Resumable if interrupted. No `PYTHONHASHSEED` is needed now.
+- Then, per `plan.md`: compare the sampled per-season band A means with the
+  full-population means in `outputs/f1_fantasy_results_batch.parquet`
+  (`StrategyMaxP2PM:unlimited_chip_4` and the `:fix_drv_chg` controls), as a
+  check that the sample is representative. The matching needs `@CON` stripped
+  from both sides; the January file predates the hash-order fix, so a few
+  control totals may differ slightly, as Verification 3 found.
+- Record elapsed time and peak memory. The wrapper used for Verification 2 was a
+  session scratch file: it called `backtest.cli.main` and then read
+  `resource.getrusage(RUSAGE_SELF).ru_maxrss`. Ignore `RUSAGE_CHILDREN`, which
+  reports forks carrying the parent's pages.
+- **Still open:** the run-time figures in the README (about 2.5 hours per
+  strategy), `plan.md` and `requirements.md` assume ~2 s a simulation. Correct
+  them once Verification 4 has measured a full run.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
