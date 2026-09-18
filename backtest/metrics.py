@@ -5,7 +5,7 @@ from collections.abc import Sequence
 
 import pandas as pd
 
-from backtest.sample import assign_bands
+from backtest.sample import assign_bands, band_labels
 
 # A team is identified within a season by its starting line-up
 _TEAM_KEY = ["season", "team"]
@@ -57,3 +57,54 @@ def pair_with_baseline(results: pd.DataFrame, baseline_label: str, band_edges: S
     paired["delta"] = paired["total_points"] - paired["baseline_points"]
     paired["delta_pct"] = paired["delta"] / paired["baseline_points"] * 100
     return paired[["label"] + _TEAM_KEY + ["band", "sampled_value", "total_points", "baseline_points", "delta", "delta_pct"]]
+
+
+def _p10(values: pd.Series) -> float:
+    return values.quantile(0.1)
+
+
+def _win_rate(deltas: pd.Series) -> float:
+    # A tie does not beat the baseline
+    return (deltas > 0).mean()
+
+
+_SUMMARY_METRICS = {
+    "teams": ("team", "count"),
+    "mean_points": ("total_points", "mean"),
+    "median_points": ("total_points", "median"),
+    "p10_points": ("total_points", _p10),
+    "max_points": ("total_points", "max"),
+    "mean_delta": ("delta", "mean"),
+    "mean_delta_pct": ("delta_pct", "mean"),
+    "median_delta": ("delta", "median"),
+    "p10_delta": ("delta", _p10),
+    "win_rate": ("delta", _win_rate),
+}
+
+POOLED_BAND = "pooled"
+
+
+def season_summary(paired: pd.DataFrame, band_edges: Sequence[float]) -> pd.DataFrame:
+    """Summarise paired results per label, season and band, plus pooled per season.
+
+    The pooled row pools every paired team of the season, so it is a mean over
+    the sampled bands, equally sampled but unequally populated, and not over all
+    the teams that exist. It is computed from the per-team rows rather than by
+    averaging band means, which diverge once pairing leaves bands unequal.
+
+    Args:
+        paired: Output of `pair_with_baseline`.
+        band_edges: Current band edges, which order the bands.
+
+    Returns:
+        One row per (label, season, band) with a populated band, and one per
+        (label, season) with band `pooled`, ordered by season, label, band edge
+        and then the pooled row.
+    """
+    by_band = paired.groupby(["label", "season", "band"], as_index=False).agg(**_SUMMARY_METRICS)
+    pooled = paired.groupby(["label", "season"], as_index=False).agg(**_SUMMARY_METRICS).assign(band=POOLED_BAND)
+
+    summary = pd.concat([by_band, pooled], ignore_index=True)
+    band_order = pd.Categorical(summary["band"], categories=band_labels(band_edges) + [POOLED_BAND], ordered=True)
+    summary = summary.assign(_band_order=band_order).sort_values(["season", "label", "_band_order"])
+    return summary[["label", "season", "band"] + list(_SUMMARY_METRICS)].reset_index(drop=True)

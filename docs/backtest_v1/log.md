@@ -11,6 +11,7 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 4 completed 2026-09-18: `backtest/runner.py`, `simulate_sample`.
 - Step 5 completed 2026-09-18: `backtest/metrics.py`, `pair_with_baseline`, in
   three commits.
+- Step 6 completed 2026-09-18: `backtest/metrics.py`, `season_summary`.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -242,5 +243,50 @@ they were confirmed by mutation.
 team alone, ignoring season; the delta reversed; the % delta divided by the
 challenger's points; the stored band kept; the outside-band check dropped; the
 missing-baseline check dropped.
+
+R12: no new entry.
+
+## Step 6 — `season_summary` (2026-09-18)
+
+Suite green at 183 before starting, 191 after.
+
+`season_summary(paired, band_edges)` gives one row per (label, season, populated
+band) and one pooled row per (label, season), each carrying `teams`,
+mean/median/P10/max points, mean delta and mean % delta, median and P10 delta,
+and win rate. Choices agreed in session:
+
+- The pooled row's band is **`pooled`**, not `all`, which would read as a mean
+  over every team that exists (R8). Its docstring says it is a mean over the
+  equally sampled bands.
+- **`teams`** is added, the paired count per row, since it is what shows bands
+  left unequal by pairing.
+- **P10** is pandas' default linearly interpolated `quantile(0.1)`.
+- **A tie is not a win** — `win_rate` counts `delta > 0` — so the baseline's own
+  win rate is 0.
+- **The pooled row is computed from the per-team rows**, never from band means.
+  The fixture makes that visible: the pooled mean delta is +50 while the average
+  of the two band means is −25.
+- Rows are ordered by season, label, band edge and then `pooled`, so the
+  signature gained `band_edges` over the plan's `season_summary(paired)`.
+- A band with no teams gets no row.
+
+**How it failed first.** A stub with correct per-band metrics, but no pooled row,
+ties counted as wins and no ordering, failed 5 of 7. The two band-metric tests
+each failed on `win_rate` alone, 1 of 10 values, which also confirmed the other
+nine hand-computed values against pandas. The single-team-band and column tests
+passed, so they were confirmed by mutation.
+
+**Mutations**, each caught in the end: a tie counted as a win; P10 as P90; P10
+by the `lower` rather than linear interpolation; `teams` counting the wrong
+thing; max as mean; median delta taken from the % delta; the pooled row averaged
+from band means; no pooled row; the index kept unreset; and bands sorted as label
+text.
+
+That last one first went uncaught. The default labels happen to sort correctly
+as text, `"(90, 95]" < "(95, 99.5]" < "(99.5, 100]" < "pooled"`, so the ordering
+test could not tell the two apart. A test on edges `(5, 10, 100)`, whose labels
+sort the wrong way as text, was added; it then also went uncaught once more, but
+only because the mutation harness filtered tests by name and missed it — rerun
+unfiltered, it fails as it should.
 
 R12: no new entry.
