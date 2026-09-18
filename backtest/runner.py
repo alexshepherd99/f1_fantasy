@@ -69,7 +69,9 @@ def simulate_sample(
         flush_every: Simulations between writes.
 
     Returns:
-        The results store, including rows from earlier runs.
+        This run's rows, one per (strategy, team), whether simulated now or
+        found in the store. Rows the store holds for other teams or strategies
+        stay on disk but are not returned, so they cannot leak into a summary.
     """
     season_data = factory_season(*load_with_derivations(season=season), season)
     starting_race = season_data.races[STARTING_RACE]
@@ -78,6 +80,7 @@ def simulate_sample(
     done = set(store["sim_key"])
     rows = []
     skipped = 0
+    run_keys = []
 
     for strategy in strategies:
         label = strategy.__name__
@@ -88,6 +91,7 @@ def simulate_sample(
             # Taken before simulating, which leaves the team as it ends the season
             starting_team = str(team)
             sim_key = get_starting_key(label, season, team)
+            run_keys.append(sim_key)
             if sim_key in done:
                 skipped += 1
                 continue
@@ -107,4 +111,5 @@ def simulate_sample(
                 rows = []
 
     logging.info(f"Season {season}: skipped {skipped} simulations already in the store")
-    return append_results(store, rows, store_path)
+    store = append_results(store, rows, store_path)
+    return store[store["sim_key"].isin(run_keys)].reset_index(drop=True)

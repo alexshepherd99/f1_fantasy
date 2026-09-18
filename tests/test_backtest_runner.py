@@ -155,6 +155,23 @@ def test_rerun_simulates_nothing(simulated, sample, monkeypatch):
     pdt.assert_frame_equal(rerun, store)
 
 
+def test_returns_only_this_runs_rows_and_keeps_the_rest_stored(simulated, sample, tmp_path, monkeypatch):
+    _, store = simulated
+    foreign_label = store.iloc[[0]].assign(sim_key="(OtherStrategy)(2023)team", label="OtherStrategy")
+    foreign_team = store.iloc[[0]].assign(sim_key="(StrategyMaxP2PM)(2023)other_team", team="other_team")
+    path = str(tmp_path / "results.parquet")
+    pd.concat([foreign_label, store, foreign_team], ignore_index=True).to_parquet(path)
+
+    def fail(*args, **kwargs):
+        raise AssertionError("run_for_team called on a re-run")
+
+    monkeypatch.setattr(runner_module, "run_for_team", fail)
+    returned = simulate_sample(_SEASON, sample, _STRATEGIES, path, flush_every=100)
+
+    pdt.assert_frame_equal(returned, store)
+    assert len(open_batch_results_file(path)) == len(store) + 2
+
+
 def test_work_flushed_before_a_crash_survives(sample, tmp_path, monkeypatch):
     path = str(tmp_path / "results.parquet")
     calls = []
