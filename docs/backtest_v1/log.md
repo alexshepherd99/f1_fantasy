@@ -20,6 +20,9 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
   implemented; *Verification* 2–4 — the real runs — have not been done.**
 - *Verification* 2 passed 2026-09-18: 540 simulations in 3.3 minutes, peak about
   215 MiB, a re-run simulating nothing. *Verification* 3–4 not yet run.
+- *Verification* 3 passed 2026-09-18: P2PM 57/57 exact against January; every
+  control mismatch traced to per-process hash ordering in `linear/`, a
+  reproducibility issue awaiting a decision. *Verification* 4 not yet run.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -512,3 +515,69 @@ across three bands is a smoke test, not a comparison.
 **Noticed, not changed:** `simulate_sample` logs "Simulating X for season Y on
 60 teams" even when every key is then skipped. It reads as if simulation
 happened; the per-season "skipped" line that follows corrects it. Cosmetic.
+
+## Verification 3 — engine cross-check against the January results (2026-09-18)
+
+**Passed: the engine agrees with the one the January file was built by.** It
+also surfaced a nondeterminism in the core modules, recorded below.
+
+Verification 2's band A teams (20 per season) were matched to
+`outputs/f1_fantasy_results_batch.parquet` on season and starting team, with
+`@CON` stripped from both sides (no collisions resulted). The new baseline was
+compared with `StrategyMaxP2PM:unlimited_chip_4`, and the controls with their
+`:fix_drv_chg` rows, whose keys all use the `@CON` form, so they post-date
+`9d2f7ed`.
+
+| Label | Sampled | In old file | Exact | Largest difference |
+|---|---|---|---|---|
+| StrategyMaxP2PM | 60 | 57 | 57 | 0 |
+| StrategyMaxBudget | 60 | 57 | 53 | 31 |
+| StrategyZeroStop | 60 | 57 | 55 | 35 |
+
+**Not an archive correction.** The plan expected archive corrections since
+January might explain differences. They cannot: the 2023–2025 sheets at
+`389186e`, the last archive commit before the January run, are identical cell
+for cell to today's.
+
+**The 3 teams missing from the old file** are the same 3 for every label, and
+all are valued at exactly 100.0, the top edge of band A. One sums to
+`100.00000000000001` unrounded. That is the float-noise case `8ed08e2` (July)
+fixed by rounding values before comparing them with the budget bounds; before
+it, such teams could fall outside `<= 100` and never be simulated. Strongly
+indicated rather than reproduced: re-running the old enumeration means
+materialising every combination, the memory cost that commit removed.
+
+**The 6 points mismatches** — controls only, 2023 and 2024, 19–35 points on
+season totals of 3,100–4,200 — have identical final-race state on both sides:
+line-up, DRS driver, unused budget and moves. The data is unchanged, and no
+commit since the January run changes the controls' behaviour.
+
+**Cause: string hash randomisation in `linear/strategy_base.py`.**
+`get_team_selection_dict` builds the LP's driver and constructor lists by
+iterating a `set` of strings, whose order depends on Python's per-process hash
+seed. That order becomes the order of the LP variables and of the team's
+drivers after each re-solve. The DRS fallback in `Team.get_drs_points` gives
+a price tie to whichever driver comes first, and variable order can also decide
+which of several equally optimal selections CBC returns. So a team's season
+total can differ between processes with no change to code or data.
+
+**Confirmed, not inferred.** Each of the 6 mismatched teams was re-simulated
+under fixed `PYTHONHASHSEED` values 0–5 (0–7 for the first). Every one produced
+exactly two season totals, today's value and January's, depending on the seed
+alone: for example, Zero-stop's `(BOT,GAS,PER,RUS,ZHO)(FER,MER)` in 2024 gave
+3,931 under seeds 0, 1, 4 and 5, and 3,896 under 2, 3, 6 and 7.
+
+**What it means.**
+
+- Every difference from the January file is accounted for: 3 teams by the
+  rounding fix, 6 totals by hash order. The engine is the same one.
+- P2PM matched 57 of 57, consistent with it choosing its own DRS driver, but
+  that is not proof it is immune: an LP tie could still break by variable order.
+- **R1's "same seed gives the same results" holds for the sample, not for the
+  simulated points.** A run, or a resumed run in a new process, can give
+  different totals for affected teams. Here that was 6 of 57 control results,
+  by under 1%.
+- Pairing is unaffected within a run: each (label, team) is simulated once, and
+  the challenger and baseline both come from the store.
+- The fix belongs in `linear/`, which is out of bounds here (*Scope*). Pending
+  a decision; see the session.
