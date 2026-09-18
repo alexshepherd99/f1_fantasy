@@ -16,6 +16,8 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
   `verdict`.
 - Step 8 completed 2026-09-18: `backtest/runner.py`, `run_backtest`.
 - Step 9 completed 2026-09-18: `backtest/cli.py`.
+- Step 10 completed 2026-09-18: README and CLAUDE.md. **Every plan step is
+  implemented; *Verification* 2–4 — the real runs — have not been done.**
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -444,3 +446,18 @@ by argparse before any work, with nothing written to `outputs/`. No simulation
 has yet been run through the CLI; that is *Verification* 2.
 
 R12: no new entry.
+
+## Step 10 — docs (2026-09-18)
+
+- **README**: a *Back-testing against P2PM* section — what the module does,
+  how to run it, the three output files and how to read them, including that
+  the pooled row is a mean over the sampled bands rather than over every team,
+  and that seasons are never pooled. `backtest` added to *Modules*, and the
+  `run_multiple_teams.py` entry points to it.
+- **CLAUDE.md**: the `backtest` commands, and an *Architecture* paragraph on each
+  module, the untouched-modules constraint with its R12 ledger, why bands are
+  derived from `sampled_value`, and `COMPLETED_SEASONS` needing extending.
+
+The README's run-time figure — about 2.5 hours per strategy at the defaults — is
+the plan's estimate from about two seconds a simulation, not yet measured
+through this CLI.

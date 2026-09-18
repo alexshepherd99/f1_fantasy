@@ -2,7 +2,8 @@
 
 **Status**: draft for review, 2026-09-13; refined 2026-09-18 for value bands and
 the replication-cost ledger. Requirements: `requirements.md`, settled
-2026-09-18. Not yet implemented — no code exists.
+2026-09-18. Not yet implemented — no code exists. [Superseded 2026-09-18:
+steps 1–10 implemented; *Verification* 2–4 not yet run. See `log.md`.]
 
 TL;DR — A new `backtest/` package: draw a seeded sample of starting teams per
 season **and value band**, simulate the P2PM baseline and each challenger on that

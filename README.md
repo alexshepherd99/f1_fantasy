@@ -25,7 +25,7 @@ After writing the initial version of the code mostly by hand, future iterations 
 ## Usage scripts
 
 - **run_single_team.py** : Run all strategies for a given team in a given season, saving the results out to Excel format.  Starting race can be specified within the script, so that you can predict from a particular point within the season against your team at that time.
-- **run_multiple_teams.py** : Full back-testing script, running all strategies against all available seasons, for every possible starting team combination above a specified total value.  Outputs are written to a parquet format file every 100 simulations, in case of interuption; when re-running, any simulations already present in the output will be skipped.
+- **run_multiple_teams.py** : Full back-testing script, running all strategies against all available seasons, for every possible starting team combination above a specified total value.  Outputs are written to a parquet format file every 100 simulations, in case of interuption; when re-running, any simulations already present in the output will be skipped.  For comparing a strategy against P2PM, the sampled **backtest** module below is quicker and reports paired results.
 - **batch_results_xl.py** : convert the parquet output file from run_multiple_teams.py into a csv format, for analysis and importing into Tableau.
 - **check_run_ppm.py** : generate an Excel version of the strategy input data, plus any derivation calculations.
 - **select_starting_team.py** : identify the best starting line-up for a given season, based on cost ratio of driver to constructor.
@@ -72,6 +72,35 @@ These strategies are contained in the **linear** module:
 
 Note on odds conversion (2026-07-26): fractional odds `a/b` are converted to an implied probability of `b/(a+b)`.  This previously used `b/a`, which over-weighted the front of the grid and rejected odds-on prices outright.  Correcting it changed the selected team in 3 of the 9 races of 2026 that previously solved, so team results logged below from before that date are not reproducible under the current code.  The `fast_f1` module also consumes these odds as a weighted indicator — see `docs/fastf1_v1/`.
 
+## Back-testing against P2PM
+
+The **backtest** module compares strategies against Max P2PM without simulating every starting team.  For each season it draws a seeded random sample of starting teams from three value bands — (90, 95], (95, 99.5] and (99.5, 100] — and simulates P2PM and each named challenger on the same teams, through the same engine as `run_single_team.py`.  Each challenger is then compared with P2PM team by team.
+
+```bash
+# 500 teams per band over 2023-2025, challengers named explicitly
+PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyMaxBudget
+
+# smaller and quicker, or other seasons and band edges
+PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyZeroStop --sample-size 20
+PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyZeroStop --seasons 2026 --bands 90 95 99.5 100
+```
+
+`--sample-size` is per band, so the default of 500 draws 1,500 teams a season.  At roughly two seconds a simulation, the default run takes about 2.5 hours per strategy, P2PM included.  Seasons default to the completed ones, listed in `COMPLETED_SEASONS` in `backtest/cli.py`; add a season there once it has finished.
+
+Three files are written to `outputs/`:
+
+- **backtest_v1_results.parquet** : one row per simulated team, written every 100 simulations.  A re-run skips any team already in it, so an interrupted run resumes, and later runs reuse P2PM's results.  Rows from other seeds, sample sizes or strategies stay in the file but are ignored by a run that did not ask for them.
+- **backtest_v1_summary.csv** : per strategy, season and band — mean, median, lower decile and max season points, then the mean, median and lower-decile difference from P2PM on the same teams, the mean percentage difference, and the share of teams beating P2PM.  Challengers are ranked by mean percentage difference within each season and band.
+- **backtest_v1_summary_verdict.csv** : per challenger, whether it beats P2PM — a positive mean difference in every season — and whether the difference at least has the same sign every season.
+
+Reading the results:
+
+- The **pooled** row of each season covers all three bands together.  The bands are sampled equally but are far from equally common — the cheapest band holds 10-15 times as many teams as the most expensive — so a pooled figure is a mean over the sampled bands, not over every possible team.
+- Seasons are never pooled or ranked together.  With three seasons, the season is what limits confidence, not the number of teams sampled.
+- Whether a cheaper start does better is what the bands are there to show, so compare them rather than relying on the pooled row alone.
+
+Full requirements, plan and development log are in `docs/backtest_v1/`.
+
 ## FastF1 signal
 
 The **fast_f1** module is a separate experiment from the strategies above: rather than optimising a team from fantasy points and prices, it tries to predict how a race will go using data available before it starts.  It combines practice lap time ranks (FP2 + FP3 on a normal weekend, FP1 + Sprint Qualifying on a sprint weekend, ignoring laps slower than 107% of the session best), a rolling total of driver points over the previous three races, and the betting odds described above.  Each is normalised to 0-1 and summed into an AggregateRank.
@@ -103,6 +132,7 @@ Full spec, plan and development log are in `docs/fastf1_v1/`.
 - **races** : class representations for assets, teams, races, seasons.
 - **linear** : linear programming strategies.
 - **fast_f1** : FastF1 API access and the predictive indicators derived from it, see above.
+- **backtest** : sampled, paired back-testing of strategies against Max P2PM, see above.
 
 ## Links
 
