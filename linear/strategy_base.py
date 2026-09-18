@@ -185,7 +185,9 @@ class StrategyBase(ABC):
         """
         all_assets = set(list_assets_available).union(set(list_assets_team))
         selection_dict = dict()
-        for i in all_assets:
+        # Sorted, as set order follows the per-process string hash seed, and this order decides DRS price
+        # ties and which of several equal LP optima is returned
+        for i in sorted(all_assets):
             if i in list_assets_team:
                 selection_dict[i] = 1
             else:

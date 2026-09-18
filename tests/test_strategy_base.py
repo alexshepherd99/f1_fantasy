@@ -290,6 +290,23 @@ def test_get_team_selection_dict():
     assert dict_result == dict_expected
 
 
+def test_get_team_selection_dict_orders_assets_independently_of_hashing():
+    """Assets come back sorted, so LP variables are built in the same order in every process.
+
+    Iterating a set of strings follows the per-process hash seed, and the order
+    decides DRS price ties and which of several equal LP optima is returned.
+    """
+    available = [
+        "VER@RED", "PER@RED", "HAM@MER", "RUS@MER", "LEC@FER", "SAI@FER", "NOR@MCL", "PIA@MCL", "ALO@AST",
+        "STR@AST", "GAS@ALP", "OCO@ALP", "ALB@WIL", "SAR@WIL", "TSU@VRB", "RIC@VRB", "BOT@KCK", "ZHO@KCK", "HUL@HAA",
+    ]
+    team = ["MAG@HAA", "VER@RED"]  # MAG@HAA no longer available
+
+    dict_result = StrategyBase.get_team_selection_dict(available, team)
+
+    assert list(dict_result) == sorted(set(available) | set(team))
+
+
 def test_initialise_sets_up_lp_variables_and_constraints(
         fixture_all_available_drivers,
         fixture_all_available_constructors,
