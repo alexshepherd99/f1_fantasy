@@ -15,6 +15,7 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 7 completed 2026-09-18: `backtest/metrics.py`, `rank_challengers` and
   `verdict`.
 - Step 8 completed 2026-09-18: `backtest/runner.py`, `run_backtest`.
+- Step 9 completed 2026-09-18: `backtest/cli.py`.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -393,5 +394,53 @@ file was missing, and duplicate labels started work instead of raising.
 prepended (so named twice); appended; the duplicate check dropped; the verdict
 not written; the verdict written elsewhere; the summary unranked; only the last
 season kept. The old results file was checked byte-identical afterwards.
+
+R12: no new entry.
+
+## Step 9 — `backtest/cli.py` (2026-09-18)
+
+Suite green at 206 before starting, 219 after.
+
+`python -m backtest.cli` takes `--seasons`, `--sample-size`, `--seed`,
+`--strategies`, `--bands`, `--output` and `--summary`. `parse_arguments(argv)`
+and `main(argv)` take an argument list, so neither touches `sys.argv` in tests;
+`__main__` is `setup_logging(); main()`. Agreed in session:
+
+- **Completed seasons are a constant**, `COMPLETED_SEASONS = [2023, 2024, 2025]`,
+  edited when a season ends. Forgetting fails safe — a finished season left out,
+  never one in progress let in. Deriving it from the calendar year was rejected:
+  the default would change silently on 1 January.
+- **Seed 1** by default.
+- **Default paths** `outputs/backtest_v1_results.parquet` and
+  `outputs/backtest_v1_summary.csv`, putting the verdict at
+  `outputs/backtest_v1_summary_verdict.csv`.
+
+As planned: `--strategies` required, with choices from a registry of
+`StrategyMaxP2PM`, `StrategyZeroStop` and `StrategyMaxBudget` (not
+`StrategyBettingOdds`, out of scope); `--seasons` choices from
+`F1_SEASON_CONSTRUCTORS`; `--sample-size` 500, its help saying it is per band;
+`--bands` 90 95 99.5 100, invalid edges rejected at parse time through
+`parser.error`. That reuses step 1's check, made public as
+`validate_band_edges`. The `main` test replaces `run_backtest` with a recorder:
+a first-party function, but tested end to end in step 8, and running it here
+would mean real simulations.
+
+**How it failed first.** A stub parsing every option with the right defaults,
+but validating nothing, lacking the per-band help and passing strategy names
+rather than classes, failed 9 of 13. The four that passed — defaults, the
+seasons constant, the registry, parsing every option — were confirmed by
+mutation.
+
+**Mutations**, each caught and each run completing cleanly: 2026 in the default
+seasons; an extra entry in the registry; the default sample size, seed and
+output path each changed; `--strategies` not required; strategy choices dropped;
+season choices dropped; band edges unvalidated; the help not saying per band;
+names passed instead of classes; seed and sample size swapped; strategies
+reordered.
+
+**Run.** `python -m backtest.cli --help` and a run with `--bands 100 95` were
+executed for real: the help renders as intended, and the bad edges are rejected
+by argparse before any work, with nothing written to `outputs/`. No simulation
+has yet been run through the CLI; that is *Verification* 2.
 
 R12: no new entry.

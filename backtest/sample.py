@@ -18,7 +18,8 @@ def band_labels(band_edges: Sequence[float]) -> list[str]:
     return [f"({low:g}, {high:g}]" for low, high in zip(band_edges, band_edges[1:])]
 
 
-def _validate_band_edges(band_edges: Sequence[float]) -> None:
+def validate_band_edges(band_edges: Sequence[float]) -> None:
+    """Raise `ValueError` unless the edges are at least two, strictly increasing."""
     if len(band_edges) < 2 or any(low >= high for low, high in zip(band_edges, band_edges[1:])):
         logging.error(f"Invalid band edges {band_edges}")
         raise ValueError(f"Band edges must be at least two strictly increasing values, got {band_edges}")
@@ -54,7 +55,7 @@ def sample_starting_teams(
     Raises:
         ValueError: If the edges are fewer than two or not strictly increasing.
     """
-    _validate_band_edges(band_edges)
+    validate_band_edges(band_edges)
 
     combinations = get_starting_combinations(season, STARTING_RACE, band_edges[0], band_edges[-1])
     combinations["band"] = assign_bands(combinations["total_value"], band_edges)
