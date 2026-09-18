@@ -7,6 +7,7 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 
 - Step 1 completed 2026-09-18: `backtest/sample.py`, `sample_starting_teams`.
 - Step 2 completed 2026-09-18: `backtest/variants.py`, `make_variant`.
+- Step 3 completed 2026-09-18: `backtest/runner.py`, `append_results`.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -91,3 +92,45 @@ confirmed by mutation instead.
   tests fail.
 
 R12: no new ledger entry. The mechanism's cost is already recorded (2026-09-13).
+
+## Step 3 — results store (2026-09-18)
+
+Suite green at 163 before starting, 168 after.
+
+- **Only `append_results`, no `open_results`** (agreed in session, a change from
+  plan step 3). `scripts.run_multiple_teams.open_batch_results_file` already
+  takes a path and opens a missing file as an empty `sim_key` frame, and is
+  tested in `test_run_batch.py`, so a wrapper would add nothing. The plan's
+  "missing file opens empty" test is dropped for the same reason.
+- `append_results(store, rows, path)` appends, writes the whole store to `path`
+  and returns it. Two changes from `write_batch_results`, agreed in session:
+  nothing is written when there are no rows, and the concat uses
+  `ignore_index=True` so the stored index does not repeat per batch.
+- **Found while testing: the original upcasts integers to float.** Concatenating
+  onto the empty `sim_key`-only store turns every integer column missing from it
+  into float. The round-trip test caught `total_points` coming back as float64;
+  the old results file does hold it as `double`. `append_results` takes the new
+  rows alone when the store is empty. Harmless to values, but recorded in the
+  R12 ledger row with the other defects.
+- The path test runs from `tmp_path` as working directory, so a relative
+  hardcoded write would land there, and asserts the given file is the only one
+  created.
+
+**How it failed first.** Against the missing module, only an import error. A
+stub mirroring `write_batch_results` with the path honoured then failed 4 of 5
+on their assertions: the float64 upcast, the repeated index `[0, 1, 0, 1]`, and
+a write when there were no rows (to an existing file and to a missing one). The
+path test passed, since the stub honoured the path, so it was confirmed by
+mutation.
+
+**Mutations**, each against the finished implementation, and each caught:
+
+- Writes to a fixed relative filename instead of `path` — the path test fails.
+  Only that test was run for this mutation, as the others do not change working
+  directory and could have written into the repo; the old results file was
+  checked byte-identical afterwards.
+- Empty-store guard dropped — the round-trip test fails.
+- `ignore_index=True` dropped — the accumulate test fails.
+- No-rows guard dropped — both no-rows tests fail.
+
+R12: no new entry. The existing results-store row is annotated.
