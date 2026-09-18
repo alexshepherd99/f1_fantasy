@@ -14,6 +14,7 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 6 completed 2026-09-18: `backtest/metrics.py`, `season_summary`.
 - Step 7 completed 2026-09-18: `backtest/metrics.py`, `rank_challengers` and
   `verdict`.
+- Step 8 completed 2026-09-18: `backtest/runner.py`, `run_backtest`.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -344,5 +345,53 @@ Three went uncaught on the first pass:
 Also simplified during the step: an explicit "has every season" guard was
 dropped, being implied by `seasons_positive` equalling the summary's season
 count.
+
+R12: no new entry.
+
+## Step 8 — `run_backtest` (2026-09-18)
+
+Suite green at 198 before starting, 206 after.
+
+`run_backtest(seasons, n, seed, strategies, band_edges, store_path,
+summary_path)` samples and simulates each season in turn, the baseline first,
+releasing each season's sample before the next; then pairs, summarises, ranks
+and judges the combined rows, writes both tables and logs them with a line
+saying `pooled` is a mean over the equally sampled bands (R8). Returns
+`(summary, verdicts)`. Agreed in session:
+
+- **The verdict is a second CSV beside the summary**, `<stem>_verdict.csv`, so
+  the CLI needs no extra flag. Logging it alone would lose the headline result
+  with the terminal; repeating its columns on every summary row would be
+  redundant and easy to misread against the per-band rows.
+- **Duplicate labels raise `ValueError`**, before any work starts: two
+  strategies sharing a label would share keys, and the second would silently
+  reuse the first's results.
+- The baseline, `BASELINE = StrategyMaxP2PM`, is identified by label and is
+  added to the front, or moved there if named. A P2PM variant under another
+  label is a challenger.
+
+**A gap the stub exposed.** The re-run test (baseline named, and named last)
+passed against the stub, which appended the baseline without de-duplicating.
+On a re-run every key is already stored and the returned rows are filtered by
+key, so a doubled baseline is invisible there. It is not harmless on a fresh
+run: `simulate_sample` does not track keys within a run (step 4 dropped
+`done.add` as unreachable, which it is only while labels are unique), so the
+baseline would be simulated twice and stored twice. `_with_baseline_first` is
+now tested directly on three orderings, and the re-run test's comment no longer
+claims to check it.
+
+The test runs 2023 and 2024 with one team per band, baseline plus Zero-stop: 12
+real simulations, about 20 seconds for the file. It checks the store, both CSVs
+against the returned frames, that the directory holds nothing else, a re-run
+simulating nothing, and duplicate labels raising before sampling starts.
+
+**How it failed first.** The stub — baseline appended last, no label check, no
+verdict file — failed 3 of 5 on behaviour: the baseline ran second, the verdict
+file was missing, and duplicate labels started work instead of raising.
+
+**Mutations**, each caught and each run completing cleanly: the baseline always
+prepended (so named twice); appended; the duplicate check dropped; the verdict
+not written; the verdict written elsewhere; the summary unranked; only the last
+season kept. The old results file was checked byte-identical afterwards.
 
 R12: no new entry.

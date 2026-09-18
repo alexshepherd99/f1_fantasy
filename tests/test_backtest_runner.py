@@ -3,8 +3,8 @@ import pandas.testing as pdt
 import pytest
 
 import backtest.runner as runner_module
-from backtest.runner import append_results, simulate_sample
-from backtest.sample import sample_starting_teams
+from backtest.runner import append_results, run_backtest, simulate_sample
+from backtest.sample import DEFAULT_BAND_EDGES, sample_starting_teams
 from helpers import load_with_derivations
 from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_zero_stop import StrategyZeroStop
@@ -187,3 +187,95 @@ def test_work_flushed_before_a_crash_survives(sample, tmp_path, monkeypatch):
         simulate_sample(_SEASON, sample.head(3), _STRATEGIES, path, flush_every=2)
 
     assert len(open_batch_results_file(path)) == 4
+
+
+_BACKTEST_SEASONS = [2023, 2024]
+
+
+@pytest.fixture(scope="module")
+def backtest_run(tmp_path_factory):
+    """One team per band over two seasons, naming only the challenger."""
+    directory = tmp_path_factory.mktemp("backtest")
+    store_path = str(directory / "results.parquet")
+    summary_path = str(directory / "summary.csv")
+    summary, verdicts = run_backtest(
+        _BACKTEST_SEASONS, 1, 1, [StrategyZeroStop], DEFAULT_BAND_EDGES, store_path, summary_path,
+    )
+    return directory, store_path, summary_path, summary, verdicts
+
+
+def test_backtest_prepends_the_baseline_and_stores_every_simulation(backtest_run):
+    _, store_path, _, _, _ = backtest_run
+    store = open_batch_results_file(store_path)
+
+    # 2 labels x 2 seasons x 3 teams
+    assert len(store) == 12
+    assert store.groupby(["label", "season"]).size().to_dict() == {
+        (label, season): 3 for label in ["StrategyMaxP2PM", "StrategyZeroStop"] for season in _BACKTEST_SEASONS
+    }
+    # The baseline is simulated first within each season
+    assert list(store.drop_duplicates("season")["label"]) == ["StrategyMaxP2PM", "StrategyMaxP2PM"]
+
+
+def test_backtest_writes_the_ranked_summary(backtest_run):
+    _, _, summary_path, summary, _ = backtest_run
+
+    # 2 labels x 2 seasons x (3 bands + pooled)
+    assert len(summary) == 16
+    assert "rank" in summary.columns
+    written = pd.read_csv(summary_path)
+    assert list(written.columns) == list(summary.columns)
+    assert list(zip(written["label"], written["season"], written["band"])) == list(
+        zip(summary["label"], summary["season"], summary["band"])
+    )
+
+
+def test_backtest_writes_the_verdict_beside_the_summary(backtest_run):
+    directory, _, _, _, verdicts = backtest_run
+
+    assert list(verdicts["label"]) == ["StrategyZeroStop"]
+    assert verdicts.iloc[0]["seasons"] == 2
+    written = pd.read_csv(directory / "summary_verdict.csv")
+    pdt.assert_frame_equal(written, verdicts)
+    assert sorted(p.name for p in directory.iterdir()) == ["results.parquet", "summary.csv", "summary_verdict.csv"]
+
+
+def test_backtest_rerun_with_the_baseline_named_simulates_nothing(backtest_run, tmp_path, monkeypatch):
+    _, store_path, _, summary, verdicts = backtest_run
+
+    def fail(*args, **kwargs):
+        raise AssertionError("run_for_team called on a re-run")
+
+    monkeypatch.setattr(runner_module, "run_for_team", fail)
+    # Naming the baseline gives the same results as leaving it out
+    rerun_summary, rerun_verdicts = run_backtest(
+        _BACKTEST_SEASONS, 1, 1, [StrategyZeroStop, StrategyMaxP2PM], DEFAULT_BAND_EDGES,
+        store_path, str(tmp_path / "summary.csv"),
+    )
+
+    pdt.assert_frame_equal(rerun_summary, summary)
+    pdt.assert_frame_equal(rerun_verdicts, verdicts)
+
+
+@pytest.mark.parametrize("given", [
+    [StrategyZeroStop],
+    [StrategyZeroStop, StrategyMaxP2PM],
+    [StrategyMaxP2PM, StrategyZeroStop],
+])
+def test_baseline_runs_first_and_once(given):
+    # simulate_sample does not track keys within a run, so a baseline listed
+    # twice would be simulated twice
+    ordered = runner_module._with_baseline_first(given)
+    assert [s.__name__ for s in ordered] == ["StrategyMaxP2PM", "StrategyZeroStop"]
+
+
+def test_backtest_duplicate_labels_raise_before_any_work(tmp_path, monkeypatch):
+    def fail(*args, **kwargs):
+        raise AssertionError("work started")
+
+    monkeypatch.setattr(runner_module, "sample_starting_teams", fail)
+    with pytest.raises(ValueError):
+        run_backtest(
+            [2023], 1, 1, [StrategyZeroStop, StrategyZeroStop], DEFAULT_BAND_EDGES,
+            str(tmp_path / "results.parquet"), str(tmp_path / "summary.csv"),
+        )
