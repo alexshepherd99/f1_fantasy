@@ -18,6 +18,8 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 9 completed 2026-09-18: `backtest/cli.py`.
 - Step 10 completed 2026-09-18: README and CLAUDE.md. **Every plan step is
   implemented; *Verification* 2–4 — the real runs — have not been done.**
+- *Verification* 2 passed 2026-09-18: 540 simulations in 3.3 minutes, peak about
+  215 MiB, a re-run simulating nothing. *Verification* 3–4 not yet run.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -461,3 +463,52 @@ R12: no new entry.
 The README's run-time figure — about 2.5 hours per strategy at the defaults — is
 the plan's estimate from about two seconds a simulation, not yet measured
 through this CLI.
+
+## Verification 2 — small real run (2026-09-18)
+
+**Passed on every criterion.** Run through the real CLI, via a wrapper that calls
+`backtest.cli.main` and then reports elapsed time and peak memory:
+
+```
+python -m backtest.cli --sample-size 20 --strategies StrategyMaxBudget StrategyZeroStop \
+    --output outputs/backtest_v1_verify_results.parquet --summary outputs/backtest_v1_verify_summary.csv
+```
+
+Separate `verify` paths were used so the default store starts clean for the full
+run. Seasons 2023–2025, seed 1, default bands.
+
+- **Outputs written.** 540 rows, 540 unique keys: exactly 20 per (label,
+  season, band). A 36-row summary — 3 labels × 3 seasons × (3 bands + pooled) —
+  and a 2-row verdict.
+- **Every team inside its band.** All 540 `sampled_value`s fall inside the
+  stored band's `(min, max]`.
+- **Paired.** Every label ran on the same 60 teams in each season.
+- **A re-run simulates nothing.** It skipped all 180 simulations per season,
+  started no solver, and finished in about 5 seconds. The store was not
+  rewritten, and the summary and verdict came out byte-identical, confirmed by
+  checksum.
+- **Peak memory: about 215 MiB** for the Python process, the 2024 enumeration of
+  about 152,000 teams included. The wrapper also reported a child process of the
+  same size, but that is a fork carrying the parent's pages at the moment it
+  starts, not CBC's own use: the re-run, which starts no solver, reports 0. The
+  concern the plan flagged about holding the full `(90, 100]` frame did not
+  materialise.
+
+**Run time: 3.3 minutes for 540 simulations, about 0.37 s each**, P2PM the
+slowest at about 0.35–0.4 s and Zero-stop the fastest at about 0.2 s. That is
+around five times faster than the ~2 s the plan, README and requirements assumed.
+Extrapolating, the full default run — 500 per band, 13,500 simulations — would
+take roughly 80–90 minutes rather than 7.5 hours. That is an extrapolation from
+one small run, not a measurement of the full one; *Verification* 4 will measure
+it.
+
+**Results, for the record, not as evidence.** Both controls trail P2PM in every
+season: mean pooled deltas of −1,020 to −1,773 points, −22% to −36%, and a win
+rate of at most 3.3% (2 of 60 teams, Zero-stop in 2024). Neither beats P2PM;
+both are consistently negative. That agrees with the January evidence (trailing
+by 900–1,800 points, winning on at most 2.3% of teams), but 60 teams a season
+across three bands is a smoke test, not a comparison.
+
+**Noticed, not changed:** `simulate_sample` logs "Simulating X for season Y on
+60 teams" even when every key is then skipped. It reads as if simulation
+happened; the per-season "skipped" line that follows corrects it. Cosmetic.
