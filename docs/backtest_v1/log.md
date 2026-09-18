@@ -9,6 +9,8 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 2 completed 2026-09-18: `backtest/variants.py`, `make_variant`.
 - Step 3 completed 2026-09-18: `backtest/runner.py`, `append_results`.
 - Step 4 completed 2026-09-18: `backtest/runner.py`, `simulate_sample`.
+- Step 5 completed 2026-09-18: `backtest/metrics.py`, `pair_with_baseline`, in
+  three commits.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -190,3 +192,55 @@ The old results file was checked byte-identical after the mutation run.
 
 R12: no new entry. Every call into `scripts/`, `races/` and `helpers` is reused
 unchanged.
+
+## Step 5 — `pair_with_baseline` (2026-09-18)
+
+Suite green at 173 before starting, 183 after. Three commits, one change each.
+
+**The plan's filter could not live where the plan put it.** Plan step 5 tests
+that `pair_with_baseline(results, baseline_label, band_edges)` drops teams
+outside the current sample, but nothing in that signature names the sample.
+Stored rows for **other labels** would leak the same way — a store holding an
+earlier Zero-stop run would feed it into a run that asked only for Max budget —
+and the plan did not mention those. Only `simulate_sample` computes the keys, so
+it now returns just this run's rows (agreed in session, option 1 of 2; the other
+was threading a `sim_keys` parameter through). `plan.md` is annotated.
+
+1. **`assign_bands` refactor** (`0c214c6`). Sampling's `pd.cut` labelling became
+   a public `assign_bands(values, edges)` in `sample.py`, so sampling and pairing
+   cannot band differently. Out-of-band values now come back as NaN rather than
+   the string `"nan"`. A pure refactor: two mutations — `right=False` and
+   reversed labels — were each caught by step 1's tests.
+2. **`simulate_sample` returns only this run's rows** (`e1635b4`), simulated or
+   found in the store. New test: a copy of the stored results plus a
+   foreign-label row and a foreign-team row, re-run with the engine set to fail
+   if called; it failed first for the intended reason, 14 rows returned against
+   12. Mutations caught: keys recorded only for teams simulated this time (the
+   re-run and filter tests fail), and filtering by label alone (the filter test
+   fails). A first attempt at the former deleted the key recording outright,
+   which returns nothing and proves little, so it was rerun as the real
+   mutation.
+3. **`pair_with_baseline`** in `backtest/metrics.py`. Re-derives each row's band
+   from `sampled_value` against the current edges; raises `ValueError` if any
+   value falls outside every band (after the filter above that can only be a
+   bug) or if the baseline has no results; inner-joins every label, the
+   baseline included, with the baseline on (season, team); logs how many rows
+   were dropped for lacking a baseline; returns `band`, `sampled_value`,
+   `total_points`, `baseline_points`, `delta` and `delta_pct`. The baseline
+   pairs with itself at zero delta, which the summary needs.
+   - `delta_pct` divides by the baseline's season total without a guard: those
+     totals are in the thousands.
+   - A team the baseline has but a challenger lacks keeps its baseline row. It
+     only arises from a partial run, and is left to steps 6–7 if it matters.
+
+**How it failed first.** A stub that pairs correctly but keeps the stored band
+and validates nothing failed 5 of 9: the two band tests, both raising tests, and
+the column list. The four pairing tests passed, as the stub genuinely pairs, so
+they were confirmed by mutation.
+
+**Mutations**, each caught: a left join (the missing-team test fails); joining on
+team alone, ignoring season; the delta reversed; the % delta divided by the
+challenger's points; the stored band kept; the outside-band check dropped; the
+missing-baseline check dropped.
+
+R12: no new entry.

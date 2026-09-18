@@ -119,7 +119,10 @@ regroup existing rows correctly without re-simulating anything.
 
 - Read the store, then **filter it to the current sample's keys**. Rows from
   another seed or sample size may be in the file and must not leak into a
-  summary.
+  summary. [Superseded 2026-09-18, step 5: the filter lives in
+  `simulate_sample`, the only place that knows the run's keys. It returns just
+  this sample × these strategies, which also keeps out stored rows for labels
+  the run did not ask for. The store on disk keeps everything.]
 - Assign each row's band from its `total_value` against the current band edges,
   rather than trusting the stored `band` (see *Simulation and store*).
 - Inner-join each challenger with the baseline on (season, team). The band comes
@@ -206,7 +209,8 @@ reason, then implement. Where the first failure can only be an `ImportError` or
    Tests:
    - deltas and % deltas per team;
    - teams missing from either side are dropped;
-   - teams outside the current sample are filtered out;
+   - teams outside the current sample are filtered out; [Superseded
+     2026-09-18: tested on `simulate_sample` instead, see *Metrics*.]
    - a row's band is derived from its `total_value` against the current edges,
      so a stored `band` from different edges does not carry into the grouping.
 6. **`season_summary(paired)`** — synthetic frames with hand-computed expected
