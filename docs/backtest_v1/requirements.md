@@ -1,6 +1,8 @@
 # backtest_v1 — Requirements
 
-**Status**: agreed 2026-09-13. Implementation plan in `plan.md`.
+**Status**: agreed 2026-09-13; under refinement from 2026-09-18, with more
+expected. Implementation plan in `plan.md`, which has **not** yet been brought
+in line with the 2026-09-18 changes.
 
 A new back-testing framework: compare each strategy against `StrategyMaxP2PM` on a
 fixed random sample of starting teams rather than every combination, and judge
@@ -26,7 +28,9 @@ it by both absolute season points and paired improvement over P2PM.
 - **No changes to any file in `scripts/`.** Importing from them is allowed.
   `scripts/run_multiple_teams.py` and its results file stay as they are.
 - **No changes to `races/`, `linear/` or `import_data/` either** (agreed
-  2026-09-13). Anything they lack is worked around inside `backtest/`.
+  2026-09-13). Anything they lack is worked around inside `backtest/`. Each such
+  workaround is called out and logged, so the cost of this decision stays
+  visible (R12, added 2026-09-18).
 - Reuse existing helpers rather than re-implementing them:
   `helpers.load_with_derivations`, `races.first_picks.get_starting_combinations`,
   `races.season.factory_season` / `factory_race`, `races.team.factory_team_row`,
@@ -38,10 +42,13 @@ it by both absolute season points and paired improvement over P2PM.
 
 - For each season, draw N starting teams uniformly at random, without
   replacement, from `get_starting_combinations(season, 1, 99.5)`. The race and
-  the minimum value match `run_multiple_teams.py`.
+  the minimum value match `run_multiple_teams.py`. [Superseded 2026-09-18: the
+  draw is per value band, not from one population above 99.5 — see *Value
+  bands* below. The race still matches `run_multiple_teams.py`.]
 - The sample is seeded and reproducible: the same seed and archive data give the
   same teams. N and the seed are parameters. Default N=500, agreed 2026-09-13
-  (see *Evidence*).
+  (see *Evidence*). [Superseded 2026-09-18: N=500 is per band, so 1,500 teams
+  per season.]
 - Each season gets its own sample, because drivers and constructors change
   between seasons.
 - Within a season, every strategy, the baseline included, runs on **the same
@@ -49,6 +56,31 @@ it by both absolute season points and paired improvement over P2PM.
   strategies breaks the pairing.
 - If N is at least the number of combinations, run them all. Full enumeration
   stays available.
+
+#### Value bands (agreed 2026-09-18)
+
+A starting team's value is not a thing to maximise. A cheaper start leaves room
+to move and may finish ahead of one that spent to the cap, and the framework
+should be able to show whether it does rather than assume it either way. The
+sample therefore spans the value range instead of sitting at the top of it.
+
+- Three bands, each a `(min, max]` window on a starting team's total value,
+  together partitioning `(90, 100]` with no overlap and no gap:
+  - **Band A — `(99.5, 100]`** — today's population, the one every historic run
+    used.
+  - **Band B — `(95, 99.5]`**.
+  - **Band C — `(90, 95]`**.
+- N is per band: 500 each by default, so 1,500 teams per season. The resulting
+  3x run cost is accepted (agreed 2026-09-18), the real runs being planned for
+  more capable hardware than the current dev box.
+- The set of bands is a parameter, defaulting to those three.
+- Every rule above applies within each band: seeded and reproducible, its own
+  sample per season, the same sample for every strategy including the baseline,
+  and full enumeration when N is at least that band's population.
+- The bands are equally sampled but not equally populated — band C holds roughly
+  10 to 15 times as many teams as band A (measured 2026-09-18, see *Evidence*).
+  Metrics are therefore reported per band (R7), and any figure pooled across
+  bands is a mean over the sampled bands, not over the teams that exist.
 
 ### R2 — P2PM baseline
 
@@ -88,6 +120,9 @@ it by both absolute season points and paired improvement over P2PM.
   Resumable: keys already present are skipped.
 - Results are written every 100 simulations, bounding both memory use and lost
   work.
+- Each row records the starting team's total value and its value band, so
+  metrics can group by band (R7). The band follows from the starting team, so
+  the key stays unique without it (agreed 2026-09-18).
 - The starting-team key comes from `str(Team)`, which currently uses the
   `DRIVER@CONSTRUCTOR` form. The existing batch parquet is not reused as a
   baseline: its keys change format partway through its history (see *Evidence*).
@@ -100,7 +135,7 @@ it by both absolute season points and paired improvement over P2PM.
 
 ### R7 — Reported metrics
 
-For each strategy and each season:
+For each strategy and each season — and, from 2026-09-18, each value band (R1):
 
 - **Absolute:** mean, median, lower decile (P10) and max of season total points.
 - **Against P2PM, paired per starting team:** mean delta in points, mean delta
@@ -115,30 +150,45 @@ Seasons are reported separately, never pooled into one headline. The effective
 replication unit is the season, so n=3. Pairing removes starting-team noise but
 does nothing about season noise.
 
+Bands are reported separately too (agreed 2026-09-18) — whether a cheaper start
+does better is the question the bands exist to answer, and pooling it away
+would defeat them. The only figure pooled across bands is the per-season mean
+delta the R8 verdict tests.
+
 ### R8 — Success criterion
 
 Success considers both absolute points and average improvement over P2PM
 (agreed 2026-09-13):
 
 - A strategy **beats P2PM** only if its mean paired delta is positive in every
-  season.
+  season. That mean pools all three bands' teams within the season; the band
+  breakdown informs the reader but does not gate the verdict (agreed
+  2026-09-18). Because the bands are equally sampled and unequally populated,
+  the pooled mean over-weights expensive starts relative to how common they
+  are — it is not an estimate of the mean over all teams above 90m, and must
+  not be reported as one.
 - Strategies are ranked by mean paired % delta. [Superseded 2026-09-13: the
   ranking is within each season only; there is no sensible way to compare
   performance across seasons. The every-season verdict above checks sign, not
-  size, so it stays.]
+  size, so it stays.] [2026-09-18: within each season *and* band, bands being a
+  reporting dimension (R7).]
 - Absolute mean season points are reported alongside the ranking.
 
 ### R9 — Output
 
 - A per-strategy, per-season summary table is written to `outputs/` and logged.
-- Per-team rows stay in the results file for drill-down (e.g. Tableau).
+  [Superseded 2026-09-18: per strategy, season **and band** (R7), so three times
+  the rows.]
+- Per-team rows stay in the results file for drill-down (e.g. Tableau), carrying
+  each team's total value and band (R5) so the bands can be cut further there.
 
 ### R10 — Operation
 
 - A CLI covering seasons, sample size, seed, strategies and output path, with
   defaults for all of them. [Superseded 2026-09-13: strategies have no default
   and must be named explicitly, because Zero-stop and Max budget are no longer
-  planned for use.]
+  planned for use.] [2026-09-18: the value bands are a parameter too (R1),
+  defaulting to the three agreed ones. Sample size is now per band.]
 - `__main__` is a single call into a tested function.
 
 ### R11 — Testing
@@ -147,6 +197,33 @@ Success considers both absolute points and average improvement over P2PM
 - Tests use a tiny sample (a few teams, one season). A single full-season
   simulation takes about 2s, so this stays fast.
 - No test writes to the real `outputs/`.
+
+### R12 — Replication of core-module functionality is called out
+
+Raised 2026-09-18, as a requirement in its own right.
+
+`races/`, `linear/`, `import_data/` and `scripts/` stay untouched (*Scope*), and
+that decision is not up for revision here. But it has a price: every time
+`backtest/` reimplements or works around something those modules already do,
+that is duplicated logic to maintain and a place the two can drift apart.
+
+- Whenever `backtest/` has to duplicate or work around core-module
+  functionality, it is **called out at the time** — in session, not silently
+  absorbed — and recorded in the ledger below.
+- Each entry names what was needed, what `backtest/` does instead, and what it
+  costs.
+- This applies during implementation as much as during requirements. New
+  entries are appended as they are found.
+- The ledger is evidence, not a lever: it exists so the running cost of the
+  untouched-modules decision is visible if it is ever worth revisiting.
+
+**Ledger**
+
+| Date | What was needed | What `backtest/` does instead | Cost |
+|---|---|---|---|
+| 2026-09-18 | Sampling within value bands (R1) | Three calls to `get_starting_combinations`, which already takes `min_total_value` and `max_total_value` with exactly the exclusive/inclusive bounds the bands need | **None.** No replication at all. |
+| 2026-09-13 | Named, parameterised strategy variants (R4) | Synthetic subclasses built in `backtest/variants.py`, because `run_for_team` names a strategy by `__name__` and a `functools.partial` has none | **Moderate.** A keyword argument on the strategy classes would remove the mechanism entirely. |
+| 2026-09-13 | A results store at an injectable path (R5) | Reimplements the append-and-flush loop, because `scripts.run_multiple_teams.write_batch_results` hardcodes its output path. `open_batch_results_file` and `get_starting_key` are reused unchanged | **Small.** One short function, duplicating a known-buggy original. |
 
 ## Evidence for the sample size
 
@@ -164,10 +241,23 @@ Pairing used the starting team as the key, with each strategy compared against
   sample mean was at most 12 points, against a between-season spread of about
   150. At 200 teams it was at most 21.
 - **Cost.** At about 2s per season simulation, 500 teams × 3 seasons is about
-  50 minutes per strategy. The full population is about 10 hours.
+  50 minutes per strategy. The full population is about 10 hours. [Superseded
+  2026-09-18: three bands of 500 make it about 2.5 hours per strategy across the
+  three seasons.]
+- **Band populations** (measured 2026-09-18 from race-1 archive prices, counting
+  only; the priced frame was never materialised). Teams per band for
+  2023 / 2024 / 2025 — band A: 3,999 / 7,579 / 6,620; band B: 42,799 / 69,809 /
+  58,751; band C: 57,575 / 74,907 / 61,777. Every band is far larger than N=500,
+  so full enumeration never triggers, and band A is the scarcest by an order of
+  magnitude despite being the only one sampled until now.
 - **What this does not show.** It measures sampling error against the full
   population. It says nothing about season-to-season noise, which only more
-  seasons would reduce.
+  seasons would reduce. It was also measured entirely within band A, a 0.5m-wide
+  window; bands B and C span 4.5m and 5m, so their per-team spread is wider and
+  N=500 has *not* been shown to buy the same precision there (noted 2026-09-18).
+  The band figures are read per band, so this weakens each band's precision
+  rather than biasing the comparison between strategies, which stays paired on
+  the same teams.
 - **Incidental finding.** Starting-team keys in that parquet change format
   across its history. Runs made before commit `9d2f7ed` use bare driver codes
   (`ALO`); later runs use `ALO@AST`. Pairing across those runs needed the suffix
@@ -211,5 +301,19 @@ Agreed 2026-09-13:
   document (*Relationship to `max_points_v1`*).
 - **Ranking:** within each season only (R8).
 - **Strategies:** named explicitly on each run, with no default (R10).
+
+Agreed 2026-09-18:
+
+- **Value bands:** three of them — `(99.5, 100]`, `(95, 99.5]`, `(90, 95]` —
+  replacing the single `>99.5` population, because a maximised start is a
+  hypothesis to test rather than the only case worth testing (R1).
+- **Sample size:** 500 per band, so 1,500 per season. The 3x run cost is
+  accepted; the real runs are planned for more capable hardware (R1).
+- **Draw:** uniform at random within each band (R1).
+- **Reporting:** per strategy, season and band (R7).
+- **Verdict:** unchanged in form — the per-season mean delta must be positive in
+  every season, pooling the bands. Bands inform but do not gate it (R8).
+- **Replication cost:** called out whenever core-module functionality has to be
+  duplicated or worked around, and recorded in a ledger (R12).
 
 No open questions remain.
