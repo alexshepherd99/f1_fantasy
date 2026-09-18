@@ -6,6 +6,7 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 ## Status summary
 
 - Step 1 completed 2026-09-18: `backtest/sample.py`, `sample_starting_teams`.
+- Step 2 completed 2026-09-18: `backtest/variants.py`, `make_variant`.
 
 ## Step 1 — `sample_starting_teams` (2026-09-18)
 
@@ -50,3 +51,43 @@ confirmed by mutation instead.
 
 R12: no ledger entry. `get_starting_combinations` is reused unchanged, and one
 call with `pd.cut` replaces the three calls the ledger first described.
+
+## Step 2 — `make_variant` (2026-09-18)
+
+Suite green at 154 before starting, 163 after.
+
+- `backtest/variants.py` returns `type(label, (base,), {"__init__": ...})`, whose
+  `__init__` calls `base.__init__` with the factory's keywords and the variant's
+  params side by side.
+- **A param clashing with a `factory_strategy` keyword raises `TypeError`** when
+  the strategy is built — Python's own duplicate-keyword error, with no code of
+  our own. Merging instead would let a variant silently override what the engine
+  sets each race, such as `max_moves`, and break R3's one-engine guarantee.
+  Agreed in session, and pinned by a test the plan did not list.
+- An empty label is rejected along with whitespace, since it would give an
+  unnamed class and an empty key.
+- Tests build strategies through the real `factory_strategy` on 2025 race 2 and
+  simulate through the real `run_for_team`, using `test_run_batch`'s 2025
+  starting team; nothing is patched. The params test uses a test-local
+  `StrategyZeroStop` subclass taking an extra keyword.
+
+**How it failed first.** Against the missing module, only an import error. A
+naive stub (`type(label, (base,), {})`, ignoring params and not validating) then
+failed 6 of 9 on their assertions. The 3 that passed — the name is the label, the
+base class is left unchanged, and a run through `run_for_team` labels its rows
+and matches the base's points — are behaviour the stub really had, so they were
+confirmed by mutation instead.
+
+**Mutations**, each against the finished implementation, and each caught:
+
+- Class named after the base — the name and `run_for_team` tests fail.
+- Params dropped — the params and clash tests fail.
+- Params merged over the factory's keywords — the clash test fails.
+- Label validation dropped — all four invalid-label cases fail.
+- Empty label allowed — the empty-label case fails.
+- The base's `__init__` patched instead of subclassed — the base-unchanged test
+  fails.
+- Wrong base class (`StrategyZeroStop`) — the name, params and `run_for_team`
+  tests fail.
+
+R12: no new ledger entry. The mechanism's cost is already recorded (2026-09-13).
