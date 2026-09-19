@@ -3,7 +3,8 @@
 **Status**: agreed 2026-09-13; under refinement from 2026-09-18, with more
 expected. Implementation plan in `plan.md`, which has **not** yet been brought
 in line with the 2026-09-18 changes. [Superseded 2026-09-18: `plan.md` has
-since been refined for the value bands and the R12 ledger.]
+since been refined for the value bands and the R12 ledger.] [Superseded
+2026-09-19: refinement is finished and the effort is complete; see `log.md`.]
 
 A new back-testing framework: compare each strategy against `StrategyMaxP2PM` on a
 fixed random sample of starting teams rather than every combination, and judge

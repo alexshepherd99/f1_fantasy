@@ -28,6 +28,9 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - *Verification* 4 passed 2026-09-18: 13,500 simulations in 85 minutes, peak
   196 MB; band A sample means within sampling error of the January population
   bar one small outlier. **Every *Verification* step has now been run.**
+- **Effort complete 2026-09-19.** Nothing is left open. The one follow-up,
+  confirming hash order behind all 215 control mismatches with January, is
+  queued in `BACKLOG.md` and is not part of this effort.
 
 **Next — *Verification* 4, the full default run** (handoff, 2026-09-18).
 [Done 2026-09-18: see *Verification 4* below.] The
