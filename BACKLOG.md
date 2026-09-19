@@ -324,3 +324,34 @@ is better; this asks whether the *objective shape* around the current signal is
 right. No data prerequisite.
 
 Raised 2026-07-30.
+
+## Confirm hash order explains every backtest_v1 control mismatch with January
+
+`docs/backtest_v1/log.md`, *Verification 4*: 215 sampled band A control teams
+(Max budget and Zero-stop, 2024 and 2025) have season totals that differ from
+`outputs/f1_fantasy_results_batch.parquet`, by up to 50 points. Hash order
+(fixed in `534d1a9`) was confirmed as the cause for 6 of them; the other 209 are
+inferred. Close the gap by re-running all 215. It takes about 10 minutes
+unattended.
+
+Method, as used for the 6 (the session's scripts were scratch files, not kept):
+
+- **List the mismatches.** Take band A rows (`sampled_value` in `(99.5, 100]`) from
+  `outputs/backtest_v1_results.parquet`. Match them to the old file's
+  final-race rows of the `:fix_drv_chg` controls on season and team, with `@CON`
+  stripped from both sides; the old team is `sim_key` less its
+  `(strategy)(season)` prefix. Read the old file with a pyarrow `strategy`
+  filter and only the columns needed, since reading it whole was OOM-killed on the
+  dev box. Keep rows whose `total_points` differ.
+- **Re-run on the pre-fix code.** `git worktree add --detach <dir> 534d1a9~1`.
+  In it, for each season, rebuild the sample with
+  `sample_starting_teams(season, 500, 1, DEFAULT_BAND_EDGES)`, map
+  `str(factory_team_row(row, race 1))` back to each row, and simulate each
+  mismatched team with `run_for_team(strategy, team, season_data, season,
+  STARTING_RACE)` as `backtest/runner.py` does. Repeat under
+  `PYTHONHASHSEED` 0–5 with `PYTHONPATH=<worktree>`.
+- **Pass:** every team produces January's total under at least one seed. A team
+  that never does points to a second cause, to be investigated. Record the
+  result in `docs/backtest_v1/log.md` and remove the worktree.
+
+Raised 2026-09-19.

@@ -714,7 +714,8 @@ by the standard error of a 500-team sample mean, finite-population corrected.
 - **The other 209 are inferred, not run:** controls only, P2PM exact, the same
   size of difference, unchanged data and no other commit touching the controls
   (Verification 3). A second cause among them has not been excluded. Re-running
-  all 215 the same way would take about 10 minutes; not done.
+  all 215 the same way would take about 10 minutes; not done. [2026-09-19:
+  queued in `BACKLOG.md`.]
 
 **Run-time figures corrected** in the README, `plan.md` and `requirements.md`,
 which assumed ~2 s a simulation, closing the item left open at handoff.
