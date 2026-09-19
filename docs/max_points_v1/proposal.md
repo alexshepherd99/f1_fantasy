@@ -1,7 +1,8 @@
 # max_points_v1 — Proposal
 
 **Status**: proposed, not started. Raised 2026-07-30. Back-test requirements
-moved to `docs/backtest_v1/requirements.md` on 2026-09-13.
+moved to `docs/backtest_v1/requirements.md` on 2026-09-13. DRS helper design,
+with `StrategyMaxP2PM` left unchanged, added 2026-09-19.
 
 Build a team selection strategy that optimises the three-race rolling *points*
 total directly, rather than the points-per-price ratio `StrategyMaxP2PM` uses,
@@ -132,6 +133,80 @@ the backlog's *Build a strategy on the FastF1 indicators* item, and does it bett
 than reshaping a rank curve: it models the actual mechanic that makes P1 worth
 more, rather than hand-fitting a coefficient to approximate it.
 
+## DRS as an opt-in `StrategyBase` helper, with `StrategyMaxP2PM` untouched
+
+Added 2026-09-19. `StrategyMaxP2PM` is picking a live team through the rest of
+the 2026 season, so its behaviour must not change at all until that season is
+complete. The DRS modelling above therefore lands in three parts:
+
+1. **A helper on `StrategyBase` that does nothing unless called.**
+2. **`StrategyMaxPoints` calls it.**
+3. **A new `StrategyMaxP2PMDrs`, derived from `StrategyMaxP2PM`, calls it.** It is
+   otherwise identical to its parent. `StrategyMaxP2PM` itself is not edited.
+
+**The helper owns the mechanics; each strategy supplies the values.** The base
+class cannot know what a strategy's objective is made of, so it cannot know which
+value DRS should count a second time. The strategy passes that in, in its own
+objective's units:
+
+```python
+def get_drs_objective_term(self, driver_values: dict[str, float]) -> LpAffineExpression:
+    """Model the DRS boost inside the objective: one selected driver's value is counted a second time."""
+```
+
+- It creates the `y_i` binaries under `VarType.DrsDriver`, which is already
+  declared in `linear/strategy_base.py` and unused, indexed over the same driver
+  set as `VarType.TeamDrivers`.
+- It adds `Σ y_i = 1` and `y_i ≤ x_i` to `self._lp_constraints`, so `execute()`
+  applies them with no further change.
+- It returns `Σ r_i·y_i` for the strategy to add to its own objective in
+  `get_problem()`. The base class never owns the objective, so it cannot add the
+  term itself.
+- A driver missing from `driver_values` is treated as `0.0`. That covers owned but
+  unavailable drivers, matching P2PM's existing fill.
+- A companion read-back returns the driver whose `y_i` solved above 0.5. A
+  strategy opts in by returning that from its `get_drs_driver()` override.
+
+The helper needs `VarType.TeamDrivers`, so it must be called after `initialise()`,
+which means from inside `get_problem()`. Reading each driver's value back out of
+the built objective was rejected: that breaks as soon as an objective holds
+anything other than one term per driver, such as the constructor scaling or
+unused-budget terms below, and passing the values in keeps each strategy's choice
+visible in its own code.
+
+**What each strategy passes.**
+
+- `StrategyMaxPoints` passes the three-race rolling points it already optimises,
+  as in *Modelling the DRS boost in the objective* above.
+- `StrategyMaxP2PMDrs` passes the P2PM values its parent's objective already uses,
+  after the parent's missing-value fill. So DRS counts the nominated driver's
+  P2PM value twice, matching the objective's own units. That differs from
+  `StrategyMaxP2PM`'s post-hoc nomination, which picks the selected driver with
+  the highest rolling *points* (`linear/strategy_p2pm.py:47-71`). Rolling points
+  were considered as the DRS value and rejected, because mixing points into a
+  P2PM objective would need a scaling coefficient. `StrategyMaxP2PMDrs` builds on
+  `super().get_problem()`, sets the objective to the parent's
+  `VarType.OptimiseMax` plus the DRS term, and inherits the race-4
+  unlimited-moves reset unchanged.
+
+**This needs an exception to the core-modules rule.** `linear/` is normally left
+untouched. This edits `linear/strategy_base.py` and adds new strategy modules
+there, so it needs Alex's explicit OK when the work is picked up, as the
+hash-order fix did. Once `StrategyMaxP2PM` is no longer in live use, whether it
+should adopt the helper directly is a separate decision.
+
+**Verification of zero change.** A passing suite is necessary but not enough,
+since `tests/test_strategy_p2pm.py` cannot detect a change in which of several
+equal LP optima is returned. Before and after the `StrategyBase` change:
+
+- `StrategyMaxP2PM`'s rows from a `backtest_v1` run on a fixed seed must be
+  identical.
+- The live `run_single_team.py` configuration must replay to an identical team,
+  DRS nomination and points race by race. Replay it through its functions, not
+  its `__main__`, which overwrites `outputs/f1_fantasy_results_single.xlsx`, as
+  was done for the hash-order fix.
+- No existing test file is edited.
+
 ## Failure modes, and a tunable coefficient for each
 
 Every coefficient defaults to the value reproducing the unbiased objective, so the
@@ -163,6 +238,8 @@ untuned case stays reachable as the comparison baseline.
   tie-breaks arbitrarily; races 2-3 run on a partial window. Same rationale as
   P2PM's race-4 unlimited-moves reset (`linear/strategy_p2pm.py:17-20`), which
   argues for lifting that behaviour somewhere shared rather than copying the block.
+  [2026-09-19: any such lift must leave `StrategyMaxP2PM` unedited while it is in
+  live use; see *DRS as an opt-in `StrategyBase` helper* below.]
 - **Rolling sum vs mean.** `fillna(0).shift(1).rolling(3).sum()` scores a driver
   who missed a race as having zeroed it, and keeps them depressed for three races
   after returning. Defensible for a "who will score next" signal, clearly wrong for
@@ -229,6 +306,11 @@ reusing `run_for_team` as the single simulation engine (R3, R4, R5, R10).
 5. The sweep driver. (The paired-delta analysis moved to
    `docs/backtest_v1/requirements.md`, R7 and R9.)
 
+> **Superseded 2026-09-19:** step 3 splits into three commits, per *DRS as an
+> opt-in `StrategyBase` helper* above: (a) the helper on `StrategyBase`, with no
+> caller yet and the zero-change verification run; (b) `StrategyMaxPoints` using
+> it; (c) `StrategyMaxP2PMDrs`.
+
 ## Open questions
 
 - **Is unused budget worth anything in practice?** Determines whether the
@@ -236,7 +318,9 @@ reusing `run_for_team` as the single simulation engine (R3, R4, R5, R10).
 - **Should DRS be modelled in P2PM's objective too?** It would make the back-test a
   cleaner comparison — both strategies DRS-aware — but it changes an existing
   strategy's results, and the 2026 team log in README.md is live against current
-  P2PM behaviour.
+  P2PM behaviour. [Answered 2026-09-19: not in `StrategyMaxP2PM` itself, which
+  stays unchanged. A derived `StrategyMaxP2PMDrs` gives the DRS-aware comparison;
+  see *DRS as an opt-in `StrategyBase` helper* above.]
 
 ## Relationship to the FastF1 backlog items
 
