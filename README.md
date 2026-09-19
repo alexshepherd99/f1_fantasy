@@ -85,7 +85,7 @@ PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyZeroStop --sam
 PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyZeroStop --seasons 2026 --bands 90 95 99.5 100
 ```
 
-`--sample-size` is per band, so the default of 500 draws 1,500 teams a season.  At roughly two seconds a simulation, the default run takes about 2.5 hours per strategy, P2PM included.  Seasons default to the completed ones, listed in `COMPLETED_SEASONS` in `backtest/cli.py`; add a season there once it has finished.
+`--sample-size` is per band, so the default of 500 draws 1,500 teams a season.  At roughly 0.4 seconds a simulation, the default run takes about 30 minutes per strategy, P2PM included, so about 85 minutes with two challengers.  Seasons default to the completed ones, listed in `COMPLETED_SEASONS` in `backtest/cli.py`; add a season there once it has finished.
 
 Three files are written to `outputs/`:
 

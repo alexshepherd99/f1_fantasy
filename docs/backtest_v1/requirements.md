@@ -248,7 +248,8 @@ Pairing used the starting team as the key, with each strategy compared against
 - **Cost.** At about 2s per season simulation, 500 teams × 3 seasons is about
   50 minutes per strategy. The full population is about 10 hours. [Superseded
   2026-09-18: three bands of 500 make it about 2.5 hours per strategy across the
-  three seasons.]
+  three seasons.] [Superseded 2026-09-18: *Verification* 4 measured 0.38 s a
+  simulation, so about 30 minutes per strategy for three bands of 500.]
 - **Band populations** (measured 2026-09-18 from race-1 archive prices, counting
   only; the priced frame was never materialised). Teams per band for
   2023 / 2024 / 2025 — band A: 3,999 / 7,579 / 6,620; band B: 42,799 / 69,809 /

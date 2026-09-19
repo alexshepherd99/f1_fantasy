@@ -4,6 +4,7 @@
 the replication-cost ledger. Requirements: `requirements.md`, settled
 2026-09-18. Not yet implemented — no code exists. [Superseded 2026-09-18:
 steps 1–10 implemented; *Verification* 2–4 not yet run. See `log.md`.]
+[Superseded 2026-09-18: *Verification* 2–4 run and passed.]
 
 TL;DR — A new `backtest/` package: draw a seeded sample of starting teams per
 season **and value band**, simulate the P2PM baseline and each challenger on that
@@ -66,7 +67,8 @@ bands, 95.0 lands in `(90, 95]`, 99.5 in `(95, 99.5]`, and 100.0 in
 - The widest frame is 2024's, about 152,000 rows. Band assignment and sampling
   are all that touch it, and it is dropped before any simulation starts. Its
   peak memory on the dev box is **not yet measured** — *Verification* 2 covers
-  it.
+  it. [Superseded 2026-09-18: measured at about 215 MiB peak by *Verification*
+  2, and 196 MB for the full run in *Verification* 4.]
 - `df.sample(n, random_state=seed)` per band, or the whole band when n is at
   least its population. That never fires for the agreed bands, the smallest of
   which holds 3,999 teams against N=500 (R1 *Evidence*), but the rule stays.
@@ -282,6 +284,8 @@ same commit as the step that incurred it.
 4. **Full default run.** 500 teams per band × 3 bands × 3 seasons × 3 labels:
    about 7.5 hours at ~2s per simulation, or 2.5 hours per strategy.
    [Superseded 2026-09-18: was 500 per season, about 2.5 hours in total.]
+   [Superseded 2026-09-18: measured by *Verification* 4 at 0.38 s a
+   simulation, about 30 minutes per strategy; 85 minutes for three labels.]
    Compare the sampled per-season means with the full-population means from the
    old file, as a check that the sample is representative — again band A only,
    for the same reason as step 3.
