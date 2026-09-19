@@ -1,5 +1,14 @@
 # Backlog
 
+Efforts under `docs/`:
+
+| Effort | State |
+| --- | --- |
+| [`backtest_v1`](docs/backtest_v1/) | done |
+| [`data_capture_v1`](docs/data_capture_v1/) | in progress |
+| [`fastf1_v1`](docs/fastf1_v1/) | done |
+| [`max_points_v1`](docs/max_points_v1/) | not started |
+
 Global list of not-yet-started work. Freeform. When an item is picked up, create `docs/<effort-name>/` (see `docs/` and `agentic`'s `shared/persistent-docs.md`) and move the item there.
 
 An entry that runs past ~350 words gets its own `docs/<effort-name>/proposal.md`, leaving a short pointer entry in this list. Picking the item up then adds `requirements.md` / `plan.md` / `log.md` beside it as usual. The threshold is a prompt to judge, not a gate — it is where the entries here actually split (2026-07-30: seven at 110-330 words, two at 537 and 766), not a target. Note this puts a `docs/<effort-name>/` directory in place before work starts, which `agentic`'s `shared/persistent-docs.md` does not describe; it is a deliberate local extension, worth proposing upstream if it sticks.
@@ -228,7 +237,9 @@ Five things to settle before writing any of it.
   is worth more than the gap between 10th and 11th, or add a bonus term on
   whichever driver the strategy nominates for DRS. Whatever the form, it needs
   a coefficient that can be tuned and back-tested at zero, so the unbiased
-  objective stays available as the comparison case.
+  objective stays available as the comparison case. [2026-09-19:
+  `docs/max_points_v1/proposal.md` argues that modelling DRS inside the LP
+  objective subsumes this; see its *Modelling the DRS boost in the objective*.]
 
 One game mechanic to note: `AggregateRank` needs FP2+FP3 (or FP1+Sprint
 Qualifying) to have run, so this strategy cannot pick a team before practice.
@@ -301,26 +312,4 @@ Raised 2026-07-29.
 
 ## Optimise rolling points directly, and model DRS inside the objective
 
-See `docs/max_points_v1/proposal.md` for the full write-up.
-
-`StrategyMaxP2PM` optimises `pts₃²/price₃`, bundling a points forecast with a
-price penalty. But the LP already carries a hard budget cap, so the divisor
-penalises expensive assets twice. Add a `StrategyMaxPoints` that optimises the
-three-race rolling points total directly — the derivation is already computed and
-threaded into `derivs_assets` — and back-test whether dropping the divisor wins.
-
-Separately and more structurally: no strategy models the DRS x2 boost in its
-objective. `Team.get_drs_points()` doubles the nominated driver *after* the team is
-chosen, so selection is DRS-blind. Adding a DRS assignment binary with
-`Σ y_i = 1` and `y_i ≤ x_i` puts it in the objective without needing a `max`
-operator, and changes which team gets picked rather than only which driver gets
-nominated. The proposal also covers a `y_i ≤ x_i` omission that would let an
-unowned driver's points be scored, tunable coefficients for the failure modes a
-pure points objective introduces, and a tuning protocol. Back-testing is covered
-by `docs/backtest_v1/requirements.md`.
-
-Independent of the two FastF1 items above — those ask whether a different *signal*
-is better; this asks whether the *objective shape* around the current signal is
-right. No data prerequisite.
-
-Raised 2026-07-30.
+See `docs/max_points_v1/proposal.md`.
