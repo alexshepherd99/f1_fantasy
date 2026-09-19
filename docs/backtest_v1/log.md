@@ -25,8 +25,12 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
   reproducibility issue awaiting a decision. *Verification* 4 not yet run.
   [2026-09-18: fixed in `linear/` as an agreed exception, `534d1a9`; see
   *Hash-order fix* below.]
+- *Verification* 4 passed 2026-09-18: 13,500 simulations in 85 minutes, peak
+  196 MB; band A sample means within sampling error of the January population
+  bar one small outlier. **Every *Verification* step has now been run.**
 
-**Next — *Verification* 4, the full default run** (handoff, 2026-09-18). The
+**Next — *Verification* 4, the full default run** (handoff, 2026-09-18).
+[Done 2026-09-18: see *Verification 4* below.] The
 Verification 2 files were deleted after the hash-order fix, so
 `outputs/backtest_v1_*` is empty and the run starts clean:
 
@@ -651,3 +655,63 @@ which ignores order, so it could not have caught this.
 produced under random hash orders; re-running a few control teams can give
 today's value or a different one, as Verification 3 showed. The
 Verification 2 store was also produced before the fix.
+
+## Verification 4 — full default run (2026-09-18)
+
+**Passed.** The suite was green before the run (220). The run started from an
+empty `outputs/backtest_v1_*`:
+
+```
+PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyMaxBudget StrategyZeroStop
+```
+
+- **13,500 simulations in 5,113 s** (85 minutes), 0.38 s each, matching
+  Verification 2. By label: P2PM about 29 minutes, Max budget about 37, Zero-stop
+  about 19. Every season logged "skipped 0"; no errors or warnings.
+- **Peak memory 196 MB**, from `ru_maxrss` of the run's own process, taken by the
+  same kind of scratch wrapper as Verification 2.
+- **Verdict:** neither control beats P2PM in any season. Both are consistently
+  negative, with pooled mean deltas of −980 to −1,763 points (−21% to −36%), as
+  in Verification 2 and the January evidence.
+
+**Is the sample representative?** Band A (`(99.5, 100]`) sample means, n=500,
+were compared with the full band A population in
+`outputs/f1_fantasy_results_batch.parquet`: final-race rows of
+`StrategyMaxP2PM:unlimited_chip_4` and the `:fix_drv_chg` controls, with
+`starting_value` in the band. That population is 3,942 / 7,495 / 6,526 teams
+against band counts of 3,999 / 7,579 / 6,620. Verification 3 found teams at
+exactly 100 missing from the old file; the rest of the shortfall was not
+investigated. Each gap is given as a z-score: the difference in means divided
+by the standard error of a 500-team sample mean, finite-population corrected.
+
+| Label | 2023 | 2024 | 2025 |
+|---|---|---|---|
+| StrategyMaxP2PM | −0.28 | 0.75 | −0.13 |
+| StrategyMaxBudget | −1.65 | −2.33 | 1.04 |
+| StrategyZeroStop | 0.55 | −1.37 | −0.31 |
+
+- Eight of nine are within ±2. Max budget 2024 is 33 points under a population
+  mean of 3,568, against a standard error of about 14. A random sample misses by
+  that much about 2% of the time; one of nine comparisons doing so is
+  unremarkable, though the nine are not independent (labels share each season's
+  sample).
+- **It is the draw, not the engine:** January's own totals for the same sampled
+  teams give z = −2.17.
+- **It does not move the conclusion:** in band A 2024, Max budget trails P2PM
+  by 1,027 points on the sample and 989 on the full population.
+
+**Exact matches with January**, on sampled band A teams present in both
+(491 / 490 / 494 per label, matched with `@CON` stripped):
+
+- P2PM: 1,475 of 1,475.
+- Controls: all of 2023; 2024 362 of 490 (Max budget) and 406 of 490
+  (Zero-stop); 2025 all but 2 (Max budget) and 1 (Zero-stop). 215 mismatches,
+  differences up to 50 points — a far higher rate than Verification 3's 6 of 57.
+- **Cause, for 6 of them confirmed:** the three largest 2024 mismatches and the
+  three in 2025 were re-run on the pre-fix code (`3ea1026`, in a throwaway
+  worktree) under `PYTHONHASHSEED` 0–5. Each gave both January's value and
+  today's, depending on the seed alone; two also gave a third value.
+- **The other 209 are inferred, not run:** controls only, P2PM exact, the same
+  size of difference, unchanged data and no other commit touching the controls
+  (Verification 3). A second cause among them has not been excluded. Re-running
+  all 215 the same way would take about 10 minutes; not done.
