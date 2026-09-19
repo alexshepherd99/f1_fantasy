@@ -30,7 +30,8 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
   bar one small outlier. **Every *Verification* step has now been run.**
 - **Effort complete 2026-09-19.** Nothing is left open. The one follow-up,
   confirming hash order behind all 215 control mismatches with January, is
-  queued in `BACKLOG.md` and is not part of this effort.
+  queued in `BACKLOG.md` and is not part of this effort. [2026-09-19: follow-up
+  done, all 215 confirmed.]
 
 **Next — *Verification* 4, the full default run** (handoff, 2026-09-18).
 [Done 2026-09-18: see *Verification 4* below.] The
@@ -718,7 +719,30 @@ by the standard error of a 500-team sample mean, finite-population corrected.
   size of difference, unchanged data and no other commit touching the controls
   (Verification 3). A second cause among them has not been excluded. Re-running
   all 215 the same way would take about 10 minutes; not done. [2026-09-19:
-  queued in `BACKLOG.md`.]
+  queued in `BACKLOG.md`; done the same day, all 215 confirmed — see *Hash-order
+  check of every control mismatch* below.]
 
 **Run-time figures corrected** in the README, `plan.md` and `requirements.md`,
 which assumed ~2 s a simulation, closing the item left open at handoff.
+
+## Hash-order check of every control mismatch (2026-09-19)
+
+**Passed: hash order explains all 215** band A control mismatches with January
+from *Verification* 4, closing the 209 that were inferred rather than run.
+
+- **Listed** as the `BACKLOG.md` entry described: 215 teams — Max budget 128
+  (2024) and 2 (2025), Zero-stop 84 and 1 — differing by up to 50 points,
+  reproducing *Verification* 4's counts.
+- **Harness check:** the same script run on current code reproduced
+  backtest_v1's stored total for 215 of 215, so teams map correctly from the
+  rebuilt sample.
+- **Pre-fix code** (`3ea1026`, throwaway worktree, since removed) under
+  `PYTHONHASHSEED` 0–5: January's total reproduced for 200 of 215. Across seeds
+  each team gave two to four distinct totals.
+- **The other 15**, all 2024, were re-run under seeds 6–29. All 15 reproduced
+  January's total. Each has four possible totals, and January's came up in 5 or
+  10 of the 30 seeds, so six seeds had simply missed it. For 11 of the 15,
+  today's own total also never appeared under seeds 0–5.
+- **No second cause.** Every team gives January's total under some seed of the
+  pre-fix code, and today's under current code. About 10 + 4 minutes of
+  runtime; the scripts were session scratch files, not kept.
