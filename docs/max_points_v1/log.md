@@ -239,12 +239,22 @@ runs' summaries and the names do not say which is trustworthy:
 
 The confounded run's *rows* were purged from the shared store, but its summary CSV
 was left on disk and is the same confusion risk one level up. Delete it, or rename it
-with a `confounded_` prefix, at the start of the next session.
+with a `confounded_` prefix, at the start of the next session. [Resolved 2026-09-20:
+deleted, along with its companion `max_points_v1_summary_verdict.csv` — which was the
+more dangerous of the two, since it stated "2 of 3 seasons positive", the conclusion
+this session retracted. Only the corrected artefacts remain, so the table above now
+describes one surviving row and two absent ones.]
 
-**Two decisions left open deliberately.**
+**Two decisions left open deliberately.** [Both resolved 2026-09-20, before the
+session closed — see the notes on each.]
 
 - **The `.bak_before_purge` copy** of the shared store is still in `outputs/`. Keep
   it until the next session is satisfied the purge caused no surprise, then delete.
+  [Resolved 2026-09-20: deleted. Before deleting, the purge was re-verified — the
+  live store is 13,500 rows across the three expected labels, `sim_key`s unique, and
+  **exactly equal** to the backup with the `StrategyMaxPoints` rows dropped. The
+  purge is therefore not reversible from here; it is reproducible instead, since
+  nothing was removed that a re-run could not regenerate.]
 - **Steps 5-8, the DRS helper**, are untouched and their design is settled in
   `requirements.md` R3-R5 and `plan.md`, *The helper's shape*. They now have a
   properly matched control to be measured against, per step 4's superseding note in
