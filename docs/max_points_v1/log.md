@@ -228,6 +228,19 @@ across all races is minutes, not hours — this does not need another overnight 
 - Whether 2024's severity tracks anything structural: that season's price movements,
   a mid-season constructor switch, or an asset whose rolling points collapsed.
 
+**Which file is which, because two are a character apart.** `outputs/` holds both
+runs' summaries and the names do not say which is trustworthy:
+
+| File | Run | Use it? |
+|---|---|---|
+| `max_points_v1_drs_summary.csv` | corrected, DRS matched | **yes** — this is *Verification* 1 |
+| `max_points_v1_summary.csv` | first attempt, confounded | **no** — objective and DRS varied together |
+| `max_points_v1_results.parquet` | corrected, 9,000 rows | yes, the only per-team store for this effort |
+
+The confounded run's *rows* were purged from the shared store, but its summary CSV
+was left on disk and is the same confusion risk one level up. Delete it, or rename it
+with a `confounded_` prefix, at the start of the next session.
+
 **Two decisions left open deliberately.**
 
 - **The `.bak_before_purge` copy** of the shared store is still in `outputs/`. Keep
