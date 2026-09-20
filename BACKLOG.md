@@ -46,6 +46,16 @@ collapses most of it — and move it up to `StrategyBase`, where
 concentration for free; leaving `max_concentration` at its permissive
 default keeps the other strategies' behaviour unchanged.
 
+2026-09-20: `max_points_v1` called this a likely prerequisite and then
+deliberately declined to treat it as one, requiring evidence first (its R7).
+*Verification* 1 measured high variance in `StrategyMaxPoints` — it wins most
+starting teams in 2025 and still loses on the mean — which *looks* like
+concentration risk but does not measure it. **Concentration itself has not been
+counted**, so this item is not yet justified by that effort; see
+`docs/max_points_v1/log.md`, *Concentration is still an assumption* and *Next —
+the per-race re-simulation*. The definition to reuse when measuring is the one
+already in `strategy_odds.py`, so the metric does not need inventing.
+
 ## Source betting odds directly from a web page
 
 `StrategyBettingOdds` (`linear/strategy_odds.py:5,14-15`),

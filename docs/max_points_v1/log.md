@@ -186,6 +186,64 @@ operation is reversible. The checks were stated before the write, not after:
 with the store, since only a label absent from them was removed. This effort's own
 results live in `outputs/max_points_v1_results.parquet` and were never mixed in.
 
+## Next — the per-race re-simulation (handoff, 2026-09-20)
+
+Session closed here with steps 1-4 and *Verification* 1 complete, the suite green at
+231, and the working tree clean. Nothing is half-finished in code; what follows is
+analysis, not implementation.
+
+**Two open questions, and the argument for answering them in one run.**
+
+1. **Is concentration actually what makes the tail?** R7's condition is unmet — see
+   *Concentration is still an assumption* above. Needs counts, not inference.
+2. **Why is 2024 an order of magnitude worse?** −156.2 against −14.5 and −4.4, and
+   nothing in this session explains it. The single most informative gap.
+
+These plausibly have the same answer, so **one re-simulation capturing every race
+serves both**, rather than two separate passes. The store's rows are final-race only
+(`run_for_team(...)[-1]` in `backtest/runner.py`), which is what made the per-race
+picture unavailable and, twice in this session, invited a wrong conclusion from a
+snapshot.
+
+**The method, which worked at small scale here.** The confirmation run for 2024
+re-simulated five sampled teams under both strategies and kept every row
+`run_for_team` returns, not just the last. Rebuild it by: sampling with
+`sample_starting_teams(season, 500, seed=1, band_edges=DEFAULT_BAND_EDGES)`, taking
+a slice, building each team with `factory_team_row(sampled.drop(_SAMPLE_COLUMNS)
+.to_dict(), starting_race)`, then `pd.DataFrame(run_for_team(strategy, team,
+season_data, season, STARTING_RACE))`. Note `factory_team_row` needs the `Race`
+object, not the race number. Roughly 0.4 s per team-season, so a few hundred teams
+across all races is minutes, not hours — this does not need another overnight run.
+
+**What to measure on it.**
+
+- Concentration per team per race, using `linear/strategy_odds.py`'s definition —
+  same-constructor driver-driver pairs plus driver-constructor pairs — so the metric
+  matches the constraint that would eventually enforce it.
+- Concentration against per-team delta, to test whether the left tail is the
+  concentrated teams. That is the claim R7 needs and this session did not make.
+- Where in a season the 2024 gap opens, and whether it is one sustained drift or a
+  few large races. The five-team confirmation showed two-sided per-race gaps — one
+  team's race 8 was +91 and its race 16 −65 — so it is not a simple monotone bleed.
+- Whether 2024's severity tracks anything structural: that season's price movements,
+  a mid-season constructor switch, or an asset whose rolling points collapsed.
+
+**Two decisions left open deliberately.**
+
+- **The `.bak_before_purge` copy** of the shared store is still in `outputs/`. Keep
+  it until the next session is satisfied the purge caused no surprise, then delete.
+- **Steps 5-8, the DRS helper**, are untouched and their design is settled in
+  `requirements.md` R3-R5 and `plan.md`, *The helper's shape*. They now have a
+  properly matched control to be measured against, per step 4's superseding note in
+  `plan.md`. Whether to do the analysis above first or the helper first is a genuine
+  choice; the analysis is cheap and may change what the coefficients are for, which
+  argues for it going first.
+
+**One thing not to redo.** The `StrategyMaxPoints` label is now clean in both stores
+— purged from the shared one, and its own store holds only the corrected run. A
+future run under that label in `outputs/max_points_v1_results.parquet` **will** be
+skipped as already done, so any changed behaviour needs a new label or a new store.
+
 ## Step 1 — Effort docs (2026-09-20)
 
 Suite green at 220 before starting.
