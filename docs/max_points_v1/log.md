@@ -7,7 +7,13 @@ design rationale predates both and is in `proposal.md`.
 ## Status summary
 
 - Effort picked up off the backlog 2026-09-20. Step 1 in progress; no code
-  written yet.
+  written yet. [Superseded 2026-09-20: steps 1-3 complete, see below.]
+- Step 1 completed 2026-09-20: `requirements.md`, `plan.md`, `log.md`, and the
+  DRS helper's shape settled ahead of the code.
+- Step 2 completed 2026-09-20: `linear/strategy_max_points.py`,
+  `StrategyMaxPoints`.
+- Step 3 completed 2026-09-20: registered in `backtest/cli.py`. **Every step up to
+  *Verification* 1 is implemented; the measurement run has not been done.**
 
 ## Step 1 — Effort docs (2026-09-20)
 
@@ -144,3 +150,34 @@ unaffected — its helper indexes over available ∪ team and does need its own
 missing-value rule. `requirements.md` annotated in place, and the test for this
 now exercises a `None` value rather than a missing key, which is what production
 data can actually present.
+
+## Step 3 — Registered in the back-test CLI (2026-09-20)
+
+Suite green at 228 before starting, 229 after.
+
+`StrategyMaxPoints` added to `backtest/cli.py`'s `STRATEGIES`, which is what makes
+*Verification* 1 runnable. Red first: the new selectability test failed with
+argparse's `invalid choice: 'StrategyMaxPoints'`, and the registry test with the
+dict mismatch.
+
+**This edited an existing test file, which R6 says not to do.**
+`tests/test_backtest_cli.py`'s registry test asserts exact dict equality on
+`STRATEGIES`, so it cannot survive a strategy being registered. Called out at the
+time rather than absorbed. R6's clause is about tests of `linear/` behaviour —
+a test changing to stay green there would be evidence `StrategyMaxP2PM` moved —
+and a registry-contents assertion in `backtest/` is the opposite case: it changes
+*because* the registry grew, which is the whole point of the step. R6 annotated
+in place with that scoping.
+
+**Smoke-run against real data, and what it does not show.** The CLI was run on
+2023 with `--sample-size 1`, output directed into a session scratch directory so
+`outputs/` was untouched. It completed end to end — six simulations, the summary
+and the verdict written — which establishes that the strategy solves against real
+`load_with_derivations` output and not only against synthetic fixtures. It
+reported `StrategyMaxPoints` ahead of the baseline on all three sampled teams.
+
+**That is not evidence for the divisor hypothesis and is not recorded as any.**
+One team per band in a single season cannot separate the two strategies; the
+per-team spread in `backtest_v1`'s own sizing work was far larger than the
+differences seen here. The run's only claim is "it executes". *Verification* 1, at
+the default sample size across three seasons, is the measurement.

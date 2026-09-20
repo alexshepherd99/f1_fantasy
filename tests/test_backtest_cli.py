@@ -4,6 +4,7 @@ import backtest.cli as cli
 from backtest.cli import COMPLETED_SEASONS, STRATEGIES, main, parse_arguments
 from backtest.sample import DEFAULT_BAND_EDGES
 from linear.strategy_budget import StrategyMaxBudget
+from linear.strategy_max_points import StrategyMaxPoints
 from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_zero_stop import StrategyZeroStop
 
@@ -28,7 +29,16 @@ def test_registry_holds_the_existing_strategies_by_name():
         "StrategyMaxP2PM": StrategyMaxP2PM,
         "StrategyZeroStop": StrategyZeroStop,
         "StrategyMaxBudget": StrategyMaxBudget,
+        "StrategyMaxPoints": StrategyMaxPoints,
     }
+
+
+def test_max_points_is_selectable_as_a_challenger():
+    """StrategyMaxPoints has to be nameable on the command line to be back-tested."""
+    args = parse_arguments(["--strategies", "StrategyMaxPoints"])
+
+    assert args.strategies == ["StrategyMaxPoints"]
+    assert STRATEGIES[args.strategies[0]] is StrategyMaxPoints
 
 
 def test_every_option_parses():

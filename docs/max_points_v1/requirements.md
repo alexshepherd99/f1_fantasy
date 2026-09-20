@@ -166,7 +166,12 @@ change in which of several equal LP optima is returned. Before and after the
   its `__main__`, which overwrites `outputs/f1_fantasy_results_single.xlsx` — as
   was done for the hash-order fix.
 - No existing test file is edited. A test that had to change to keep passing is
-  evidence the behaviour changed.
+  evidence the behaviour changed. [Scoped 2026-09-20: this clause covers tests of
+  `linear/` behaviour, which is what it was written to protect. It does not cover
+  `tests/test_backtest_cli.py`'s registry assertion, which asserts exact dict
+  equality on `STRATEGIES` and so must change whenever a strategy is registered —
+  that is the intended change, not a symptom of one. Step 3 edited it for exactly
+  that reason.]
 
 ### R7 — Concentration is measured before it is constrained
 
