@@ -364,19 +364,79 @@ def test_strat_max_points_does_not_reset_moves_before_race_four(
     assert strat._max_moves == 2
 
 
-def test_strat_max_points_nominates_no_drs_driver(
+def test_strat_max_points_nominates_the_highest_rolling_points_driver(
     fixture_all_available_drivers,
     fixture_all_available_constructors,
     fixture_asset_prices,
     fixture_pairings,
 ):
-    """At neutral defaults the strategy makes no DRS choice, so Team falls back to price.
+    """DRS goes to the selected driver with the most rolling points, as StrategyMaxP2PM does.
 
-    DRS is modelled inside the objective in a later step; this is the control case.
+    The rule is matched to P2PM's deliberately, so that a back-test between the two
+    compares their objectives and nothing else. Without it the strategy nominates
+    nobody and Team falls back to the highest-priced driver, which is a second
+    difference and would confound the comparison.
     """
     points_derivs = {
-        d: 10.0
-        for d in fixture_all_available_drivers + fixture_all_available_constructors
+        d: 5.0 for d in fixture_all_available_drivers + fixture_all_available_constructors
+    }
+    # LEC leads among the current team, which max_moves=0 holds in place
+    points_derivs.update({"VER": 10.0, "LEC": 50.0, "HAM": 20.0, "ALO": 5.0})
+
+    strat = factory_test_strategy(
+        points_derivs,
+        fixture_asset_prices,
+        fixture_all_available_drivers,
+        fixture_all_available_constructors,
+        fixture_pairings,
+        max_moves=0,
+    )
+    strat.execute()
+
+    assert strat.get_drs_driver() == "LEC"
+
+
+def test_strat_max_points_nominates_only_a_driver_it_owns(
+    fixture_all_available_drivers,
+    fixture_all_available_constructors,
+    fixture_asset_prices,
+    fixture_pairings,
+):
+    """The best driver in the field is not nominated unless the team holds them.
+
+    Team.get_drs_points() checks the nominee is in the race, not that the team owns
+    them, so an unowned nominee's points would be added silently.
+    """
+    points_derivs = {
+        d: 5.0 for d in fixture_all_available_drivers + fixture_all_available_constructors
+    }
+    points_derivs.update({"VER": 10.0, "LEC": 50.0, "HAM": 20.0, "ALO": 5.0})
+    # Far and away the best in the field, and deliberately not on the team
+    points_derivs["PIA"] = 999.0
+
+    strat = factory_test_strategy(
+        points_derivs,
+        fixture_asset_prices,
+        fixture_all_available_drivers,
+        fixture_all_available_constructors,
+        fixture_pairings,
+        max_moves=0,
+    )
+    strat.execute()
+
+    assert strat._lp_variables[VarType.TeamDrivers]["PIA"].value() == 0.0
+    assert strat.get_drs_driver() == "LEC"
+
+
+def test_strat_max_points_nominates_nobody_when_no_driver_has_points(
+    fixture_all_available_drivers,
+    fixture_all_available_constructors,
+    fixture_asset_prices,
+    fixture_pairings,
+):
+    """With no points to go on, the choice is left to Team, which picks on price."""
+    points_derivs = {
+        d: 0.0 for d in fixture_all_available_drivers + fixture_all_available_constructors
     }
 
     strat = factory_test_strategy(
@@ -385,6 +445,7 @@ def test_strat_max_points_nominates_no_drs_driver(
         fixture_all_available_drivers,
         fixture_all_available_constructors,
         fixture_pairings,
+        max_moves=0,
     )
     strat.execute()
 

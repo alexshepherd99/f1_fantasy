@@ -49,3 +49,37 @@ class StrategyMaxPoints(StrategyBase):
         # Optimise for this
         problem += self._lp_variables[VarType.OptimiseMax]
         return problem
+
+
+    def get_drs_driver(self) -> str:
+        """Select a driver from the chosen team to assign DRS based on maximum recent points.
+
+        Returns an empty string if no suitable driver has points data.
+
+        Duplicated from `StrategyMaxP2PM` on purpose, rather than shared or inherited.
+        A back-test between the two has to differ in the objective and nothing else, and
+        without this the strategy nominates nobody, leaving `Team` to fall back to the
+        highest-priced driver - a second difference that would confound the comparison.
+        `strategy_p2pm.py` cannot be edited to share the method while P2PM is picking a
+        live team, so the duplication is the cost of keeping that guarantee.
+        """
+        # Override behaviour to select driver with highest points average
+        deriv_points = get_derivation_name(DerivationType.POINTS_CUMULATIVE, 3)
+
+        max_points = 0.0
+        max_driver = ""
+
+        for d in self._all_available_drivers:
+            # This will only be called after the strategy has run, so self._lp_variables[VarType.TeamDrivers] will
+            # represent the selected drivers
+            if self._lp_variables[VarType.TeamDrivers][d].value() > 0:
+                if self._derivs_assets[deriv_points][d] > max_points:
+                    max_points = self._derivs_assets[deriv_points][d]
+                    max_driver = d
+
+        # If we had no points to work with, ensure we return no driver.  This will allow the default team selection
+        # to choose, which will pick driver with max current value.
+        if max_points == 0.0:
+            return ""
+        else:
+            return max_driver

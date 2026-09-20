@@ -14,6 +14,77 @@ design rationale predates both and is in `proposal.md`.
   `StrategyMaxPoints`.
 - Step 3 completed 2026-09-20: registered in `backtest/cli.py`. **Every step up to
   *Verification* 1 is implemented; the measurement run has not been done.**
+- *Verification* 1 run 2026-09-20 and **found to be confounded** — the comparison
+  measured the objective *and* DRS nomination. Its result is not a finding about
+  the objective. See *Verification 1, first attempt* and *Matching P2PM's DRS
+  nomination* below.
+- Step 4 added 2026-09-20: `StrategyMaxPoints` now nominates a DRS driver by the
+  same rule as `StrategyMaxP2PM`, so a re-run compares objectives alone.
+
+## Verification 1, first attempt — confounded (2026-09-20)
+
+Ran in about 30 minutes rather than the planned 2.5 hours: the store already held
+*Verification* 4's rows from `backtest_v1`, so the P2PM baseline was skipped and
+only the 4,500 challenger simulations ran. Reuse was checked before relying on it —
+2023's sample was rebuilt from seed 1 and compared against the store's baseline
+teams, 1,500 against 1,500, identical with none on either side. The archive last
+changed on 2026-09-09 and the store was written on 2026-09-18, which is why it
+reproduces.
+
+**The result, which is not a finding about the objective.** Pooled mean delta per
+season: 2023 +104, 2024 −156, 2025 +1. Two seasons positive of three, so
+`beats_baseline` and `consistent_sign` both `False` — "no evidence" by R10, not a
+win for either side. 2025's pooled mean of +1 hides a median of +48 against a p10
+of −281: it beats P2PM on most teams and loses heavily on a few, which is the
+concentration risk the proposal predicted, visible in the data.
+
+**Why it is confounded.** `StrategyMaxPoints` nominated no DRS driver in 100% of
+teams in all three seasons, so `Team` fell back to the highest-*priced* driver,
+while `StrategyMaxP2PM` nominated the highest-rolling-points driver in 100%. DRS
+doubles one driver's score every race, which is worth the same order as every delta
+reported. R2 copied the race-4 chip so the comparison would measure "the objective
+alone", and then left a second, larger difference in place.
+
+**A wrong turn recorded because the reasoning is instructive.** Comparing the
+strategies' stored rows showed *identical* end-of-season driver holdings for 2024
+and near-identical constructor spend, which was read as "same team, different
+score, so DRS must be the cause". The store keeps only each team's final-race row
+(`run_for_team(...)[-1]`), so that was one snapshot, not a season. Re-simulating
+five 2024 teams across all 24 races showed the strategies hold the same assets in
+only 1–5 races of 24. The convergence at the final race was coincidence. DRS is
+confirmed *present* as a difference; it is not established as the *cause*, and the
+per-race gaps are two-sided — one team's race 8 was +91 and its race 16 −65 — so
+selection is doing real work too. The two causes cannot be separated from this run.
+
+## Matching P2PM's DRS nomination (2026-09-20)
+
+`get_drs_driver` copied verbatim from `StrategyMaxP2PM` into `StrategyMaxPoints`,
+so the two differ in their objective and nothing else. Duplicated rather than
+shared: `strategy_p2pm.py` cannot be edited while P2PM picks a live team, which is
+the cost of that guarantee and is noted in the method's docstring.
+
+The nominated *driver* will still often differ between the strategies, because the
+teams differ. That is downstream of the objective under test, not a second
+variable; what is matched is the rule.
+
+**One asymmetry that remains, named rather than discovered later.**
+`StrategyMaxPoints.get_problem` normalises the points derivation, since that is its
+objective, so `get_drs_driver` reads filled floats. P2PM normalises only the P2PM
+derivation, so its `get_drs_driver` reads the points derivation raw. Identical while
+those values are plain floats, which production behaviour implies; if one were ever
+`None`, P2PM would raise where `StrategyMaxPoints` would not.
+
+**The sim-key trap, avoided.** The store already held 4,500 rows labelled
+`StrategyMaxPoints` from the confounded run, and `simulate_sample` skips keys it
+already has, so re-running under the same label would have silently returned the
+old results — exactly the trap `proposal.md` and `backtest_v1` R4/R5 describe. The
+re-run therefore writes to its own store, `outputs/max_points_v1_results.parquet`,
+leaving the shared `backtest_v1` store untouched rather than deleting rows from it
+without agreement. The cost is that the baseline is simulated again, roughly
+doubling the run to about an hour; the benefit is that nothing stale can be reused
+and the re-simulated baseline is a free reproducibility check. **The superseded
+`StrategyMaxPoints` rows are still in the shared store and must not be read as this
+effort's result.**
 
 ## Step 1 — Effort docs (2026-09-20)
 

@@ -163,6 +163,24 @@ Run the back-test. This answers the proposal's central falsifiable claim before
 any further code is written, so a negative result can redirect the effort rather
 than being discovered after the coefficients are built.
 
+> **Superseded 2026-09-20, after the run.** The comparison was confounded:
+> `StrategyMaxPoints` nominated no DRS driver, so `Team` fell back to the
+> highest-priced one while P2PM nominated on rolling points. The run measured the
+> objective *and* DRS nomination together, and its numbers say nothing about the
+> objective. Step 4 therefore splits:
+>
+> - **4a — match P2PM's DRS nomination.** `get_drs_driver` copied verbatim into
+>   `StrategyMaxPoints`, so the two strategies differ in their objective alone.
+> - **4b — re-run *Verification* 1** against its own store, since the shared one
+>   already holds rows under the `StrategyMaxPoints` label that `simulate_sample`
+>   would skip.
+>
+> This also improves the experiment the rest of the plan runs. Step 4a's strategy
+> is a proper control — points objective, post-hoc DRS nomination, mirroring P2PM —
+> which gives three rungs instead of two: P2PM, then `StrategyMaxPoints` isolating
+> the **objective**, then step 7's in-objective DRS isolating the **DRS
+> modelling** against a matched control rather than against a tangle of both.
+
 ### Step 5 — The DRS helper on `StrategyBase` (R3)
 
 Added with **no caller**. Tests construct a throwaway subclass that calls it, so
