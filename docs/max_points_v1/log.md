@@ -92,3 +92,55 @@ same protection more cheaply. A forgotten `extend` otherwise fails silently —
 `Team.get_drs_points()` guards on the driver being *in the race*, not *on the
 team*, so an unowned nominee's points are added and the score merely looks
 plausible.
+
+## Step 2 — `StrategyMaxPoints` (2026-09-20)
+
+Suite green at 220 before starting.
+
+`linear/strategy_max_points.py`, mirroring `StrategyMaxP2PM` with
+`POINTS_CUMULATIVE` in place of `P2PM_CUMULATIVE`, the race-4 unlimited-moves
+block copied per R2, no DRS override and no coefficients. No change to
+`strategy_factory.py` was needed, as `plan.md` predicted.
+
+**How red-first was reached.** A brand-new module's only pre-implementation red is
+`ModuleNotFoundError`, which `coding-standards` rules out as demonstrating
+nothing. The module was therefore first committed to the working tree as a stub
+whose `get_problem` deliberately maximised **price**, which made six of the eight
+tests fail on their assertions rather than on an import. The stub was then
+replaced by the real objective.
+
+**Two tests passed against the stub and were diagnosed, not accepted.**
+
+- `test_strat_max_points_is_not_swayed_by_price` was genuinely defective: its
+  highest-scoring assets were also the most expensive, so a price objective
+  returned the same team and the test could not distinguish the property it was
+  named for. Rebuilt so three objectives disagree — points picks the mid-priced
+  NOR/BOT/MAG/HUL, price would take the near-pointless PIA/TSU/AST, and
+  points-per-price would take VER, whose ratio of 20 leads the field.
+- `test_strat_max_points_respects_the_budget_cap` asserted only `total_cost <= 25`
+  and `objective > 0`, both true under any objective. Rebuilt so the best scorers
+  are also the cheapest: the points-optimal team costs 19.0 and leaves 6.0
+  unspent, which an objective that merely filled the budget would not do.
+
+**Two tests could not be made red and were confirmed by mutation instead**, both
+asserting the absence of behaviour:
+
+- `does_not_reset_moves_before_race_four`: changing the guard to
+  `if self._race_num >= 3` gave `assert 6 == 2`.
+- `nominates_no_drs_driver`: adding a `get_drs_driver` override returning a driver
+  gave `assert 'VER' == ''`.
+
+Both mutations were reverted.
+
+**A correction to R1, found by reading `StrategyBase.__init__` to the end** rather
+than the method being changed. R1 said the `0.0` fill covers owned-but-unavailable
+drivers. It does not: `verify_data_available` raises when an *available* asset has
+no derivation entry, so a missing key never reaches the objective, and
+owned-but-unavailable drivers are excluded by *omission* from a comprehension that
+iterates `_all_available_*`. The fill's real job is a key present with value
+`None`, which passes verification because derivations are checked with
+`check_type=False`. The fill is still needed; only the reason changed. R3 is
+unaffected — its helper indexes over available ∪ team and does need its own
+missing-value rule. `requirements.md` annotated in place, and the test for this
+now exercises a `None` value rather than a missing key, which is what production
+data can actually present.

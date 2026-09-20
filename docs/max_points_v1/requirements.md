@@ -60,7 +60,19 @@ against P2PM.
   `get_derivation_name(DerivationType.POINTS_CUMULATIVE, 3)`.
 - An asset with no derivation entry is filled with `0.0`, matching P2PM's
   existing fill. This covers owned-but-unavailable drivers, which
-  `get_team_selection_dict` includes at `COST_PROHIBITIVE`.
+  `get_team_selection_dict` includes at `COST_PROHIBITIVE`. [Corrected
+  2026-09-20, on reading `StrategyBase.__init__` end to end: that is not the
+  mechanism. `verify_data_available` runs over every derivation
+  (`linear/strategy_base.py:116-123`) and **raises** if an *available* asset has
+  no entry, so a missing key never reaches the objective. What P2PM's fill
+  actually catches is a key present with value `None`, which passes verification
+  because derivations are checked with `check_type=False`. Owned-but-unavailable
+  drivers are handled by *omission* instead: they have no entry by design (see
+  the comment at `:112-113`), and the objective comprehension iterates
+  `_all_available_*`, so they are simply absent from it rather than filled. The
+  fill is still required, for the `None` case; only the reason changed. This does
+  **not** affect R3, where the helper indexes `y` over available ∪ team and so
+  genuinely needs its own missing-value rule.]
 - It reuses the base class's budget cap, team-size and max-moves constraints
   unchanged. It adds no constraint of its own.
 - No DRS term and no tunable coefficients at this stage. This is the control,
