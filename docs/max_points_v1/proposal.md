@@ -2,7 +2,10 @@
 
 **Status**: proposed, not started. Raised 2026-07-30. Back-test requirements
 moved to `docs/backtest_v1/requirements.md` on 2026-09-13. DRS helper design,
-with `StrategyMaxP2PM` left unchanged, added 2026-09-19.
+with `StrategyMaxP2PM` left unchanged, added 2026-09-19. [Superseded 2026-09-20:
+the effort was picked up. Requirements agreed in `requirements.md`, plan in
+`plan.md`, progress in `log.md`. This file stays as the design rationale and is
+not rewritten.]
 
 Build a team selection strategy that optimises the three-race rolling *points*
 total directly, rather than the points-per-price ratio `StrategyMaxP2PM` uses,
@@ -158,7 +161,14 @@ def get_drs_objective_term(self, driver_values: dict[str, float]) -> LpAffineExp
   declared in `linear/strategy_base.py` and unused, indexed over the same driver
   set as `VarType.TeamDrivers`.
 - It adds `Σ y_i = 1` and `y_i ≤ x_i` to `self._lp_constraints`, so `execute()`
-  applies them with no further change.
+  applies them with no further change. [Superseded 2026-09-20: `_lp_constraints`
+  holds one constraint per `VarType` key, and `y_i ≤ x_i` is one constraint per
+  driver, which the single `VarType.DrsDriver` key cannot express. The helper
+  stays pure instead and **returns** the constraints as a name-keyed dict
+  alongside the term, for the caller to apply with `problem.extend()`. The
+  signature above gains a second return value, and a convenience wrapper around
+  the caller's two lines was proposed and rejected at two callers. See `plan.md`,
+  *The helper's shape*.]
 - It returns `Σ r_i·y_i` for the strategy to add to its own objective in
   `get_problem()`. The base class never owns the objective, so it cannot add the
   term itself.
@@ -166,6 +176,10 @@ def get_drs_objective_term(self, driver_values: dict[str, float]) -> LpAffineExp
   unavailable drivers, matching P2PM's existing fill.
 - A companion read-back returns the driver whose `y_i` solved above 0.5. A
   strategy opts in by returning that from its `get_drs_driver()` override.
+  [2026-09-20: the read-back also **raises** if the nominee is not on the selected
+  team. Both values are to hand after the solve, so it is free, and it is what
+  makes the pure helper safe — a caller who forgets `problem.extend()` gets a
+  named error rather than a silently inflated score.]
 
 The helper needs `VarType.TeamDrivers`, so it must be called after `initialise()`,
 which means from inside `get_problem()`. Reading each driver's value back out of

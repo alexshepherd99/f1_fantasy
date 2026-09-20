@@ -7,7 +7,7 @@ Efforts under `docs/`:
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
-| [`max_points_v1`](docs/max_points_v1/) | not started |
+| [`max_points_v1`](docs/max_points_v1/) | in progress |
 
 Global list of not-yet-started work. Freeform. When an item is picked up, create `docs/<effort-name>/` (see `docs/` and `agentic`'s `shared/persistent-docs.md`) and move the item there.
 
