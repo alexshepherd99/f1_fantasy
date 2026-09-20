@@ -233,7 +233,8 @@ test suite. A step reaches **done (dev)** without them; a *Verification* item
 reaches **done (verified)**. Work continues past an uncleared one — it blocks only
 the claim that its step is verified.
 
-**Verification 1 — the divisor hypothesis** (after step 3)
+**Verification 1 — the divisor hypothesis** (after step 3) — **done (verified)
+2026-09-20, on the second attempt; the hypothesis is refuted. See `log.md`.**
 
 - `PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyMaxPoints`
 - About 2.5 hours on `backtest_v1`'s measured 0.38 s a simulation, 13,500

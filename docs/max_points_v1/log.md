@@ -84,7 +84,107 @@ without agreement. The cost is that the baseline is simulated again, roughly
 doubling the run to about an hour; the benefit is that nothing stale can be reused
 and the re-simulated baseline is a free reproducibility check. **The superseded
 `StrategyMaxPoints` rows are still in the shared store and must not be read as this
-effort's result.**
+effort's result.** [2026-09-20: Alex has agreed they should be purged, and
+deliberately deferred it until the re-run's results are in — one thing at a time.
+Until then the shared store holds confounded rows under a label this effort also
+uses, and anything reading it needs to know that.] [2026-09-20: purged, see
+*Purging the superseded rows* at the end.]
+
+## Verification 1 — the divisor hypothesis is refuted (2026-09-20)
+
+**done (verified).** About 57 minutes, 9,000 simulations into
+`outputs/max_points_v1_results.parquet`, baseline included since the store started
+empty. Summary in `outputs/max_points_v1_drs_summary.csv`.
+
+`StrategyMaxPoints` and `StrategyMaxP2PM` now differ in their objective alone, so
+this measures what the effort set out to measure.
+
+**The verdict: 0 of 3 seasons positive, `consistent_sign` true, `beats_baseline`
+false.** Pooled per-team deltas against the paired baseline:
+
+| Season | Mean | Std err | Mean/se | Median | Per-team SD | Win rate |
+|---|---|---|---|---|---|---|
+| 2023 | −14.5 | 1.4 | −10.6 | −18 | 52.6 | 41% |
+| 2024 | −156.2 | 3.9 | −40.3 | −213 | 150.2 | 18% |
+| 2025 | −4.4 | 5.2 | −0.8 | +39 | 203.3 | 58% |
+
+**The hypothesis in `proposal.md` is dead.** It argued that dividing by price
+penalises expensive assets a second time on top of a budget cap that already
+rations them, so a pure points objective should beat P2PM. It loses in every
+season. That is a successful test of a falsifiable claim, not a failed effort.
+`proposal.md` annotated in place.
+
+**Fixing the DRS confound changed the answer, which justifies the re-run.** 2023
+moved from +104 to −14.5 — its apparent win was entirely the confound. 2024 barely
+moved, from −156 to −156.2, so its loss was always the objective. Reporting the
+first run would have claimed a two-of-three split where the truth is zero of three.
+
+**The more interesting finding is variance, not the verdict.** In 2025 the strategy
+**wins 58% of teams and still loses on the mean**: median +39 against a worst case
+of −713. The same shape appears in every season, and the per-team SD against a
+fixed reference grows from 52.6 to 203.3. So pure points is not simply worse — it
+beats P2PM on most starting teams and loses badly on a minority, and the bad tail
+outweighs the frequent small wins. That suggests the divisor is buying **downside
+protection**, costing median points and earning it back by not blowing up, which is
+close to the opposite of what the proposal assumed it was doing.
+
+**What this does not license.**
+
+- 2025's mean/se of −0.8 is noise. It is recorded as "no difference on the mean,
+  with a much wider spread", not as a loss.
+- 2023's −14.5 is real at 10 standard errors but small: −0.26%.
+- Why 2024 is an order of magnitude worse than the other two is **not** explained.
+  It is the most informative open question here.
+- n=3 seasons. A consistent sign at n=3 is suggestive, not conclusive.
+- **Concentration is not measured.** The variance above is measured; the claim that
+  concentration causes it is an inference and nothing more — see *Concentration is
+  still an assumption* below.
+
+## Concentration is still an assumption (2026-09-20)
+
+Raised by Alex, and correct. The tail behaviour above was read as the signature of
+concentration risk, which R7 predicted. That reasoning has not been tested:
+
+- Whether `StrategyMaxPoints` actually holds a constructor plus both its drivers
+  more often than P2PM has **not been counted**.
+- Whether the concentrated teams are the ones in the left tail has **not been
+  checked**.
+
+Both are measurable. `linear/strategy_odds.py` already defines concentration as the
+count of same-constructor driver-driver and driver-constructor pairs, so the metric
+exists and does not need inventing. The obstacle is that the results store keeps
+only each team's final-race row, which is the snapshot that already produced one
+wrong conclusion in this effort; measuring concentration properly means
+re-simulating with every race captured.
+
+Until that is done, R7's condition — evidence before constraining — is **not met**,
+and the concentration lift stays unjustified rather than justified.
+
+## Purging the superseded rows (2026-09-20)
+
+The confounded run's 4,500 rows were removed from the shared
+`backtest_v1` store, on Alex's instruction and after the corrected results were in.
+They were labelled `StrategyMaxPoints`, the same label this effort still uses, so
+leaving them would have meant a resumed run skipping them as done and a reader
+mistaking them for the result.
+
+A copy was taken first, as `backtest_v1_results.parquet.bak_before_purge`, so the
+operation is reversible. The checks were stated before the write, not after:
+
+- 18,000 rows before — `backtest_v1`'s 13,500 plus this effort's 4,500 — and 13,500
+  after.
+- `StrategyMaxBudget`, `StrategyMaxP2PM` and `StrategyZeroStop` each still hold
+  4,500.
+- Zero `StrategyMaxPoints` rows remain.
+- The retained frame is **exactly equal** to the pre-purge frame with those rows
+  dropped, by `DataFrame.equals` — which is the check that proves nothing else
+  moved, rather than a row count that would pass whatever else had changed.
+- Columns, dtypes and `sim_key` uniqueness unchanged; `total_points` sums identical
+  either side.
+
+`backtest_v1`'s summary and verdict files were not touched and remain consistent
+with the store, since only a label absent from them was removed. This effort's own
+results live in `outputs/max_points_v1_results.parquet` and were never mixed in.
 
 ## Step 1 — Effort docs (2026-09-20)
 

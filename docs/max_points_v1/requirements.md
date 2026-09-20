@@ -184,6 +184,18 @@ change in which of several equal LP optima is returned. Before and after the
   file, and wants its own session.
 - Deliberately **not** treated as a blocking prerequisite (agreed 2026-09-20).
 
+[2026-09-20, after *Verification* 1: this requirement's condition is **not yet
+met**. The run measured high variance — `StrategyMaxPoints` wins most starting
+teams in 2025 and still loses on the mean, with a left tail reaching −713 — which
+*looks* like concentration risk, but concentration itself was never counted.
+Whether the strategy holds a constructor plus both its drivers more often than
+P2PM, and whether those teams are the ones in the tail, are both unmeasured. The
+metric already exists in `linear/strategy_odds.py` and does not need inventing; the
+obstacle is that the results store keeps only each team's final-race row, so
+measuring it properly needs a re-simulation capturing every race. Until then the
+lift stays unjustified, which is exactly what this requirement was written to
+prevent.]
+
 ### R8 — Tunable coefficients, each defaulting to neutral
 
 - The levers in `proposal.md`, *Failure modes*: constructor scaling (default

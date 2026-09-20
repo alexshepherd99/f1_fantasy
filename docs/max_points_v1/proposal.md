@@ -44,6 +44,21 @@ a pure points objective should beat P2PM and the divisor is a hedge left over
 from before the constraint was trusted. It is falsifiable and the back-test is
 the test.
 
+> **Refuted 2026-09-20** by *Verification* 1, with DRS nomination matched so the
+> objective was the only difference. `StrategyMaxPoints` loses in all three
+> seasons: mean per-team deltas of −14.5, −156.2 and −4.4, zero seasons positive.
+> The wording above is left as written, since the hypothesis being falsifiable and
+> then falsified is the point.
+>
+> The measured shape argues the divisor is doing something the paragraph above did
+> not consider. Pure points **wins the majority of starting teams in 2025 (58%) and
+> still loses on the mean**, with a median of +39 against a worst case of −713, and
+> per-team spread rising from 52.6 to 203.3 across the seasons. So the divisor
+> reads as buying **downside protection** — costing median points, earning it back
+> by not blowing up — rather than as a redundant second penalty on price. Why 2024
+> is an order of magnitude worse than the other two seasons is unexplained. See
+> `log.md`, *Verification 1*.
+
 **The data already exists.** `Points Cumulative (3)` is computed for drivers and
 constructors alike in `helpers.load_with_derivations` and threaded into
 `derivs_assets` by `linear/strategy_factory.py:31-37`. `StrategyMaxP2PM` already
