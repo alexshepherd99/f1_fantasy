@@ -219,6 +219,19 @@ Both DRS strategies against the P2PM baseline. Report concentration behaviour
 here (R7): whether a pure-points objective takes a constructor plus both its
 drivers, and whether it costs points.
 
+> **The R7 clause is discharged 2026-09-21**, ahead of this step, by the per-race
+> re-simulation. It does not need repeating here: a pure-points objective does
+> **not** take a constructor plus both its drivers more often than the baseline —
+> in 2024 it does so ten times less — and concentration does not cost points. See
+> `log.md`, *The per-race re-simulation*, and R7's closing annotation in
+> `requirements.md`. The rest of this step stands.
+>
+> **Step 8's premise also needs revisiting before this step is planned.** R5 as
+> written feeds the DRS term P2PM values, which would nominate worse than the
+> post-hoc rule it replaces; and in matching units the in-objective nomination is
+> provably the same driver the post-hoc rule already picks, so the step measures
+> selection feedback alone. See `log.md`, *Next session — start here*.
+
 ### Steps 10+ — The tunable coefficients (R8) and the sweep (R9)
 
 One coefficient per commit, each defaulting neutral, with a back-test sweep per

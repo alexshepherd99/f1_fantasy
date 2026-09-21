@@ -578,3 +578,149 @@ driver — and none of it is nomination.
 
 This is reasoned from the LP's structure and the existing code, not run. It is
 the argument that should be checked first if R5 is picked up.
+
+**Reproducing the ceiling.** It is not committed code. From
+`outputs/max_points_v1_per_race.parquet`, for each row take the nominated
+driver's points where `drs_driver` matches one of `D1`–`D5`, and the
+highest-*priced* held driver's points where it does not — that second case is
+`Team.get_drs_points`'s fallback and occurs only at race 1, where no strategy has
+run yet, in exactly 9,000 of 210,000 rows. "Perfect" is the maximum of `D1_pts`
+through `D5_pts`. Sum each per simulation, then average per label and season.
+
+## Next session — start here (handoff, 2026-09-21)
+
+Session closed here at Alex's request, with the working tree clean, the suite
+green at 261 and everything pushed. **No decision on next steps was taken** — the
+options are laid out below and are deliberately still open.
+
+This section is written plainly and from the beginning, because the detail above
+assumes the reader followed the whole session. Nothing here is new; it is the
+same findings in fewer terms.
+
+### The words you need
+
+- **P2PM** — the strategy picking a live 2026 team. It scores an asset by
+  points² ÷ price, so it prefers good value rather than the highest scorer.
+- **MaxPoints** — the strategy this effort built. Same machinery, but it scores
+  an asset by its recent points alone, ignoring price. It is the test of whether
+  P2PM's division by price was a mistake.
+- **DRS** — each race, one driver on your team scores twice. The strategy
+  nominates which one, after the team is chosen.
+- **Concentration** — how much of your team sits with one constructor. Holding a
+  constructor *and* both of its drivers is the extreme case, and the proposal
+  predicted MaxPoints would do it and get burned by it.
+
+### What happened before this session
+
+`StrategyMaxPoints` was built and back-tested. **It lost in all three seasons**,
+so the idea that P2PM's price divisor was hurting it is dead. But the losses were
+strange: in 2025 MaxPoints beat P2PM on 58% of starting teams and *still* lost on
+average, because a few teams lost badly. That looked like concentration risk. The
+previous session was explicit that it had not actually checked, because the saved
+results only kept each team's last race and so could not show what a team held
+during the season.
+
+### What this session did
+
+Re-ran all 9,000 simulations keeping **every race**, not just the last — 210,000
+rows, 63 minutes. Built as a proper tested module, `backtest/per_race.py`, so the
+numbers can be re-derived. Nothing in the core engine was touched.
+
+### Finding 1 — the run is trustworthy
+
+Each team's final race here matches its stored row from the earlier back-test
+exactly: 9,000 of 9,000, zero differences. Same teams, same points, same
+everything. So the new detail sits on top of results we already trusted.
+
+### Finding 2 — the concentration theory is wrong
+
+It was the main question, and the answer is no.
+
+- MaxPoints is **not** the more concentrated strategy. In 2024 — the season it
+  loses worst by far — it holds a constructor plus both its drivers in 0.7% of
+  team-races, against P2PM's 6.5%. It concentrates *ten times less* in the season
+  it does worst.
+- More concentration goes with **better** results, not worse, in all three
+  seasons. The worst-performing tenth of teams is *less* concentrated than the
+  rest.
+
+So the bad tail is caused by something else, still unknown. The backlog item that
+was waiting on this evidence does not get it, and has been annotated rather than
+dropped — it was always a code-tidiness argument as well as a risk one.
+
+### Finding 3 — the starting team stops mattering by race 4
+
+Not something anyone asked for, and possibly the most useful thing here.
+
+All 1,500 different starting teams end up holding the **same single line-up by
+race 4** in 2023 (6 in 2024, 10 in 2025), under both strategies. The race-4 rule
+that allows unlimited transfers lets the optimiser rebuild from scratch, and it
+rebuilds everyone into the same team.
+
+So whatever separates one starting team from another is decided in races 1–3 and
+then carried to the end. This matters beyond this effort: the whole back-test
+design samples 500 starting teams per value band on the assumption they are
+meaningfully different seasons, and after race 4 they largely are not.
+
+### Finding 4 — DRS nomination is worth real points, but not the way the plan assumed
+
+Measured how many points a *perfect* DRS pick would have scored versus what the
+current rule actually scored: **+226 in 2023, +103 in 2024, +98 in 2025**. The
+current rule already picks the best available driver 60–76% of the time, so those
+numbers are the value of the remaining 24–40%.
+
+For scale, the whole objective change this effort tested was worth −14, −156 and
+−4. So *how DRS is nominated* is a bigger lever than *what the objective
+optimises*.
+
+**The catch.** The proposal's plan was to move the DRS choice inside the
+optimiser. But if you give the optimiser the same numbers the current rule uses,
+it picks the same driver — that follows from how the maths is set up, and the one
+exception that could break it never happens in 210,000 races. So moving DRS
+inside the optimiser collects **none** of that +98 to +226. Its only real effect
+is changing which *team* gets picked in the first place, which is a smaller and
+different benefit than the proposal claimed.
+
+This is a reasoned argument from the code and the maths, **not** something that
+was run. It is the first thing to check if that route is taken.
+
+### The four options, and the trade-off
+
+Alex proposed testing P2PM with DRS moved into the optimiser. That is option B.
+No option is started; this is a genuine choice.
+
+**A — improve how DRS is nominated, leave everything else alone.** Chase the +98
+to +226 directly by changing the rule that picks the DRS driver. Smallest change
+available: one method on a new subclass, no edit to the shared `StrategyBase`, no
+multi-hour verification gate, and it tests on the harness that already exists.
+The obvious things to try as the criterion are betting odds, which the odds
+strategy already loads, or `fast_f1`'s `AggregateRank`, which is built, tested,
+and currently connected to nothing.
+*Risk:* perfect hindsight is not achievable — the rule only knows what happened
+before the race — so the realistic gain is some unknown fraction of the ceiling.
+
+**B — P2PM with DRS inside the optimiser, as Alex proposed, but respecified.**
+The plan's R5 says to feed the optimiser P2PM values. That would make the DRS
+pick *worse* than today's rule, because today's rule uses recent points, which
+predicts a points payoff better than a value ratio does. It would need to use
+points instead — and then, per Finding 4, the nomination is unchanged and the
+test measures team selection only. Also needs the shared `StrategyBase` edited
+first, which carries a mandatory before-and-after verification (R6) that this
+session's data now makes both cheaper and stronger.
+*Risk:* several steps and a long gate to measure what is now expected to be a
+small effect.
+
+**C — explain 2024 first.** −156 against −14 and −4 is the largest unexplained
+number in the effort. Untested hypothesis: 2024's drivers scored so little
+(constructors gave 74–76% of all points from 44–45% of the spend) that ranking
+drivers on recent points barely separates them, while dividing by price still
+does. Cheap to test on data already on disk.
+*Risk:* diagnostic only — it explains a result rather than improving anything.
+
+**D — close `max_points_v1`.** Its question was "is the price divisor a
+mistake?", answered no, and R7 is now closed too. The DRS work could restart as
+its own effort with a corrected premise: a selection lever worth a little, not a
+nomination lever worth 200.
+
+**Nothing blocks any of these.** They are not sequential, except that B needs
+steps 5 and 6 of `plan.md` first.
