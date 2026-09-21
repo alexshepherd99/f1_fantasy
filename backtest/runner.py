@@ -17,7 +17,7 @@ from scripts.run_multiple_teams import get_starting_key, open_batch_results_file
 from scripts.run_single_team import run_for_team
 
 # Columns the sample adds to the priced combinations, which are not assets
-_SAMPLE_COLUMNS = ["total_value", "band"]
+SAMPLE_COLUMNS = ["total_value", "band"]
 
 # Every challenger is paired with this strategy's result for the same team (R2)
 BASELINE = StrategyMaxP2PM
@@ -94,7 +94,7 @@ def simulate_sample(
         logging.info(f"Simulating {label} for season {season} on {len(sample)} teams")
 
         for _, sampled in sample.iterrows():
-            team = factory_team_row(sampled.drop(_SAMPLE_COLUMNS).to_dict(), starting_race)
+            team = factory_team_row(sampled.drop(SAMPLE_COLUMNS).to_dict(), starting_race)
             # Taken before simulating, which leaves the team as it ends the season
             starting_team = str(team)
             sim_key = get_starting_key(label, season, team)
