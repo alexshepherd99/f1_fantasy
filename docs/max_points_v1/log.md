@@ -20,6 +20,11 @@ design rationale predates both and is in `proposal.md`.
   nomination* below.
 - Step 4 added 2026-09-20: `StrategyMaxPoints` now nominates a DRS driver by the
   same rule as `StrategyMaxP2PM`, so a re-run compares objectives alone.
+- Per-race re-simulation run 2026-09-21, closing the handoff below: it reconciles
+  exactly with *Verification* 1, **refutes R7's concentration prediction**, shows
+  2024 to be a sustained drift rather than a few races, and measures the DRS
+  nomination ceiling at +98 to +226 points a season. See *The per-race
+  re-simulation* at the end.
 
 ## Verification 1, first attempt — confounded (2026-09-20)
 
@@ -187,6 +192,13 @@ with the store, since only a label absent from them was removed. This effort's o
 results live in `outputs/max_points_v1_results.parquet` and were never mixed in.
 
 ## Next — the per-race re-simulation (handoff, 2026-09-20)
+
+> **Done 2026-09-21.** Both open questions below are answered in *The per-race
+> re-simulation* at the end of this log. The method described here was followed
+> as written, except that it was built as a committed, tested module —
+> `backtest/per_race.py` — rather than a one-off, so the evidence that settles R7
+> can be re-derived. The full sample was run rather than a slice, which made the
+> reconciliation against *Verification* 1 a row-for-row check.
 
 Session closed here with steps 1-4 and *Verification* 1 complete, the suite green at
 231, and the working tree clean. Nothing is half-finished in code; what follows is
@@ -433,3 +445,136 @@ One team per band in a single season cannot separate the two strategies; the
 per-team spread in `backtest_v1`'s own sizing work was far larger than the
 differences seen here. The run's only claim is "it executes". *Verification* 1, at
 the default sample size across three seasons, is the measurement.
+
+## The per-race re-simulation (2026-09-21)
+
+**done (verified).** 9,000 simulations, 210,000 rows, 63 minutes, into
+`outputs/max_points_v1_per_race.parquet`. Built as `backtest/per_race.py`
+(commits `a81d67d`, `0e8b347`, `9b46da9`, `992ba0d`); nothing in `races/`,
+`linear/`, `import_data/` or `scripts/` was touched and `run_for_team` was used
+unchanged. Suite green at 261.
+
+This is the run the previous session handed off. It answers both of its open
+questions, and the answer to the first is **no**.
+
+### The run reconciles exactly with *Verification* 1
+
+Sampled on the same seed and edges, so each simulation's final race must equal
+its stored row from *Verification* 1. All 9,000 keys matched, none on either
+side only, and **0 of 9,000 rows differ** on `race`, `total_points`,
+`total_value`, `unused_budget`, `drs_driver`, `D1`–`D5`, `C1` or `C2`.
+
+This is the check that would have caught a moved sample, a changed engine or a
+changed strategy between the two runs; it was stated before the run, not after.
+I ran it — it is not a reasoned claim.
+
+### R7 is refuted: concentration is not what makes the tail
+
+Two separate findings, both against the prediction.
+
+**`StrategyMaxPoints` is not the more concentrated strategy.** Over every
+team-race:
+
+| Season | Label | Mean conc. | Median | Share > 0 | Mean full stacks | Share stacked |
+|---|---|---|---|---|---|---|
+| 2023 | P2PM | 3.15 | 3 | 99.3% | 0.587 | 54.8% |
+| 2023 | MaxPoints | 3.24 | 4 | 99.2% | 0.630 | 59.1% |
+| 2024 | P2PM | 1.97 | 2 | 97.5% | 0.065 | 6.5% |
+| 2024 | MaxPoints | 1.78 | 2 | 97.4% | **0.007** | **0.7%** |
+| 2025 | P2PM | 2.23 | 2 | 98.2% | 0.186 | 18.5% |
+| 2025 | MaxPoints | 2.11 | 2 | 97.1% | 0.183 | 18.2% |
+
+It is more concentrated in 2023 only, and marginally. In 2024 — **the season it
+loses by an order of magnitude more than the others** — it holds a constructor
+with both its drivers in 0.7% of team-races against the baseline's 6.5%, nearly
+ten times less. The proposal predicted a pure-points objective would take the top
+constructor and both its drivers. In the season that most needed explaining, it
+does the opposite of that.
+
+**Concentration is mildly associated with *better* outcomes, not worse.**
+Spearman correlation against each team's season delta, and the bottom decile of
+delta against the rest:
+
+| Season | ρ(conc., delta) | ρ(stacks, delta) | Bottom decile conc. | Rest |
+|---|---|---|---|---|
+| 2023 | +0.159 | +0.399 | 3.10 | 3.26 |
+| 2024 | +0.064 | +0.168 | 1.77 | 1.78 |
+| 2025 | +0.281 | +0.167 | 1.95 | 2.13 |
+
+Every correlation is positive and the worst-performing teams are the *less*
+concentrated ones in all three seasons. The tail is not made of concentrated
+teams.
+
+**So R7's condition is met, and it clears the backlog item rather than
+justifying it.** The requirement said measure before constraining. Measured: the
+concentration lift has no support from this effort, and the variance reported in
+*Verification* 1 needs a different explanation. The earlier reading — that the
+tail "looks like concentration risk" — was inference, is now tested, and was
+wrong. `requirements.md` R7 and the BACKLOG entry annotated in place.
+
+### Starting teams barely survive the race-4 chip
+
+Not asked for, and the most surprising thing in the run. Distinct team line-ups
+held at each race, out of 1,500 starting teams:
+
+- 2023: 1,500 → 1,226 (race 2) → 272 (race 3) → **1** (races 4 and 5).
+- 2024: 1,500 → 1,243 → 408 → 6.
+- 2025: 1,500 → 1,254 → 435 → 10.
+
+Both strategies, near-identically. R2's copied race-4 unlimited-moves block lets
+the LP rebuild the whole team, and it rebuilds every starting team into the same
+one. So essentially all of a season's per-team variance is created in races 1–3
+and then carried, not generated through the season.
+
+This bears on the whole back-test design and is recorded for `backtest_v1` as
+much as for here: sampling 500 starting teams a band buys far less independent
+information after race 4 than the sample size suggests.
+
+### 2024 is a sustained drift, and is still not explained
+
+`mean_cumulative_delta` crosses zero at race 5 and never returns; 16 of the 23
+scored races are negative. It is not a few bad weekends — the worst single race
+is −48.6 and there are positive spikes of +36.3, +28.7 and +25.7 — and it is not
+a collapse onto one team, since 2024 holds 6–19 distinct line-ups where 2023
+holds 1–3.
+
+What it is not, measured: not concentration (above), and not budget allocation
+between the slot types. Averaged over races 4 onwards, `StrategyMaxPoints` spends
+45.1% of team value on constructors against the baseline's 44.0% — and is worse
+on **both** halves, scoring 121.0 constructor points against 124.2 and 38.2
+driver points against 43.7.
+
+2024 is the season where drivers scored least: constructors returned 74–76% of
+all points from 44–45% of the spend, against 56–57% of points in 2023. A rolling
+points sum over a compressed driver field discriminates between drivers very
+little, where dividing by price still separates them. **That is a hypothesis, not
+a finding** — it is consistent with the numbers above and has not been tested.
+
+### The DRS nomination ceiling, measured while the data was to hand
+
+`Team.get_drs_points` pays the nominated driver's actual points, so perfect
+hindsight would nominate whichever held driver actually scored most. The gap
+between that and what each strategy's rule actually collected is the ceiling on
+any nomination rule:
+
+| Season | Baseline DRS points | Perfect hindsight | Ceiling | % of season | Rule already optimal |
+|---|---|---|---|---|---|
+| 2023 | 816 | 1,043 | **+226** | 4.1% | 60.3% of team-races |
+| 2024 | 591 | 694 | **+103** | 2.3% | 70.5% |
+| 2025 | 774 | 872 | **+98** | 2.0% | 76.2% |
+
+Set against *Verification* 1's deltas of −14.5, −156.2 and −4.4, DRS nomination
+is a larger lever than the objective change this effort tested.
+
+**But modelling DRS inside the objective cannot collect any of it.** For a fixed
+team the LP maximises `Σ r_i·x_i + Σ r_i·y_i` subject to `Σ y_i = 1` and
+`y_i ≤ x_i`, so its optimal `y` is `argmax r_i` over the selected drivers. When
+`r` is `Points Cumulative (3)` that is **exactly** what
+`StrategyMaxP2PM.get_drs_driver` already returns (`linear/strategy_p2pm.py:47-71`).
+In matching units the in-objective nomination and the post-hoc one are the same
+driver, by construction. The entire value of R3–R5 is therefore the **selection**
+feedback — that the objective will pay more for a team containing one strong
+driver — and none of it is nomination.
+
+This is reasoned from the LP's structure and the existing code, not run. It is
+the argument that should be checked first if R5 is picked up.
