@@ -3,7 +3,15 @@ import pandas.testing as pdt
 import pytest
 
 import backtest.per_race as per_race_module
-from backtest.per_race import concentration, race_driver_pairs, row_assets, run_per_race, simulate_per_race
+from backtest.per_race import (
+    add_full_stacks,
+    concentration,
+    full_stack_count,
+    race_driver_pairs,
+    row_assets,
+    run_per_race,
+    simulate_per_race,
+)
 from backtest.sample import DEFAULT_BAND_EDGES, sample_starting_teams
 from helpers import load_with_derivations
 from linear.strategy_max_points import StrategyMaxPoints
@@ -71,6 +79,27 @@ def test_race_driver_pairs_covers_every_driver_in_the_race(season):
 
     assert set(pairs) == set(race.drivers)
     assert pairs["VER@RED"] == "RED"
+
+
+def test_a_constructor_held_with_both_its_drivers_is_one_full_stack():
+    assert full_stack_count(["VER@RED", "PER@RED"], ["RED"], _PAIRS) == 1
+
+
+def test_a_constructor_held_with_only_one_of_its_drivers_is_no_stack():
+    assert full_stack_count(["VER@RED"], ["RED"], _PAIRS) == 0
+
+
+def test_each_fully_held_constructor_counts_separately():
+    drivers = ["VER@RED", "PER@RED", "HAM@MER", "RUS@MER"]
+    assert full_stack_count(drivers, ["RED", "MER"], _PAIRS) == 2
+
+
+def test_a_constructor_whose_drivers_are_not_held_is_no_stack():
+    assert full_stack_count(["VER@RED", "PER@RED"], ["MCL"], _PAIRS) == 0
+
+
+def test_drivers_held_without_their_constructor_are_no_stack():
+    assert full_stack_count(["VER@RED", "PER@RED"], [], _PAIRS) == 0
 
 
 def test_row_assets_reads_the_numbered_columns_and_not_their_companions():
@@ -191,3 +220,16 @@ def test_a_run_puts_every_season_in_one_store(tmp_path):
     # 2 labels x 3 teams in each season, each kept for every race
     assert rows.groupby("season")["sim_key"].nunique().to_dict() == {2023: 6, 2024: 6}
     assert (rows.groupby("season")["race"].nunique() == rows.groupby("season")["race"].max()).all()
+
+
+def test_full_stacks_are_added_per_row_against_that_rows_race(simulated):
+    _, store = simulated
+
+    with_stacks = add_full_stacks(store)
+
+    # Each full stack is a shared driver pair plus two held driver-constructor pairs
+    stacked = with_stacks[with_stacks["full_stacks"] > 0]
+    assert not stacked.empty
+    assert (stacked["concentration"] >= 3 * stacked["full_stacks"]).all()
+    assert (with_stacks.loc[with_stacks["concentration"] == 0, "full_stacks"] == 0).all()
+    pdt.assert_frame_equal(with_stacks.drop(columns="full_stacks"), store)

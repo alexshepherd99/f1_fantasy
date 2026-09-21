@@ -2,7 +2,7 @@
 
 import logging
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from itertools import combinations
 
 import pandas as pd
@@ -84,6 +84,62 @@ def concentration(
     shared = sum(1 for first, second in combinations(held, 2) if first == second)
     owned = sum(1 for constructor in held if constructor in constructors)
     return shared + owned
+
+
+def full_stack_count(
+    drivers: Sequence[str],
+    constructors: Sequence[str],
+    driver_pairs: Mapping[str, str],
+) -> int:
+    """Count held constructors whose every driver is held too.
+
+    This is R7's literal prediction in `docs/max_points_v1/requirements.md` —
+    that a pure-points objective takes the top constructor and both its
+    drivers. `concentration` scores such a team three, but three can also be
+    reached without one, so it is counted in its own right.
+
+    Args:
+        drivers: Drivers held, by their `DRIVER@CONSTRUCTOR` identifiers.
+        constructors: Constructors held.
+        driver_pairs: Driver to constructor, for the race in question.
+
+    Returns:
+        The number of held constructors whose whole line-up is held.
+    """
+    held = set(drivers)
+    line_ups = ([d for d, c in driver_pairs.items() if c == constructor] for constructor in constructors)
+    return sum(1 for line_up in line_ups if line_up and held.issuperset(line_up))
+
+
+def _pairs_by_season_race(seasons: Iterable[int]) -> dict[tuple[int, int], dict[str, str]]:
+    """Return the driver-to-constructor pairings of every race of each season."""
+    pairs = {}
+    for season in seasons:
+        season_data = factory_season(*load_with_derivations(season=int(season)), int(season))
+        for number, race in season_data.races.items():
+            pairs[(int(season), int(number))] = race_driver_pairs(race)
+    return pairs
+
+
+def add_full_stacks(per_race: pd.DataFrame) -> pd.DataFrame:
+    """Return the frame with a `full_stacks` column, scored against each row's race.
+
+    Rebuilds the pairings from the same season data `simulate_per_race` used,
+    rather than parsing them out of the driver identifiers. Rows are read one
+    at a time, since the whole frame is a season's teams times every race.
+
+    Args:
+        per_race: Rows from `simulate_per_race`.
+
+    Returns:
+        The frame with `full_stacks` added, everything else unchanged.
+    """
+    pairs = _pairs_by_season_race(per_race["season"].unique())
+    counts = [
+        full_stack_count(*row_assets(row._asdict()), pairs[(row.season, row.race)])
+        for row in per_race.itertuples(index=False)
+    ]
+    return per_race.assign(full_stacks=counts)
 
 
 def row_assets(row: Mapping[str, object]) -> tuple[list[str], list[str]]:
