@@ -238,6 +238,125 @@ def simulate_per_race(
     return store[store["sim_key"].isin(run_keys)].reset_index(drop=True)
 
 
+# A team is identified within a season by its starting line-up, as in
+# backtest.metrics; the season is part of the key because a strategy's rows
+# for one season must never pair with another's
+_TEAM_KEY = ["season", "team"]
+
+
+def _require_full_stacks(per_race: pd.DataFrame) -> None:
+    """Raise unless the rows have been through `add_full_stacks`."""
+    if "full_stacks" not in per_race.columns:
+        logging.error(f"Per-race rows lack a full_stacks column, have {sorted(per_race.columns)}")
+        raise ValueError("Per-race rows need a full_stacks column: call add_full_stacks first")
+
+
+def _share_above_zero(values: pd.Series) -> float:
+    return (values > 0).mean()
+
+
+def concentration_summary(per_race: pd.DataFrame) -> pd.DataFrame:
+    """Summarise how concentrated each strategy's teams are, per season.
+
+    Counts over every team-race, so a strategy that concentrates in a few races
+    reads differently from one that concentrates all season.
+
+    Args:
+        per_race: Rows from `simulate_per_race`, through `add_full_stacks`.
+
+    Returns:
+        One row per (label, season), with the number of team-races, the mean
+        and median concentration, the share of team-races carrying any, and the
+        same for constructors held with their whole line-up.
+
+    Raises:
+        ValueError: If `full_stacks` is missing.
+    """
+    _require_full_stacks(per_race)
+    return per_race.groupby(["season", "label"], as_index=False).agg(
+        team_races=("concentration", "count"),
+        mean_concentration=("concentration", "mean"),
+        median_concentration=("concentration", "median"),
+        share_concentrated=("concentration", _share_above_zero),
+        mean_full_stacks=("full_stacks", "mean"),
+        share_full_stacked=("full_stacks", _share_above_zero),
+    )[["label", "season", "team_races", "mean_concentration", "median_concentration",
+       "share_concentrated", "mean_full_stacks", "share_full_stacked"]]
+
+
+def team_summary(per_race: pd.DataFrame, baseline_label: str) -> pd.DataFrame:
+    """Summarise each team's season: how concentrated it was, and its paired delta.
+
+    The delta is the team's final-race `total_points` less the baseline's for
+    the same season and starting team — the quantity `backtest.metrics` pairs
+    on — set beside the concentration it carried getting there, so the two can
+    be tested against each other.
+
+    Args:
+        per_race: Rows from `simulate_per_race`, through `add_full_stacks`.
+        baseline_label: Label of the strategy every team is paired against.
+
+    Returns:
+        One row per (label, season, team) with its mean concentration and full
+        stacks across the season, its band, `total_points`, `baseline_points`
+        and `delta`.
+
+    Raises:
+        ValueError: If `full_stacks` is missing.
+    """
+    _require_full_stacks(per_race)
+    finals = per_race.loc[per_race.groupby("sim_key")["race"].idxmax()]
+    baseline = finals.loc[finals["label"] == baseline_label, _TEAM_KEY + ["total_points"]].rename(
+        columns={"total_points": "baseline_points"}
+    )
+
+    summary = per_race.groupby(["label"] + _TEAM_KEY, as_index=False).agg(
+        mean_concentration=("concentration", "mean"),
+        mean_full_stacks=("full_stacks", "mean"),
+        share_full_stacked=("full_stacks", _share_above_zero),
+    )
+    summary = summary.merge(finals[["label"] + _TEAM_KEY + ["band", "total_points"]], on=["label"] + _TEAM_KEY)
+    summary = summary.merge(baseline, on=_TEAM_KEY)
+    summary["delta"] = summary["total_points"] - summary["baseline_points"]
+    return summary
+
+
+def race_summary(per_race: pd.DataFrame, baseline_label: str) -> pd.DataFrame:
+    """Summarise each race of each season, to show where a gap opens.
+
+    A steady drift against the baseline reads as a straight line in
+    `mean_cumulative_delta`; a few bad weekends read as steps. `mean_race_delta`
+    is that race alone, so the two separate a persistent handicap from an event.
+
+    Args:
+        per_race: Rows from `simulate_per_race`, through `add_full_stacks`.
+        baseline_label: Label of the strategy every race is paired against.
+
+    Returns:
+        One row per (label, season, race) with the teams paired, the mean
+        cumulative and single-race deltas, and the mean concentration and full
+        stacks held at that point in the season.
+
+    Raises:
+        ValueError: If `full_stacks` is missing.
+    """
+    _require_full_stacks(per_race)
+    baseline = per_race.loc[
+        per_race["label"] == baseline_label, _TEAM_KEY + ["race", "total_points", "points"]
+    ].rename(columns={"total_points": "baseline_total_points", "points": "baseline_race_points"})
+
+    paired = per_race.merge(baseline, on=_TEAM_KEY + ["race"])
+    paired["cumulative_delta"] = paired["total_points"] - paired["baseline_total_points"]
+    paired["race_delta"] = paired["points"] - paired["baseline_race_points"]
+    return paired.groupby(["label", "season", "race"], as_index=False).agg(
+        teams=("team", "count"),
+        mean_cumulative_delta=("cumulative_delta", "mean"),
+        mean_race_delta=("race_delta", "mean"),
+        mean_concentration=("concentration", "mean"),
+        mean_full_stacks=("full_stacks", "mean"),
+    )
+
+
 def run_per_race(
     seasons: Sequence[int],
     n: int,

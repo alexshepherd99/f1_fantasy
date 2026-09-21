@@ -6,11 +6,14 @@ import backtest.per_race as per_race_module
 from backtest.per_race import (
     add_full_stacks,
     concentration,
+    concentration_summary,
     full_stack_count,
     race_driver_pairs,
+    race_summary,
     row_assets,
     run_per_race,
     simulate_per_race,
+    team_summary,
 )
 from backtest.sample import DEFAULT_BAND_EDGES, sample_starting_teams
 from helpers import load_with_derivations
@@ -209,12 +212,24 @@ def test_flushing_counts_simulations_not_rows(sample, season, tmp_path, monkeypa
 
 
 _RUN_SEASONS = [2023, 2024]
+_BASELINE = "StrategyMaxP2PM"
 
 
-def test_a_run_puts_every_season_in_one_store(tmp_path):
-    path = str(tmp_path / "results.parquet")
+@pytest.fixture(scope="module")
+def run(tmp_path_factory):
+    """One team per band over two seasons, so season keying has something to get wrong."""
+    path = str(tmp_path_factory.mktemp("run") / "results.parquet")
+    return path, run_per_race(_RUN_SEASONS, 1, 1, _STRATEGIES, DEFAULT_BAND_EDGES, path)
 
-    rows = run_per_race(_RUN_SEASONS, 1, 1, _STRATEGIES, DEFAULT_BAND_EDGES, path)
+
+@pytest.fixture(scope="module")
+def stacked(run):
+    _, rows = run
+    return add_full_stacks(rows)
+
+
+def test_a_run_puts_every_season_in_one_store(run):
+    path, rows = run
 
     pdt.assert_frame_equal(rows, open_batch_results_file(path))
     # 2 labels x 3 teams in each season, each kept for every race
@@ -233,3 +248,100 @@ def test_full_stacks_are_added_per_row_against_that_rows_race(simulated):
     assert (stacked["concentration"] >= 3 * stacked["full_stacks"]).all()
     assert (with_stacks.loc[with_stacks["concentration"] == 0, "full_stacks"] == 0).all()
     pdt.assert_frame_equal(with_stacks.drop(columns="full_stacks"), store)
+
+
+@pytest.mark.parametrize(
+    "summarise",
+    [
+        concentration_summary,
+        lambda rows: team_summary(rows, _BASELINE),
+        lambda rows: race_summary(rows, _BASELINE),
+    ],
+    ids=["concentration_summary", "team_summary", "race_summary"],
+)
+def test_a_summary_without_full_stacks_says_which_call_is_missing(run, summarise):
+    _, rows = run
+
+    with pytest.raises(ValueError, match="add_full_stacks"):
+        summarise(rows)
+
+
+def test_concentration_is_summarised_per_label_and_season(stacked):
+    summary = concentration_summary(stacked)
+
+    assert list(zip(summary["label"], summary["season"])) == [
+        (label, season) for season in _RUN_SEASONS for label in sorted({s.__name__ for s in _STRATEGIES})
+    ]
+    # 3 teams x every race of the season
+    races = stacked.groupby("season")["race"].nunique().to_dict()
+    assert dict(zip(zip(summary["label"], summary["season"]), summary["team_races"])) == {
+        (strategy.__name__, season): 3 * races[season] for season in _RUN_SEASONS for strategy in _STRATEGIES
+    }
+    assert summary["share_concentrated"].between(0, 1).all()
+    assert summary["share_full_stacked"].between(0, 1).all()
+
+
+@pytest.fixture
+def shared_team():
+    """The same starting team in two seasons, which a real sample never produces.
+
+    Driver identifiers carry their constructor, so no two seasons draw the same
+    team string and no real fixture can catch a pairing that ignores the season.
+    """
+    rows = []
+    for season, scores in [(2023, [10, 20]), (2024, [100, 200])]:
+        for label, bonus in [(_BASELINE, 0), ("StrategyMaxPoints", 5)]:
+            total = 0
+            for race, points in enumerate(scores, start=1):
+                total += points + bonus
+                rows.append({
+                    "label": label, "season": season, "race": race, "team": "(A,B)(C)",
+                    "sim_key": f"({label})({season})(A,B)(C)", "band": "(99.5, 100]",
+                    "points": points + bonus, "total_points": total,
+                    "concentration": 1, "full_stacks": 0,
+                })
+    return pd.DataFrame(rows)
+
+
+def test_teams_are_paired_within_their_own_season(shared_team):
+    summary = team_summary(shared_team, _BASELINE)
+
+    # Four rows, not eight: neither season's team pairs with the other's baseline
+    assert len(summary) == 4
+    assert summary[summary["label"] != _BASELINE].set_index("season")["delta"].to_dict() == {2023: 10, 2024: 10}
+
+
+def test_races_are_paired_within_their_own_season(shared_team):
+    summary = race_summary(shared_team, _BASELINE)
+
+    assert (summary["teams"] == 1).all()
+    assert summary.loc[summary["label"] != _BASELINE, "mean_cumulative_delta"].tolist() == [5.0, 10.0, 5.0, 10.0]
+
+
+def test_each_team_is_summarised_once_with_its_final_delta(stacked):
+    summary = team_summary(stacked, _BASELINE)
+
+    assert len(summary) == len(stacked.groupby(["label", "season", "team"]))
+    assert (summary.loc[summary["label"] == _BASELINE, "delta"] == 0).all()
+
+    # The delta is against the baseline's final race for the same season and team
+    finals = stacked.loc[stacked.groupby("sim_key")["race"].idxmax()]
+    row = summary[summary["label"] != _BASELINE].iloc[0]
+    paired = finals[(finals["season"] == row["season"]) & (finals["team"] == row["team"])]
+    assert row["delta"] == (
+        paired.loc[paired["label"] == row["label"], "total_points"].item()
+        - paired.loc[paired["label"] == _BASELINE, "total_points"].item()
+    )
+
+
+def test_every_race_of_every_season_gets_a_paired_row(stacked):
+    summary = race_summary(stacked, _BASELINE)
+
+    expected = stacked.groupby(["label", "season"])["race"].nunique().sum()
+    assert len(summary) == expected
+    assert (summary.loc[summary["label"] == _BASELINE, "mean_cumulative_delta"] == 0).all()
+    # The cumulative delta at the final race is the season delta
+    teams = team_summary(stacked, _BASELINE)
+    final = summary.loc[summary.groupby(["label", "season"])["race"].idxmax()]
+    expected_final = teams.groupby(["label", "season"])["delta"].mean().reset_index()
+    assert final["mean_cumulative_delta"].round(6).tolist() == expected_final["delta"].round(6).tolist()
