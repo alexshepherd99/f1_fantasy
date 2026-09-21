@@ -196,6 +196,20 @@ measuring it properly needs a re-simulation capturing every race. Until then the
 lift stays unjustified, which is exactly what this requirement was written to
 prevent.]
 
+[2026-09-21, after the per-race re-simulation: **this requirement is met, and the
+prediction it was hedging is refuted.** Measured over all 210,000 team-races,
+`StrategyMaxPoints` is the more concentrated strategy in 2023 alone; in 2024 it
+holds a constructor with both its drivers in 0.7% of team-races against
+`StrategyMaxP2PM`'s 6.5%, and 2024 is the season it loses by an order of magnitude
+more than the others. Concentration correlates *positively* with the per-team
+season delta in all three seasons (Spearman +0.16, +0.06, +0.28), and the bottom
+decile of teams by delta is **less** concentrated than the rest. So concentration
+does not make the tail, this effort supplies **no evidence** for the backlog lift,
+and *Verification* 1's variance needs another explanation. Full numbers in
+`log.md`, *The per-race re-simulation*; the metric itself is
+`backtest/per_race.py`. The corresponding clause in `plan.md` step 9 — "report
+concentration behaviour here (R7)" — is discharged early by that run.]
+
 ### R8 — Tunable coefficients, each defaulting to neutral
 
 - The levers in `proposal.md`, *Failure modes*: constructor scaling (default

@@ -56,6 +56,23 @@ counted**, so this item is not yet justified by that effort; see
 the per-race re-simulation*. The definition to reuse when measuring is the one
 already in `strategy_odds.py`, so the metric does not need inventing.
 
+2026-09-21: **counted, and it does not support this item.** The per-race
+re-simulation measured concentration over all 210,000 team-races.
+`StrategyMaxPoints` is not the more concentrated strategy — in 2024, the season
+it loses worst, it holds a constructor with both its drivers ten times *less*
+often than `StrategyMaxP2PM` — and concentration correlates positively with the
+per-team season delta in all three seasons, with the worst teams the less
+concentrated ones. So there is no measured concentration risk to constrain, and
+`max_points_v1` supplies no argument for this lift. See
+`docs/max_points_v1/log.md`, *The per-race re-simulation*.
+
+**The item still stands on its own terms** — it was a simplification and reuse
+argument before it was ever a risk argument, and `StrategyBettingOdds` keeps its
+concentration constraint regardless. What has gone is the claim that another
+strategy needs it. The metric now also exists as
+`backtest/per_race.py:concentration`, matching the odds strategy's definition, so
+a lift has a tested reference to check itself against.
+
 ## Source betting odds directly from a web page
 
 `StrategyBettingOdds` (`linear/strategy_odds.py:5,14-15`),
