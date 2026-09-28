@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from pulp import LpAffineExpression, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
+from pulp import LpAffineExpression, LpConstraint, LpProblem, LpVariable, lpSum, PULP_CBC_CMD
 from enum import Enum, auto
+import logging
 import numpy as np
 
 
@@ -270,6 +271,63 @@ class StrategyBase(ABC):
         by `execute`.
         """
         pass
+
+    def get_drs_objective_term(
+        self, driver_values: dict[str, float]
+    ) -> tuple[LpAffineExpression, dict[str, LpConstraint]]:
+        """Model the DRS x2 boost inside the objective, opt-in for strategies that want it.
+
+        Creates one binary per team-driver candidate under `VarType.DrsDriver`, and returns the objective term
+        (each driver's value counted a second time if they get DRS) plus the constraints that make exactly one
+        selected driver the DRS driver.  Nothing is added to the problem here: the caller adds the term to its
+        objective and applies the constraints with `problem.extend()`, then reads the result back with
+        `get_drs_nominee()`.  Call from `get_problem()`, as the team-driver binaries are created in `initialise()`.
+
+        Parameters
+        ----------
+        driver_values : dict[str, float]
+            Driver -> value, in the units of the caller's own objective.  A driver missing from it counts as 0.0.
+
+        Returns
+        -------
+        tuple[LpAffineExpression, dict[str, LpConstraint]]
+            The objective term, and the constraints keyed by constraint name.
+        """
+        team_drivers = self._lp_variables[VarType.TeamDrivers]
+        drs_drivers = LpVariable.dicts('drs', list(team_drivers.keys()), cat="Binary")
+        self._lp_variables[VarType.DrsDriver] = drs_drivers
+
+        drs_term = lpSum([driver_values.get(d, 0.0) * drs_drivers[d] for d in drs_drivers])
+
+        # The game always awards DRS to someone, so exactly one, and only to a driver on the selected team
+        drs_constraints = {"drs_one": lpSum(drs_drivers.values()) == 1}
+        for d in drs_drivers:
+            drs_constraints[f"drs_owned_{d}"] = drs_drivers[d] <= team_drivers[d]
+
+        return drs_term, drs_constraints
+
+    def get_drs_nominee(self) -> str:
+        """Return the driver the solved DRS binaries chose, for use by a `get_drs_driver()` override.
+
+        Raises
+        ------
+        ValueError
+            If `get_drs_objective_term()` was never called, or the nominee is not on the selected team - the
+            latter meaning its constraints were not added, and would otherwise silently score an unowned driver.
+        """
+        if VarType.DrsDriver not in self._lp_variables:
+            raise ValueError("No DRS variables - call get_drs_objective_term() from get_problem() first")
+
+        for driver, drs in self._lp_variables[VarType.DrsDriver].items():
+            # Tolerance rather than == 1, as CBC returns floats
+            if drs.value() > 0.5:
+                if self._lp_variables[VarType.TeamDrivers][driver].value() <= 0.5:
+                    logging.error(f"DRS driver {driver} not in selected team for {self.__class__.__name__}")
+                    raise ValueError(
+                        f"DRS driver {driver} is not in the selected team - were the DRS constraints added?"
+                    )
+                return driver
+        return ""
 
     def get_drs_driver(self) -> str:
         """Return the driver chosen for DRS based on strategy-specific logic.
