@@ -599,7 +599,10 @@ through `D5_pts`. Sum each per simulation, then average per label and season.
 
 Session closed here at Alex's request, with the working tree clean, the suite
 green at 261 and everything pushed. **No decision on next steps was taken** — the
-options are laid out below and are deliberately still open.
+options are laid out below and are deliberately still open. [Resolved 2026-09-28:
+step 5 was done, B and the rest of the plan were dropped, and C is the one
+remaining piece of work. A and the race-4 finding became backlog items. See *Step
+5 — the DRS helper* at the end.]
 
 This section is written plainly and from the beginning, because the detail above
 assumes the reader followed the whole session. Nothing here is new; it is the

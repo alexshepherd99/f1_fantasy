@@ -267,6 +267,10 @@ Five things to settle before writing any of it.
   objective stays available as the comparison case. [2026-09-19:
   `docs/max_points_v1/proposal.md` argues that modelling DRS inside the LP
   objective subsumes this; see its *Modelling the DRS boost in the objective*.]
+  [2026-09-28: only partly. The helper now exists on `StrategyBase`, and it
+  rewards teams with one strong driver, but it nominates by whatever values it is
+  given. So it biases selection towards the top of the field without improving
+  the DRS pick itself. See *Refine P2PM: better DRS nomination* below.]
 
 One game mechanic to note: `AggregateRank` needs FP2+FP3 (or FP1+Sprint
 Qualifying) to have run, so this strategy cannot pick a team before practice.
