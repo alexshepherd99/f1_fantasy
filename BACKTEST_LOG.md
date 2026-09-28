@@ -15,7 +15,56 @@ is positive in every season tested.
 
 | Strategy | Effort | Tested | Seasons | Mean delta vs P2PM (points/season) | Beats P2PM? | Outcome |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Zero-stop (`StrategyZeroStop`) | [backtest_v1](docs/backtest_v1/) | 2026-09-18 | 2023, 2024, 2025 | −1,358, −1,019, −1,763 | No, 0 of 3 seasons | Control, loses as expected |
+| Max budget (`StrategyMaxBudget`) | [backtest_v1](docs/backtest_v1/) | 2026-09-18 | 2023, 2024, 2025 | −1,302, −979, −1,748 | No, 0 of 3 seasons | Control, loses as expected |
 | Max points (`StrategyMaxPoints`) | [max_points_v1](docs/max_points_v1/) | 2026-09-20 | 2023, 2024, 2025 | −14.5, −156.2, −4.4 | No, 0 of 3 seasons | Hypothesis refuted |
+
+## Zero-stop and Max budget controls — `backtest_v1` (2026-09-18)
+
+**Question.** These are the two simple control strategies. Zero-stop keeps the
+starting team all season and only changes a driver when forced to. Max budget
+just spends as much of the budget as it can. Neither was expected to win.
+They were run to check the new `backtest` module against a result already
+known from the full back-test in January, which showed both well behind P2PM.
+
+**Result: both lose heavily in every season.** For scale, P2PM's pooled mean
+was 5,505, 4,547 and 4,948 points in 2023, 2024 and 2025.
+
+| Strategy | Season | Mean delta | Mean delta % | Teams beating P2PM |
+| :--- | :--- | :--- | :--- | :--- |
+| Zero-stop | 2023 | −1,358 | −24.8% | 0.8% |
+| Zero-stop | 2024 | −1,019 | −22.4% | 1.7% |
+| Zero-stop | 2025 | −1,763 | −35.7% | 0% |
+| Max budget | 2023 | −1,302 | −23.7% | 0% |
+| Max budget | 2024 | −979 | −21.5% | 0.3% |
+| Max budget | 2025 | −1,748 | −35.3% | 0% |
+
+**Key findings.**
+
+- **P2PM's objective is worth about a quarter to a third of a season's
+  points.** Both controls trail P2PM by 21% to 36%, and almost never beat it on
+  any single starting team. Max budget re-solves every race just as P2PM does,
+  yet loses by about as much as Zero-stop. So the gain comes from *what* P2PM
+  optimises, not simply from making transfers.
+- **For Zero-stop, a cheaper starting team does worse.** It is stuck with its
+  starting team, so the cheapest band, (90, 95], loses most in every season.
+  In 2023 the loss goes from −1,547 there to −1,184 in (99.5, 100]. Max budget
+  shows no such pattern, since it can trade up.
+- **The sample is representative.** In the top band, the sampled means matched
+  the full January population within sampling error for eight of nine
+  strategy-seasons. The ninth was Max budget 2024, about 2.3 standard errors
+  out. That is the luck of the draw, not the engine, and it doesn't change the
+  conclusion.
+- **Results are now reproducible.** Cross-checking against January exposed a
+  randomness in `linear/`. Asset order depended on Python's per-process hash
+  seed, which could change a control's season total by up to 50 points between
+  runs. This was fixed at source in `534d1a9`, and all 215 mismatches with
+  January were confirmed to come from it. P2PM matched January exactly
+  throughout.
+
+**Full detail:** [`docs/backtest_v1/log.md`](docs/backtest_v1/log.md),
+*Verification 4* and the entries around it. The numbers above come from
+`outputs/backtest_v1_summary.csv`.
 
 ## Max points — `max_points_v1` (2026-09-20)
 
