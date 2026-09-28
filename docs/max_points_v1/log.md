@@ -25,6 +25,9 @@ design rationale predates both and is in `proposal.md`.
   2024 to be a sustained drift rather than a few races, and measures the DRS
   nomination ceiling at +98 to +226 points a season. See *The per-race
   re-simulation* at the end.
+- 2026-09-28: key findings summarised in the root `BACKTEST_LOG.md`. `plan.md`'s
+  status line and steps 5 onwards annotated as out of date. The choice of next
+  step in *Next session — start here* is still open.
 
 ## Verification 1, first attempt — confounded (2026-09-20)
 

@@ -2,7 +2,11 @@
 
 **Status**: draft for review, 2026-09-20. Requirements: `requirements.md`,
 agreed 2026-09-20. Design rationale: `proposal.md`. Not yet implemented — no
-code exists.
+code exists. [Superseded 2026-09-28: steps 1-4 are done and *Verification* 1
+is done (verified), refuting the divisor hypothesis. The per-race re-simulation
+has also discharged R7. Steps 5 onwards have not been started, and their premise
+is in doubt; see the banner above *Step 5*. Current state is in `log.md`,
+*Status summary*.]
 
 TL;DR — Add `StrategyMaxPoints` (rolling points objective, no DRS, no
 coefficients) and back-test it against P2PM to test the divisor hypothesis. Then
@@ -180,6 +184,25 @@ than being discovered after the coefficients are built.
 > which gives three rungs instead of two: P2PM, then `StrategyMaxPoints` isolating
 > the **objective**, then step 7's in-objective DRS isolating the **DRS
 > modelling** against a matched control rather than against a tangle of both.
+
+> **Steps 5 onwards: not started, and their premise is in doubt (2026-09-28).**
+> The steps below are kept as written, but should not be followed as they stand.
+> The per-race re-simulation (`log.md`, *The per-race re-simulation*) changed
+> what they can deliver:
+>
+> - **In-objective DRS cannot improve the nomination.** For a fixed team, the
+>   LP's optimal `y` is the selected driver with the highest `r_i`. With `r` as
+>   rolling points, that is exactly the driver `StrategyMaxP2PM.get_drs_driver`
+>   already picks. So none of the measured +98 to +226 points a season ceiling
+>   can come from steps 5-8. Their only effect is on which team is selected.
+>   Reasoned from the LP's structure, not run.
+> - **Step 8 as specified would nominate worse than today's rule.** R5 feeds the
+>   DRS term P2PM values, where the current rule uses rolling points.
+> - **Steps 10+ have lost their target.** The coefficients were to tune
+>   `StrategyMaxPoints`, which lost to P2PM in every season.
+>
+> Whether to respecify these steps, replace them, or close the effort is the
+> open decision in `log.md`, *Next session — start here*.
 
 ### Step 5 — The DRS helper on `StrategyBase` (R3)
 
