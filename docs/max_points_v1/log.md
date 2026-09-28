@@ -27,7 +27,12 @@ design rationale predates both and is in `proposal.md`.
   re-simulation* at the end.
 - 2026-09-28: key findings summarised in the root `BACKTEST_LOG.md`. `plan.md`'s
   status line and steps 5 onwards annotated as out of date. The choice of next
-  step in *Next session — start here* is still open.
+  step in *Next session — start here* is still open. [Resolved later the same
+  day, see the next bullet.]
+- Step 5 completed 2026-09-28: the DRS helper is on `StrategyBase`, and
+  *Verification* 2 confirms `StrategyMaxP2PM` is unchanged. Steps 7 onwards are
+  dropped. **The one remaining piece of work is the 2024 analysis**, to be started
+  in a fresh session. See *Step 5 — the DRS helper* at the end.
 
 ## Verification 1, first attempt — confounded (2026-09-20)
 
@@ -727,3 +732,99 @@ nomination lever worth 200.
 
 **Nothing blocks any of these.** They are not sequential, except that B needs
 steps 5 and 6 of `plan.md` first.
+
+## Step 5 — the DRS helper (2026-09-28)
+
+**Decision (Alex).** Step 5 goes ahead so future strategies can use the helper,
+and steps 7 onwards are dropped. There is no further analysis of
+`StrategyMaxPoints`, and nothing in this effort calls the helper. Of the four
+options above, only **C, the 2024 analysis**, remains in this effort. Refining
+P2PM is two new backlog items, neither a priority: *back-test it without the
+race-4 reset*, and *better DRS nomination*. The constraint throughout: **P2PM's
+behaviour must not change at all.**
+
+Suite green at 261 before starting, 269 after. No existing test file edited.
+
+**What was added.** Two methods on `StrategyBase`, in the shape agreed on
+2026-09-20 (`plan.md`, *The helper's shape*), with no deviation:
+
+- `get_drs_objective_term(driver_values)` creates one binary per team-driver
+  candidate under `VarType.DrsDriver`, indexed over the same drivers as
+  `VarType.TeamDrivers`, owned-but-unavailable ones included. It returns the
+  objective term and a name-keyed dict of constraints (`drs_one`, and
+  `drs_owned_<driver>` per driver) for the caller to `problem.extend()`. It
+  mutates no problem. A driver missing from `driver_values` counts as `0.0`.
+- `get_drs_nominee()` returns the driver whose binary solved above 0.5. It raises
+  if the nominee is not on the selected team, naming the likely cause (the
+  constraints were not added). It also raises if the helper was never called.
+  That case was not in the agreed shape, and was added because it would otherwise
+  surface as a bare `KeyError`.
+
+Tests are in a new `tests/test_strategy_base_drs.py`, using a probe subclass. They
+include the proposal's four-driver worked example: DRS-blind picks the two mid
+drivers, and DRS-aware picks STAR + CHEAP with STAR nominated.
+
+**How red-first was reached.** As in step 2, a new method's only
+pre-implementation red is an `AttributeError`. So the methods were first added as
+stubs returning an empty term, no constraints and no nominee. Seven of the eight
+tests failed on their assertions. The eighth, the DRS-blind control, never calls
+the helper, so it passes by design. Its opt-in assertion was confirmed by mutation
+below.
+
+**Six mutations, each caught and each reverted:**
+
+| Mutation | Tests that went red |
+|---|---|
+| `Σ y = 1` weakened to `≤ 1` | exact-sum constraint test |
+| ownership constraints `y ≤ x` removed | 5, including worked example and nominee-on-team |
+| missing-value fill removed (`values[d]`) | missing-driver and owned-but-unavailable tests |
+| read-back team check removed | raises-when-constraints-not-added |
+| `DrsDriver` created in `initialise()` (no longer opt-in) | DRS-blind control and helper-not-called |
+| binaries indexed over available drivers only | owned-but-unavailable test |
+
+### *Verification* 2 — `StrategyMaxP2PM` is unchanged (R6)
+
+**done (verified).** Both checks were run, not reasoned. `linear/strategy_p2pm.py`
+was not edited.
+
+- **Back-test rows.** `backtest_v1`'s P2PM sample was re-simulated on the new code
+  into a scratch store: seed 1, 500 per band, 2023-2025, 4,500 simulations in
+  about 28 minutes. It was compared with the P2PM rows stored before the change,
+  in both `outputs/backtest_v1_results.parquet` and
+  `outputs/max_points_v1_results.parquet`. Both matched: 4,500 keys, none on
+  either side only, all 40 columns, **exactly equal** by `DataFrame.equals`. The
+  comparison can fail: changing one `total_points` by 1 in a copy made it report
+  `False` and name the column.
+- **Live configuration.** 2026 was replayed through `run_single_team`'s functions,
+  not its `__main__`, before and after the change. The two outputs, 16 rows, are
+  exactly equal. One caveat: the live config starts at race 15, the last race with
+  data, so it re-solves nothing. The meaningful half is the full 2026 season from
+  the race-1 line-up, which re-solves 14 races, all identical: line-ups, DRS
+  picks, points, budget and moves.
+- Full suite green at 269, with no existing test file edited.
+
+The probe scripts were session scratch files and are not kept.
+
+## Next session — the 2024 analysis (handoff, 2026-09-28)
+
+The only remaining work in this effort. Once it is recorded, `max_points_v1` can
+close.
+
+**The question.** Why does `StrategyMaxPoints` lose to P2PM by −156.2 points a
+season in 2024, against −14.5 in 2023 and −4.4 in 2025?
+
+**Already ruled out**, in *The per-race re-simulation*: concentration, and the
+budget split between drivers and constructors. The loss is also a sustained drift
+from race 5 onwards, not a few bad races.
+
+**The hypothesis to test.** In 2024 constructors took 74-76% of all points from
+44-45% of the spend, so driver scores were compressed. A rolling points total then
+barely separates drivers, while dividing by price still does. So MaxPoints picks
+worse drivers. It scored 38.2 driver points a race against P2PM's 43.7. But it
+also scored fewer constructor points (121.0 against 124.2), which the hypothesis
+does not obviously explain.
+
+**Data on disk:** `outputs/max_points_v1_per_race.parquet`, 210,000 rows, every
+race of every simulation, with `D1`–`D5`/`C1`–`C2` and their points. No
+re-simulation is needed to start. This is diagnostic only; it explains a result
+rather than improving a strategy.

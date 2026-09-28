@@ -203,6 +203,17 @@ than being discovered after the coefficients are built.
 >
 > Whether to respecify these steps, replace them, or close the effort is the
 > open decision in `log.md`, *Next session — start here*.
+>
+> **Decided 2026-09-28 (Alex): step 5 goes ahead, and steps 7 onwards are
+> dropped.** The helper lands in `StrategyBase` for future strategies to use, with
+> step 6's zero-change verification as its gate. No further analysis is done on
+> `StrategyMaxPoints`. So step 7 (it calls the helper), step 8
+> (`StrategyMaxP2PMDrs`), step 9 (their back-test) and steps 10+ (the
+> coefficients and sweep) will not be done in this effort. Refining P2PM's DRS
+> nomination and testing it without the race-4 reset are backlog items instead.
+> **The one remaining piece of work in this effort is the 2024 analysis** (option
+> C in `log.md`, *Next session — start here*), to be started in a fresh session.
+> See `log.md`, *Step 5 — the DRS helper*.
 
 ### Step 5 — The DRS helper on `StrategyBase` (R3)
 

@@ -34,6 +34,13 @@ against P2PM.
 3. **The concentration lift is deferred**, to be driven by measurement rather
    than assumption — see R7.
 
+[Added 2026-09-28 (Alex): **R3, R4 and R6 are delivered** as the DRS helper on
+`StrategyBase` (plan step 5), for future strategies to use. **R5, R8 and R9 are
+dropped**: no further analysis is done on `StrategyMaxPoints`, and nothing in this
+effort calls the helper. Refining P2PM's DRS nomination is a backlog item instead.
+The one remaining piece of work is the 2024 analysis. See `log.md`, *Step 5 — the
+DRS helper*.]
+
 ## Scope
 
 - New strategy modules in `linear/`, and an **opt-in** helper added to
