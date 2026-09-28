@@ -299,9 +299,15 @@ this is a single-file read with no join, no LP run and no re-fetch:
 That deliberately avoids running `StrategyMaxP2PM` and comparing team outcomes:
 the LP, transfer mechanics and budget constraints all sit between a signal and a
 finishing position, and the question here is only which per-driver signal ranks
-the field better. If the two separate clearly there is no need for the fuller
-strategy-output comparison; if they do not, the strategy back-test is where to
-look next.
+the field better. The test is a go/no-go gate for the strategy, and only one
+outcome stops it. If `AggregateRank` clearly loses to rolling points on its own,
+the strategy is not built. Any other result, including a clear win, means
+building it: a strategy class is needed anyway to pick a real team from the
+signal next season, and a back-test is the only way to see whether better
+driver ranking survives the LP, transfers and budget cap to score more team
+points. [Corrected 2026-09-28: this previously said a clear separation would make
+the strategy comparison unnecessary. That was wrong, since a clear win still needs
+the strategy for live use.]
 
 Points to settle:
 
