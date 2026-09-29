@@ -1056,6 +1056,10 @@ two things are worth knowing:
 
 ### Open for the session to settle
 
+[Settled 2026-09-29 (Alex): the module goes in `linear/`, both existing stores
+are reused, and line-up survival is measured. See *P2PM without the race-4
+reset* below.]
+
 - **Where the new module lives.** `linear/` holds every other strategy, but a
   new file there still needs Alex's OK under the core-modules rule. `backtest/`
   is the alternative.
