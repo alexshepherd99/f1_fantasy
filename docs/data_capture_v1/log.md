@@ -49,3 +49,11 @@ This narrows the still-open paste-format question rather than settling it — a
 per-asset prompt has somewhere to display previous values, a single pasted
 block does not, and a paste-then-confirm-row-by-row hybrid would keep both.
 
+## 2026-09-29 — Legacy workbooks to be removed
+
+A whole-repo security review found local machine metadata (a save path and
+printer settings) inside the two Excel-authored workbooks. Alex accepted it as
+low-sensitivity, with no history rewrite, and asked that this effort retire
+both workbooks once in-season capture moves to CSV. Recorded as a scope item
+in `requirements.md`: the archive goes as already planned, and
+`test_expected_values.xlsx` becomes a text fixture so it can go too.

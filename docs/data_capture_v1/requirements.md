@@ -38,6 +38,16 @@ answers first.
   and `data/fastf1_practice_rolling_metrics.xlsx` are out of scope and stay as
   they are. Whether the archive is one CSV or two (drivers, constructors) is
   part of the schema decision in chunk 2 below.
+- **The legacy Excel-authored workbooks are retired and removed from the repo**
+  (added 2026-09-29). `data/f1_fantasy_archive.xlsx` and
+  `data/test_expected_values.xlsx` are the two workbooks saved from desktop
+  Excel, and both carry local machine metadata in their file properties (a
+  2026-09-29 security review found it; Alex accepted it as low-sensitivity
+  rather than rewriting history). Once in-season capture and persistence move
+  to CSV, both go: the archive as chunk 3's last step, and the derivation
+  test fixture (`tests/test_derivations.py`) converted to a text fixture so it
+  can follow. Removal only stops future versions; the old blobs stay in
+  history.
 
 ## What the change touches
 
