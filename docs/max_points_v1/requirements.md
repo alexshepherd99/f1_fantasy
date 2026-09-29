@@ -39,7 +39,10 @@ against P2PM.
 dropped**: no further analysis is done on `StrategyMaxPoints`, and nothing in this
 effort calls the helper. Refining P2PM's DRS nomination is a backlog item instead.
 The one remaining piece of work is the 2024 analysis. See `log.md`, *Step 5 — the
-DRS helper*.]
+DRS helper*.] [Added 2026-09-29 (Alex): the 2024 analysis is done. Scope gains
+one final item, moved from `BACKLOG.md`: back-test P2PM without the race-4 reset,
+as a subclass, with `linear/strategy_p2pm.py` unedited. See `log.md`, *Next
+session — P2PM without the race-4 reset*.]
 
 ## Scope
 

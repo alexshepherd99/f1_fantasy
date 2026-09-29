@@ -353,34 +353,8 @@ See `docs/max_points_v1/proposal.md`.
 
 ## Refine P2PM: back-test it without the race-4 reset
 
-Not a priority. `StrategyMaxP2PM` picks the live team, so it must not change
-before the 2026 season ends. Test this as a subclass, not as an edit to
-`linear/strategy_p2pm.py`.
-
-`StrategyMaxP2PM` plays the unlimited-moves chip at race 4 (its `__init__` resets
-`max_moves` to the full team size). `max_points_v1`'s per-race re-simulation found
-that this reset rebuilds almost every starting team into the same line-up. Out of
-1,500 sampled starting teams, 1 distinct line-up remained at race 4 in 2023, 6 in
-2024 and 10 in 2025. See `docs/max_points_v1/log.md`, *Starting teams barely
-survive the race-4 chip*.
-
-Two questions:
-
-- **Is the reset worth its chip?** Back-test a P2PM subclass that skips the reset
-  (restore `max_moves` after `super().__init__()`) against `StrategyMaxP2PM`. It
-  needs a subclass rather than `backtest.variants.make_variant`, because the reset
-  is not a constructor parameter. The chip could instead be played later in the
-  season, but chips across a season are not modelled (see README), so any gain
-  here is only the value of not resetting.
-- **What does it mean for back-test sample sizes?** With the reset in place, 500
-  starting teams per band carry far less independent information after race 4
-  than the sample size suggests. Almost all of the per-team variance is created
-  in races 1-3. Without the reset, that may no longer hold. It also means the
-  standard errors in `BACKTEST_LOG.md` overstate precision, as
-  `max_points_v1`'s 2024 analysis found (`docs/max_points_v1/log.md`, *The 2024
-  analysis*).
-
-Raised 2026-09-28, from `max_points_v1`.
+Picked up 2026-09-29 as the final piece of `max_points_v1`. See
+`docs/max_points_v1/log.md`, *Next session — P2PM without the race-4 reset*.
 
 ## Refine P2PM: better DRS nomination
 

@@ -36,6 +36,10 @@ design rationale predates both and is in `proposal.md`.
 - 2024 analysis done 2026-09-29: the compressed-driver hypothesis is refuted, and
   2024's loss is a handful of divergent trades within one path's noise, needing
   no season-specific cause. See *The 2024 analysis* at the end.
+- 2026-09-29 (Alex): the effort does **not** close yet. One final session
+  back-tests P2PM without the race-4 reset, moved here from `BACKLOG.md`, and
+  closes the effort at its end. See *Next session — P2PM without the race-4
+  reset* at the end.
 
 ## Verification 1, first attempt — confounded (2026-09-20)
 
@@ -997,3 +1001,66 @@ All from `outputs/max_points_v1_per_race.parquet`, one season at a time, 2023–
   simulations.
 - **Noise.** Mean `points` per race and label; the MaxPoints−P2PM difference from
   race 5; its sum and SD.
+
+## Next session — P2PM without the race-4 reset (handoff, 2026-09-29)
+
+**The final session of this effort.** Decided 2026-09-29 (Alex), in place of
+closing the effort after the 2024 analysis. When this is recorded, close
+`max_points_v1`: the `BACKLOG.md` row goes to `done`, *Status summary* gets an
+"effort complete" line, and `requirements.md` and `plan.md` get dated status
+markers, following `backtest_v1`'s closing commit `f0d7e58`.
+
+### In plain terms
+
+Both P2PM and MaxPoints use the game's unlimited-transfers chip at race 4,
+letting the optimiser rebuild the whole team. The per-race re-simulation showed
+that this turns all 1,500 starting teams into the same handful of line-ups. So
+two things are worth knowing:
+
+- **Is the chip worth playing at race 4?** Run P2PM without it, keeping the
+  normal two moves a race (three with a carried-over free transfer), and compare
+  with P2PM as it is. Chips across a season are not modelled (see README), so
+  this measures the value of *not* resetting, not the value of playing the chip
+  somewhere better.
+- **Does it change how much the back-test can be trusted?** Without the reset,
+  starting teams may stay different for longer. If they do, a 500-per-band sample
+  carries more independent information, and the standard errors in
+  `BACKTEST_LOG.md` overstate precision by less. *The 2024 analysis* found they
+  overstate it today.
+
+### Constraints
+
+- **`linear/strategy_p2pm.py` is not edited.** It picks the live 2026 team.
+  This is a subclass.
+- The reset is in `StrategyMaxP2PM.__init__`, not a constructor parameter, so
+  `backtest.variants.make_variant` cannot switch it off. The subclass restores
+  the `max_moves` it was given after `super().__init__()`:
+  `StrategyBase.__init__` stores it as `self._max_moves`
+  (`linear/strategy_base.py:134`), and the reset overwrites that at race 4. Every
+  other race is unchanged, since the parent only touches race 4.
+- `run_for_team` labels results by class `__name__`, so the subclass needs a
+  distinct name, and it goes into `backtest/cli.py`'s `STRATEGIES`.
+- TDD as usual: a test that the subclass keeps the passed `max_moves` at race 4,
+  and one that race 3 and race 5 are unchanged from the parent, seen failing
+  first.
+
+### Open for the session to settle
+
+- **Where the new module lives.** `linear/` holds every other strategy, but a
+  new file there still needs Alex's OK under the core-modules rule. `backtest/`
+  is the alternative.
+- **Which store.** A fresh `--output` avoids mixing with
+  `outputs/max_points_v1_results.parquet`. It re-runs the P2PM baseline too,
+  about 28 minutes for 4,500 simulations (measured in *Verification* 2), so
+  about an hour for both labels. Reusing the existing store saves the baseline
+  run, because `simulate_sample` skips rows already present under the same seed.
+- **Whether to measure line-up survival too.** Answering the second question
+  needs every race kept, not just the final one. `backtest/per_race.py` does
+  that but has its `STRATEGIES` and `STORE` hard-coded for this effort's run,
+  so it needs a small change or a parameter. The first question needs only
+  season totals, from the ordinary back-test.
+
+### Recording the result
+
+A summary row and key findings go into `BACKTEST_LOG.md`, as for every
+back-tested strategy, along with a log entry here.

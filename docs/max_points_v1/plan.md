@@ -6,7 +6,10 @@ code exists. [Superseded 2026-09-28: steps 1-4 are done and *Verification* 1
 is done (verified), refuting the divisor hypothesis. The per-race re-simulation
 has also discharged R7. Steps 5 onwards have not been started, and their premise
 is in doubt; see the banner above *Step 5*. Current state is in `log.md`,
-*Status summary*.]
+*Status summary*.] [Superseded 2026-09-29: step 5 and *Verification* 2 are done,
+steps 7 onwards are dropped, and the 2024 analysis is done. The final piece of
+work is a back-test of P2PM without the race-4 reset, specified in `log.md`,
+*Next session — P2PM without the race-4 reset*, not here.]
 
 TL;DR — Add `StrategyMaxPoints` (rolling points objective, no DRS, no
 coefficients) and back-test it against P2PM to test the divisor hypothesis. Then
