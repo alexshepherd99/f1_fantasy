@@ -7,7 +7,7 @@ Efforts under `docs/`:
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
-| [`max_points_v1`](docs/max_points_v1/) | in progress |
+| [`max_points_v1`](docs/max_points_v1/) | done |
 
 Global list of not-yet-started work. Freeform. When an item is picked up, create `docs/<effort-name>/` (see `docs/` and `agentic`'s `shared/persistent-docs.md`) and move the item there.
 
@@ -349,12 +349,15 @@ Raised 2026-07-29.
 
 ## Optimise rolling points directly, and model DRS inside the objective
 
-See `docs/max_points_v1/proposal.md`.
+See `docs/max_points_v1/proposal.md`. [Done 2026-09-29: `max_points_v1` is
+complete. Rolling points lost to P2PM, and the in-objective DRS strategies were
+dropped. See `BACKTEST_LOG.md`.]
 
 ## Refine P2PM: back-test it without the race-4 reset
 
 Picked up 2026-09-29 as the final piece of `max_points_v1`. See
 `docs/max_points_v1/log.md`, *Next session — P2PM without the race-4 reset*.
+[Done 2026-09-29: the chip is worth keeping. See `BACKTEST_LOG.md`.]
 
 ## Refine P2PM: better DRS nomination
 

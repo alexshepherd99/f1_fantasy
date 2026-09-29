@@ -9,7 +9,8 @@ is in doubt; see the banner above *Step 5*. Current state is in `log.md`,
 *Status summary*.] [Superseded 2026-09-29: step 5 and *Verification* 2 are done,
 steps 7 onwards are dropped, and the 2024 analysis is done. The final piece of
 work is a back-test of P2PM without the race-4 reset, specified in `log.md`,
-*Next session — P2PM without the race-4 reset*, not here.]
+*Next session — P2PM without the race-4 reset*, not here.] [Superseded
+2026-09-29: that back-test is done and the effort is complete; see `log.md`.]
 
 TL;DR — Add `StrategyMaxPoints` (rolling points objective, no DRS, no
 coefficients) and back-test it against P2PM to test the divisor hypothesis. Then

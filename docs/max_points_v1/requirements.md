@@ -3,7 +3,9 @@
 **Status**: agreed 2026-09-20, when the effort was picked up off the backlog.
 Design rationale and the LP derivations live in `proposal.md` (raised
 2026-07-30, extended 2026-09-19) and are not restated here. Implementation plan
-in `plan.md`; execution log in `log.md`.
+in `plan.md`; execution log in `log.md`. [Superseded 2026-09-29: the effort is
+complete. Steps 7 onwards of `plan.md` were dropped, so R5, R8 and R9 were not
+built; see `log.md`, *Status summary*.]
 
 Optimise the three-race rolling *points* total directly rather than the
 points-per-price ratio `StrategyMaxP2PM` uses, model the DRS x2 boost inside the

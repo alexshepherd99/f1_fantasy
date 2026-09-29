@@ -44,6 +44,9 @@ design rationale predates both and is in `proposal.md`.
   keeping (−32 and −168 points without it in 2024 and 2025), and it is not what
   makes starting teams identical. Ordinary moves in races 2 and 3 do most of
   that. See *P2PM without the race-4 reset* at the end.
+- **Effort complete 2026-09-29.** Nothing is left open. Its follow-ups, better
+  DRS nomination and lifting the concentration calculation into `StrategyBase`,
+  are queued in `BACKLOG.md` and are not part of this effort.
 
 ## Verification 1, first attempt — confounded (2026-09-20)
 
