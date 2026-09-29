@@ -9,6 +9,7 @@ from common import F1_SEASON_CONSTRUCTORS, setup_logging
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_max_points import StrategyMaxPoints
 from linear.strategy_p2pm import StrategyMaxP2PM
+from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
 from linear.strategy_zero_stop import StrategyZeroStop
 
 # Seasons run by default. Add a season here once it has finished; one in
@@ -16,7 +17,10 @@ from linear.strategy_zero_stop import StrategyZeroStop
 COMPLETED_SEASONS = [2023, 2024, 2025]
 
 # Strategies that can be named with --strategies, by label
-STRATEGIES = {s.__name__: s for s in [StrategyMaxP2PM, StrategyZeroStop, StrategyMaxBudget, StrategyMaxPoints]}
+STRATEGIES = {
+    s.__name__: s
+    for s in [StrategyMaxP2PM, StrategyZeroStop, StrategyMaxBudget, StrategyMaxPoints, StrategyMaxP2PMNoReset]
+}
 
 DEFAULT_SAMPLE_SIZE = 500
 DEFAULT_SEED = 1
