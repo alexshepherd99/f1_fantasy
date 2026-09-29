@@ -40,6 +40,10 @@ design rationale predates both and is in `proposal.md`.
   back-tests P2PM without the race-4 reset, moved here from `BACKLOG.md`, and
   closes the effort at its end. See *Next session — P2PM without the race-4
   reset* at the end.
+- P2PM without the race-4 reset back-tested 2026-09-29: the chip is worth
+  keeping (−32 and −168 points without it in 2024 and 2025), and it is not what
+  makes starting teams identical. Ordinary moves in races 2 and 3 do most of
+  that. See *P2PM without the race-4 reset* at the end.
 
 ## Verification 1, first attempt — confounded (2026-09-20)
 
@@ -1008,13 +1012,16 @@ All from `outputs/max_points_v1_per_race.parquet`, one season at a time, 2023–
 closing the effort after the 2024 analysis. When this is recorded, close
 `max_points_v1`: the `BACKLOG.md` row goes to `done`, *Status summary* gets an
 "effort complete" line, and `requirements.md` and `plan.md` get dated status
-markers, following `backtest_v1`'s closing commit `f0d7e58`.
+markers, following `backtest_v1`'s closing commit `f0d7e58`. [Done 2026-09-29:
+see *P2PM without the race-4 reset* below.]
 
 ### In plain terms
 
 Both P2PM and MaxPoints use the game's unlimited-transfers chip at race 4,
 letting the optimiser rebuild the whole team. The per-race re-simulation showed
-that this turns all 1,500 starting teams into the same handful of line-ups. So
+that this turns all 1,500 starting teams into the same handful of line-ups.
+[Corrected 2026-09-29: most of that collapse happens in races 2 and 3, before the
+chip. See *P2PM without the race-4 reset* below.] So
 two things are worth knowing:
 
 - **Is the chip worth playing at race 4?** Run P2PM without it, keeping the
@@ -1064,3 +1071,121 @@ two things are worth knowing:
 
 A summary row and key findings go into `BACKTEST_LOG.md`, as for every
 back-tested strategy, along with a log entry here.
+
+## P2PM without the race-4 reset (2026-09-29)
+
+**done (verified).** Both questions in the handoff above are answered: playing
+the chip at race 4 is worth having, and dropping it does not make the back-test
+meaningfully more trustworthy.
+
+### In plain terms
+
+- **Keep the chip.** Without the race-4 rebuild, P2PM scores about the same in
+  2023, 32 points less in 2024 and 168 less in 2025. The rebuild gets every team
+  to the strong line-up at once. Without it, teams take several races to get
+  there two moves at a time and drop points on the way.
+- **The chip is not what makes starting teams identical.** Most of that happens
+  in races 2 and 3, before the chip. 1,500 starting teams become 268 to 432
+  distinct line-ups by race 3 under ordinary moves, because every team chases the
+  same few top-rated assets. The chip finishes the job, but without it the teams
+  mostly come back together within a few races anyway.
+- So **the standard-error caveat in `BACKTEST_LOG.md` stands** and is not a
+  quirk of the chip. Any deterministic strategy here makes a sample of starting
+  teams far less independent than its size suggests.
+
+### What was built
+
+- `linear/strategy_p2pm_no_reset.py`, `StrategyMaxP2PMNoReset` (`e524204`).
+  Subclasses `StrategyMaxP2PM` and puts back the `max_moves` it was given after
+  the parent's `__init__`. `strategy_p2pm.py` is not edited. The race-4 test was
+  seen failing (`6 == 3`) against a stub before the implementation. The race-3,
+  race-5 and parent-unchanged tests pass on the stub by design, since they check
+  inherited behaviour. They were confirmed by mutation instead: making the
+  subclass set `max_moves + 1` turned the race-3 and race-5 tests red. The
+  parent-unchanged test was not mutation-checked, because that needs a temporary
+  edit to `strategy_p2pm.py`.
+- Registered in `backtest/cli.py` (with a test) and added to `backtest/per_race.py`'s
+  `STRATEGIES` (no test, as it is run configuration).
+
+### The runs
+
+Both reused the existing stores, as agreed, so only the new label simulated.
+
+- **Store reuse is valid.** The archive changed on 2026-09-24 (`37cc4d9`), after
+  both stores were written. Every 2023–2025 sheet was compared before and after
+  that commit and is identical. The 2026 sheets show as different, so the
+  comparison could detect a change.
+- `PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyMaxP2PMNoReset
+  --output outputs/max_points_v1_results.parquet --summary
+  outputs/max_points_v1_no_reset_summary.csv`: 4,500 simulations, 28 minutes.
+- `PYTHONPATH=. venv/bin/python -m backtest.per_race`: 4,500 simulations keeping
+  every race, 34 minutes. The store is now 315,000 rows.
+- **The two agree.** Final-race mean `total_points` per season from the per-race
+  store matches the season back-test's pooled mean exactly, for both labels.
+- **The subclass worked in the engine, not only in the tests.** At race 4,
+  `used_moves` never exceeds 3 for NoReset. P2PM uses up to 6.
+
+### Result
+
+| Season | Mean delta | Median delta | p10 delta | Teams beating P2PM |
+|---|---|---|---|---|
+| 2023 | +1.8 | 0 | 0 | 10.7% |
+| 2024 | −32.3 | 0 | −158 | 10.7% |
+| 2025 | −168.0 | −33 | −583 | 11.1% |
+
+Verdict: one season positive of three, so it does not beat the baseline. 2023's
++1.8 is noise: from race 6 the two strategies' mean per-race points differ by
+0.1 at most.
+The bands barely differ, and no band reverses the sign.
+
+**Where the gap opens.** Mean per-race delta, cumulative:
+
+| After race | 2023 | 2024 | 2025 |
+|---|---|---|---|
+| 4 | +2.0 | −3.0 | −12.5 |
+| 7 | +1.9 | −14.0 | −58.3 |
+| 9 | +1.9 | −9.3 | −114.8 |
+| 11 | +1.9 | −9.7 | −126.7 |
+| last | +1.8 | −32.3 | −168.0 |
+
+In 2025 NoReset loses 11 to 16 points every race from 4 to 8, then 45.6 at race
+9. By race 11 three-quarters of the season's loss is in. That is the cost of
+reaching the strong line-up slowly. 2024's smaller loss is spread thinly across
+the season.
+
+**Distinct line-ups per race**, of 1,500 teams:
+
+| Season | Race 3 (both) | Race 4, P2PM → NoReset | Race 5 | Median from race 5 |
+|---|---|---|---|---|
+| 2023 | 268 | 1 → 17 | 1 → 4 | 1 → 1.5 |
+| 2024 | 432 | 7 → 111 | 7 → 28 | 8.5 → 11 |
+| 2025 | 348 | 10 → 109 | 13 → 70 | 6.5 → 8 |
+
+From race 5, the modal line-up holds 79%, 62% and 56% of teams with the chip,
+and 78%, 52% and 42% without it. NoReset keeps teams apart for longer only in
+2025, from race 5 to about race 10. Otherwise it converges to within a line-up
+or two of P2PM's count.
+
+### What this can and cannot say
+
+- It measures playing the chip at race 4 against never playing it. It does not
+  measure whether the chip would be worth more at some other race, since chips
+  are not modelled (README).
+- The season deltas rest on few independent paths, as the line-up counts show,
+  so treat 2024's −32 as "probably small and negative", not a precise figure.
+  2025's −168 is large and builds steadily over six races, so it is not one
+  bad weekend. Neither is a significance test.
+- `BACKTEST_LOG.md` gives 1, 6 and 10 distinct teams after the chip. Counted
+  here at race 4 from the same P2PM rows, it is 1, 7 and 10. The earlier count
+  was not re-derived to find where the one team in 2024 comes from. It changes
+  nothing above.
+
+### Reproducing it
+
+- Season totals: `outputs/max_points_v1_no_reset_summary.csv` and its
+  `_verdict` companion.
+- Line-ups: per season, label and race in the per-race store, sort each row's
+  `D1`–`D5`, `C1`–`C2` into one key and count distinct keys. Also the modal key's
+  share. Written to `outputs/max_points_v1_no_reset_lineups.csv`.
+- Per-race delta: mean `points` per season, race and label. NoReset minus P2PM,
+  then cumulative.

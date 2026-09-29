@@ -18,6 +18,7 @@ is positive in every season tested.
 | Zero-stop (`StrategyZeroStop`) | [backtest_v1](docs/backtest_v1/) | 2026-09-18 | 2023, 2024, 2025 | −1,358, −1,019, −1,763 | No, 0 of 3 seasons | Control, loses as expected |
 | Max budget (`StrategyMaxBudget`) | [backtest_v1](docs/backtest_v1/) | 2026-09-18 | 2023, 2024, 2025 | −1,302, −979, −1,748 | No, 0 of 3 seasons | Control, loses as expected |
 | Max points (`StrategyMaxPoints`) | [max_points_v1](docs/max_points_v1/) | 2026-09-20 | 2023, 2024, 2025 | −14.5, −156.2, −4.4 | No, 0 of 3 seasons | Hypothesis refuted |
+| P2PM without race-4 reset (`StrategyMaxP2PMNoReset`) | [max_points_v1](docs/max_points_v1/) | 2026-09-29 | 2023, 2024, 2025 | +1.8, −32.3, −168.0 | No, 1 of 3 seasons | Keep the race-4 chip |
 
 ## Zero-stop and Max budget controls — `backtest_v1` (2026-09-18)
 
@@ -111,12 +112,17 @@ constraint and no tuning coefficients.
 - **The standard errors above overstate precision** (added 2026-09-29). They
   treat the 1,500 starting teams as independent, but after race 4 each strategy
   holds only a few distinct line-ups a race. This is reasoned from the race-4
-  finding below, not measured.
+  finding below, not measured. [Confirmed 2026-09-29, and not caused by the
+  chip: see *P2PM without the race-4 reset* below.]
 - **The starting team stops mattering by race 4.** Under both strategies, the
   race-4 unlimited-moves chip rebuilds nearly all 1,500 starting teams into the
   same line-up: 1 distinct team in 2023, 6 in 2024 and 10 in 2025. So a
   sampled back-test gets far less independent information after race 4 than
   its sample size suggests. This applies to every back-test, not just this one.
+  [Corrected 2026-09-29: the chip only finishes the collapse. Ordinary moves in
+  races 2 and 3 already bring 1,500 teams down to a few hundred, and without the
+  chip they mostly converge again within a few races. See *P2PM without the
+  race-4 reset* below.]
 - **DRS nomination is a bigger lever than the objective.** A perfect-hindsight
   DRS pick would have added 98 to 226 points a season over the current rule.
   The objective change was worth −4 to −156 by comparison. Modelling DRS inside
@@ -133,3 +139,48 @@ valid.
 **Full detail:** [`docs/max_points_v1/log.md`](docs/max_points_v1/log.md),
 starting with its plain-language recap under *Next session — start here*.
 Requirements, plan and design rationale are in the same folder.
+
+## P2PM without the race-4 reset — `max_points_v1` (2026-09-29)
+
+**Question.** Max P2PM plays the unlimited-moves chip at race 4 and can rebuild
+the whole team. Is that worth doing? And is the chip why starting teams end up
+identical, which limits how much a back-test can tell us?
+
+**Set-up.** `StrategyMaxP2PMNoReset` is Max P2PM with race 4 treated as an
+ordinary race: two moves, or three with a carried-over free transfer. Nothing
+else differs. This compares the chip at race 4 against never playing it. It
+does not test playing it at a different race, since chips are not modelled.
+
+**Result: the chip is worth keeping.**
+
+| Season | Mean delta | Median delta | p10 delta | Teams beating P2PM |
+| :--- | :--- | :--- | :--- | :--- |
+| 2023 | +1.8 | 0 | 0 | 10.7% |
+| 2024 | −32.3 | 0 | −158 | 10.7% |
+| 2025 | −168.0 | −33 | −583 | 11.1% |
+
+**Key findings.**
+
+- **Rebuilding at race 4 gets to the strong team sooner.** Without it, teams
+  reach roughly the same line-up two moves at a time and lose points meanwhile.
+  In 2025 that costs 11 to 16 points a race from race 4 to 8, and three-quarters
+  of the season's loss is in by race 11. 2023 is a wash: from race 6 both score
+  the same.
+- **The chip is not what makes starting teams identical.** By race 3, before
+  any chip, ordinary moves have already brought 1,500 starting teams down to
+  268–432 distinct line-ups, as every team chases the same top-rated assets.
+  Without the chip, race 4 has 17, 111 and 109 line-ups where P2PM has 1, 7 and
+  10. But by mid-season they converge again to within one or two of P2PM's
+  count.
+- **So the standard-error caveat above holds for every strategy tested here.**
+  A back-test of 1,500 starting teams rests on a handful of independent paths
+  per season, whatever the chip does. Read these standard errors as describing
+  those paths, not how the strategies would compare in general.
+- **The season deltas are not significance tests.** 2024's −32 is best read as
+  "probably small and negative". 2025's −168 builds up over six races, so it is
+  not one bad weekend.
+
+**Full detail:** [`docs/max_points_v1/log.md`](docs/max_points_v1/log.md),
+*P2PM without the race-4 reset*. The numbers come from
+`outputs/max_points_v1_no_reset_summary.csv` and
+`outputs/max_points_v1_no_reset_lineups.csv`.
