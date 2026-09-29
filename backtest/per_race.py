@@ -14,6 +14,7 @@ from helpers import load_with_derivations
 from linear.strategy_base import StrategyBase
 from linear.strategy_max_points import StrategyMaxPoints
 from linear.strategy_p2pm import StrategyMaxP2PM
+from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
 from races.season import Race, factory_season
 from races.team import factory_team_row
 from scripts.run_multiple_teams import get_starting_key, open_batch_results_file
@@ -26,11 +27,13 @@ _CONSTRUCTOR_COLUMN = re.compile(r"^C\d+$")
 
 # The run this module was built for: max_points_v1's per-race re-simulation.
 # Same seed, edges and sample size as Verification 1, so every team's final
-# race is directly comparable with outputs/max_points_v1_results.parquet
+# race is directly comparable with outputs/max_points_v1_results.parquet.
+# StrategyMaxP2PMNoReset was added for the effort's final run; the two labels
+# before it are already in the store and skip
 SEASONS = [2023, 2024, 2025]
 SAMPLE_SIZE = 500
 SEED = 1
-STRATEGIES = [StrategyMaxP2PM, StrategyMaxPoints]
+STRATEGIES = [StrategyMaxP2PM, StrategyMaxPoints, StrategyMaxP2PMNoReset]
 STORE = "outputs/max_points_v1_per_race.parquet"
 
 
