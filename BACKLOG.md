@@ -375,7 +375,10 @@ Two questions:
 - **What does it mean for back-test sample sizes?** With the reset in place, 500
   starting teams per band carry far less independent information after race 4
   than the sample size suggests. Almost all of the per-team variance is created
-  in races 1-3. Without the reset, that may no longer hold.
+  in races 1-3. Without the reset, that may no longer hold. It also means the
+  standard errors in `BACKTEST_LOG.md` overstate precision, as
+  `max_points_v1`'s 2024 analysis found (`docs/max_points_v1/log.md`, *The 2024
+  analysis*).
 
 Raised 2026-09-28, from `max_points_v1`.
 

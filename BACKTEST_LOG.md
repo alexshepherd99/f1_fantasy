@@ -102,7 +102,16 @@ constraint and no tuning coefficients.
 - **2024 is unexplained.** The loss builds steadily from race 5 onwards rather
   than coming from a few bad weekends. An untested hypothesis is that 2024's
   drivers scored so little that rolling points barely told them apart, while
-  dividing by price still did.
+  dividing by price still did. [Refuted 2026-09-29: across the whole field,
+  2024's drivers scored their usual share, and rolling points ranked them better
+  than in any other season. The loss comes from about eight races where the two
+  strategies traded differently, mostly Red Bull held instead of Ferrari or
+  McLaren and the Mercedes drivers missed mid-season. It is within the noise of
+  what is effectively one path, so 2024 needs no special explanation.]
+- **The standard errors above overstate precision** (added 2026-09-29). They
+  treat the 1,500 starting teams as independent, but after race 4 each strategy
+  holds only a few distinct line-ups a race. This is reasoned from the race-4
+  finding below, not measured.
 - **The starting team stops mattering by race 4.** Under both strategies, the
   race-4 unlimited-moves chip rebuilds nearly all 1,500 starting teams into the
   same line-up: 1 distinct team in 2023, 6 in 2024 and 10 in 2025. So a

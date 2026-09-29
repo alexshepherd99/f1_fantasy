@@ -33,6 +33,9 @@ design rationale predates both and is in `proposal.md`.
   *Verification* 2 confirms `StrategyMaxP2PM` is unchanged. Steps 7 onwards are
   dropped. **The one remaining piece of work is the 2024 analysis**, to be started
   in a fresh session. See *Step 5 — the DRS helper* at the end.
+- 2024 analysis done 2026-09-29: the compressed-driver hypothesis is refuted, and
+  2024's loss is a handful of divergent trades within one path's noise, needing
+  no season-specific cause. See *The 2024 analysis* at the end.
 
 ## Verification 1, first attempt — confounded (2026-09-20)
 
@@ -557,6 +560,10 @@ all points from 44–45% of the spend, against 56–57% of points in 2023. A rol
 points sum over a compressed driver field discriminates between drivers very
 little, where dividing by price still separates them. **That is a hypothesis, not
 a finding** — it is consistent with the numbers above and has not been tested.
+[Tested and refuted 2026-09-29: the 74–76% is what the *teams* held, under both
+strategies; across the whole field constructors took 55.8% of 2024's points, as in
+2023, and rolling points ranked 2024's drivers better than any other season's. See
+*The 2024 analysis* at the end.]
 
 ### The DRS nomination ceiling, measured while the data was to hand
 
@@ -810,6 +817,9 @@ The probe scripts were session scratch files and are not kept.
 
 ## Next session — the 2024 analysis (handoff, 2026-09-28)
 
+[Done 2026-09-29: the hypothesis below is refuted, and 2024 needs no
+season-specific explanation. See *The 2024 analysis* below.]
+
 The only remaining work in this effort. Once it is recorded, `max_points_v1` can
 close.
 
@@ -831,3 +841,159 @@ does not obviously explain.
 race of every simulation, with `D1`–`D5`/`C1`–`C2` and their points. No
 re-simulation is needed to start. This is diagnostic only; it explains a result
 rather than improving a strategy.
+
+## The 2024 analysis (2026-09-29)
+
+**done (verified).** Run on `outputs/max_points_v1_per_race.parquet` and
+`load_with_derivations`, with no re-simulation. No code was committed; the
+scripts were session scratch files, and *Reproducing it* below says how to
+re-derive every number. Nothing in `races/`, `linear/`, `import_data/` or
+`scripts/` was touched.
+
+### In plain terms
+
+The idea was that 2024's drivers scored so little that ranking them on recent
+points could not tell them apart, while dividing by price still could. **That is
+wrong.** 2024's drivers did not score unusually little, and recent points ranked
+them *better* than in any other season.
+
+What actually happened is ordinary. Both strategies make at most two transfers a
+race, and in about eight races they chose differently. Most of those choices went
+P2PM's way — above all, keeping Ferrari when MaxPoints bought the dearer Red
+Bull, and holding the Mercedes drivers during their mid-season run. Because the
+race-4 chip merges every starting team into a handful of line-ups, the 1,500
+simulations are close to *one* season each, not 1,500, so the −156 is one bad
+path. Measured against how much the per-race gap swings anyway, it is within what
+one path can produce. 2024 needs no season-specific explanation.
+
+### The hypothesis's premise does not hold
+
+The "74–76% of points from constructors" was what the back-tested **teams** held,
+under both strategies. Across the whole field, the constructor share is the same
+every season:
+
+| Season | Constructor share, whole field | Constructor share, held by teams |
+|---|---|---|
+| 2023 | 55.2% | 56.5% |
+| 2024 | 55.8% | 74.1% |
+| 2025 | 58.6% | 65.5% |
+
+Teams share is over every team-race of both labels, DRS excluded.
+
+### Rolling points discriminates *better* in 2024
+
+Per race from race 5, across every participating driver (and separately every
+constructor), the Spearman correlation between each signal and the points then
+scored, averaged per season. All signals are lagged — the derivation shifts by
+one race — so none sees the race it predicts.
+
+| Season | Kind | Rolling points | Rolling P2PM | Price | CV of rolling points |
+|---|---|---|---|---|---|
+| 2023 | D | 0.486 | 0.376 | 0.597 | 1.17 |
+| 2024 | D | **0.589** | 0.527 | 0.706 | **1.33** |
+| 2025 | D | 0.446 | 0.330 | 0.538 | 1.26 |
+| 2023 | C | 0.663 | 0.593 | 0.698 | 0.86 |
+| 2024 | C | 0.663 | 0.648 | 0.729 | 0.91 |
+| 2025 | C | 0.539 | 0.442 | 0.595 | 0.81 |
+
+2024's driver field is the *least* compressed of the three, and rolling points
+ranks it best. Rolling points out-ranks P2PM on raw points in every season and
+kind. Against points *per million* the two are level in 2024 (0.318 and 0.315 for
+drivers). So the ranking signal is not where MaxPoints lost. Price alone out-ranks
+both, which is expected: price is the game's own form estimate, and it is not a
+value signal.
+
+### Where the 156.2 points went
+
+Each strategy's mean score per race splits exactly by asset: the fraction of its
+1,500 simulations holding an asset, times that asset's points, summed. The DRS
+bonus is attributed separately. The parts reconcile to the stored race points in
+every row after race 1; race 1 differs only by `Team.get_drs_points`'s fallback,
+as expected.
+
+| Part | P2PM | MaxPoints | Delta |
+|---|---|---|---|
+| Constructors | 2,894.2 | 2,831.6 | −62.6 |
+| Drivers | 1,062.7 | 943.3 | −119.4 |
+| DRS | 564.3 | 590.2 | +25.8 |
+| **Season** | | | **−156.2** |
+
+Largest single assets, points per simulation-season:
+
+| Asset | Delta | Races held, P2PM → MaxPoints |
+|---|---|---|
+| FER | −146.0 | 15.1 → 12.4 |
+| RED | +125.2 | 6.9 → 10.2 |
+| MCL | −69.0 | |
+| HAM@MER | −60.1 | 3.7 → 1.6 |
+| RUS@MER | −58.3 | 4.6 → 1.7 |
+| LEC@FER | +36.6 | |
+| MER | +27.5 | |
+
+So the driver half of the loss is almost all the Mercedes pair, and the
+constructor half is mostly Red Bull held in place of Ferrari or McLaren.
+
+### It is a handful of divergent trades
+
+From race 5, the per-race gap exceeds 20 points in 8 of 20 races. Reading the
+modal line-up of each strategy in those races:
+
+- **Races 9–10, −81.1.** Red Bull scored 8 in race 8. P2PM spent a move switching
+  to McLaren; MaxPoints mostly stayed on Red Bull (75% of simulations), which
+  scored 25 against McLaren's 57. Rolling points also ranked McLaren above Red
+  Bull at race 9 (170 against 154), so MaxPoints did not prefer Red Bull — its
+  margin was just too small to win a scarce move against its driver swaps.
+  P2PM's squared points widen the same gap (397 against 275). That last reading
+  is from the objective's structure, not tested.
+- **Races 15–17, −47.7.** MaxPoints bought Red Bull at £29.1m on 171 rolling
+  points over Ferrari at £23.7m on 129. P2PM kept Ferrari. Ferrari outscored Red
+  Bull 158 to 118 over the three races. This is the price divisor doing what it
+  is for.
+- **Races 12–14 and 18–20.** P2PM held Russell and Hamilton through Mercedes'
+  mid-season run; MaxPoints held cheaper drivers or Norris. The Mercedes drivers
+  were priced £19–25m on rolling points of 60–119, where P2PM rated them
+  alongside the constructors and MaxPoints rated them well below.
+
+MaxPoints also won some: +28.7 at race 8, +36.3 at race 12 and +25.7 at race 21.
+No single mechanism covers every one of the losing races.
+
+### The size is within one path's noise
+
+Per-race delta, MaxPoints minus P2PM, from race 5 (after the race-4 rebuild):
+
+| Season | Races | Sum | Per-race SD | Sum ÷ (SD·√n) | Races negative |
+|---|---|---|---|---|---|
+| 2023 | 18 | −35.0 | 30.3 | −0.27 | 7 |
+| 2024 | 20 | −160.4 | 21.1 | −1.70 | 15 |
+| 2025 | 20 | −11.8 | 14.5 | −0.18 | 12 |
+
+−1.70 treats races as independent. They are not: a trade decision usually
+persists for several races, which widens the true spread of the sum and makes
+2024 less unusual still. So this is a judgement that 2024 is a plausible bad
+draw, not a significance test.
+
+**The standard errors in `BACKTEST_LOG.md` overstate precision.** They treat
+the 1,500 starting teams as independent, but from race 4 each strategy holds
+1–5 distinct line-ups a race in 2023, 3–19 in 2024 and 2–33 in 2025, so the season comparison rests on very few independent paths.
+2024's standard error of 3.9 against a mean of −156.2 is precise about *those
+paths*, not about how the strategies compare in general. This is reasoned from
+*Starting teams barely survive the race-4 chip*, not measured; it belongs to the
+race-4 backlog item's sample-size question.
+
+### Reproducing it
+
+All from `outputs/max_points_v1_per_race.parquet`, one season at a time, 2023–2025:
+
+- **Attribution.** Melt `D1`–`D5`, `C1`–`C2` and their `_pts` companions to one
+  row per held asset. Sum `pts` per label and asset, divide by 1,500. DRS points
+  are the `_pts` of the slot whose driver equals `drs_driver`. Check the
+  per-row sum of holdings plus DRS against `points`: only race-1 rows differ.
+- **Signal quality.** From `load_with_derivations(season)`, per race from 5 with
+  `Points` not null, Spearman of `Points Cumulative (3)`, `P2PM Cumulative (3)`
+  and `Price` against `Points`, and against `Points / Price`; average over races.
+  The field constructor share is total constructor `Points` over total driver and
+  constructor `Points`.
+- **Trades.** Per race, the modal sorted line-up per label and its share of
+  simulations.
+- **Noise.** Mean `points` per race and label; the MaxPoints−P2PM difference from
+  race 5; its sum and SD.
