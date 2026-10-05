@@ -8,6 +8,7 @@ from backtest.sample import DEFAULT_BAND_EDGES, validate_band_edges
 from common import F1_SEASON_CONSTRUCTORS, setup_logging
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_max_points import StrategyMaxPoints
+from linear.strategy_odds import StrategyBettingOdds
 from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
 from linear.strategy_zero_stop import StrategyZeroStop
@@ -19,7 +20,10 @@ COMPLETED_SEASONS = [2023, 2024, 2025]
 # Strategies that can be named with --strategies, by label
 STRATEGIES = {
     s.__name__: s
-    for s in [StrategyMaxP2PM, StrategyZeroStop, StrategyMaxBudget, StrategyMaxPoints, StrategyMaxP2PMNoReset]
+    for s in [
+        StrategyMaxP2PM, StrategyZeroStop, StrategyMaxBudget, StrategyMaxPoints, StrategyMaxP2PMNoReset,
+        StrategyBettingOdds,
+    ]
 }
 
 DEFAULT_SAMPLE_SIZE = 500

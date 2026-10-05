@@ -5,6 +5,7 @@ from backtest.cli import COMPLETED_SEASONS, STRATEGIES, main, parse_arguments
 from backtest.sample import DEFAULT_BAND_EDGES
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_max_points import StrategyMaxPoints
+from linear.strategy_odds import StrategyBettingOdds
 from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
 from linear.strategy_zero_stop import StrategyZeroStop
@@ -32,6 +33,7 @@ def test_registry_holds_the_existing_strategies_by_name():
         "StrategyMaxBudget": StrategyMaxBudget,
         "StrategyMaxPoints": StrategyMaxPoints,
         "StrategyMaxP2PMNoReset": StrategyMaxP2PMNoReset,
+        "StrategyBettingOdds": StrategyBettingOdds,
     }
 
 
@@ -49,6 +51,14 @@ def test_p2pm_no_reset_is_selectable_as_a_challenger():
 
     assert args.strategies == ["StrategyMaxP2PMNoReset"]
     assert STRATEGIES[args.strategies[0]] is StrategyMaxP2PMNoReset
+
+
+def test_betting_odds_is_selectable_as_a_challenger():
+    """StrategyBettingOdds has to be nameable on the command line to be back-tested."""
+    args = parse_arguments(["--strategies", "StrategyBettingOdds"])
+
+    assert args.strategies == ["StrategyBettingOdds"]
+    assert STRATEGIES[args.strategies[0]] is StrategyBettingOdds
 
 
 def test_every_option_parses():

@@ -8,7 +8,9 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Effort started 2026-10-05. Step 1 (docs) is complete, with requirements and
   plan agreed.
 - Step 2 completed 2026-10-05: `StrategyBettingOdds` puts DRS inside its
-  objective. Next is step 3, registering it in the back-test CLI.
+  objective.
+- Step 3 completed 2026-10-05: registered in `backtest/cli.py`. Next is
+  step 4, the timing run.
 
 ## 2026-10-05 — Scoping
 
@@ -51,3 +53,14 @@ Two new tests, both seen failing:
 
 The existing `test_strategy_odds_run` still expects `Drv3@Con2` to get DRS, and
 passes unchanged. Full suite green, 278 passed.
+
+## 2026-10-05 — Step 3, registered in the back-test CLI
+
+`StrategyBettingOdds` is added to `STRATEGIES` in `backtest/cli.py`. R5's "one
+line" became an import plus the registry list wrapped over three lines to fit
+the width. Nothing else in `backtest/` changed.
+
+In `tests/test_backtest_cli.py`, the exact-match registry test gains the entry
+and there is a new `test_betting_odds_is_selectable_as_a_challenger`. Both
+failed before registration, the second because argparse rejected the name.
+Full suite green, 279 passed.
