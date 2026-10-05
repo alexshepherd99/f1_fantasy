@@ -86,7 +86,8 @@ ideal timing "after FP3 (and obviously before quali)."
 
 Coverage is the binding constraint: the file holds 2026 races 1–11 only, so
 the fast_f1 odds indicator contributes nothing to any 2023–2025 race and
-`--historical` output is largely a constant-zero column.
+`--historical` output is largely a constant-zero column. [2026-10-05: now 2026
+races 1–17. There are still no odds for any earlier season.]
 
 Pull odds directly from a betting-odds web page instead of manual entry,
 landing in the same `Season`/`Race`/`Driver`/`Constructor`/`Odds` shape
@@ -248,7 +249,7 @@ Five things to settle before writing any of it.
   of API fetching, and worth doing before anything else here since it is the
   long pole and everything else depends on it.
 - **Back-testing will only exercise part of the signal.** Odds coverage is 2026
-  races 1-11 only (see *Source betting odds directly from a web page* above), so
+  races 1-11 only [2026-10-05: now 1–17] (see *Source betting odds directly from a web page* above), so
   across 2023-2025 the `OddsRank` component is a constant zero and the back-test
   measures the practice and rolling-points indicators alone. That is the same
   limitation README already records for `StrategyBettingOdds` — "no historical
@@ -342,7 +343,7 @@ Points to settle:
   prerequisite here just as it is for the strategy back-test; it is the long pole
   for both. The run is resumable and skips season/race pairs already present, so
   the existing rows are not recomputed.
-- **Odds coverage limits what is being compared.** Outside 2026 races 1–11 the
+- **Odds coverage limits what is being compared.** Outside 2026 races 1–11 [2026-10-05: now 1–17] the
   `OddsRank` component of `AggregateRank` is a constant zero, so a historical
   regression measures the practice and rolling-points indicators only.
 

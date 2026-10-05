@@ -147,6 +147,10 @@ Review:
   larger size, or read the rate off the first few saves of the real run.
 - Not fixed, out of scope: `BACKLOG.md` still says odds cover 2026 races 1–11
   (lines 87, 245, 251, 339, 345). The odds file now holds races 1–17.
+  [2026-10-05: fixed at Alex's request, with dated markers on lines 87, 251
+  and 345. Lines 245 and 339 were wrongly listed. They describe
+  `data/fastf1_practice_rolling_metrics.xlsx`, which still holds 2023 races
+  1–6 and 2026 races 1–11 (342 rows), so they are accurate.]
 - Not executed: the race-17 limitless selection. It was never part of this
   effort, and Alex will run it by hand through `scripts/run_single_team.py`.
 - No code changed in this step. The suite was last run green, 279 passed,
