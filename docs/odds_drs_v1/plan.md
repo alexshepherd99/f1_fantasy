@@ -1,7 +1,8 @@
 # odds_drs_v1 — Plan
 
 **Status**: agreed 2026-10-05. Requirements: `requirements.md`. Not
-yet implemented — no code exists.
+yet implemented — no code exists. [2026-10-05: all six steps done. See
+`log.md`.]
 
 One commit per step. Each behavioural change is seen failing before it passes,
 and the full suite is green at the end of every step.

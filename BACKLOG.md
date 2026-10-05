@@ -8,7 +8,7 @@ Efforts under `docs/`:
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
 | [`max_points_v1`](docs/max_points_v1/) | done |
-| [`odds_drs_v1`](docs/odds_drs_v1/) | in progress |
+| [`odds_drs_v1`](docs/odds_drs_v1/) | done |
 
 Global list of not-yet-started work. Freeform. When an item is picked up, create `docs/<effort-name>/` (see `docs/` and `agentic`'s `shared/persistent-docs.md`) and move the item there.
 
@@ -374,7 +374,9 @@ change `max_points_v1` tested was worth −4 to −156. See `docs/max_points_v1/
 
 `StrategyBase` now has an opt-in DRS helper: `get_drs_objective_term()` models the
 boost inside the LP objective, and `get_drs_nominee()` reads it back. It was added
-in `max_points_v1` step 5 and nothing calls it yet. What it can and cannot buy:
+in `max_points_v1` step 5 and nothing calls it yet. [2026-10-05: `odds_drs_v1`
+made `StrategyBettingOdds` its first caller, with odds as the values. P2PM still
+does not use it. See `docs/odds_drs_v1/log.md`.] What it can and cannot buy:
 
 - **With rolling points as the values, it nominates the same driver as today's
   rule.** For a fixed team, the LP gives DRS to the highest-valued selected driver.

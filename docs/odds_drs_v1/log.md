@@ -13,7 +13,8 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 4 completed 2026-10-05: timing run done, sample size agreed as 500
   per band.
 - Step 5 completed 2026-10-05: back-test run. The odds strategy lost to
-  P2PM by about 390 points (−12%) through race 16. Next is step 6, close-out.
+  P2PM by about 390 points (−12%) through race 16.
+- Step 6 completed 2026-10-05: close-out. The effort is done.
 
 ## 2026-10-05 — Scoping
 
@@ -122,3 +123,31 @@ strategy's race-17 line-ups pair VER and ANT with cheap drivers (`PER@CAD`,
 (mean 2.44 vs 1.15). This fits an objective that values the two favourites
 and gives long shots almost nothing. It is untested, because nothing here
 re-simulates the season race by race.
+
+## 2026-10-05 — Step 6, close-out and end-of-session review
+
+- `CLAUDE.md`: the DRS helper is now described as having one caller,
+  `StrategyBettingOdds`. The odds strategy's entry gives its in-LP DRS and the
+  back-test result.
+- `BACKLOG.md`: the effort is marked done. The *better DRS nomination* item
+  gets a dated note where it says the helper has no caller.
+- `README.md`: the line saying the odds strategy has never been back-tested
+  gets a dated note pointing here. The plan did not list this, but it was made
+  stale by this effort.
+- `plan.md`: its "not yet implemented" status line is annotated.
+
+Review:
+
+- Every step stayed in scope (R5). The only code edits are in
+  `linear/strategy_odds.py` and `backtest/cli.py`, plus their tests. The
+  shared store `outputs/backtest_v1_results.parquet` was not touched (R7).
+- The timing run's estimate of 30–50 minutes held (the run took 23.5), but
+  only by luck. Save time grew as the results file grew, so a 6-team run
+  understates per-row cost at scale. Next time, take a second timing at a
+  larger size, or read the rate off the first few saves of the real run.
+- Not fixed, out of scope: `BACKLOG.md` still says odds cover 2026 races 1–11
+  (lines 87, 245, 251, 339, 345). The odds file now holds races 1–17.
+- Not executed: the race-17 limitless selection. It was never part of this
+  effort, and Alex will run it by hand through `scripts/run_single_team.py`.
+- No code changed in this step. The suite was last run green, 279 passed,
+  before step 4.
