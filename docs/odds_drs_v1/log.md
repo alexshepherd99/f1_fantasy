@@ -9,8 +9,9 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
   plan agreed.
 - Step 2 completed 2026-10-05: `StrategyBettingOdds` puts DRS inside its
   objective.
-- Step 3 completed 2026-10-05: registered in `backtest/cli.py`. Next is
-  step 4, the timing run.
+- Step 3 completed 2026-10-05: registered in `backtest/cli.py`.
+- Step 4 completed 2026-10-05: timing run done, sample size agreed as 500
+  per band. Next is step 5, the back-test.
 
 ## 2026-10-05 — Scoping
 
@@ -64,3 +65,23 @@ In `tests/test_backtest_cli.py`, the exact-match registry test gains the entry
 and there is a new `test_betting_odds_is_selectable_as_a_challenger`. Both
 failed before registration, the second because argparse rejected the name.
 Full suite green, 279 passed.
+
+## 2026-10-05 — Step 4, timing run and sample size
+
+Ran `--seasons 2026 --strategies StrategyBettingOdds --sample-size 2`, writing
+to `outputs/odds_drs_v1_timing_*` so that neither the shared store nor the
+step-5 path was touched (R7). That is 6 teams and 12 simulations.
+
+- 11.5 s wall time, including data load and enumerating starting teams, so
+  at most about 1 s per simulation.
+- 285 MB peak RSS. Enumeration runs at full size whatever the sample size, so
+  memory should barely grow with more teams.
+- Exit 0, no errors in the log.
+- `/usr/bin/time` is not installed here, so wall time and peak RSS came from a
+  Python wrapper using `getrusage(RUSAGE_CHILDREN)`.
+
+The 6 teams were a smoke test, not a result. The odds strategy trailed P2PM in
+all six, by a mean of −379 points (−11%).
+
+Agreed with Alex: 500 per band, the harness default (1,500 teams, 3,000
+simulations), estimated at 30–50 minutes. The timing files are deleted.
