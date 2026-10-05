@@ -11,7 +11,9 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
   objective.
 - Step 3 completed 2026-10-05: registered in `backtest/cli.py`.
 - Step 4 completed 2026-10-05: timing run done, sample size agreed as 500
-  per band. Next is step 5, the back-test.
+  per band.
+- Step 5 completed 2026-10-05: back-test run. The odds strategy lost to
+  P2PM by about 390 points (−12%) through race 16. Next is step 6, close-out.
 
 ## 2026-10-05 — Scoping
 
@@ -85,3 +87,38 @@ all six, by a mean of −379 points (−11%).
 
 Agreed with Alex: 500 per band, the harness default (1,500 teams, 3,000
 simulations), estimated at 30–50 minutes. The timing files are deleted.
+
+## 2026-10-05 — Step 5, the 2026 back-test
+
+Ran the plan's command with `--sample-size 500`: 1,500 teams, 3,000
+simulations, and no errors. It took 23.5 minutes, longer than the timing run
+suggested, because the time per save rose from about 28 s to 65 s per 100
+rows as the run went on. Peak RSS was 285 MB. Results are in
+`outputs/odds_drs_v1_*`, which are not committed (R8).
+
+**What this cannot show (R9).** This is one partial season of 15 decisions per
+team (races 2–16), played under normal budget and move rules rather than the
+race-17 limitless rules. It changes the objective and the DRS choice together,
+so it cannot say which of the two caused the gap. Concentration is
+effectively off (R4).
+
+**What it shows.** The odds strategy trails P2PM by a wide, consistent margin:
+
+| Band | Mean Δ | Median Δ | p10 Δ | Win rate |
+|---|---|---|---|---|
+| (90, 95] | −412 (−12.4%) | −410 | −639 | 1.4% |
+| (95, 99.5] | −387 (−11.6%) | −386 | −613 | 1.8% |
+| (99.5, 100] | −382 (−11.4%) | −379 | −630 | 1.8% |
+| pooled | −394 (−11.8%) | −390 | −623 | 1.7% |
+
+The odds strategy wins 25 of 1,500 pairs, and there are no ties. The gap barely
+depends on starting value. P2PM's pooled mean is 3,307 and the odds strategy's
+is 2,913.
+
+From the stored rows (final race only, so these describe race 17, not the
+season): both strategies give DRS to `VER@RED` in every team. The odds
+strategy's race-17 line-ups pair VER and ANT with cheap drivers (`PER@CAD`,
+`BOT@CAD`, `STR@AST`, `HUL@AUD`) and leave more budget unused than P2PM
+(mean 2.44 vs 1.15). This fits an objective that values the two favourites
+and gives long shots almost nothing. It is untested, because nothing here
+re-simulates the season race by race.
