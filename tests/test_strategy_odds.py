@@ -365,3 +365,47 @@ def test_max_concentration_constraint():
     # In this case, selecting just one driver from Con1 gives concentration = 1
     # (one driver-constructor pair)
     assert concentration == pytest.approx(1.0, abs=0.01)
+
+
+def _strat_drs_choice(odds: dict[str, float]) -> StrategyBettingOdds:
+    """Odds strategy where the budget only allows pairs A1/A2, B1/B2, or one A driver with B2."""
+    strat = StrategyBettingOdds(
+        fn_odds=_TEST_ODDS_FILE,
+        team_drivers=["A1@C1", "B2@C2"],
+        team_constructors=["C1"],
+        all_available_drivers=["A1@C1", "A2@C1", "B1@C2", "B2@C2"],
+        all_available_constructors=["C1", "C2"],
+        all_available_driver_pairs={"A1@C1": "C1", "A2@C1": "C1", "B1@C2": "C2", "B2@C2": "C2"},
+        prev_available_driver_pairs={},
+        max_cost=10.0,
+        max_moves=3,
+        prices_assets={"A1@C1": 5.0, "A2@C1": 5.0, "B1@C2": 9.0, "B2@C2": 1.0, "C1": 0.0, "C2": 0.0},
+        derivs_assets={},
+        race_num=1,
+        season_year=1900,
+    )
+    strat._odds_assets = odds
+    return strat
+
+
+def test_strategy_odds_drs_changes_selection():
+    # Without DRS, A1/A2 has the best odds (1.0 vs 0.9).  With the DRS driver counted twice, B1/B2 wins (1.7 vs
+    # 1.5), so picking B1/B2 shows DRS is inside the objective rather than applied after the team is chosen
+    strat = _strat_drs_choice(
+        {"A1@C1": 0.5, "A2@C1": 0.5, "B1@C2": 0.8, "B2@C2": 0.1, "C1": 0.1, "C2": 0.0}
+    )
+    strat.execute()
+    drivers = strat._lp_variables[VarType.TeamDrivers]
+
+    assert [d for d, v in drivers.items() if v.value() > 0.5] == ["B1@C2", "B2@C2"]
+    assert strat.get_drs_driver() == "B1@C2"
+
+
+def test_strategy_odds_drs_no_odds_falls_back():
+    # No selected driver has odds, so no DRS nominee is returned, leaving Team to pick the highest-priced driver
+    strat = _strat_drs_choice(
+        {"A1@C1": 0.0, "A2@C1": 0.0, "B1@C2": 0.0, "B2@C2": 0.0, "C1": 0.1, "C2": 0.0}
+    )
+    strat.execute()
+
+    assert strat.get_drs_driver() == ""

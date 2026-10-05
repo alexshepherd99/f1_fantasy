@@ -6,7 +6,9 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 ## Status summary
 
 - Effort started 2026-10-05. Step 1 (docs) is complete, with requirements and
-  plan agreed. Step 2 is in progress.
+  plan agreed.
+- Step 2 completed 2026-10-05: `StrategyBettingOdds` puts DRS inside its
+  objective. Next is step 3, registering it in the back-test CLI.
 
 ## 2026-10-05 — Scoping
 
@@ -28,3 +30,24 @@ Found while scoping:
 Q1 settled as (a): when the LP's DRS nominee has no odds, return `""` so
 `Team` keeps its highest-price fallback. The fallback sits in the odds
 strategy, not in `StrategyBase`.
+
+## 2026-10-05 — Step 2, DRS inside the odds objective
+
+`get_problem()` now passes each available driver's odds to
+`get_drs_objective_term()`, adds the term to the objective, and applies the
+constraints. `get_drs_driver()` returns `get_drs_nominee()`, or `""` when the
+nominee has no odds.
+
+Two new tests, both seen failing:
+
+- `test_strategy_odds_drs_changes_selection` is a budget-limited case in which
+  doubling the DRS driver's odds changes which pair is best. The old code
+  failed it by picking A1/A2 (best without DRS) instead of B1/B2.
+- `test_strategy_odds_drs_no_odds_falls_back` passed on the old code, which
+  already had this fallback. To check that it guards anything, the change was
+  first made without the fallback. The test then failed, with the LP
+  nominating an arbitrary zero-odds driver (`B2@C2`), before the fallback was
+  added.
+
+The existing `test_strategy_odds_run` still expects `Drv3@Con2` to get DRS, and
+passes unchanged. Full suite green, 278 passed.

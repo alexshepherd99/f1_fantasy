@@ -87,8 +87,13 @@ class StrategyBettingOdds(StrategyBase):
         # Constraint to reduce concentration
         problem += self._lp_variables[VarType.Concentration] <= self.max_concentration
 
+        # DRS x2 boost inside the objective, so the DRS driver's odds can decide the team selection
+        drs_values = {i: self._odds_assets[i] for i in self._all_available_drivers}
+        drs_term, drs_constraints = self.get_drs_objective_term(drs_values)
+        problem.extend(drs_constraints)
+
         # Variable for total odds value
-        self._lp_variables[VarType.OptimiseMax] = lpSum(odds_drivers + odds_constructors)
+        self._lp_variables[VarType.OptimiseMax] = lpSum(odds_drivers + odds_constructors) + drs_term
 
         # Optimise for this
         problem += self._lp_variables[VarType.OptimiseMax]
@@ -96,24 +101,11 @@ class StrategyBettingOdds(StrategyBase):
 
 
     def get_drs_driver(self) -> str:
-        """Select a driver from the chosen team to assign DRS based on maximum odds value
+        """Return the DRS driver chosen by the LP objective, from the selected team
 
-        Returns an empty string if no suitable driver has points data.
+        Returns an empty string if the chosen driver has no odds, so the LP's pick between drivers worth nothing
+        is not used.  This will allow the default team selection to choose, which will pick driver with max
+        current value.
         """
-        max_odds = 0.0
-        max_driver = ""
-
-        for d in self._all_available_drivers:
-            # This will only be called after the strategy has run, so self._lp_variables[VarType.TeamDrivers] will
-            # represent the selected drivers
-            if self._lp_variables[VarType.TeamDrivers][d].value() > 0:
-                if self._odds_assets[d] > max_odds:
-                    max_odds = self._odds_assets[d]
-                    max_driver = d
-
-        # If we had no odds to work with, ensure we return no driver.  This will allow the default team selection
-        # to choose, which will pick driver with max current value.
-        if max_odds == 0.0:
-            return ""
-        else:
-            return max_driver
+        nominee = self.get_drs_nominee()
+        return nominee if self._odds_assets.get(nominee, 0.0) > 0.0 else ""
