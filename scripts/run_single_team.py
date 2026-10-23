@@ -11,6 +11,7 @@ from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_factory import factory_strategy
 from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_zero_stop import StrategyZeroStop
+from linear.strategy_odds import StrategyBettingOdds
 from races.season import Season, factory_season, Race
 from races.team import Team, factory_team_lists
 
@@ -37,7 +38,7 @@ SEASON = 2026
 #TEAM_START_CONSTRUCTORS = ["HAA", "MER"]  # Starting line-up
 TEAM_START_DRIVERS = ["VER@RED", "LIN@VRB", "HAD@RED", "HUL@AUD", "ANT@MER"]
 TEAM_START_CONSTRUCTORS = ["AUD", "MER"]
-STARTING_RACE = 16
+STARTING_RACE = 17
 STARTING_UNUSED_BUDGET = 2.0
 
 
