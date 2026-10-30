@@ -8,6 +8,7 @@ import pytest
 
 from fast_f1 import cli
 from fast_f1.api import SessionDataUnavailable
+from fast_f1.output import HistoricalRunIncomplete
 
 
 def test_cli_single_race_mode(monkeypatch, tmp_path):
@@ -60,6 +61,23 @@ def test_cli_historical_mode(monkeypatch, tmp_path):
     assert called["cache"][1] is True
     assert called["historical"][1] == str(tmp_path / "historical.xlsx")
     assert called["historical"][0][0] == 2023
+
+
+def test_cli_historical_mode_exits_nonzero_when_races_failed(monkeypatch, tmp_path, caplog):
+    monkeypatch.setattr(sys, "argv", ["fast_f1", "--historical", "--season", "2023", "--cache-dir", str(tmp_path)])
+    monkeypatch.setattr(cli, "setup_fastf1_cache", lambda cache_dir=None, interactive=True: (tmp_path, tmp_path / "local_cache"))
+
+    def fake_generate_historical_metrics(season_years, output_path=None):
+        raise HistoricalRunIncomplete([(2023, 9), (2023, 12)])
+
+    monkeypatch.setattr(cli, "generate_historical_metrics", fake_generate_historical_metrics)
+
+    caplog.set_level("ERROR", logger="fast_f1.cli")
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main()
+
+    assert excinfo.value.code == 1
+    assert "season 2023 race 9, season 2023 race 12" in caplog.text
 
 
 def test_cli_historical_mode_restricted_to_one_season(monkeypatch, tmp_path):

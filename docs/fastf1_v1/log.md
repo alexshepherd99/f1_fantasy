@@ -456,6 +456,9 @@ That is the intended direction — a run that stops is recoverable, a run that
 quietly produces incomplete data is not — but it does make long runs less
 tolerant of a transient blip. Left as is rather than widened, because catching
 it again in the loop would restore the behaviour just removed.
+[Superseded 2026-10-30: the loop now steps over such a race and fails the run
+once every race has been tried, rather than stopping at the first — see *A
+failed race no longer halts a historical run* below.]
 
 **`CLAUDE.md` corrected.** It claimed `api.py` "raises `RuntimeError` (never
 returns `None`) when required session data is missing", which was true of the
@@ -605,4 +608,46 @@ cache, and on 2026-10-30 every uncached session download failed —
 stopped the 2024 and 2025 historical runs at their first uncached sprint
 weekend. In that state `get_session_laps` raises FastF1's
 `DataNotLoadedError`, which is not caught and ends the season's run rather
-than skipping the race.
+than skipping the race. [2026-10-30: no longer ends the run — see the next
+entry.]
+
+## A failed race no longer halts a historical run (2026-10-30)
+
+Reverses the trade-off recorded in *`api.py` no longer hides failures as
+missing data* (2026-07-27). That entry chose to let any non-missing-data failure
+end a `--historical` run, on the grounds that "a run that stops is
+recoverable, a run that quietly produces incomplete data is not". Its concern
+was the *quiet*: failures turned into empty frames and runs that finished clean
+with gaps. Stopping fixed the quiet but made one unfetchable race block every
+race after it — on 2026-10-30 a refused download at 2023 round 9 left rounds
+12, 17, 18 and 20 unattempted, and 2024 and 2025 stopped at their first
+uncached sprint weekend.
+
+`generate_historical_metrics` now catches any other exception per race, logs
+it with its traceback as an ERROR naming the season and race, and moves on.
+Nothing is saved for that race, so the next run retries it. Once every race has
+been tried, it raises a new `HistoricalRunIncomplete` naming the failed
+season/race pairs, and `cli.py` turns that into a logged summary and exit code
+1. The run therefore carries on but never ends looking clean.
+
+The catch is deliberately broad. Listing the ways a fetch can fail is the
+classification the July entry warned against. The cost is that a bug in our
+own code now skips races rather than stopping at the first; every one it hits is
+an ERROR with a traceback, and the run still fails.
+
+Unchanged: `api.py`'s split between no data and a failed call, the
+missing-sessions `RuntimeError` skip (still a warning, still not reported as a
+failure), and single-race mode.
+
+**Test-suite effect:** 284 → 287 passing. The carry-on test was red first,
+attempting `[(2025, 1), (2025, 2)]` and never round 3. The test that the run
+ends in `HistoricalRunIncomplete` exercises a new class, so it was confirmed by
+mutation instead: disabling the final raise turns both new output tests red
+with `DID NOT RAISE`. The CLI test was red first with the exception escaping
+`main()` unhandled.
+
+**Verified beyond the suite.** `--historical --season 2023` against the live
+API, still refusing downloads, now attempts all five remaining sprint weekends
+(9, 12, 17, 18, 20), logs each as failed, ends with one summary naming them and
+exits 1. `data/fastf1_practice_rolling_metrics.xlsx` was byte-identical before
+and after.

@@ -11,6 +11,7 @@ from fast_f1.api import SessionDataUnavailable
 from fast_f1.cache import setup_fastf1_cache
 from fast_f1.output import (
     DEFAULT_HISTORICAL_OUTPUT,
+    HistoricalRunIncomplete,
     generate_historical_metrics,
     generate_single_race_prediction,
 )
@@ -42,7 +43,11 @@ def main() -> None:
         output_arg = str(output_path)
 
         logger.info("Generating historical metrics for %s seasons", len(season_years))
-        generate_historical_metrics(season_years, output_path=output_arg)
+        try:
+            generate_historical_metrics(season_years, output_path=output_arg)
+        except HistoricalRunIncomplete as exc:
+            logger.error("%s. Every other race was saved to %s; rerun to retry these.", exc, output_arg)
+            sys.exit(1)
         logger.info("Historical metrics generation complete: %s", output_arg)
         return
 
