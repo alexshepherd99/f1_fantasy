@@ -115,6 +115,18 @@ def test_azerbaijan_2023_lists_sprint_shootout(azerbaijan_2023_event):
     assert sessions == ["FP1", "SprintShootout", "Qualifying", "Race"]
 
 
+def test_azerbaijan_2023_scores_from_fp1_only(azerbaijan_2023_event):
+    """Confirm a 2023 sprint weekend is scored from FP1 alone.
+
+    Fantasy teams locked at Friday's Grand Prix qualifying, before Saturday's
+    Sprint Shootout, so FP1 is the only session run before lock.
+    """
+    sessions = get_available_sessions_from_event(azerbaijan_2023_event)
+
+    assert is_sprint_weekend(sessions) is True
+    assert determine_practice_sessions(sessions) == ("FP1",)
+
+
 def test_race_results_expose_expected_columns_and_values(australia_2025_event):
     """Confirm race results carry the columns and the finishing order we expect."""
     race = australia_2025_event.get_session("R")

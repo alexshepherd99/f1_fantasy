@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Iterable, Tuple
+from typing import Any, Iterable
 
 import fastf1
 import pandas as pd
@@ -376,17 +376,17 @@ def get_session_code(session_name: str) -> str:
     return _SESSION_NAME_TO_CODE.get(session_name, session_name)
 
 
-def select_practice_sessions_from_event(event: Any) -> Tuple[str, str]:
-    """Return the pair of practice session codes to use for metric calculations.
+def select_practice_sessions_from_event(event: Any) -> tuple[str, ...]:
+    """Return the practice session codes to use for metric calculations.
 
     Extracts available sessions from the FastF1 Event object and determines
-    which pair to use based on weekend format (normal vs sprint).
+    which to use based on weekend format (normal, sprint, or 2023 sprint).
 
     Args:
         event: A FastF1 Event object from the schedule.
 
     Returns:
-        A tuple of two session type codes (e.g., ("FP2", "FP3") or ("FP1", "SQ")).
+        A tuple of session type codes (e.g., ("FP2", "FP3"), ("FP1", "SQ") or ("FP1",)).
 
     Raises:
         RuntimeError: If required sessions are missing from the event.
@@ -397,8 +397,8 @@ def select_practice_sessions_from_event(event: Any) -> Tuple[str, str]:
     return tuple(get_session_code(session) for session in practice_sessions)
 
 
-def select_practice_sessions_from_available(available_sessions: Iterable[str]) -> Tuple[str, str]:
-    """Return the pair of practice session codes to use for metric calculations.
+def select_practice_sessions_from_available(available_sessions: Iterable[str]) -> tuple[str, ...]:
+    """Return the practice session codes to use for metric calculations.
 
     This is a thin wrapper around ``fast_f1.weekend.determine_practice_sessions``
     so higher-level code in this package can import the helper from
@@ -408,7 +408,7 @@ def select_practice_sessions_from_available(available_sessions: Iterable[str]) -
         available_sessions: An iterable of session type names.
 
     Returns:
-        A tuple of two session type codes (e.g., ("FP2", "FP3") or ("FP1", "SQ")).
+        A tuple of session type codes (e.g., ("FP2", "FP3"), ("FP1", "SQ") or ("FP1",)).
 
     Raises:
         RuntimeError: If required sessions are missing.

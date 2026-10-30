@@ -557,3 +557,52 @@ was left byte-identical throughout.
 cache is configured, and threading the odds file path through `fast_f1.output`
 instead of patching `load_odds`. Both are real, both are recorded, and neither
 is a fastf1_v1 requirement.
+
+## 2023 sprint weekends scored from FP1 alone (2026-10-30)
+
+A full `--historical` rerun of 2023 skipped all six 2023 sprint weekends
+(rounds 4, 9, 12, 17, 18, 20) with "Missing required sessions: FP2, FP3".
+2023 used a different sprint format from 2024 onwards:
+
+| | Friday | Saturday |
+|---|---|---|
+| 2024 onwards | FP1, Sprint Qualifying | Sprint, GP Qualifying |
+| 2023 | FP1, GP Qualifying | Sprint Shootout, Sprint |
+
+The Sprint Shootout set the sprint grid, as Sprint Qualifying does now, but
+it ran on Saturday, after Friday's Grand Prix qualifying, where fantasy teams
+lock. Treating it as Sprint Qualifying would score those weekends from a
+session teams could not have seen, so FP1 is the only legitimate input.
+
+Two changes:
+
+1. FastF1's `SS` code is the Sprint Shootout, but `api.py` labelled it
+   `"Sprint"` as though it were the sprint race. It is now `"SprintShootout"`.
+   The sprint race itself (`S`) is never probed and never listed.
+2. `weekend.py` now scores a weekend listing `SprintShootout` from `("FP1",)`
+   alone, and `is_sprint_weekend` counts it as a sprint weekend. The
+   session-selection functions return a tuple of one or two codes;
+   `build_race_metrics` already iterated over however many it was given.
+
+FP1 keeps a weight of 1.0, so on those six weekends practice counts 1:1 with
+rolling points instead of 2:1 (odds are zero throughout 2023). Doubling FP1 to
+preserve the balance was considered and rejected: one session is a noisier
+signal, and halving its influence needs no special-case weighting.
+
+**Test-suite effect:** 279 → 284 passing. The missing-FP1 test first passed
+before the change, raising for FP2/FP3 down the normal-weekend path, and was
+tightened to match on `['FP1']`. Moving the Shootout branch below the sprint
+check turns three tests red.
+
+**Verified beyond the suite.** `--season 2023 --race 4` (Baku) to a scratch
+file lists `['FP1', 'SprintShootout', 'Qualifying', 'Race']`, scores 20
+drivers from FP1 laps served from `local_cache`, writes only `FP1_*` practice
+columns, and tops out at an `AggregateRank` of 2.0.
+
+**Not yet run:** the five other 2023 sprint weekends. Their FP1 is not in the
+cache, and on 2026-10-30 every uncached session download failed —
+`livetiming.formula1.com` answered a plain request with 401 — which also
+stopped the 2024 and 2025 historical runs at their first uncached sprint
+weekend. In that state `get_session_laps` raises FastF1's
+`DataNotLoadedError`, which is not caught and ends the season's run rather
+than skipping the race.

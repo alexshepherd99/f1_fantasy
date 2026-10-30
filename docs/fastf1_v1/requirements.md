@@ -101,6 +101,9 @@ The module provides two modes of operation in `scripts/`.
 - Determine weekend type based on available session data:
   - normal weekend = `FP2` + `FP3`
   - sprint weekend = `FP1` + `SprintQualifying`
+  - [added 2026-10-30] 2023 sprint weekend = `FP1` alone. 2023 ran a Sprint
+    Shootout on Saturday instead of Sprint Qualifying on Friday, after
+    Friday's Grand Prix qualifying, where fantasy teams lock. See `log.md`.
 - Session availability is discovered dynamically from the FastF1 Event object by attempting to load each known session code (FP1, FP2, FP3, SQ, SS, Q, R).
 - If required sessions are unavailable, the module raises `RuntimeError` with a logged message describing which sessions are missing.
 - Display expected aggregate rank and ordering.
