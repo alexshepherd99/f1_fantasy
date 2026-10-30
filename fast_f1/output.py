@@ -32,6 +32,19 @@ DEFAULT_OUTPUT_DIRECTORY = Path("outputs")
 _DEFAULT_SHEET_NAME = "PracticeRollingMetrics"
 
 
+class HistoricalRunIncomplete(Exception):
+    """Raised at the end of a historical run in which some races failed.
+
+    Every race that succeeded has already been saved; ``failed_races`` holds
+    the (season, race) pairs that did not, which the next run retries.
+    """
+
+    def __init__(self, failed_races: list[tuple[int, int]]):
+        self.failed_races = failed_races
+        races = ", ".join(f"season {season} race {race}" for season, race in failed_races)
+        super().__init__(f"Historical run incomplete; failed to compute {races}")
+
+
 def _ensure_parent_directory(output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -271,6 +284,11 @@ def generate_historical_metrics(
 
     Each season is walked over the rounds it actually scheduled, so seasons of
     differing length are all covered in full.
+
+    A race whose sessions do not exist is skipped with a warning. A race that
+    fails for any other reason - a refused download, a bug - is logged as an
+    error and stepped over so it cannot block the races after it; once every
+    race has been tried, ``HistoricalRunIncomplete`` is raised naming them.
     """
     path = Path(output_path)
     existing_metrics = load_existing_metrics(path)
@@ -279,6 +297,7 @@ def generate_historical_metrics(
         existing_keys = set(zip(existing_metrics["Season"], existing_metrics["Race"]))
 
     updated = existing_metrics.copy()
+    failed_races: list[tuple[int, int]] = []
 
     for season_year in season_years:
         for race_num in get_race_numbers_for_season(season_year):
@@ -297,10 +316,20 @@ def generate_historical_metrics(
                     exc,
                 )
                 continue
+            except Exception:
+                # Deliberately broad: classifying every way a fetch can fail is
+                # not possible, and nothing is saved for this race, so the next
+                # run retries it. The run still ends in HistoricalRunIncomplete.
+                logger.exception("Failed to compute metrics for season %s race %s", season_year, race_num)
+                failed_races.append((season_year, race_num))
+                continue
 
             updated = pd.concat([updated, race_metrics], ignore_index=True, sort=False)
             save_metrics(updated, path)
             existing_keys.add((season_year, race_num))
             logger.info("Saved updated metrics to %s", path)
+
+    if failed_races:
+        raise HistoricalRunIncomplete(failed_races)
 
     return updated

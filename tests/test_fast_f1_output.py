@@ -6,7 +6,12 @@ import pandas as pd
 import pytest
 
 from fast_f1.metrics import METRIC_WEIGHTS, get_rolling_window_races
-from fast_f1.output import build_race_metrics, generate_historical_metrics
+from fast_f1.output import (
+    HistoricalRunIncomplete,
+    build_race_metrics,
+    generate_historical_metrics,
+    load_existing_metrics,
+)
 
 
 class DummySession:
@@ -473,8 +478,9 @@ def test_build_race_metrics_treats_a_session_with_no_timed_laps_as_missing(monke
     A session red-flagged before anyone set a time still returns lap rows, so
     the empty-frame guard does not catch it. The 107% threshold is then derived
     from a NaT and the rank arithmetic raises TypeError, which
-    generate_historical_metrics does not catch - one washed-out practice
-    session would abort a whole historical run instead of skipping one race.
+    generate_historical_metrics treats as a failure rather than missing data -
+    one washed-out practice session would end a whole historical run as
+    incomplete instead of skipping one race.
     """
     season_year, race_num = 2025, 4
     drivers = ["HAM", "VER"]
@@ -724,7 +730,7 @@ def test_historical_metrics_walks_over_a_gap_in_the_round_numbers(monkeypatch, t
 
     Rounds are taken from the schedule as they are, so a season listing 1, 2, 5
     is walked as 1, 2, 5 - asking for the absent 3 and 4 would raise a
-    ValueError that the historical loop does not catch.
+    ValueError, failing the run over rounds that never existed.
     """
     monkeypatch.setattr(
         "fastf1.get_event_schedule",
@@ -742,3 +748,51 @@ def test_historical_metrics_walks_over_a_gap_in_the_round_numbers(monkeypatch, t
     generate_historical_metrics([2025], output_path=tmp_path / "historical.xlsx")
 
     assert attempted == [(2025, 1), (2025, 2), (2025, 5)]
+
+
+def _patch_failing_middle_round(monkeypatch) -> list[tuple[int, int]]:
+    """Schedule rounds 1-3 where round 2's fetch fails, as a refused download does."""
+    monkeypatch.setattr(
+        "fastf1.get_event_schedule",
+        lambda season_year, include_testing=False: pd.DataFrame({"RoundNumber": [1, 2, 3]}),
+    )
+
+    attempted: list[tuple[int, int]] = []
+
+    def fake_build_race_metrics(season_year, race_num, *args, **kwargs):
+        attempted.append((season_year, race_num))
+        if race_num == 2:
+            raise ConnectionError("401 Unauthorized from livetiming")
+        return pd.DataFrame({"Season": [season_year], "Race": [race_num], "AggregateRank": [1.0]})
+
+    monkeypatch.setattr("fast_f1.output.build_race_metrics", fake_build_race_metrics)
+    return attempted
+
+
+def test_historical_metrics_carries_on_past_a_race_that_fails(monkeypatch, tmp_path, caplog):
+    """One race that cannot be fetched must not block every race after it.
+
+    The failed race is logged and left out of the file, so the next run retries
+    it; the races either side of it are computed and saved.
+    """
+    attempted = _patch_failing_middle_round(monkeypatch)
+    output_path = tmp_path / "historical.xlsx"
+
+    caplog.set_level("ERROR", logger="fast_f1.output")
+    with pytest.raises(Exception):
+        generate_historical_metrics([2025], output_path=output_path)
+
+    assert attempted == [(2025, 1), (2025, 2), (2025, 3)]
+    assert sorted(load_existing_metrics(output_path)["Race"]) == [1, 3]
+    assert "season 2025 race 2" in caplog.text
+    assert "401 Unauthorized" in caplog.text
+
+
+def test_historical_metrics_reports_failed_races_once_all_are_tried(monkeypatch, tmp_path):
+    """A run with a failed race must not end looking like a clean one."""
+    _patch_failing_middle_round(monkeypatch)
+
+    with pytest.raises(HistoricalRunIncomplete, match="season 2025 race 2") as excinfo:
+        generate_historical_metrics([2025], output_path=tmp_path / "historical.xlsx")
+
+    assert excinfo.value.failed_races == [(2025, 2)]
