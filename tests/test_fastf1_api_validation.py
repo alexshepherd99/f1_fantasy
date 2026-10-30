@@ -5,9 +5,11 @@ returns the sessions, columns and values the rest of ``fast_f1`` is built on.
 They call FastF1 directly rather than through ``fast_f1.api``, so a failure
 here means upstream changed rather than one of our wrappers.
 
-Two known 2025 weekends are used as fixtures:
-- race 1 (Australia): normal weekend (FP1, FP2, FP3, Qualifying, Race)
-- race 2 (China): sprint weekend (FP1, SprintQualifying, Sprint, Race)
+Three known weekends are used as fixtures:
+- 2025 race 1 (Australia): normal weekend (FP1, FP2, FP3, Qualifying, Race)
+- 2025 race 2 (China): sprint weekend (FP1, SprintQualifying, Qualifying, Race)
+- 2023 race 4 (Azerbaijan): 2023-format sprint weekend (FP1, SprintShootout,
+  Qualifying, Race)
 """
 
 from __future__ import annotations
@@ -65,6 +67,11 @@ def china_2025_event():
     return _get_event(2025, 2)
 
 
+@pytest.fixture(scope="module")
+def azerbaijan_2023_event():
+    return _get_event(2023, 4)
+
+
 def test_australia_2025_is_normal_weekend(australia_2025_event):
     """Confirm 2025 Australia (race 1) is a normal weekend with FP2/FP3."""
     sessions = get_available_sessions_from_event(australia_2025_event)
@@ -94,6 +101,18 @@ def test_china_2025_is_sprint_weekend(china_2025_event):
     # Normal weekends have FP2/FP3, sprint weekends should not (in 2025 China format)
     assert "FP2" not in sessions
     assert "FP3" not in sessions
+
+
+def test_azerbaijan_2023_lists_sprint_shootout(azerbaijan_2023_event):
+    """Confirm a 2023 sprint weekend lists its Sprint Shootout under that name.
+
+    FastF1's ``SS`` code is the Sprint Shootout, the Saturday session that set
+    the 2023 sprint grid, not the sprint race itself.
+    """
+    sessions = get_available_sessions_from_event(azerbaijan_2023_event)
+    logger.info(f"Azerbaijan 2023 sessions: {sessions}")
+
+    assert sessions == ["FP1", "SprintShootout", "Qualifying", "Race"]
 
 
 def test_race_results_expose_expected_columns_and_values(australia_2025_event):

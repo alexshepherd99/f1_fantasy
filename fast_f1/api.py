@@ -36,7 +36,7 @@ _SESSION_CODE_NAMES = {
     "FP2": "FP2",
     "FP3": "FP3",
     "SQ": "SprintQualifying",  # Sprint Qualifying session
-    "SS": "Sprint",             # Sprint race (may not exist in all sprint weekends)
+    "SS": "SprintShootout",    # 2023's equivalent of Sprint Qualifying, run on Saturday
     "Q": "Qualifying",
     "R": "Race",
 }
@@ -347,7 +347,8 @@ def get_available_sessions_from_event(event: Any) -> list[str]:
 
     Returns:
         A list of session type names (e.g., ["FP1", "FP2", "FP3", "Qualifying", "Race"]
-        or ["FP1", "SprintQualifying", "Sprint", "Race"] for sprint weekends).
+        or ["FP1", "SprintQualifying", "Qualifying", "Race"] for sprint weekends,
+        with "SprintShootout" in place of "SprintQualifying" in 2023).
 
     Raises:
         AttributeError: If the event object does not have a ``get_session`` method.
