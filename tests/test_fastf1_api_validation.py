@@ -21,6 +21,8 @@ import pandas as pd
 import pytest
 
 from fast_f1.api import get_available_sessions_from_event
+from fast_f1.auth import CREDENTIALS_FILE as REAL_CREDENTIALS_FILE
+from fast_f1.auth import load_f1_credentials
 from fast_f1.cache import get_default_config_file_location, get_persisted_cache_directory
 from fast_f1.weekend import determine_practice_sessions, is_sprint_weekend
 
@@ -49,6 +51,19 @@ def real_fastf1_cache():
         logger.warning("No application FastF1 cache available; using the FastF1 default")
     else:
         fastf1.Cache.enable_cache(str(cache_dir))
+
+
+@pytest.fixture(autouse=True)
+def real_f1_credentials(isolate_f1_credentials):
+    """Sign in with the real F1 account, as downloads now require.
+
+    ``tests/conftest.py`` points every other test at dummy credentials. These
+    tests reach the API, so they load the real file instead; depending on the
+    conftest fixture makes it run first, and it still restores the environment
+    afterwards. A missing file fails these tests loudly rather than leaving
+    FastF1 to download unauthenticated.
+    """
+    load_f1_credentials(REAL_CREDENTIALS_FILE)
 
 
 def _get_event(season_year: int, race_num: int):

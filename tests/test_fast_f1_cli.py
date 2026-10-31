@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -61,6 +62,37 @@ def test_cli_historical_mode(monkeypatch, tmp_path):
     assert called["cache"][1] is True
     assert called["historical"][1] == str(tmp_path / "historical.xlsx")
     assert called["historical"][0][0] == 2023
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["fast_f1", "--historical"], ["fast_f1", "--season", "2025", "--race", "2"]],
+)
+def test_cli_exits_before_any_work_without_f1_credentials(monkeypatch, tmp_path, caplog, argv):
+    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr("fast_f1.auth.CREDENTIALS_FILE", tmp_path / "absent")
+    called = []
+    monkeypatch.setattr(cli, "setup_fastf1_cache", lambda *args, **kwargs: called.append("cache"))
+    monkeypatch.setattr(cli, "generate_historical_metrics", lambda *args, **kwargs: called.append("historical"))
+    monkeypatch.setattr(cli, "generate_single_race_prediction", lambda *args, **kwargs: called.append("single"))
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main()
+
+    assert excinfo.value.code == 1
+    assert called == []
+    assert "F1 credentials file not found" in caplog.text
+
+
+def test_cli_loads_f1_credentials(monkeypatch, tmp_path):
+    monkeypatch.setattr(sys, "argv", ["fast_f1", "--historical"])
+    monkeypatch.setattr(cli, "setup_fastf1_cache", lambda *args, **kwargs: (tmp_path, tmp_path / "local_cache"))
+    monkeypatch.setattr(cli, "generate_historical_metrics", lambda *args, **kwargs: pd.DataFrame())
+
+    cli.main()
+
+    assert os.environ["F1_USERNAME"] == "test-user"
+    assert os.environ["F1_PASSWORD"] == "test-password"
 
 
 def test_cli_historical_mode_exits_nonzero_when_races_failed(monkeypatch, tmp_path, caplog):

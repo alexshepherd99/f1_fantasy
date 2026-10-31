@@ -8,6 +8,7 @@ from pathlib import Path
 
 from common import setup_logging
 from fast_f1.api import SessionDataUnavailable
+from fast_f1.auth import F1CredentialsError, load_f1_credentials
 from fast_f1.cache import setup_fastf1_cache
 from fast_f1.output import (
     DEFAULT_HISTORICAL_OUTPUT,
@@ -31,6 +32,11 @@ def parse_arguments() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_arguments()
+    try:
+        load_f1_credentials()
+    except F1CredentialsError:
+        # already logged with the file path and what is wrong with it
+        sys.exit(1)
     setup_fastf1_cache(cache_dir=args.cache_dir, interactive=args.cache_dir is None)
 
     if args.historical:
