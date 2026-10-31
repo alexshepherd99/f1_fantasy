@@ -651,3 +651,58 @@ API, still refusing downloads, now attempts all five remaining sprint weekends
 (9, 12, 17, 18, 20), logs each as failed, ends with one summary naming them and
 exits 1. `data/fastf1_practice_rolling_metrics.xlsx` was byte-identical before
 and after.
+
+## Downloads now sign in to an F1 account (2026-10-31)
+
+**Cause of the 401s.** From October 2026 `livetiming.formula1.com` answers any
+unauthenticated request with 401, and FastF1's fallback mirror
+(`livetiming-mirror.fastf1.dev`) answers 404. FastF1 3.8.1 had an F1TV
+sign-in, but used it only for live-session streaming, never for the archive
+downloads this module makes. 3.9.0 attaches a signed-in account's token to
+every livetiming request; its release notes give the October 2026 requirement
+as the reason. A free F1 account was enough when tested on 2026-10-31, although
+3.9.0's own error text says a subscription is required.
+
+**What changed.**
+
+1. `fastf1` upgraded 3.8.1 → 3.9.0 and pinned in `requirements.txt`. A full
+   `pip freeze` before and after differed in that line only.
+2. New `fast_f1/auth.py`. 3.9.0 signs in by itself on the first download that
+   misses the cache, and keeps the token for about four days in its user data
+   dir, readable only by its owner. It reads the account from the `F1_USERNAME`
+   and `F1_PASSWORD` environment variables, otherwise prompting. So the module
+   only has to supply those two variables: `load_f1_credentials` reads them
+   from a file outside the repo and sets them in the process environment,
+   which nothing else sees and which goes when the run ends. It fails loudly —
+   an ERROR naming the file, then `F1CredentialsError` — if the file is
+   missing, unreadable, accessible to other users, or lacks either value.
+   Messages name the file and keys, never their values.
+3. `cli.py` calls it before anything else and exits 1 on failure, so a
+   missing file stops a run before the cache prompt or any download, even one
+   that the cache alone could have served.
+4. `tests/conftest.py` points every test at a dummy credentials file in a tmp
+   dir of its own and restores the environment. The first version wrote the
+   dummy into `tmp_path`, which broke a back-test runner test asserting that
+   `tmp_path` holds only its own output. `test_fastf1_api_validation.py` loads
+   the real file, since its live calls must sign in.
+
+Signing in lazily inside FastF1 was preferred over checking the token up
+front, which would need FastF1's internal `fastf1.internals.f1account` API.
+The cost: a wrong password surfaces only as FastF1 warning that sign-in failed
+and downloads then returning 401, which the historical loop reports as failed
+races and exit 1. The system keyring was not used: no keyring backend is set
+up on this machine, and it would add a dependency.
+
+**Test-suite effect:** 287 → 297 passing, and 0 failing for the first time
+since the cache was cleared on 2026-10-30. `auth.py` is a new module, so its
+seven tests were confirmed by mutation: disabling the missing-file, permission
+and missing-value checks each turns its tests red, as does logging the values.
+The three CLI tests were red first: no exit without the file, and the
+environment left empty with it. `test_practice_laps_expose_expected_columns`,
+red with 401 since the cache was cleared, passes again with the real sign-in.
+
+**Verified beyond the suite.** `--season 2023 --race 9` (Austria, one of the
+missing sprint weekends) to a scratch file loads the credentials, downloads
+FP1 that was refused the day before, and scores 20 drivers from FP1 alone. The
+run log contains neither credential value. `data/` was not touched; the 16
+missing sprint weekends are still to be filled by rerunning each season.

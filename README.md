@@ -106,7 +106,7 @@ Results of each strategy back-tested this way are summarised in **[BACKTEST_LOG.
 
 ## FastF1 signal
 
-The **fast_f1** module is a separate experiment from the strategies above: rather than optimising a team from fantasy points and prices, it tries to predict how a race will go using data available before it starts.  It combines practice lap time ranks (FP2 + FP3 on a normal weekend, FP1 + Sprint Qualifying on a sprint weekend, ignoring laps slower than 107% of the session best), a rolling total of driver points over the previous three races, and the betting odds described above.  Each is normalised to 0-1 and summed into an AggregateRank.
+The **fast_f1** module is a separate experiment from the strategies above: rather than optimising a team from fantasy points and prices, it tries to predict how a race will go using data available before it starts.  It combines practice lap time ranks (FP2 + FP3 on a normal weekend, FP1 + Sprint Qualifying on a sprint weekend, FP1 alone on a 2023 sprint weekend since its Sprint Shootout ran after teams locked, ignoring laps slower than 107% of the session best), a rolling total of driver points over the previous three races, and the betting odds described above.  Each is normalised to 0-1 and summed into an AggregateRank.
 
 Constructor rolling points are calculated and written out too, but carry zero weight in the aggregate — they turned out to be almost entirely redundant with the driver indicators, correlating 0.80-0.98 with driver rolling points within a race.  The weights live in one dict in `fast_f1/metrics.py` if you want to put it back.
 
@@ -126,6 +126,18 @@ PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical --season 2026
 Historical mode skips season/race pairs already in the output file, so it can be interrupted and resumed; delete the file to regenerate from scratch.  Results land in **data/fastf1_practice_rolling_metrics.xlsx**.
 
 On first run it will ask where to keep the FastF1 API cache and remember the answer.  The cache is large and lives outside the repo, and the file recording your choice is not committed.
+
+Since October 2026 the F1 timing service only serves data to a signed-in F1 account (a free account worked when this was set up).  FastF1 3.9.0 signs in on its first download and keeps the token for about four days, so it needs your account details whenever the token has expired.  They are read from a credentials file outside the repo, which you create once:
+
+```bash
+mkdir -p ~/.config/f1_fantasy && chmod 700 ~/.config/f1_fantasy
+# then create ~/.config/f1_fantasy/f1_credentials with two lines, no quotes:
+#   F1_USERNAME=<your F1 account email>
+#   F1_PASSWORD=<your F1 account password>
+chmod 600 ~/.config/f1_fantasy/f1_credentials
+```
+
+Every `fast_f1.cli` run reads that file first and stops with an error if it is missing, readable by other users, or lacks either line.  The values are placed in that run's environment only and are never logged or written anywhere else; FastF1 keeps its own token, readable only by you, which `venv/bin/python -m fastf1 auth f1tv --clear` removes.  Never put the credentials in the repo or in a shell profile.
 
 Full spec, plan and development log are in `docs/fastf1_v1/`.
 
