@@ -3,10 +3,14 @@
 See ``docs/indicator_analysis_v1/requirements.md`` for the rules this applies.
 """
 import logging
+from typing import Literal
 
 import pandas as pd
+from scipy.stats import spearmanr
 
 logger = logging.getLogger(__name__)
+
+RACE_KEYS = ["Season", "Race"]
 
 NEVER_RACED_STATUSES = ("Did not start", "Withdrew")
 FINISHED_STATUSES = ("Finished", "Lapped")
@@ -118,3 +122,56 @@ def build_analysis_frame(metrics: pd.DataFrame, archive: pd.DataFrame) -> pd.Dat
         late_time.isna() & (frame["format"] != FORMAT_SPRINT_FP1)
     )
     return frame.reset_index(drop=True)
+
+
+def combination_signal(
+    frame: pd.DataFrame,
+    slots: tuple[str, ...],
+    scale: Literal["stored", "rank"] = "stored",
+) -> pd.Series:
+    """Add the given slots with equal weight.
+
+    ``scale="stored"`` uses the values as held. ``scale="rank"`` first converts each
+    slot to its within-race percentile rank. A missing slot value makes the sum
+    missing rather than counting as zero.
+    """
+    values = frame[list(slots)]
+    if scale == "rank":
+        values = values.groupby([frame[key] for key in RACE_KEYS]).rank(pct=True)
+    return values.sum(axis=1, skipna=False)
+
+
+def _top_k_overlap(race: pd.DataFrame, k: int) -> float:
+    """Share of the actual top k that the signal also placed in its top k."""
+    def _top(column: str) -> set[str]:
+        # Ties resolve on driver code, so that a score is repeatable.
+        ordered = race.sort_values([column, "Driver"], ascending=[False, True])
+        return set(ordered["Driver"].head(k))
+
+    return len(_top("_signal") & _top("_target")) / k
+
+
+def race_scores(frame: pd.DataFrame, signal: pd.Series, target: str) -> pd.DataFrame:
+    """Score a signal against a target, one row per race.
+
+    Returns ``Season``, ``Race``, ``spearman``, ``top3`` and ``top5``.
+
+    Raises:
+        ValueError: A race's signal has missing values or does not vary, either of
+            which would otherwise drop out of an average unnoticed.
+    """
+    working = frame[[*RACE_KEYS, "Driver"]].assign(_signal=signal, _target=frame[target])
+    rows = []
+    for (season, race_num), race in working.groupby(RACE_KEYS):
+        if race["_signal"].isna().any() or race["_signal"].nunique() < 2:
+            msg = f"Signal is missing or constant in {season} race {race_num}"
+            logger.error(msg)
+            raise ValueError(msg)
+        rows.append({
+            "Season": season,
+            "Race": race_num,
+            "spearman": spearmanr(race["_signal"], race["_target"]).statistic,
+            "top3": _top_k_overlap(race, 3),
+            "top5": _top_k_overlap(race, 5),
+        })
+    return pd.DataFrame(rows)

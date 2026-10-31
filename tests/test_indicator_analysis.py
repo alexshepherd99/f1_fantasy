@@ -1,7 +1,11 @@
 import pandas as pd
 import pytest
 
-from fast_f1.indicator_analysis import build_analysis_frame
+from fast_f1.indicator_analysis import (
+    build_analysis_frame,
+    combination_signal,
+    race_scores,
+)
 
 
 def _metrics_row(season: int, race: int, driver: str, **overrides) -> dict:
@@ -233,3 +237,74 @@ def test_grid_signal_is_negated_and_a_pit_lane_start_counts_as_last():
     grid = frame.set_index("Driver")["grid"].to_dict()
     assert grid["HAM"] == -2.0
     assert grid["VER"] < grid["HAM"]
+
+
+def _race(season: int, race: int, **columns: list[float]) -> pd.DataFrame:
+    """A small race with drivers D0, D1, ... and the given columns."""
+    size = len(next(iter(columns.values())))
+    return pd.DataFrame({
+        "Season": season,
+        "Race": race,
+        "Driver": [f"D{i}" for i in range(size)],
+        **columns,
+    })
+
+
+def test_race_scores_spearman_is_one_race_at_a_time_and_ignores_scale():
+    frame = pd.concat([
+        _race(2024, 2, target=[3.0, 2.0, 1.0], signal=[100.0, 2.0, 1.0]),
+        _race(2024, 3, target=[3.0, 2.0, 1.0], signal=[1.0, 2.0, 3.0]),
+    ], ignore_index=True)
+    scores = race_scores(frame, frame["signal"], "target")
+    assert scores["Season"].tolist() == [2024, 2024]
+    assert scores["Race"].tolist() == [2, 3]
+    assert scores["spearman"].tolist() == pytest.approx([1.0, -1.0])
+
+
+def test_race_scores_top_k_is_the_share_of_the_actual_top_k_also_picked():
+    target = [9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0]
+    # The signal's top 3 is D0, D1, D5 and its top 5 adds D3 and D6.
+    signal = [9.0, 8.0, 3.0, 6.0, 2.0, 7.0, 5.0]
+    frame = _race(2024, 2, target=target, signal=signal)
+    row = race_scores(frame, frame["signal"], "target").iloc[0]
+    assert row["top3"] == pytest.approx(2 / 3)
+    assert row["top5"] == pytest.approx(3 / 5)
+
+
+def test_race_scores_rejects_a_missing_signal_rather_than_scoring_around_it():
+    frame = _race(2024, 2, target=[3.0, 2.0, 1.0], signal=[1.0, None, 3.0])
+    with pytest.raises(ValueError, match="2024 race 2"):
+        race_scores(frame, frame["signal"], "target")
+
+
+def test_race_scores_rejects_a_constant_signal_which_has_no_rank_correlation():
+    frame = _race(2024, 2, target=[3.0, 2.0, 1.0], signal=[0.0, 0.0, 0.0])
+    with pytest.raises(ValueError, match="2024 race 2"):
+        race_scores(frame, frame["signal"], "target")
+
+
+def test_combination_signal_is_an_equal_weight_sum_of_the_stored_values():
+    frame = _race(2024, 2, a=[1.0, 0.5], b=[0.25, 0.75], c=[9.0, 9.0])
+    assert combination_signal(frame, ("a", "b")).tolist() == [1.25, 1.25]
+
+
+def test_combination_signal_rank_scale_removes_the_effect_of_one_outlier():
+    # Min-max style values where one slow lap squeezes the rest towards the top.
+    frame = _race(2024, 2, pace=[1.0, 0.99, 0.98, 0.0], rolling=[0.0, 0.5, 1.0, 0.25])
+    stored = combination_signal(frame, ("pace", "rolling"))
+    ranked = combination_signal(frame, ("pace", "rolling"), scale="rank")
+    assert stored.idxmax() == 2  # rolling decides it, because pace barely varies
+    assert ranked.tolist() == pytest.approx([1.25, 1.5, 1.5, 0.75])
+
+
+def test_combination_signal_ranks_within_each_race():
+    frame = pd.concat([
+        _race(2024, 2, a=[1.0, 2.0]),
+        _race(2024, 3, a=[30.0, 40.0]),
+    ], ignore_index=True)
+    assert combination_signal(frame, ("a",), scale="rank").tolist() == [0.5, 1.0, 0.5, 1.0]
+
+
+def test_combination_signal_does_not_treat_a_missing_slot_as_zero():
+    frame = _race(2024, 2, a=[1.0, 0.5], b=[None, 0.75])
+    assert combination_signal(frame, ("a", "b")).isna().tolist() == [True, False]
