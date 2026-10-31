@@ -3,6 +3,7 @@
 See ``docs/indicator_analysis_v1/requirements.md`` for the rules this applies.
 """
 from dataclasses import dataclass
+from itertools import combinations
 import logging
 from typing import Iterable, Literal
 
@@ -16,6 +17,8 @@ RACE_KEYS = ["Season", "Race"]
 
 BOOTSTRAP_RESAMPLES = 10_000
 BOOTSTRAP_SEED = 20261031
+
+COMBINATION_SLOTS = ("driver_rolling", "constructor_rolling", "early", "late")
 
 NEVER_RACED_STATUSES = ("Did not start", "Withdrew")
 FINISHED_STATUSES = ("Finished", "Lapped")
@@ -140,9 +143,8 @@ def combination_signal(
     slot to its within-race percentile rank. A missing slot value makes the sum
     missing rather than counting as zero.
     """
-    values = frame[list(slots)]
-    if scale == "rank":
-        values = values.groupby([frame[key] for key in RACE_KEYS]).rank(pct=True)
+    columns = list(slots)
+    values = _within_race_ranks(frame, columns) if scale == "rank" else frame[columns]
     return values.sum(axis=1, skipna=False)
 
 
@@ -238,3 +240,105 @@ def compare_scores(candidate: pd.DataFrame, baseline: pd.DataFrame) -> Compariso
         season_gains=season_gains,
         wins=low > 0 and all(gain > 0 for gain in season_gains.values()),
     )
+
+
+def all_combinations(slots: tuple[str, ...] = COMBINATION_SLOTS) -> list[tuple[str, ...]]:
+    """Every non-empty subset of the slots."""
+    return [
+        combo
+        for size in range(1, len(slots) + 1)
+        for combo in combinations(slots, size)
+    ]
+
+
+def rank_combinations(
+    frame: pd.DataFrame,
+    target: str,
+    slots: tuple[str, ...] = COMBINATION_SLOTS,
+) -> pd.DataFrame:
+    """Score every equal-weight combination, best mean Spearman first.
+
+    Exact ties go to the smaller combination, since it is the simpler answer.
+    """
+    rows = []
+    for order, combo in enumerate(all_combinations(slots)):
+        scores = race_scores(frame, combination_signal(frame, combo), target)
+        rows.append({
+            "combination": combo,
+            "spearman": scores["spearman"].mean(),
+            "top3": scores["top3"].mean(),
+            "top5": scores["top5"].mean(),
+            "_order": order,
+        })
+    ranked = pd.DataFrame(rows).sort_values(
+        ["spearman", "_order"], ascending=[False, True]
+    )
+    return ranked.drop(columns="_order").reset_index(drop=True)
+
+
+def leave_one_season_out_selection(
+    frame: pd.DataFrame,
+    target: str,
+    slots: tuple[str, ...] = COMBINATION_SLOTS,
+) -> tuple[pd.DataFrame, dict[int, tuple[str, ...]]]:
+    """Score each season on the combination chosen from the other seasons.
+
+    Returns the per-race scores and the combination chosen for each held-out season.
+    """
+    chosen: dict[int, tuple[str, ...]] = {}
+    held_out_scores = []
+    for season, held_out in frame.groupby("Season"):
+        train = frame[frame["Season"] != season]
+        chosen[season] = rank_combinations(train, target, slots)["combination"].iloc[0]
+        held_out_scores.append(
+            race_scores(held_out, combination_signal(held_out, chosen[season]), target)
+        )
+    return pd.concat(held_out_scores, ignore_index=True), chosen
+
+
+def _within_race_ranks(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Each column as its within-race percentile rank."""
+    return frame[columns].groupby([frame[key] for key in RACE_KEYS]).rank(pct=True)
+
+
+def _centred(values: pd.DataFrame, frame: pd.DataFrame) -> pd.DataFrame:
+    """Remove each race's mean, so a fit explains order within a race only."""
+    keys = [frame[key] for key in RACE_KEYS]
+    return values - values.groupby(keys).transform("mean")
+
+
+def fit_weights(
+    frame: pd.DataFrame,
+    target: str,
+    slots: tuple[str, ...] = COMBINATION_SLOTS,
+) -> dict[str, float]:
+    """Least squares weights of the slots on the target, on within-race ranks."""
+    features = _centred(_within_race_ranks(frame, list(slots)), frame)
+    outcome = _centred(_within_race_ranks(frame, [target]), frame)
+    weights, *_ = np.linalg.lstsq(features.to_numpy(), outcome[target].to_numpy(), rcond=None)
+    return dict(zip(slots, (float(weight) for weight in weights)))
+
+
+def fitted_signal(frame: pd.DataFrame, weights: dict[str, float]) -> pd.Series:
+    """Apply fitted weights to the slots' within-race ranks."""
+    ranks = _within_race_ranks(frame, list(weights))
+    return sum(ranks[slot] * weight for slot, weight in weights.items())
+
+
+def leave_one_season_out_fitted(
+    frame: pd.DataFrame,
+    target: str,
+    slots: tuple[str, ...] = COMBINATION_SLOTS,
+) -> tuple[pd.DataFrame, dict[int, dict[str, float]]]:
+    """Score each season on weights fitted to the other seasons.
+
+    Returns the per-race scores and the weights used for each held-out season.
+    """
+    weights: dict[int, dict[str, float]] = {}
+    held_out_scores = []
+    for season, held_out in frame.groupby("Season"):
+        weights[season] = fit_weights(frame[frame["Season"] != season], target, slots)
+        held_out_scores.append(
+            race_scores(held_out, fitted_signal(held_out, weights[season]), target)
+        )
+    return pd.concat(held_out_scores, ignore_index=True), weights

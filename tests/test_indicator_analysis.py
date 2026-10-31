@@ -2,11 +2,17 @@ import pandas as pd
 import pytest
 
 from fast_f1.indicator_analysis import (
+    all_combinations,
     bootstrap_interval,
     build_analysis_frame,
     combination_signal,
     compare_scores,
+    fit_weights,
+    fitted_signal,
+    leave_one_season_out_fitted,
+    leave_one_season_out_selection,
     race_scores,
+    rank_combinations,
 )
 
 
@@ -382,3 +388,103 @@ def test_compare_scores_does_not_win_on_a_clear_loss():
 def test_compare_scores_refuses_races_that_are_not_like_for_like():
     with pytest.raises(ValueError, match="same races"):
         compare_scores(_scores((2024, 2, 0.5)), _scores((2024, 3, 0.5)))
+
+
+def test_all_combinations_covers_every_non_empty_subset_once():
+    combinations = all_combinations(("a", "b", "c", "d"))
+    assert len(combinations) == 15
+    assert len(set(combinations)) == 15
+    assert ("a",) in combinations
+    assert ("a", "b", "c", "d") in combinations
+    assert () not in combinations
+
+
+def _season_with_slots(season: int, good: str, bad: str) -> pd.DataFrame:
+    """Two races where slot ``good`` orders the target exactly and ``bad`` reverses it.
+
+    ``bad`` is not an exact mirror of ``good``, whose sum would then be constant.
+    """
+    target = [4.0, 3.0, 2.0, 1.0]
+    return pd.concat([
+        _race(season, race, target=target, **{good: target, bad: [1.0, 2.0, 3.0, 5.0]})
+        for race in (2, 3)
+    ], ignore_index=True)
+
+
+def test_rank_combinations_puts_the_best_mean_spearman_first():
+    ranked = rank_combinations(_season_with_slots(2024, "a", "b"), "target", ("a", "b"))
+    assert ranked["combination"].tolist()[0] == ("a",)
+    assert ranked["spearman"].iloc[0] == pytest.approx(1.0)
+    assert ranked["combination"].tolist()[-1] == ("b",)
+    assert ranked["spearman"].iloc[-1] == pytest.approx(-1.0)
+    assert {"top3", "top5"} <= set(ranked.columns)
+
+
+def test_rank_combinations_prefers_the_smaller_combination_on_a_tie():
+    target = [4.0, 3.0, 2.0, 1.0]
+    frame = _race(2024, 2, target=target, a=target, b=target)
+    ranked = rank_combinations(frame, "target", ("a", "b"))
+    assert ranked["combination"].tolist() == [("a",), ("b",), ("a", "b")]
+
+
+def test_selection_for_a_held_out_season_is_made_on_the_other_seasons_only():
+    frame = pd.concat([
+        _season_with_slots(2024, "a", "b"),
+        _season_with_slots(2025, "a", "b"),
+        _season_with_slots(2026, "b", "a"),
+    ], ignore_index=True)
+    scores, chosen = leave_one_season_out_selection(frame, "target", ("a", "b"))
+    assert chosen[2026] == ("a",)  # 2024 and 2025 favour a, so 2026 is scored on a
+    assert scores[scores["Season"] == 2026]["spearman"].tolist() == pytest.approx([-1.0, -1.0])
+    assert scores[scores["Season"] == 2024]["spearman"].tolist() == pytest.approx([1.0, 1.0])
+    assert len(scores) == 6
+
+
+def test_selection_ignores_the_held_out_season_even_when_it_would_decide_the_choice():
+    frame = pd.concat([
+        _season_with_slots(2024, "a", "b"),
+        _season_with_slots(2025, "b", "a"),
+    ], ignore_index=True)
+    _, chosen = leave_one_season_out_selection(frame, "target", ("a", "b"))
+    assert chosen == {2024: ("b",), 2025: ("a",)}
+
+
+def test_fit_weights_gives_an_uncorrelated_slot_no_weight():
+    # Centring matters here: both sets of ranks are positive, so an uncentred fit
+    # with no intercept would credit this slot for their shared average.
+    frame = _race(2024, 2, target=[4.0, 3.0, 2.0, 1.0], a=[2.0, 4.0, 1.0, 3.0])
+    assert fit_weights(frame, "target", ("a",))["a"] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_fit_weights_gives_the_informative_slot_the_weight():
+    target = [6.0, 5.0, 4.0, 3.0, 2.0, 1.0]
+    frame = _race(2024, 2, target=target, a=target, b=[3.0, 6.0, 1.0, 4.0, 2.0, 5.0])
+    weights = fit_weights(frame, "target", ("a", "b"))
+    assert weights["a"] == pytest.approx(1.0)
+    assert weights["b"] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_fit_weights_uses_within_race_ranks_so_race_level_shifts_do_not_matter():
+    target = [3.0, 2.0, 1.0]
+    frame = pd.concat([
+        _race(2024, 2, target=target, a=[30.0, 20.0, 10.0]),
+        _race(2024, 3, target=[300.0, 200.0, 100.0], a=[3.0, 2.0, 1.0]),
+    ], ignore_index=True)
+    assert fit_weights(frame, "target", ("a",))["a"] == pytest.approx(1.0)
+
+
+def test_fitted_signal_applies_weights_to_within_race_ranks():
+    frame = _race(2024, 2, a=[10.0, 20.0], b=[20.0, 10.0])
+    assert fitted_signal(frame, {"a": 2.0, "b": 1.0}).tolist() == pytest.approx([2.0, 2.5])
+
+
+def test_fitted_scores_for_a_held_out_season_never_train_on_that_season():
+    # Training on 2024 alone learns a good slot, which reverses in 2025.
+    frame = pd.concat([
+        _season_with_slots(2024, "a", "b"),
+        _season_with_slots(2025, "b", "a"),
+    ], ignore_index=True)
+    scores, weights = leave_one_season_out_fitted(frame, "target", ("a", "b"))
+    assert weights[2025]["a"] > 0
+    assert weights[2024]["a"] < 0
+    assert scores["spearman"].tolist() == pytest.approx([-1.0, -1.0, -1.0, -1.0])
