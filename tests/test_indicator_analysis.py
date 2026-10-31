@@ -2,8 +2,10 @@ import pandas as pd
 import pytest
 
 from fast_f1.indicator_analysis import (
+    bootstrap_interval,
     build_analysis_frame,
     combination_signal,
+    compare_scores,
     race_scores,
 )
 
@@ -308,3 +310,75 @@ def test_combination_signal_ranks_within_each_race():
 def test_combination_signal_does_not_treat_a_missing_slot_as_zero():
     frame = _race(2024, 2, a=[1.0, 0.5], b=[None, 0.75])
     assert combination_signal(frame, ("a", "b")).isna().tolist() == [True, False]
+
+
+def test_bootstrap_interval_is_repeatable_and_brackets_the_mean():
+    values = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+    low, high = bootstrap_interval(values)
+    assert (low, high) == bootstrap_interval(values)
+    assert low < 0.45 < high
+
+
+def test_bootstrap_interval_width_matches_the_theory_for_the_mean():
+    values = [float(v) for v in range(100)]
+    low, high = bootstrap_interval(values)
+    # Standard error of the mean is about 2.89, so the 95% interval is about +/- 5.66.
+    assert low == pytest.approx(49.5 - 5.66, abs=0.3)
+    assert high == pytest.approx(49.5 + 5.66, abs=0.3)
+
+
+def _scores(*season_race_spearman: tuple[int, int, float]) -> pd.DataFrame:
+    return pd.DataFrame(season_race_spearman, columns=["Season", "Race", "spearman"])
+
+
+def _flat_baseline(*season_race: tuple[int, int]) -> pd.DataFrame:
+    return _scores(*[(season, race, 0.5) for season, race in season_race])
+
+
+_ROUNDS = [(season, race) for season in (2024, 2025) for race in range(2, 12)]
+
+
+def test_compare_scores_wins_on_a_steady_gain_in_every_season():
+    candidate = _scores(*[
+        (season, race, 0.6 + race * 0.001) for season, race in _ROUNDS
+    ])
+    result = compare_scores(candidate, _flat_baseline(*_ROUNDS))
+    assert result.wins
+    assert result.races == 20
+    assert result.mean_gain == pytest.approx(0.1065)
+    assert result.low > 0
+    assert result.season_gains == pytest.approx({2024: 0.1065, 2025: 0.1065})
+
+
+def test_compare_scores_does_not_win_when_the_interval_includes_zero():
+    # Positive in each season but swinging far more than its mean.
+    candidate = _scores(*[
+        (season, race, 0.5 + (0.51 if race % 2 else -0.5)) for season, race in _ROUNDS
+    ])
+    result = compare_scores(candidate, _flat_baseline(*_ROUNDS))
+    assert result.mean_gain > 0
+    assert all(gain > 0 for gain in result.season_gains.values())
+    assert result.low < 0 < result.high
+    assert not result.wins
+
+
+def test_compare_scores_does_not_win_when_any_season_loses():
+    # One big season carries a clear overall gain, while the other loses a little.
+    candidate = _scores(*[
+        (season, race, (0.8 if season == 2024 else 0.49) + race * 0.0001)
+        for season, race in _ROUNDS
+    ])
+    result = compare_scores(candidate, _flat_baseline(*_ROUNDS))
+    assert result.low > 0
+    assert result.season_gains[2025] < 0
+    assert not result.wins
+
+
+def test_compare_scores_does_not_win_on_a_clear_loss():
+    candidate = _scores(*[(season, race, 0.4) for season, race in _ROUNDS])
+    assert not compare_scores(candidate, _flat_baseline(*_ROUNDS)).wins
+
+
+def test_compare_scores_refuses_races_that_are_not_like_for_like():
+    with pytest.raises(ValueError, match="same races"):
+        compare_scores(_scores((2024, 2, 0.5)), _scores((2024, 3, 0.5)))

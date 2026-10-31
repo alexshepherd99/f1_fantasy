@@ -2,15 +2,20 @@
 
 See ``docs/indicator_analysis_v1/requirements.md`` for the rules this applies.
 """
+from dataclasses import dataclass
 import logging
-from typing import Literal
+from typing import Iterable, Literal
 
+import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
 
 logger = logging.getLogger(__name__)
 
 RACE_KEYS = ["Season", "Race"]
+
+BOOTSTRAP_RESAMPLES = 10_000
+BOOTSTRAP_SEED = 20261031
 
 NEVER_RACED_STATUSES = ("Did not start", "Withdrew")
 FINISHED_STATUSES = ("Finished", "Lapped")
@@ -175,3 +180,61 @@ def race_scores(frame: pd.DataFrame, signal: pd.Series, target: str) -> pd.DataF
             "top5": _top_k_overlap(race, 5),
         })
     return pd.DataFrame(rows)
+
+
+def bootstrap_interval(
+    values: Iterable[float],
+    resamples: int = BOOTSTRAP_RESAMPLES,
+    seed: int = BOOTSTRAP_SEED,
+) -> tuple[float, float]:
+    """95% percentile bootstrap interval on the mean of ``values``."""
+    data = np.asarray(list(values), dtype=float)
+    picks = np.random.default_rng(seed).integers(0, len(data), (resamples, len(data)))
+    means = data[picks].mean(axis=1)
+    low, high = np.percentile(means, [2.5, 97.5])
+    return float(low), float(high)
+
+
+@dataclass(frozen=True)
+class Comparison:
+    """The per-race Spearman gain of one signal over another, and its verdict."""
+
+    races: int
+    mean_gain: float
+    low: float
+    high: float
+    season_gains: dict[int, float]
+    wins: bool
+
+
+def compare_scores(candidate: pd.DataFrame, baseline: pd.DataFrame) -> Comparison:
+    """Apply the bar for a win to two sets of per-race scores.
+
+    A win needs the 95% interval on the mean gain to exclude zero on the positive
+    side, and the mean gain to be positive in every season.
+
+    Raises:
+        ValueError: The two sets do not cover the same races.
+    """
+    paired = candidate[[*RACE_KEYS, "spearman"]].merge(
+        baseline[[*RACE_KEYS, "spearman"]],
+        on=RACE_KEYS,
+        how="outer",
+        suffixes=("_candidate", "_baseline"),
+    )
+    if paired.isna().any().any():
+        msg = "Comparison scores must cover the same races"
+        logger.error(msg)
+        raise ValueError(msg)
+
+    gains = paired["spearman_candidate"] - paired["spearman_baseline"]
+    low, high = bootstrap_interval(gains)
+    season_gains = gains.groupby(paired["Season"]).mean().to_dict()
+    return Comparison(
+        races=len(gains),
+        mean_gain=float(gains.mean()),
+        low=low,
+        high=high,
+        season_gains=season_gains,
+        wins=low > 0 and all(gain > 0 for gain in season_gains.values()),
+    )
