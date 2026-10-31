@@ -2,6 +2,8 @@ import pandas as pd
 import pytest
 
 from fast_f1.indicator_analysis import (
+    _format_comparisons,
+    _standalone_table,
     all_combinations,
     bootstrap_interval,
     build_analysis_frame,
@@ -11,8 +13,10 @@ from fast_f1.indicator_analysis import (
     fitted_signal,
     leave_one_season_out_fitted,
     leave_one_season_out_selection,
+    odds_capture_points,
     race_scores,
     rank_combinations,
+    run_analysis,
 )
 
 
@@ -476,6 +480,251 @@ def test_fit_weights_uses_within_race_ranks_so_race_level_shifts_do_not_matter()
 def test_fitted_signal_applies_weights_to_within_race_ranks():
     frame = _race(2024, 2, a=[10.0, 20.0], b=[20.0, 10.0])
     assert fitted_signal(frame, {"a": 2.0, "b": 1.0}).tolist() == pytest.approx([2.0, 2.5])
+
+
+def _odds_rows(race: int, odds: list[str], **snapshots: list[str | None]) -> list[dict]:
+    return [
+        {"Season": 2026, "Race": race, "Driver": f"D{i}", "Odds": price}
+        | {name: values[i] for name, values in snapshots.items()}
+        for i, price in enumerate(odds)
+    ]
+
+
+def test_odds_capture_point_is_the_snapshot_matching_every_driver():
+    odds = pd.DataFrame(
+        _odds_rows(
+            2, ["9-4", "10-1"], Odds_Pre_Weekend=["5/2", "10/1"], Odds_Post_FP2=["9/4", "10:1"]
+        )
+        + _odds_rows(3, ["9-4", "10-1"], Odds_Pre_Weekend=["9/4", "10/1"], Odds_Post_FP2=[None, None])
+    )
+    assert odds_capture_points(odds) == {2: "Odds_Post_FP2", 3: "Odds_Pre_Weekend"}
+
+
+def test_odds_capture_point_needs_a_full_snapshot_not_just_matching_entries():
+    odds = pd.DataFrame(_odds_rows(2, ["9-4", "10-1"], Odds_Post_FP2=["9/4", None]))
+    with pytest.raises(ValueError, match="race 2"):
+        odds_capture_points(odds)
+
+
+def _analysis_race(season: int, race: int, race_format: str, late_works: bool) -> pd.DataFrame:
+    """Six drivers where ``late`` predicts the outcome exactly, or exactly backwards."""
+    target = [6.0, 5.0, 4.0, 3.0, 2.0, 1.0]
+    return pd.DataFrame({
+        "Season": season,
+        "Race": race,
+        "Driver": [f"D{i}" for i in range(6)],
+        "format": race_format,
+        "finished": [True, True, True, True, True, False],
+        "no_time": [False, False, False, False, False, True],
+        "target_fantasy": target,
+        "target_finish": target,
+        "driver_rolling": [3.0, 6.0, 1.0, 5.0, 2.0, 4.0],
+        "constructor_rolling": [2.0, 5.0, 6.0, 1.0, 3.0, 4.0],
+        "early": [4.0, 2.0, 6.0, 3.0, 5.0, 1.0],
+        "late": target if late_works else list(reversed(target)),
+        "odds": [6.0, 5.0, 4.0, 3.0, 2.0, 1.5] if season == 2026 else [0.0] * 6,
+        "grid": [6.0, 4.0, 5.0, 3.0, 1.0, 2.0],
+        "early_laps": [20.0, 21.0, 19.0, 22.0, 18.0, 23.0],
+        "late_laps": [20.0, 19.0, 21.0, 18.0, 22.0, 17.0],
+        "early_stint": [5.0, 6.0, 4.0, 7.0, 3.0, 8.0],
+        "late_stint": [5.0, 4.0, 6.0, 3.0, 7.0, 2.0],
+    })
+
+
+def _analysis_frame() -> pd.DataFrame:
+    """Normal and sprint weekends in which ``late`` stops working in 2026."""
+    races = []
+    for season in (2023, 2024, 2025, 2026):
+        for race in (2, 3, 4, 5):
+            races.append(_analysis_race(season, race, "normal", late_works=season != 2026))
+        if season == 2023:
+            races.append(
+                _analysis_race(season, 6, "sprint_fp1", late_works=True).assign(late=float("nan"))
+            )
+        else:
+            races.append(_analysis_race(season, 6, "sprint", late_works=season != 2026))
+            races.append(_analysis_race(season, 7, "sprint", late_works=season != 2026))
+    return pd.concat(races, ignore_index=True)
+
+
+_CAPTURE = {2: "Odds_Pre_Weekend", 3: "Odds_Post_FP2", 4: "Odds_Post_Quali", 5: "Odds_Pre_Weekend",
+            6: "Odds_Pre_Weekend", 7: "Odds_Post_FP2"}
+
+
+def _comparison(report: dict, **match: str) -> pd.Series:
+    rows = report["comparisons"]
+    for column, value in match.items():
+        rows = rows[rows[column] == value]
+    assert len(rows) == 1, f"{match} matched {len(rows)} rows"
+    return rows.iloc[0]
+
+
+@pytest.fixture(scope="module")
+def report() -> dict:
+    """One run of the analysis, shared because a run takes seconds."""
+    return run_analysis(_analysis_frame(), _CAPTURE)
+
+
+def test_run_analysis_chooses_the_winner_without_looking_at_2026(report: dict):
+    winners = report["winners"]
+    row = winners[(winners["target"] == "target_fantasy") & (winners["format"] == "normal")]
+    assert row["combination"].iloc[0] == ("late",)
+
+
+def test_run_analysis_marks_the_winner_on_2026_alone_as_well_as_overall(report: dict):
+    held_out = _comparison(
+        report, target="target_fantasy", format="normal",
+        comparison="winner vs rolling", scope="2026",
+    )
+    assert held_out["races"] == 4
+    assert held_out["mean_gain"] < 0
+    assert not held_out["wins"]
+    overall = _comparison(
+        report, target="target_fantasy", format="normal",
+        comparison="winner vs rolling", scope="all",
+    )
+    assert overall["races"] == 16
+    assert overall["gain_2023"] > 0
+
+
+def test_run_analysis_never_compares_a_2023_sprint_on_the_late_slot(report: dict):
+    overall = _comparison(
+        report, target="target_fantasy", format="sprint",
+        comparison="winner vs rolling", scope="all",
+    )
+    assert overall["races"] == 6  # 2024, 2025 and 2026 only
+
+
+def test_run_analysis_odds_comparison_leaves_out_the_post_qualifying_race(report: dict):
+    row = _comparison(
+        report, target="target_fantasy", format="odds",
+        comparison="odds vs best non-odds", scope="2026",
+    )
+    assert row["races"] == 5  # 2, 3, 5, 6 and 7, with race 4 left out
+
+
+def test_run_analysis_splits_the_odds_comparison_by_capture_point(report: dict):
+    pre = _comparison(
+        report, target="target_fantasy", format="odds",
+        comparison="odds vs best non-odds", scope="pre_weekend",
+    )
+    during = _comparison(
+        report, target="target_fantasy", format="odds",
+        comparison="odds vs best non-odds", scope="during_weekend",
+    )
+    assert pre["races"] == 3
+    assert during["races"] == 2
+
+
+def test_run_analysis_scores_both_targets_and_the_grid_ceiling(report: dict):
+    assert set(report["winners"]["target"]) == {"target_fantasy", "target_finish"}
+    grid = report["standalone"]
+    assert not grid[(grid["signal"] == "grid") & (grid["format"] == "normal")].empty
+
+
+def test_run_analysis_standalone_treats_a_missing_lap_count_as_no_laps():
+    frame = _analysis_frame()
+    frame.loc[frame["Driver"] == "D5", "early_laps"] = None
+    standalone = _standalone_table(frame, "target_fantasy", _CAPTURE)
+    assert not standalone[standalone["signal"] == "early_laps"].empty
+
+
+def test_run_analysis_scores_the_late_slot_only_where_it_exists(report: dict):
+    standalone = report["standalone"]
+    sprint_fp1 = standalone[standalone["format"] == "sprint_fp1"]
+    assert "early" in set(sprint_fp1["signal"])
+    assert "late" not in set(sprint_fp1["signal"])
+    assert "late_laps" not in set(sprint_fp1["signal"])
+
+
+def test_run_analysis_sensitivities_drop_the_rows_they_say_they_drop(report: dict):
+    # D5 retires and sets no time, so each subset scores five drivers, and ``late``
+    # over the five against ``driver_rolling`` over the five has a known gain.
+    five = _analysis_frame()
+    five = five[(five["Driver"] != "D5") & (five["format"] == "normal")]
+    expected = compare_scores(
+        race_scores(five, five["late"], "target_fantasy"),
+        race_scores(five, five["driver_rolling"], "target_fantasy"),
+    ).mean_gain
+    for comparison in ("finishers only: winner vs rolling", "set a time only: winner vs rolling"):
+        row = _comparison(
+            report, target="target_fantasy", format="normal", comparison=comparison, scope="all"
+        )
+        assert row["mean_gain"] == pytest.approx(expected)
+
+
+def test_standalone_odds_score_leaves_out_the_post_qualifying_race(report: dict):
+    standalone = report["standalone"]
+    odds = standalone[
+        (standalone["signal"] == "odds")
+        & (standalone["format"] == "normal")
+        & (standalone["season"] == "all")
+        & (standalone["target"] == "target_fantasy")
+    ]
+    assert odds["races"].tolist() == [3]  # 2026 races 2, 3 and 5, with race 4 left out
+
+
+def _odds_races() -> pd.DataFrame:
+    frame = _analysis_frame()
+    return frame[(frame["Season"] == 2026) & (frame["Race"] != 4)]
+
+
+def test_odds_together_adds_the_odds_to_the_best_signal(report: dict):
+    races = _odds_races()
+    expected = compare_scores(
+        race_scores(races, races["late"] + races["odds"], "target_fantasy"),
+        race_scores(races, races["late"], "target_fantasy"),
+    ).mean_gain
+    assert expected != 0
+    row = _comparison(
+        report, target="target_fantasy", format="odds",
+        comparison="odds + best non-odds vs best non-odds", scope="2026",
+    )
+    assert row["mean_gain"] == pytest.approx(expected)
+
+
+def test_aggregate_in_the_odds_comparison_includes_the_odds(report: dict):
+    races = _odds_races()
+    slots = ("driver_rolling", "early", "late", "odds")
+    expected = compare_scores(
+        race_scores(races, combination_signal(races, slots), "target_fantasy"),
+        race_scores(races, races["late"], "target_fantasy"),
+    ).mean_gain
+    row = _comparison(
+        report, target="target_fantasy", format="odds",
+        comparison="aggregate with odds vs best non-odds", scope="2026",
+    )
+    assert row["mean_gain"] == pytest.approx(expected)
+
+
+def test_fitted_comparison_is_the_gain_of_fitted_over_the_unseen_season_choice(report: dict):
+    frame = _analysis_frame()
+    frame = frame[frame["format"] == "normal"]
+    fitted, _ = leave_one_season_out_fitted(frame, "target_fantasy")
+    chosen, _ = leave_one_season_out_selection(frame, "target_fantasy")
+    expected = compare_scores(fitted, chosen).mean_gain
+    assert expected != 0
+    row = _comparison(
+        report, target="target_fantasy", format="normal",
+        comparison="fitted vs unseen season choice", scope="all",
+    )
+    assert row["mean_gain"] == pytest.approx(expected)
+
+
+def test_true_rank_sensitivity_really_compares_the_two_scales():
+    # An outlier in ``late`` makes it dominate the stored sum, but not the ranked one.
+    frame = _analysis_frame()
+    frame = frame[frame["format"] == "normal"].copy()
+    frame["late"] = frame["late"] * frame["Driver"].map({"D0": 100.0}).fillna(1.0)
+    winner = ("driver_rolling", "late")
+    expected = compare_scores(
+        race_scores(frame, combination_signal(frame, winner, scale="rank"), "target_fantasy"),
+        race_scores(frame, combination_signal(frame, winner), "target_fantasy"),
+    ).mean_gain
+    assert expected != 0
+    rows, _ = _format_comparisons(frame, "target_fantasy", "normal", winner)
+    row = next(r for r in rows if r["comparison"] == "true ranks vs stored ranks: winner")
+    assert row["mean_gain"] == pytest.approx(expected)
 
 
 def test_fitted_scores_for_a_held_out_season_never_train_on_that_season():

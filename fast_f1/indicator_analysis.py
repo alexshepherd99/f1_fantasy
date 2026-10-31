@@ -11,6 +11,11 @@ import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
 
+from common import AssetType, setup_logging
+from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, DEFAULT_OUTPUT_DIRECTORY
+from import_data.import_history import load_all_archive_data
+from import_data.odds import _FILE_BETTING_ODDS
+
 logger = logging.getLogger(__name__)
 
 RACE_KEYS = ["Season", "Race"]
@@ -18,7 +23,19 @@ RACE_KEYS = ["Season", "Race"]
 BOOTSTRAP_RESAMPLES = 10_000
 BOOTSTRAP_SEED = 20261031
 
+TARGETS = ("target_fantasy", "target_finish")
+HOLDOUT_SEASON = 2026
+
 COMBINATION_SLOTS = ("driver_rolling", "constructor_rolling", "early", "late")
+BASELINE_SLOTS = ("driver_rolling",)
+AGGREGATE_SLOTS = ("driver_rolling", "early", "late")
+LAP_SCREEN_SIGNALS = ("early_laps", "late_laps", "early_stint", "late_stint")
+STANDALONE_SIGNALS = (*COMBINATION_SLOTS, "odds", *LAP_SCREEN_SIGNALS)
+
+COMPARED_FORMATS = ("normal", "sprint")
+
+ODDS_LEAK_SNAPSHOT = "Odds_Post_Quali"
+ODDS_PRE_WEEKEND_SNAPSHOT = "Odds_Pre_Weekend"
 
 NEVER_RACED_STATUSES = ("Did not start", "Withdrew")
 FINISHED_STATUSES = ("Finished", "Lapped")
@@ -342,3 +359,278 @@ def leave_one_season_out_fitted(
             race_scores(held_out, fitted_signal(held_out, weights[season]), target)
         )
     return pd.concat(held_out_scores, ignore_index=True), weights
+
+
+def odds_capture_points(odds: pd.DataFrame) -> dict[int, str]:
+    """Work out which snapshot column each race's ``Odds`` were taken from.
+
+    Raises:
+        ValueError: No snapshot matches every driver in a race.
+    """
+    def _normalised(prices: pd.Series) -> pd.Series:
+        return prices.astype(str).str.strip().str.replace(r"[-:]", "/", regex=True)
+
+    captured: dict[int, str] = {}
+    for race_num, race in odds.groupby("Race"):
+        chosen = _normalised(race["Odds"])
+        matches = [
+            column for column in odds.columns
+            if column.startswith("Odds_") and (_normalised(race[column]) == chosen).all()
+        ]
+        if not matches:
+            msg = f"No odds snapshot matches every driver in race {race_num}"
+            logger.error(msg)
+            raise ValueError(msg)
+        captured[race_num] = matches[0]
+    return captured
+
+
+def _scores_for(frame: pd.DataFrame, slots: tuple[str, ...], target: str) -> pd.DataFrame:
+    return race_scores(frame, combination_signal(frame, slots), target)
+
+
+def _comparison_row(
+    labels: dict[str, str], comparison: str, scope: str, result: Comparison
+) -> dict:
+    return {
+        **labels,
+        "comparison": comparison,
+        "scope": scope,
+        "races": result.races,
+        "mean_gain": result.mean_gain,
+        "low": result.low,
+        "high": result.high,
+        **{f"gain_{season}": gain for season, gain in result.season_gains.items()},
+        "wins": result.wins,
+    }
+
+
+def _usable_odds_races(frame: pd.DataFrame, capture_points: dict[int, str]) -> pd.DataFrame:
+    """The held-out season's rows, less any race whose odds knew qualifying."""
+    return frame[
+        (frame["Season"] == HOLDOUT_SEASON)
+        & (frame["Race"].map(capture_points) != ODDS_LEAK_SNAPSHOT)
+    ]
+
+
+def _standalone_table(
+    frame: pd.DataFrame, target: str, capture_points: dict[int, str]
+) -> pd.DataFrame:
+    """Score every signal alone, per weekend format and per season."""
+    rows = []
+    for race_format, in_format in frame.groupby("format"):
+        signals = [*STANDALONE_SIGNALS, "grid"]
+        if race_format == FORMAT_SPRINT_FP1:
+            signals = [signal for signal in signals if not signal.startswith("late")]
+        for signal in signals:
+            if signal == "odds":
+                scoped = _usable_odds_races(in_format, capture_points)
+                if scoped.empty:
+                    continue
+            else:
+                scoped = in_format
+            values = scoped[signal]
+            if signal in LAP_SCREEN_SIGNALS:
+                values = values.fillna(0.0)
+            scores = race_scores(scoped, values, target)
+            for season, group in [("all", scores), *scores.groupby("Season")]:
+                rows.append({
+                    "target": target,
+                    "format": race_format,
+                    "signal": signal,
+                    "season": season,
+                    "races": len(group),
+                    "spearman": group["spearman"].mean(),
+                    "top3": group["top3"].mean(),
+                    "top5": group["top5"].mean(),
+                })
+    return pd.DataFrame(rows)
+
+
+def _overlap_table(frame: pd.DataFrame) -> pd.DataFrame:
+    """Mean within-race Spearman between each pair of slots, per weekend format."""
+    rows = []
+    for race_format in COMPARED_FORMATS:
+        in_format = frame[frame["format"] == race_format]
+        for first, second in combinations(COMBINATION_SLOTS, 2):
+            scores = race_scores(in_format, in_format[first], second)
+            rows.append({
+                "format": race_format,
+                "first": first,
+                "second": second,
+                "spearman": scores["spearman"].mean(),
+            })
+    return pd.DataFrame(rows)
+
+
+def _format_comparisons(
+    in_format: pd.DataFrame, target: str, race_format: str, winner: tuple[str, ...]
+) -> tuple[list[dict], dict]:
+    """The comparisons for one target on one weekend format, and the stability row."""
+    labels = {"target": target, "format": race_format}
+    rolling = _scores_for(in_format, BASELINE_SLOTS, target)
+    best = _scores_for(in_format, winner, target)
+    aggregate = _scores_for(in_format, AGGREGATE_SLOTS, target)
+    grid = race_scores(in_format, in_format["grid"], target)
+    chosen_scores, chosen = leave_one_season_out_selection(in_format, target)
+    fitted_scores, weights = leave_one_season_out_fitted(in_format, target)
+
+    def _held_out(scores: pd.DataFrame) -> pd.DataFrame:
+        return scores[scores["Season"] == HOLDOUT_SEASON]
+
+    rows = [
+        _comparison_row(labels, "winner vs rolling", "all", compare_scores(best, rolling)),
+        _comparison_row(
+            labels, "winner vs rolling", str(HOLDOUT_SEASON),
+            compare_scores(_held_out(best), _held_out(rolling)),
+        ),
+        _comparison_row(labels, "winner vs aggregate", "all", compare_scores(best, aggregate)),
+        _comparison_row(
+            labels, "winner vs aggregate", str(HOLDOUT_SEASON),
+            compare_scores(_held_out(best), _held_out(aggregate)),
+        ),
+        _comparison_row(labels, "aggregate vs rolling", "all", compare_scores(aggregate, rolling)),
+        _comparison_row(labels, "grid vs rolling", "all", compare_scores(grid, rolling)),
+        _comparison_row(labels, "grid vs winner", "all", compare_scores(grid, best)),
+        _comparison_row(
+            labels, "unseen season choice vs rolling", "all", compare_scores(chosen_scores, rolling)
+        ),
+        _comparison_row(
+            labels, "fitted vs unseen season choice", "all",
+            compare_scores(fitted_scores, chosen_scores),
+        ),
+        _comparison_row(
+            labels, "fitted vs rolling", "all", compare_scores(fitted_scores, rolling)
+        ),
+        _comparison_row(
+            labels, "true ranks vs stored ranks: winner", "all",
+            compare_scores(
+                race_scores(in_format, combination_signal(in_format, winner, scale="rank"), target),
+                best,
+            ),
+        ),
+    ]
+    for label, subset in (
+        ("set a time only: winner vs rolling", in_format[~in_format["no_time"]]),
+        ("finishers only: winner vs rolling", in_format[in_format["finished"]]),
+    ):
+        rows.append(_comparison_row(
+            labels, label, "all",
+            compare_scores(
+                _scores_for(subset, winner, target), _scores_for(subset, BASELINE_SLOTS, target)
+            ),
+        ))
+    stability = {
+        **labels,
+        "chosen_by_held_out_season": chosen,
+        "fitted_weights_by_held_out_season": weights,
+    }
+    return rows, stability
+
+
+def _odds_comparisons(
+    frame: pd.DataFrame,
+    target: str,
+    winners: dict[str, tuple[str, ...]],
+    capture_points: dict[int, str],
+) -> list[dict]:
+    """Compare odds with the best non-odds signal inside the held-out season."""
+    races = _usable_odds_races(frame, capture_points)
+    best_signal = pd.concat([
+        combination_signal(races[races["format"] == race_format], winner)
+        for race_format, winner in winners.items()
+    ]).reindex(races.index)
+    best = race_scores(races, best_signal, target)
+    alone = race_scores(races, races["odds"], target)
+    together = race_scores(races, best_signal + races["odds"], target)
+    rolling = _scores_for(races, BASELINE_SLOTS, target)
+    aggregate = _scores_for(races, (*AGGREGATE_SLOTS, "odds"), target)
+    pairs = [
+        ("odds vs best non-odds", alone, best),
+        ("odds + best non-odds vs best non-odds", together, best),
+        ("odds + best non-odds vs odds", together, alone),
+        ("odds vs rolling", alone, rolling),
+        ("aggregate with odds vs best non-odds", aggregate, best),
+    ]
+    pre_weekend = {
+        race for race, column in capture_points.items() if column == ODDS_PRE_WEEKEND_SNAPSHOT
+    }
+    scopes = {
+        str(HOLDOUT_SEASON): lambda scores: scores,
+        "pre_weekend": lambda scores: scores[scores["Race"].isin(pre_weekend)],
+        "during_weekend": lambda scores: scores[~scores["Race"].isin(pre_weekend)],
+    }
+    labels = {"target": target, "format": "odds"}
+    return [
+        _comparison_row(labels, name, scope, compare_scores(pick(first), pick(second)))
+        for name, first, second in pairs
+        for scope, pick in scopes.items()
+    ]
+
+
+def run_analysis(frame: pd.DataFrame, capture_points: dict[int, str]) -> dict[str, pd.DataFrame]:
+    """Produce every table the effort reports, keyed by name.
+
+    Winners are chosen on the seasons before ``HOLDOUT_SEASON``, separately for each
+    target and each compared weekend format.
+    """
+    standalone, comparison_rows, stability_rows, winner_rows, combination_tables = [], [], [], [], []
+    for target in TARGETS:
+        standalone.append(_standalone_table(frame, target, capture_points))
+        winners: dict[str, tuple[str, ...]] = {}
+        for race_format in COMPARED_FORMATS:
+            in_format = frame[frame["format"] == race_format]
+            development = in_format[in_format["Season"] != HOLDOUT_SEASON]
+            for split, subset in (
+                ("development", development),
+                (str(HOLDOUT_SEASON), in_format[in_format["Season"] == HOLDOUT_SEASON]),
+                ("all", in_format),
+            ):
+                combination_tables.append(
+                    rank_combinations(subset, target).assign(
+                        target=target, format=race_format, split=split
+                    )
+                )
+            winners[race_format] = rank_combinations(development, target)["combination"].iloc[0]
+            winner_rows.append(
+                {"target": target, "format": race_format, "combination": winners[race_format]}
+            )
+            rows, stability = _format_comparisons(
+                in_format, target, race_format, winners[race_format]
+            )
+            comparison_rows.extend(rows)
+            stability_rows.append(stability)
+        comparison_rows.extend(_odds_comparisons(frame, target, winners, capture_points))
+    return {
+        "winners": pd.DataFrame(winner_rows),
+        "standalone": pd.concat(standalone, ignore_index=True),
+        "overlap": _overlap_table(frame),
+        "combinations": pd.concat(combination_tables, ignore_index=True),
+        "comparisons": pd.DataFrame(comparison_rows),
+        "stability": pd.DataFrame(stability_rows),
+    }
+
+
+def main() -> None:
+    """Run the analysis on the real data and write its tables to ``outputs/``."""
+    setup_logging()
+    try:
+        metrics = pd.read_excel(DEFAULT_HISTORICAL_OUTPUT)
+        odds = pd.read_excel(_FILE_BETTING_ODDS)
+    except OSError:
+        logger.exception("Could not read the analysis inputs")
+        raise
+    frame = build_analysis_frame(metrics, load_all_archive_data(AssetType.DRIVER))
+    # Odds can be captured for a race before its results reach the metrics file.
+    analysed_races = frame.loc[frame["Season"] == HOLDOUT_SEASON, "Race"]
+    held_out_odds = odds[(odds["Season"] == HOLDOUT_SEASON) & odds["Race"].isin(analysed_races)]
+    report = run_analysis(frame, odds_capture_points(held_out_odds))
+    DEFAULT_OUTPUT_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    for name, table in report.items():
+        path = DEFAULT_OUTPUT_DIRECTORY / f"indicator_analysis_v1_{name}.csv"
+        table.to_csv(path, index=False)
+        logger.info("Wrote %s", path)
+
+
+if __name__ == "__main__":
+    main()
