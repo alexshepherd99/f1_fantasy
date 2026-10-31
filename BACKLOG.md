@@ -7,6 +7,7 @@ Efforts under `docs/`:
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
+| [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | in progress |
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
 
@@ -283,6 +284,9 @@ Raised 2026-07-27, on completing `docs/fastf1_v1/` — the module works and is
 unused, which is the whole point of the next step rather than a defect in it.
 
 ## Regress the FastF1 indicator against rolling points, both versus finishing position
+
+[Picked up 2026-10-31: answered by `docs/indicator_analysis_v1/`, which widens it to
+every combination of indicators, with fantasy points as the main target.]
 
 Before building *Build a strategy on the FastF1 indicators* above, establish
 whether the new signal actually carries more information than the rolling points
