@@ -15,6 +15,20 @@ Global list of not-yet-started work. Freeform. When an item is picked up, create
 
 An entry that runs past ~350 words gets its own `docs/<effort-name>/proposal.md`, leaving a short pointer entry in this list. Picking the item up then adds `requirements.md` / `plan.md` / `log.md` beside it as usual. The threshold is a prompt to judge, not a gate — it is where the entries here actually split (2026-07-30: seven at 110-330 words, two at 537 and 766), not a target. Note this puts a `docs/<effort-name>/` directory in place before work starts, which `agentic`'s `shared/persistent-docs.md` does not describe; it is a deliberate local extension, worth proposing upstream if it sticks.
 
+## Next session: follow-ups from `indicator_analysis_v1`
+
+Raised by Alex 2026-10-31, to start in a fresh session. Findings are in
+`docs/indicator_analysis_v1/log.md`.
+
+- **Best signal for the first race of a season.** There are no previous points to
+  refer to there, and `indicator_analysis_v1` excludes race 1 for that reason (its R4),
+  so this is unanswered.
+- **Clarify one sentence for Alex:** "Fitted weights: not worth using, as simple equal
+  weights match them on normal weekends and clearly beat them on sprint weekends."
+- **What a Spearman gain might translate to in a strategy.** Get some understanding of
+  what the gain could be worth when a strategy is built. Pure approximation is fine in
+  the first instance.
+
 ## Unported FastF1 signals from the removed `external_data` prototype
 
 The `external_data/` prototype was removed 2026-07-25; its code is recoverable
