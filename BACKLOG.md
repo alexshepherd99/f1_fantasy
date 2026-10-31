@@ -7,7 +7,7 @@ Efforts under `docs/`:
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
-| [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | in progress |
+| [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | done |
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
 
@@ -197,6 +197,9 @@ concrete answer.
 
 ## Build a strategy on the FastF1 indicators
 
+[2026-10-31: `docs/indicator_analysis_v1/log.md` has the best-performing indicator
+combinations to start from, which differ between normal and sprint weekends.]
+
 `fast_f1` produces a per-driver `AggregateRank` for every race but nothing
 consumes it. It is a standalone signal — `docs/fastf1_v1/` is complete as of
 2026-07-27, and every strategy in `linear/` still optimises on fantasy points,
@@ -287,6 +290,10 @@ unused, which is the whole point of the next step rather than a defect in it.
 
 [Picked up 2026-10-31: answered by `docs/indicator_analysis_v1/`, which widens it to
 every combination of indicators, with fantasy points as the main target.]
+[Done 2026-10-31: the gate does not stop the strategy. Against fantasy points,
+`AggregateRank` rebuilt without odds neither clearly beats nor clearly loses to rolling
+points, at +0.023 on normal weekends and −0.056 on sprint weekends, with both intervals
+spanning zero. See `docs/indicator_analysis_v1/log.md`.]
 
 Before building *Build a strategy on the FastF1 indicators* above, establish
 whether the new signal actually carries more information than the rolling points

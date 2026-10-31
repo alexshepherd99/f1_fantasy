@@ -73,7 +73,10 @@ candidates.
 - Candidates are the 15 equal-weight sums of the four non-odds slots.
 - Benchmarks are rolling points alone (the baseline every win is measured against),
   the rebuilt `AggregateRank` (`driver_rolling` + `early` + `late`, plus odds in
-  2026), and grid position as a ceiling.
+  2026), and grid position as a ceiling. [Corrected 2026-10-31: grid position turned
+  out not to be a ceiling for fantasy points, so it is reported as a plain comparison.
+  The odds are only added to the aggregate in the odds comparison, so that the
+  all-season comparisons stay like for like. See `log.md`.]
 - `AggregateRank` is rebuilt from its components because its stored value adds up
   different inputs by season.
 - The winner is chosen on 2023–25 (2024–25 for sprint weekends, the earlier seasons
