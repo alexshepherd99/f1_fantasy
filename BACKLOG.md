@@ -32,6 +32,24 @@ signals in it have no `fast_f1/` equivalent and may be worth porting:
 - **Season aggregate points rank** — cumulative season-to-date points per
   driver, dense-ranked per race; broader than `fast_f1`'s 3-race window.
 
+## Bring `AggregateRank` into line with the indicator conclusions
+
+`AggregateRank` still adds every rank column at weight 1.0, with only
+`METRIC_WEIGHTS` in `fast_f1/metrics.py` setting constructor rolling points to
+zero. `docs/indicator_analysis_v1/log.md`, *Conclusions*, wants driver +
+constructor + FP3 on normal weekends, driver + constructor on sprint weekends,
+and odds for race 1, which one flat dict cannot say. So the ranking
+`fast_f1.cli` prints each race is on the older signal.
+
+Nothing outside `fast_f1` reads the column. `fastf1_v2` builds its signal from
+the component columns and defines it once in `fast_f1`, so reuse that definition
+here rather than writing a second one. Changing the column moves the stored
+values in `data/fastf1_practice_rolling_metrics.xlsx`, and tests in
+`test_fastf1_metrics.py` and `test_fast_f1_output.py` pin today's weights.
+
+Raised by Alex 2026-11-01, and moved here from `docs/fastf1_v2/` as its question 6
+decided the strategy does not depend on it.
+
 ## Lift concentration calculation into `StrategyBase`
 
 `StrategyBettingOdds.get_problem()` (`linear/strategy_odds.py:36-88`) builds
