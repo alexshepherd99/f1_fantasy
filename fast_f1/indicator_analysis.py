@@ -19,6 +19,7 @@ from import_data.odds import _FILE_BETTING_ODDS
 logger = logging.getLogger(__name__)
 
 RACE_KEYS = ["Season", "Race"]
+FIRST_RACE = 1
 
 BOOTSTRAP_RESAMPLES = 10_000
 BOOTSTRAP_SEED = 20261031
@@ -110,9 +111,15 @@ def build_analysis_frame(metrics: pd.DataFrame, archive: pd.DataFrame) -> pd.Dat
         ValueError: A remaining driver has no fantasy points, or a race has no
             practice sessions.
     """
-    kept = metrics[
-        (metrics["Race"] > 1) & ~metrics["Status"].isin(NEVER_RACED_STATUSES)
-    ].copy()
+    return _frame_from_kept_rows(
+        metrics[(metrics["Race"] > FIRST_RACE) & ~metrics["Status"].isin(NEVER_RACED_STATUSES)],
+        archive,
+    )
+
+
+def _frame_from_kept_rows(kept: pd.DataFrame, archive: pd.DataFrame) -> pd.DataFrame:
+    """Join fantasy points onto rows already filtered, and build targets and slots."""
+    kept = kept.copy()
     frame = kept.merge(
         _fantasy_points(archive), on=["Season", "Race", "Driver"], how="left", validate="1:1"
     ).set_axis(kept.index)
@@ -147,6 +154,57 @@ def build_analysis_frame(metrics: pd.DataFrame, archive: pd.DataFrame) -> pd.Dat
         late_time.isna() & (frame["format"] != FORMAT_SPRINT_FP1)
     )
     return frame.reset_index(drop=True)
+
+
+def _first_race_prices(archive: pd.DataFrame) -> pd.DataFrame:
+    """Each driver's race 1 price, from the constructor they scored points with."""
+    raced = archive[(archive["Race"] == FIRST_RACE) & archive["Points"].notna()]
+    return pd.DataFrame({
+        "Season": raced["Season"],
+        "Driver": raced["Driver"].str.split("@").str[0],
+        "price": raced["Price"],
+    })
+
+
+def _prior_season_points(archive: pd.DataFrame) -> pd.DataFrame:
+    """Each driver's total fantasy points, keyed to the season after they were scored."""
+    totals = _fantasy_points(archive).groupby(["Season", "Driver"], as_index=False)[
+        "target_fantasy"
+    ].sum()
+    return pd.DataFrame({
+        "Season": totals["Season"] + 1,
+        "Driver": totals["Driver"],
+        "prior_season": totals["target_fantasy"],
+    })
+
+
+def build_first_race_frame(metrics: pd.DataFrame, archive: pd.DataFrame) -> pd.DataFrame:
+    """Build race 1's rows, with the signals known before any race has been run.
+
+    Holds what ``build_analysis_frame`` holds, for race 1 alone, plus ``price``,
+    ``prior_season`` and ``early_late``. ``prior_season`` is missing for a driver with
+    no fantasy points in the season before.
+
+    Raises:
+        ValueError: A remaining driver has no fantasy points or no race 1 price, or a
+            race has no practice sessions.
+    """
+    frame = _frame_from_kept_rows(
+        metrics[(metrics["Race"] == FIRST_RACE) & ~metrics["Status"].isin(NEVER_RACED_STATUSES)],
+        archive,
+    )
+    for signals in (_first_race_prices(archive), _prior_season_points(archive)):
+        frame = frame.merge(signals, on=["Season", "Driver"], how="left", validate="1:1")
+    unpriced = frame[frame["price"].isna()]
+    if not unpriced.empty:
+        names = ", ".join(
+            f"{row.Season} race {row.Race} {row.Driver}" for row in unpriced.itertuples()
+        )
+        msg = f"No race 1 price for: {names}"
+        logger.error(msg)
+        raise ValueError(msg)
+    frame["early_late"] = combination_signal(frame, ("early", "late"))
+    return frame
 
 
 def combination_signal(

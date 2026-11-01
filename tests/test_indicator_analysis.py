@@ -7,6 +7,7 @@ from fast_f1.indicator_analysis import (
     all_combinations,
     bootstrap_interval,
     build_analysis_frame,
+    build_first_race_frame,
     combination_signal,
     compare_scores,
     fit_weights,
@@ -737,3 +738,87 @@ def test_fitted_scores_for_a_held_out_season_never_train_on_that_season():
     assert weights[2025]["a"] > 0
     assert weights[2024]["a"] < 0
     assert scores["spearman"].tolist() == pytest.approx([-1.0, -1.0, -1.0, -1.0])
+
+
+def _priced(season: int, race: int, driver_id: str, points: float | None, price: float | None) -> dict:
+    return _archive_row(season, race, driver_id, points) | {"Price": price}
+
+
+def _first_race_row(frame: pd.DataFrame, driver: str = "HAM") -> pd.Series:
+    return frame.set_index("Driver").loc[driver]
+
+
+def test_first_race_frame_holds_only_race_one():
+    frame = build_first_race_frame(
+        pd.DataFrame([_metrics_row(2024, 1, "HAM"), _metrics_row(2024, 2, "HAM")]),
+        pd.DataFrame([_priced(2024, 1, "HAM@MER", 10.0, 20.0), _priced(2024, 2, "HAM@MER", 11.0, 21.0)]),
+    )
+    assert frame["Race"].tolist() == [1]
+
+
+def test_first_race_frame_drops_drivers_who_never_raced():
+    frame = build_first_race_frame(
+        pd.DataFrame([_metrics_row(2024, 1, "HAM"), _metrics_row(2024, 1, "VER", Status="Withdrew")]),
+        pd.DataFrame([_priced(2024, 1, "HAM@MER", 10.0, 20.0)]),
+    )
+    assert frame["Driver"].tolist() == ["HAM"]
+
+
+def test_first_race_price_is_race_ones_price_not_a_later_one():
+    frame = build_first_race_frame(
+        pd.DataFrame([_metrics_row(2024, 1, "HAM")]),
+        pd.DataFrame([_priced(2024, 1, "HAM@MER", 10.0, 20.0), _priced(2024, 2, "HAM@MER", 11.0, 25.0)]),
+    )
+    assert _first_race_row(frame)["price"] == 20.0
+
+
+def test_first_race_price_is_from_the_constructor_actually_driven_for():
+    frame = build_first_race_frame(
+        pd.DataFrame([_metrics_row(2024, 1, "BEA")]),
+        pd.DataFrame([_priced(2024, 1, "BEA@FER", None, 7.0), _priced(2024, 1, "BEA@HAA", 12.0, 9.0)]),
+    )
+    assert _first_race_row(frame, "BEA")["price"] == 9.0
+
+
+def test_first_race_driver_with_no_price_is_an_error_not_a_silent_gap():
+    with pytest.raises(ValueError, match="2024 race 1.*HAM"):
+        build_first_race_frame(
+            pd.DataFrame([_metrics_row(2024, 1, "HAM")]),
+            pd.DataFrame([_priced(2024, 1, "HAM@MER", 10.0, None)]),
+        )
+
+
+def test_first_race_prior_season_totals_last_season_across_constructors():
+    frame = build_first_race_frame(
+        pd.DataFrame([_metrics_row(2024, 1, "BEA")]),
+        pd.DataFrame([
+            _priced(2022, 1, "BEA@FER", 500.0, 7.0),
+            _priced(2023, 1, "BEA@FER", 30.0, 7.0),
+            _priced(2023, 2, "BEA@HAA", 12.0, 8.0),
+            _priced(2024, 1, "BEA@HAA", 99.0, 9.0),
+        ]),
+    )
+    assert _first_race_row(frame, "BEA")["prior_season"] == 42.0
+
+
+def test_first_race_driver_absent_last_season_has_no_prior_score_and_stays_in():
+    frame = build_first_race_frame(
+        pd.DataFrame([_metrics_row(2024, 1, "HAM"), _metrics_row(2024, 1, "ANT")]),
+        pd.DataFrame([
+            _priced(2023, 1, "HAM@MER", 30.0, 20.0),
+            _priced(2024, 1, "HAM@MER", 10.0, 20.0),
+            _priced(2024, 1, "ANT@MER", 10.0, 9.0),
+        ]),
+    )
+    assert _first_race_row(frame, "HAM")["prior_season"] == 30.0
+    assert pd.isna(_first_race_row(frame, "ANT")["prior_season"])
+
+
+def test_first_race_frame_lines_up_the_practice_slots_and_their_sum():
+    row = _first_race_row(build_first_race_frame(
+        pd.DataFrame([_metrics_row(2024, 1, "HAM")]),
+        pd.DataFrame([_priced(2024, 1, "HAM@MER", 10.0, 20.0)]),
+    ))
+    assert row["early"] == 0.3
+    assert row["late"] == 0.4
+    assert row["early_late"] == pytest.approx(0.7)
