@@ -1,17 +1,21 @@
 # fastf1_v2 — Log
 
 Execution log for the fastf1_v2 effort. Newest entries at the bottom. Requirements live
-alongside in `requirements.md`, and `plan.md` follows once its questions are answered.
+alongside in `requirements.md`, and the steps in `plan.md`.
 
 ## Status summary
 
 - Effort opened 2026-11-01. The backlog item has moved to `requirements.md`. Questions
   are being asked one at a time, and no code has been written.
-- Paused 2026-11-01 at question 1 of 8, which has been put to Alex and not yet answered.
-  Questions 2 to 8, their evidence and how to resume are in `requirements.md`.
-- Only decision so far: no hard rule on maximum spend, and a soft term gets tested.
-- Nothing from this effort is committed yet: `docs/fastf1_v2/` and the `BACKLOG.md` edit are
-  in the working tree.
+- All eight questions answered and the working assumptions confirmed 2026-11-01. `plan.md` is
+  written and no step has started.
+- Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
+  tested; the objective scores in expected fantasy points by signal position; a constructor
+  scores on its own rolling place, converted the same way; negatives get no separate term in
+  the base strategy, with a soft penalty as a tested variant; DRS sits inside the objective at
+  a coefficient of 1, with zero as the comparison; the signal is built from the component
+  columns, leaving `AggregateRank` to its own backlog item; and the verdict is the harness's
+  across four seasons, with coefficients fixed on 2023–25 before 2026 is run.
 
 ## 2026-11-01 — Sizing the two levers in the brief
 
@@ -229,3 +233,136 @@ Unaffected: everything measured on P2PM's held teams, which were reconciled to t
 points, the signal-position tables, which come from a frame validated one row per driver
 per race, and all constructor figures. The other negative-after-negative figures hold, at
 20% after one and 23% after two.
+
+## 2026-11-01 — Reaching fantasy assets, and a fault in 2024 race 24
+
+Checked for question 8, from throwaway read-only scripts, not kept. No data file was changed.
+
+### In plain language
+
+- **No constructor name mapping is needed.** Each driver row in the metrics file already leads
+  to the right fantasy constructor through the archive's per-race driver pairs.
+- **2024 race 24 has a real fault.** Four teams changed name in the FastF1 data at that race
+  alone, so they lost their rolling points and rank as if they had scored nothing.
+
+### Reaching fantasy assets
+
+Joining the metrics file's bare driver code to the archive's per-race pairs:
+
+| Season | Rows | Unmatched | Matching more than one pair | Race-constructors whose drivers differ on rank |
+| --- | --- | --- | --- | --- |
+| 2023 | 440 | 0 | 0 | 0 of 220 |
+| 2024 | 479 | 0 | 0 | 0 of 240 |
+| 2025 | 479 | 0 | 0 | 0 of 240 |
+| 2026 | 396 | 0 | 0 | 0 of 198 |
+
+A first attempt matched on rows with a price, and wrongly found some drivers ambiguous, because
+the archive prices stints a driver was not in (`LAW@RED` in 2026 race 1). The pairs do not have
+that problem.
+
+### The 2024 race 24 fault
+
+| Team at race 23 | Rolling points, race 23 | Name at race 24 | Rolling points, race 24 | Rank, race 24 |
+| --- | --- | --- | --- | --- |
+| Red Bull Racing | 45 | Red Bull | missing | 0 |
+| Alpine | 34 | Alpine F1 Team | missing | 0 |
+| RB | 10 | RB F1 Team | missing | 0 |
+| Kick Sauber | 0 | Sauber | missing | 0 |
+
+`_calculate_rolling_points` in `fast_f1/metrics.py` groups by the name, which fits a rename
+losing the history, though the cause has not been traced further. No other season has a team
+under two names. Red Bull and Alpine are clearly understated; RB too; Kick Sauber's rank of 0 may
+be right by chance.
+
+`AggregateRank` is unaffected, as constructor rolling points carry zero weight in it. The winning
+signal in `indicator_analysis_v1` does use the column, so this race fed into that analysis. It is
+one of 60 normal weekends, and its effect on those conclusions has not been sized.
+
+**How it happens, read from the code and not run.** `get_race_results` copies `TeamName` from
+FastF1 into `Constructor` (`fast_f1/api.py:243`). `build_race_metrics` sums the prior races'
+points by that name, then left-joins them to the current race on it (`fast_f1/output.py:202`). A
+name that differs from the prior races finds no match, which leaves the points missing and the
+rank 0, with no error. So the fault is in the code, and a delete and refresh would run it again.
+
+The four race 24 names look like the older Ergast naming rather than the live timing naming, which
+would mean a fallback in FastF1 for that race. That is an inference, not checked. If it is right,
+which races get those names could depend on the day of the refresh, so a refresh could put the
+fault at other races too. A rename mid-season would trigger it in a live season as well.
+
+## 2026-11-01 — One table or two across weekend formats
+
+Asked for by Alex before plan step 5. From a throwaway read-only script, not kept. It covers 2023–25
+only, so 2026 stays unseen, and leaves out race 1 and the faulty 2024 race 24: 48 normal and 18
+sprint weekends. The driver fantasy points were reconciled to the archive, all 1,307 rows, after a
+first run was discarded for mixing championship points into them.
+
+### In plain language
+
+**Keep one table.** Sprint weekends score about 20–30% more, but a sprint-only table is too noisy to
+help. It predicted sprint weekends worse than one table did, and changed the team on nearly every
+sprint weekend with no reliable gain. Scaling one table up for sprints changed almost nothing.
+
+### What each format scores
+
+| Drivers, position | 1 | 2–3 | 4–5 | 6–10 | 11–15 | 16–20 | Field total a race |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Normal | 31.2 | 26.6 | 19.7 | 12.1 | 4.4 | 3.7 | 224.0 |
+| Sprint | 42.6 | 30.6 | 23.5 | 15.9 | 5.4 | 6.5 | 288.3 |
+| Ratio | 1.36 | 1.15 | 1.19 | 1.31 | 1.23 | 1.78 | 1.29 |
+
+| Constructors, place | 1–2 | 3–4 | 5–7 | 8–10 | Field total a race |
+| --- | --- | --- | --- | --- | --- |
+| Normal | 58.8 | 45.7 | 18.3 | 10.0 | 293.8 |
+| Sprint | 71.1 | 52.5 | 19.4 | 16.5 | 355.1 |
+| Ratio | 1.21 | 1.15 | 1.06 | 1.65 | 1.21 |
+
+The rise is broadly even, with more at the very top and at the back. The intervals are wide on 18
+weekends, and the back's extra points are small in absolute terms.
+
+### Out-of-sample error
+
+Each season is scored on a table from the other two. Within-race error removes each race's mean,
+which is closer to what the LP uses. Lower is better.
+
+| Sprint weekends, within-race error | One table | Sprint-only | One table, scaled |
+| --- | --- | --- | --- |
+| Drivers | 14.97 | 15.45 | 15.02 |
+| Constructors | 23.19 | 24.07 | 23.25 |
+
+| Normal weekends, within-race error | One table | Normal-only | One table, scaled |
+| --- | --- | --- | --- |
+| Drivers | 12.70 | 12.72 | 12.64 |
+| Constructors | 20.79 | 20.97 | 20.72 |
+
+### The teams each table picks
+
+A team picked fresh each race, with DRS, ignoring the move limit, at a fixed budget. So this shows
+whether the table changes the choice, and is not a back-test. Mean actual points a race, with the
+change against one table and its 95% interval:
+
+| Budget | Format | One table | Split | Change | Teams differing | Scaled | Change | Teams differing |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 | Sprint | 215.3 | 201.1 | −14.2 (−35.6 to +4.1) | 17 of 18 | 215.3 | 0.0 | 0 |
+| 110 | Sprint | 241.2 | 242.0 | +0.8 (−25.2 to +28.8) | 16 of 18 | 235.8 | −5.3 (−16.0 to 0.0) | 1 |
+| 120 | Sprint | 252.7 | 233.8 | −18.9 (−39.4 to +0.4) | 16 of 18 | 248.2 | −4.6 (−13.7 to 0.0) | 1 |
+| 100 | Normal | 173.1 | 175.4 | +2.4 (−6.7 to +13.4) | 29 of 48 | 173.1 | 0.0 | 0 |
+| 110 | Normal | 189.4 | 187.9 | −1.5 (−7.5 to +4.4) | 26 of 48 | 190.2 | +0.8 (0.0 to +2.2) | 1 |
+| 120 | Normal | 198.7 | 197.2 | −1.4 (−5.3 to +2.5) | 29 of 48 | 200.0 | +1.4 (0.0 to +4.1) | 1 |
+
+### Limits and a side finding
+
+The budget reward and negative penalty are not in this test. Both are fixed-point terms, so they
+weigh about 20–30% too much relative to expected points on a sprint weekend. Not measured.
+
+The 18 sprint weekends here include 2023's six, which the signal can use as it needs no session.
+So a table has 12 sprint weekends in tuning and 18 for 2026. The requirement that 2023's sprints be
+treated separately in `indicator_analysis_v1` does not apply to the tables.
+
+**Plain means are out of order in places, even on 48 weekends.** Driver position 11 averages 7.2
+against 4.6 at position 10, and position 18 averages 6.6 against 2.5 at position 12. That looks like
+noise, and an LP would treat it as real. Plan step 5 now compares them with means forced to fall by
+position.
+
+| Driver position, normal weekends | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 18 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Mean fantasy points | 16.4 | 17.4 | 11.9 | 10.1 | 4.6 | 7.2 | 2.5 | 4.8 | 6.6 |
