@@ -148,6 +148,9 @@ conversation, from `BACKLOG.md`'s follow-ups to this effort.
   odds and grid has, so that those signals can be compared like for like.
 - **No winner and no R8 bar.** There is one race per season, so four at most, and
   condition 2 would be a single race's sign. The result is reported as size and spread.
+  [2026-11-01: the analysis still declares no winner. Having seen it, Alex took odds as
+  the best predictor so far, accepting the very limited data. See `log.md`,
+  *Conclusions*.]
 
 ## Out of scope
 

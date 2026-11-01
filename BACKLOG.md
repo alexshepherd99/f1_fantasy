@@ -201,7 +201,8 @@ concrete answer.
 combinations to start from, which differ between normal and sprint weekends.]
 [2026-11-01: the same log has a rough estimate of what those combinations' gain is
 worth, about 50 to 130 points a season against rolling points. It is not a comparison
-with P2PM.]
+with P2PM. Its *Conclusions* entry records the combinations Alex accepted, including
+odds for race 1.]
 
 `fast_f1` produces a per-driver `AggregateRank` for every race but nothing
 consumes it. It is a standalone signal — `docs/fastf1_v1/` is complete as of

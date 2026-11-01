@@ -10,7 +10,8 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
   fitted weights, and the report, all in `fast_f1/indicator_analysis.py`.
 - Step 7 completed 2026-10-31: findings below. The effort is done.
 - Step 8, the first race, added and completed 2026-11-01: below.
-- A rough estimate of what a Spearman gain is worth, 2026-11-01: last entry below.
+- A rough estimate of what a Spearman gain is worth, 2026-11-01: below.
+- Alex's conclusions, 2026-11-01: last entry below.
 
 ## 2026-10-31 — Scoping
 
@@ -325,3 +326,21 @@ points in every season, and perfect foresight far above. In view 1, a random pic
 scored 54.8 a race, against 55.4 expected by chance. These show that the simulation
 behaves, not that its size estimate is right. It has not been compared with the real
 engine.
+
+## 2026-11-01 — Conclusions
+
+Decided by Alex, having reviewed the findings above. These are the effort's conclusions,
+all for fantasy points, the primary target.
+
+- **Normal weekends: driver rolling + constructor rolling + FP3,** weighted equally.
+- **Sprint weekends: driver rolling + constructor rolling,** weighted equally. This is
+  accepted as the winner although it cannot be separated from driver rolling alone
+  (+0.014, −0.009 to +0.038).
+- **Race 1: betting odds are the best predictor so far.** This is accepted on very
+  limited data. It rests on 2026's single race, where odds scored 0.872 and FP2 0.854,
+  so it goes further than the 2026-11-01 first-race entry, which declared no winner.
+  That entry's figures stand.
+- **Rule of thumb:** 0.01 of Spearman is worth about 15–25 points a season.
+
+Alex will keep capturing race 1 odds in future seasons, to build up the evidence. 2026
+race 1 used the post-FP2 price, and a post-qualifying price cannot be scored (R2).
