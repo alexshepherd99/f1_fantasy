@@ -58,7 +58,8 @@ candidates.
 - The race is the unit of evidence. Scores are computed per race, and options are
   compared by the race-by-race difference.
 - Every comparison uses only races where all its options have data.
-- Race 1 is excluded, because rolling points are empty there.
+- Race 1 is excluded, because rolling points are empty there. [2026-11-01: still true
+  of every comparison here. R12 scores race 1 on its own.]
 - Drivers who did not start or withdrew are dropped. Retirements stay in, since a
   team picker suffers them too, with a finishers-only rerun as a sensitivity.
 
@@ -128,6 +129,25 @@ by capture point.
   is read through its existing loaders.
 - No new dependencies: numpy, scipy and pandas only.
 - Results go to `outputs/` (not tracked) and findings to `log.md`.
+
+## R12 — The first race, added 2026-11-01
+
+Which signal best predicts race 1, where R4 leaves the question unanswered. Agreed in
+conversation, from `BACKLOG.md`'s follow-ups to this effort.
+
+- **Signals:** the race 1 fantasy price; each driver's total fantasy points last
+  season, across constructors; the `early` and `late` slots and their sum; and odds,
+  with R2 applied. Grid position is a reference only, as in R2. FP1 on normal weekends
+  and pre-season testing are not in the metrics file and are left out.
+- **FP3 counts,** since it runs before team lock. The 2026 team was picked after FP2,
+  so the `early` row is the one that matches that routine.
+- **Drivers:** as R4, less race 1's exclusion. A driver with no previous season has no
+  score from that signal alone, and 2023 has no previous season in the archive.
+- **Scoring:** R5, against both targets, per season and averaged. Each signal is scored
+  on the data it has, and again on only the drivers and seasons that every signal bar
+  odds and grid has, so that those signals can be compared like for like.
+- **No winner and no R8 bar.** There is one race per season, so four at most, and
+  condition 2 would be a single race's sign. The result is reported as size and spread.
 
 ## Out of scope
 

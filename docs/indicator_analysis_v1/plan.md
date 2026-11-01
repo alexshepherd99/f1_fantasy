@@ -40,3 +40,9 @@ sensitivities, written to `outputs/`.
 
 Findings in `log.md`, a plain-language summary, and the backlog gate closed with
 the result.
+
+## Step 8 — The first race (R12), added 2026-11-01
+
+Build a race 1 frame and report its scores in `fast_f1/indicator_analysis.py`, add the
+findings to `log.md`, and take the item off `BACKLOG.md`. Same discipline as above: one
+commit per concern, each behavioural change seen failing.
