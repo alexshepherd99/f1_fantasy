@@ -7,6 +7,7 @@ Efforts under `docs/`:
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
+| [`fastf1_v2`](docs/fastf1_v2/) | in progress |
 | [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | done |
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
@@ -195,113 +196,6 @@ Raised 2026-07-27, immediately after deleting `get_fastf1_data.py`, when the
 question "what else is unprotected in the same way" turned out to have a
 concrete answer.
 
-## Build a strategy on the FastF1 indicators
-
-[2026-10-31: `docs/indicator_analysis_v1/log.md` has the best-performing indicator
-combinations to start from, which differ between normal and sprint weekends.]
-[2026-11-01: the same log has a rough estimate of what those combinations' gain is
-worth, about 50 to 130 points a season against rolling points. It is not a comparison
-with P2PM. Its *Conclusions* entry records the combinations Alex accepted, including
-odds for race 1.]
-
-**Bring `AggregateRank` into line with those conclusions** (raised by Alex 2026-11-01).
-It still adds every rank column at weight 1.0, so driver rolling points, both practice
-sessions and odds count equally, and only `METRIC_WEIGHTS` in `fast_f1/metrics.py` sets
-constructor rolling points to zero. The conclusions want driver + constructor + FP3 on
-normal weekends, driver + constructor on sprint weekends, and odds for race 1. One flat
-dict cannot say that, as the sessions differ by weekend format and race 1 differs again,
-so weights will need to depend on those. `fast_f1.cli` writes this column for each race,
-and this section's strategy is written to maximise it, so settle this before building on
-it. Changing it also moves the stored values in
-`data/fastf1_practice_rolling_metrics.xlsx`, which `indicator_analysis_v1` rebuilt from
-components and so does not rely on.
-
-`fast_f1` produces a per-driver `AggregateRank` for every race but nothing
-consumes it. It is a standalone signal — `docs/fastf1_v1/` is complete as of
-2026-07-27, and every strategy in `linear/` still optimises on fantasy points,
-price or odds. Whether the indicators actually pick better teams than P2PM is
-the open question the module was built to answer, and it cannot be answered
-without a strategy and a back-test.
-
-Add a `StrategyFastF1` subclassing `StrategyBase` that maximises `AggregateRank`
-subject to the existing budget/team-size/max-moves constraints, and back-test it
-against the other four.
-
-**How the signal gets in.** Two precedents. `StrategyMaxP2PM` reads
-`derivs_assets`, threaded from the `Race` object by
-`strategy_factory.factory_strategy()`. `StrategyBettingOdds`
-(`linear/strategy_odds.py:10-25`) ignores that and loads its own file in
-`__init__`, defaulting the path to a parameter (`fn_odds`) so tests can point at
-a fixture. The odds pattern is the closer fit — `AggregateRank` is a per-race
-external file, not a derivation of archive data — and its file-path parameter
-should be copied, not its hardcoded-default habit. A
-`data/test_fastf1_metrics.xlsx` fixture will be needed, as
-`tests/test_strategy_odds.py` has for odds.
-
-Five things to settle before writing any of it.
-
-- **Constructor identifiers do not match.** Drivers do: `fast_f1` writes the
-  bare FastF1 abbreviation (`ALO`) and `load_odds` already has a
-  `qualify_driver_with_constructor` flag to turn that into the repo-wide
-  `ALO@AST`. Constructors do not — the fantasy side uses three-letter codes
-  (`ALP`, `AST`, `AUD`, `CAD`, `FER`, `HAA`, `MCL`, `MER`, `RED`, `VRB`, `WIL`)
-  and `data/fastf1_practice_rolling_metrics.xlsx` carries FastF1 team names
-  (`Alpine`, `Aston Martin`, `Audi`, `Cadillac`, `Ferrari`, `Haas F1 Team`,
-  `McLaren`, `Mercedes`, `Racing Bulls`, `Red Bull Racing`, `Williams`). It is a
-  clean 1:1 mapping that exists nowhere in the repo, and it has to live
-  somewhere both `fast_f1` and `linear` can reach — probably `common`. Watch
-  mid-season and cross-season renames; `Racing Bulls`/`VRB` and `Audi`/`AUD` are
-  the ones that have moved.
-- **There is no constructor-level aggregate.** `AggregateRank` is per driver.
-  `ConstructorRollingPointsRank` exists but carries zero weight
-  (`fast_f1/metrics.py:METRIC_WEIGHTS`), and there is no constructor practice or
-  odds rank at all. `StrategyBettingOdds` solved the same problem by summing its
-  two drivers' values into a constructor value — "not accurate from a pure stats
-  perspective, but works when using as an LP optimise variable", as README puts
-  it. Either reuse that, or raise the constructor weight and build a genuine
-  constructor indicator. The former is cheaper and consistent; the latter is
-  what the zero weight was left adjustable for.
-- **The back-test data does not exist yet.**
-  `data/fastf1_practice_rolling_metrics.xlsx` currently holds 342 rows: 2023
-  races 1-6 and 2026 races 1-11. `run_multiple_teams.py` walks the seasons in
-  `common.F1_SEASON_CONSTRUCTORS`, which is 2023-2025, so a full
-  `python -m fast_f1.cli --historical` has to complete first. That is ~70 races
-  of API fetching, and worth doing before anything else here since it is the
-  long pole and everything else depends on it.
-- **Back-testing will only exercise part of the signal.** Odds coverage is 2026
-  races 1-11 only [2026-10-05: now 1–17] (see *Source betting odds directly from a web page* above), so
-  across 2023-2025 the `OddsRank` component is a constant zero and the back-test
-  measures the practice and rolling-points indicators alone. That is the same
-  limitation README already records for `StrategyBettingOdds` — "no historical
-  odds could be found during development, so it's not been back-tested" — and it
-  means a good back-test result understates the live strategy while a bad one is
-  not conclusive against it. Say which is being measured when reporting.
-- **Bias the objective towards getting P1 right.** A plain "maximise summed
-  `AggregateRank`" objective treats a unit of rank at the front of the field the
-  same as a unit at the back, but the fantasy scoring does not: P1 pays the most,
-  and doubly so once the DRS x2 multiplier lands on that driver (`races/team.py`
-  applies it to the highest-priced driver by default, and `StrategyMaxP2PM`
-  overrides `get_drs_driver()` to move it). Weight the top of the field
-  explicitly — either transform `AggregateRank` so the gap between 1st and 2nd
-  is worth more than the gap between 10th and 11th, or add a bonus term on
-  whichever driver the strategy nominates for DRS. Whatever the form, it needs
-  a coefficient that can be tuned and back-tested at zero, so the unbiased
-  objective stays available as the comparison case. [2026-09-19:
-  `docs/max_points_v1/proposal.md` argues that modelling DRS inside the LP
-  objective subsumes this; see its *Modelling the DRS boost in the objective*.]
-  [2026-09-28: only partly. The helper now exists on `StrategyBase`, and it
-  rewards teams with one strong driver, but it nominates by whatever values it is
-  given. So it biases selection towards the top of the field without improving
-  the DRS pick itself. See *Refine P2PM: better DRS nomination* below.]
-
-One game mechanic to note: `AggregateRank` needs FP2+FP3 (or FP1+Sprint
-Qualifying) to have run, so this strategy cannot pick a team before practice.
-That matches the odds strategy's recommended timing and rules out using it for
-`select_starting_team.py`-style pre-season picks.
-
-Raised 2026-07-27, on completing `docs/fastf1_v1/` — the module works and is
-unused, which is the whole point of the next step rather than a defect in it.
-
 ## Refine P2PM: better DRS nomination
 
 Not a priority. P2PM must not change before the 2026 season ends, so build this as a
@@ -333,8 +227,8 @@ does not use it. See `docs/odds_drs_v1/log.md`.] What it can and cannot buy:
   the helper's values if team selection should respond too. This overlaps with
   *Build a strategy on the FastF1 indicators* and its regression prerequisite
   above. [2026-11-01: that prerequisite is answered, in
-  `docs/indicator_analysis_v1/log.md`, and is off this list.] A DRS signal is a narrower
-  first use of `AggregateRank`.
+  `docs/indicator_analysis_v1/log.md`, and is off this list. The strategy item has moved
+  to `docs/fastf1_v2/`.] A DRS signal is a narrower first use of `AggregateRank`.
 - Perfect hindsight is not achievable, so the realistic gain is some unknown
   fraction of the ceiling.
 
