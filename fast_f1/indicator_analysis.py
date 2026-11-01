@@ -35,6 +35,8 @@ STANDALONE_SIGNALS = (*COMBINATION_SLOTS, "odds", *LAP_SCREEN_SIGNALS)
 
 COMPARED_FORMATS = ("normal", "sprint")
 
+FIRST_RACE_COMPARED_SIGNALS = ("price", "prior_season", "early", "late", "early_late")
+
 ODDS_LEAK_SNAPSHOT = "Odds_Post_Quali"
 ODDS_PRE_WEEKEND_SNAPSHOT = "Odds_Pre_Weekend"
 
@@ -505,6 +507,47 @@ def _standalone_table(
     return pd.DataFrame(rows)
 
 
+def first_race_table(frame: pd.DataFrame, capture_points: dict[int, str]) -> pd.DataFrame:
+    """Score the signals known before race 1, per target and season.
+
+    Scope ``own`` scores each signal on the rows where it has a value. Scope ``common``
+    scores ``FIRST_RACE_COMPARED_SIGNALS`` on only the rows where all of them have one,
+    so those can be compared like for like. A season's ``season`` is its year; ``all``
+    averages the seasons scored.
+
+    ``frame`` is from ``build_first_race_frame``, and ``capture_points`` maps race number
+    to the snapshot its odds were taken from.
+    """
+    usable_odds = _usable_odds_races(frame, capture_points)
+    common = frame.dropna(subset=list(FIRST_RACE_COMPARED_SIGNALS))
+    candidates = [
+        *(("own", signal, frame) for signal in (*FIRST_RACE_COMPARED_SIGNALS, "grid")),
+        ("own", "odds", usable_odds),
+        *(("common", signal, common) for signal in FIRST_RACE_COMPARED_SIGNALS),
+    ]
+    rows = []
+    for target in TARGETS:
+        for scope, signal, rows_in_scope in candidates:
+            scored = rows_in_scope.dropna(subset=[signal])
+            if scored.empty:
+                continue
+            scores = race_scores(scored, scored[signal], target)
+            drivers = scored.groupby("Season").size()
+            for season, group in [("all", scores), *scores.groupby("Season")]:
+                rows.append({
+                    "target": target,
+                    "scope": scope,
+                    "signal": signal,
+                    "season": season,
+                    "races": len(group),
+                    "drivers": drivers[group["Season"]].sum(),
+                    "spearman": group["spearman"].mean(),
+                    "top3": group["top3"].mean(),
+                    "top5": group["top5"].mean(),
+                })
+    return pd.DataFrame(rows)
+
+
 def _overlap_table(frame: pd.DataFrame) -> pd.DataFrame:
     """Mean within-race Spearman between each pair of slots, per weekend format."""
     rows = []
@@ -678,11 +721,18 @@ def main() -> None:
     except OSError:
         logger.exception("Could not read the analysis inputs")
         raise
-    frame = build_analysis_frame(metrics, load_all_archive_data(AssetType.DRIVER))
+    archive = load_all_archive_data(AssetType.DRIVER)
+    frame = build_analysis_frame(metrics, archive)
     # Odds can be captured for a race before its results reach the metrics file.
     analysed_races = frame.loc[frame["Season"] == HOLDOUT_SEASON, "Race"]
-    held_out_odds = odds[(odds["Season"] == HOLDOUT_SEASON) & odds["Race"].isin(analysed_races)]
-    report = run_analysis(frame, odds_capture_points(held_out_odds))
+    held_out_odds = odds[odds["Season"] == HOLDOUT_SEASON]
+    report = run_analysis(
+        frame, odds_capture_points(held_out_odds[held_out_odds["Race"].isin(analysed_races)])
+    )
+    report["first_race"] = first_race_table(
+        build_first_race_frame(metrics, archive),
+        odds_capture_points(held_out_odds[held_out_odds["Race"] == FIRST_RACE]),
+    )
     DEFAULT_OUTPUT_DIRECTORY.mkdir(parents=True, exist_ok=True)
     for name, table in report.items():
         path = DEFAULT_OUTPUT_DIRECTORY / f"indicator_analysis_v1_{name}.csv"

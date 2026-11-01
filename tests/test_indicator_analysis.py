@@ -10,6 +10,7 @@ from fast_f1.indicator_analysis import (
     build_first_race_frame,
     combination_signal,
     compare_scores,
+    first_race_table,
     fit_weights,
     fitted_signal,
     leave_one_season_out_fitted,
@@ -822,3 +823,156 @@ def test_first_race_frame_lines_up_the_practice_slots_and_their_sum():
     assert row["early"] == 0.3
     assert row["late"] == 0.4
     assert row["early_late"] == pytest.approx(0.7)
+
+
+def _first_race_season(season: int, order: list[float], **columns: list[float]) -> pd.DataFrame:
+    """A race 1 with one driver per value in ``order``, its best driver scoring most.
+
+    Every signal defaults to agreeing exactly with the result; ``columns`` overrides one.
+    """
+    agreeing = pd.Series(order, dtype=float)
+    return pd.DataFrame({
+        "Season": season,
+        "Race": 1,
+        "Driver": [f"D{i}" for i in range(len(order))],
+        "target_fantasy": agreeing,
+        "target_finish": agreeing,
+        "price": agreeing,
+        "prior_season": agreeing,
+        "early": agreeing,
+        "late": agreeing,
+        "early_late": agreeing,
+        "odds": agreeing,
+        "grid": agreeing,
+    }).assign(**columns)
+
+
+def _first_race_cell(table: pd.DataFrame, signal: str, season, scope: str = "own") -> pd.Series:
+    match = table[
+        (table["target"] == "target_fantasy")
+        & (table["scope"] == scope)
+        & (table["signal"] == signal)
+        & (table["season"] == season)
+    ]
+    assert len(match) == 1
+    return match.iloc[0]
+
+
+def test_first_race_table_scores_each_signal_per_season():
+    frame = _first_race_season(2024, [1.0, 2.0, 3.0, 4.0], price=[4.0, 3.0, 2.0, 1.0])
+    table = first_race_table(frame, {})
+    assert _first_race_cell(table, "price", 2024)["spearman"] == pytest.approx(-1.0)
+    assert _first_race_cell(table, "early", 2024)["spearman"] == pytest.approx(1.0)
+
+
+def test_first_race_table_scores_both_targets():
+    frame = _first_race_season(2024, [1.0, 2.0, 3.0, 4.0], target_finish=[4.0, 3.0, 2.0, 1.0])
+    table = first_race_table(frame, {})
+    finish = table[
+        (table["target"] == "target_finish") & (table["scope"] == "own")
+        & (table["signal"] == "price") & (table["season"] == 2024)
+    ]
+    assert finish["spearman"].tolist() == pytest.approx([-1.0])
+    assert _first_race_cell(table, "price", 2024)["spearman"] == pytest.approx(1.0)
+
+
+def test_first_race_table_averages_the_seasons_a_signal_has():
+    frame = pd.concat([
+        _first_race_season(2024, [1.0, 2.0, 3.0], price=[1.0, 2.0, 3.0]),
+        _first_race_season(2025, [1.0, 2.0, 3.0], price=[3.0, 2.0, 1.0]),
+    ], ignore_index=True)
+    cell = _first_race_cell(first_race_table(frame, {}), "price", "all")
+    assert cell["spearman"] == pytest.approx(0.0)
+    assert cell["races"] == 2
+    assert cell["drivers"] == 6
+
+
+def test_first_race_table_scores_a_signal_only_on_the_drivers_who_have_it():
+    frame = _first_race_season(
+        2024, [1.0, 2.0, 3.0, 4.0], prior_season=[1.0, 2.0, 3.0, None]
+    )
+    cell = _first_race_cell(first_race_table(frame, {}), "prior_season", 2024)
+    assert cell["drivers"] == 3
+    assert cell["spearman"] == pytest.approx(1.0)
+
+
+def test_first_race_table_reports_top_three_and_top_five_hit_rates_separately():
+    frame = _first_race_season(
+        2024, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], price=[6.0, 5.0, 4.0, 3.0, 2.0, 1.0]
+    )
+    cell = _first_race_cell(first_race_table(frame, {}), "price", 2024)
+    assert cell["top3"] == pytest.approx(0.0)
+    assert cell["top5"] == pytest.approx(0.8)
+
+
+def _two_seasons_with_no_prior_for_2023() -> pd.DataFrame:
+    frame = pd.concat([
+        _first_race_season(2023, [1.0, 2.0, 3.0]),
+        _first_race_season(2024, [1.0, 2.0, 3.0]),
+    ], ignore_index=True)
+    frame.loc[frame["Season"] == 2023, "prior_season"] = float("nan")
+    return frame
+
+
+def test_first_race_table_gives_no_row_for_a_season_a_signal_lacks():
+    table = first_race_table(_two_seasons_with_no_prior_for_2023(), {})
+    seasons = table[
+        (table["signal"] == "prior_season") & (table["target"] == "target_fantasy")
+        & (table["scope"] == "own")
+    ]["season"]
+    assert sorted(map(str, seasons)) == ["2024", "all"]
+    assert _first_race_cell(table, "price", 2023)["races"] == 1
+
+
+def test_first_race_common_scope_compares_signals_on_the_same_drivers():
+    # Price's one miss is the driver with no prior season, so only "common" hides it.
+    frame = _first_race_season(
+        2024,
+        [1.0, 2.0, 3.0, 4.0],
+        price=[4.0, 1.0, 2.0, 3.0],
+        prior_season=[None, 1.0, 2.0, 3.0],
+    )
+    table = first_race_table(frame, {})
+    assert _first_race_cell(table, "price", 2024)["spearman"] < 1.0
+    common = _first_race_cell(table, "price", 2024, scope="common")
+    assert common["spearman"] == pytest.approx(1.0)
+    assert common["drivers"] == 3
+
+
+def test_first_race_common_scope_leaves_out_a_season_any_signal_lacks():
+    table = first_race_table(_two_seasons_with_no_prior_for_2023(), {})
+    seasons = table[
+        (table["signal"] == "price") & (table["target"] == "target_fantasy")
+        & (table["scope"] == "common")
+    ]["season"]
+    assert sorted(map(str, seasons)) == ["2024", "all"]
+
+
+def test_first_race_common_scope_holds_only_the_signals_being_compared():
+    table = first_race_table(_first_race_season(2026, [1.0, 2.0, 3.0]), {})
+    common = set(table.loc[table["scope"] == "common", "signal"])
+    assert common == {"price", "prior_season", "early", "late", "early_late"}
+
+
+def test_first_race_own_scope_includes_grid_as_a_reference():
+    table = first_race_table(_first_race_season(2024, [1.0, 2.0, 3.0]), {})
+    assert _first_race_cell(table, "grid", 2024)["races"] == 1
+
+
+def test_first_race_odds_are_scored_on_the_held_out_season_only():
+    frame = pd.concat([
+        _first_race_season(2025, [1.0, 2.0, 3.0], odds=[0.0, 0.0, 0.0]),
+        _first_race_season(2026, [1.0, 2.0, 3.0]),
+    ], ignore_index=True)
+    table = first_race_table(frame, {1: "Odds_Post_FP2"})
+    seasons = table[
+        (table["signal"] == "odds") & (table["target"] == "target_fantasy")
+    ]["season"]
+    assert sorted(map(str, seasons)) == ["2026", "all"]
+
+
+def test_first_race_odds_captured_after_qualifying_are_not_scored():
+    frame = _first_race_season(2026, [1.0, 2.0, 3.0])
+    table = first_race_table(frame, {1: "Odds_Post_Quali"})
+    assert "odds" not in set(table["signal"])
+    assert "price" in set(table["signal"])
