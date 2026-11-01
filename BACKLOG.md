@@ -15,15 +15,6 @@ Global list of not-yet-started work. Freeform. When an item is picked up, create
 
 An entry that runs past ~350 words gets its own `docs/<effort-name>/proposal.md`, leaving a short pointer entry in this list. Picking the item up then adds `requirements.md` / `plan.md` / `log.md` beside it as usual. The threshold is a prompt to judge, not a gate — it is where the entries here actually split (2026-07-30: seven at 110-330 words, two at 537 and 766), not a target. Note this puts a `docs/<effort-name>/` directory in place before work starts, which `agentic`'s `shared/persistent-docs.md` does not describe; it is a deliberate local extension, worth proposing upstream if it sticks.
 
-## Next session: follow-ups from `indicator_analysis_v1`
-
-Raised by Alex 2026-10-31, to start in a fresh session. Findings are in
-`docs/indicator_analysis_v1/log.md`.
-
-- **What a Spearman gain might translate to in a strategy.** Get some understanding of
-  what the gain could be worth when a strategy is built. Pure approximation is fine in
-  the first instance.
-
 ## Unported FastF1 signals from the removed `external_data` prototype
 
 The `external_data/` prototype was removed 2026-07-25; its code is recoverable
@@ -208,6 +199,9 @@ concrete answer.
 
 [2026-10-31: `docs/indicator_analysis_v1/log.md` has the best-performing indicator
 combinations to start from, which differ between normal and sprint weekends.]
+[2026-11-01: the same log has a rough estimate of what those combinations' gain is
+worth, about 50 to 130 points a season against rolling points. It is not a comparison
+with P2PM.]
 
 `fast_f1` produces a per-driver `AggregateRank` for every race but nothing
 consumes it. It is a standalone signal — `docs/fastf1_v1/` is complete as of

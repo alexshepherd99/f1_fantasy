@@ -9,7 +9,8 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Steps 2–6 completed 2026-10-31: analysis frame, scoring, the bar, selection and
   fitted weights, and the report, all in `fast_f1/indicator_analysis.py`.
 - Step 7 completed 2026-10-31: findings below. The effort is done.
-- Step 8, the first race, added and completed 2026-11-01: last entry below.
+- Step 8, the first race, added and completed 2026-11-01: below.
+- A rough estimate of what a Spearman gain is worth, 2026-11-01: last entry below.
 
 ## 2026-10-31 — Scoping
 
@@ -247,3 +248,80 @@ relationship.
 
 The real entry point was run, and the six existing output files came out byte-identical,
 so the main analysis did not move.
+
+## 2026-11-01 — What a Spearman gain might be worth
+
+A deliberately rough estimate, asked for as "pure approximation in the first instance".
+It came from a throwaway script that is not kept and has no tests. The method below is
+enough to rebuild it.
+
+### In plain language
+
+**Moving from rolling points to the normal-weekend winner, a gain of 0.04, looks worth
+roughly 50 to 130 points a season, or about 1–3% of P2PM's 4,500–5,500.** As a rule of
+thumb, each 0.01 of Spearman is worth about 15–25 points a season.
+
+That is the same size as differences that have decided earlier back-tests (Max Points
+lost by 4 to 156 a season, and removing the race-4 chip moved results by 2 to 168). But
+it is small against luck in one season, as tiny changes to the signal alone moved a
+simulated season by a similar amount. It might show up across several seasons and
+would be hard to see in one.
+
+**This is not a comparison with P2PM.** It only measures rolling points against the
+winner inside a simplified simulation. It does not say an indicator strategy would beat
+P2PM, which only a back-test can show.
+
+### Three views
+
+Rolling points is the baseline. The candidate is driver + constructor + FP3 on normal
+weekends, and driver + constructor on sprint weekends. All three count drivers only.
+
+| View | What it does | Gain from +0.04 |
+| --- | --- | --- |
+| 1. Top five, no limits | Each of 60 normal races, take the signal's top five | +2.1 a race (−2.1 to +6.3) |
+| 2. Degraded result | Add noise to the actual result, and read points against Spearman | +4.1 a race, or +2.4 with a budget of 70 |
+| 3. Season simulation | Pick under a driver budget, with two moves a race | +2.2 to +6.2 a race, or +46 to +131 a season |
+
+View 2 is where the rule of thumb comes from: 0.6 (budget) to 1.0 (no budget) points a
+race per 0.01, near a Spearman of 0.6, over about 24 races.
+
+View 1 gains about half of what view 2's no-budget figure predicts, with an interval
+that spans zero. A plausible reason, reasoned and not tested, is that Spearman counts
+all twenty positions and a team only uses five.
+
+View 3 picks the highest-signal team of five under the budget, starting from race 2.
+A driver who leaves is replaced with a free move, and race 4 has unlimited moves, as
+P2PM's chip does. DRS doubles the team's highest-signal driver. Season gains in points:
+
+| Driver budget | 2023 | 2024 | 2025 | 2026 | Mean |
+| --- | --- | --- | --- | --- | --- |
+| 60 | −30 | −51 | +106 | +161 | +46 |
+| 70 | +72 | +22 | +121 | +85 | +75 |
+| 80 | +114 | +174 | +291 | −55 | +131 |
+| No limit | −11 | −20 | +210 | +95 | +68 |
+
+Adding random noise of 0.02 to the rolling points signal, with no real change, moved a
+season's total with a standard deviation of 19–93 points across 20 runs. So most single
+cells above cannot be told from noise. The direction is positive in 11 of 16, and those
+cells are not independent.
+
+### Limits
+
+- Constructors are not modelled, and neither are unused-transfer carryover or chips
+  other than the race 4 reset.
+- The budget is fixed, while a real team's value grows through a season. Top-five
+  drivers cost about 126 on average, so view 1 could not actually be afforded.
+- The winner was chosen on 2023–25, which flatters those seasons. 2026 is the fair read,
+  and its gains are +161, +85, −55 and +95.
+- 2026 has 17 races scored, and the others 21–23.
+- The noise size in the check above is a judgement call. A different one changes the
+  floor.
+
+### Checks
+
+The simulation asserted its move limit and team size on every race, and no rolling-points
+or winner team went over budget. Under budgets of 70 and no limit, a random signal scored far below rolling
+points in every season, and perfect foresight far above. In view 1, a random pick
+scored 54.8 a race, against 55.4 expected by chance. These show that the simulation
+behaves, not that its size estimate is right. It has not been compared with the real
+engine.
