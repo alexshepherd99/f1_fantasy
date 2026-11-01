@@ -310,6 +310,9 @@ every combination of indicators, with fantasy points as the main target.]
 `AggregateRank` rebuilt without odds neither clearly beats nor clearly loses to rolling
 points, at +0.023 on normal weekends and −0.056 on sprint weekends, with both intervals
 spanning zero. See `docs/indicator_analysis_v1/log.md`.]
+[2026-11-01: on finishing position, the target this item actually names, it does not
+lose either: +0.049 on normal weekends and +0.031 on sprint weekends, neither passing the
+bar. So the gate is open on both targets. See the same log, *Closing the regression item*.]
 
 Before building *Build a strategy on the FastF1 indicators* above, establish
 whether the new signal actually carries more information than the rolling points

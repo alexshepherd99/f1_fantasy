@@ -11,7 +11,7 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 7 completed 2026-10-31: findings below. The effort is done.
 - Step 8, the first race, added and completed 2026-11-01: below.
 - A rough estimate of what a Spearman gain is worth, 2026-11-01: below.
-- Alex's conclusions, 2026-11-01: last entry below.
+- Alex's conclusions, 2026-11-01: below, with two later entries after them.
 
 ## 2026-10-31 — Scoping
 
@@ -361,3 +361,38 @@ data all seven output files came out byte-identical.
 analysis also treats every season except `HOLDOUT_SEASON` as development, so 2027 would
 join the data the winners are chosen on, and those winners could change. Read that
 before relying on anything but the `first_race` table from such a run.
+
+## 2026-11-01 — Closing the regression item
+
+Reviewing `BACKLOG.md`'s *Regress the FastF1 indicator against rolling points* found
+every point in it settled, except two results it asks for that had not been written down.
+
+**`AggregateRank` against finishing position, the item's own question.** The figures were
+in `outputs/` but not in this log, whose finishing-position table does not show them.
+
+| Rebuilt aggregate vs rolling, finishing position | Races | Gain | Interval | Pass |
+| --- | --- | --- | --- | --- |
+| Normal weekends | 60 | +0.049 | +0.017 to +0.079 | No, 2024 is −0.004 |
+| Sprint weekends | 18 | +0.031 | −0.023 to +0.087 | No, the interval spans zero |
+
+It does not clearly lose, and the item's gate only closes on a clear loss. So the answer
+on the item's target matches the one already recorded for fantasy points.
+
+**Practice ranks alone against rolling points.** The item suggests this as the
+independent comparison if the first came out ambiguous, which on fantasy points it did.
+It was computed with the module's functions during this review, and is not one of the
+report's tables.
+
+| Early + late vs rolling | Fantasy points | Finishing position |
+| --- | --- | --- |
+| Normal weekends (60) | −0.026 (−0.073 to +0.020) | +0.006 (−0.043 to +0.053) |
+| Sprint weekends (18) | −0.117 (−0.212 to −0.024) | −0.014 (−0.102 to +0.065) |
+
+On its own, practice does not beat rolling points on any row, and on sprint weekends it
+is clearly worse for fantasy points. That fits the conclusion to leave practice out on
+sprints. It does not contradict FP3's place on normal weekends, which is measured as an
+addition to rolling points rather than a replacement.
+
+The stored `AggregateRank`, which includes odds in 2026, gives much the same result on
+normal weekends: +0.021 on fantasy points and +0.049 on finishing position, neither
+passing. Its stored sums differ by season, which is why R6 rebuilt it.
