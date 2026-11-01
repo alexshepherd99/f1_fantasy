@@ -204,6 +204,18 @@ worth, about 50 to 130 points a season against rolling points. It is not a compa
 with P2PM. Its *Conclusions* entry records the combinations Alex accepted, including
 odds for race 1.]
 
+**Bring `AggregateRank` into line with those conclusions** (raised by Alex 2026-11-01).
+It still adds every rank column at weight 1.0, so driver rolling points, both practice
+sessions and odds count equally, and only `METRIC_WEIGHTS` in `fast_f1/metrics.py` sets
+constructor rolling points to zero. The conclusions want driver + constructor + FP3 on
+normal weekends, driver + constructor on sprint weekends, and odds for race 1. One flat
+dict cannot say that, as the sessions differ by weekend format and race 1 differs again,
+so weights will need to depend on those. `fast_f1.cli` writes this column for each race,
+and this section's strategy is written to maximise it, so settle this before building on
+it. Changing it also moves the stored values in
+`data/fastf1_practice_rolling_metrics.xlsx`, which `indicator_analysis_v1` rebuilt from
+components and so does not rely on.
+
 `fast_f1` produces a per-driver `AggregateRank` for every race but nothing
 consumes it. It is a standalone signal — `docs/fastf1_v1/` is complete as of
 2026-07-27, and every strategy in `linear/` still optimises on fantasy points,
