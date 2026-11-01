@@ -507,6 +507,21 @@ def _standalone_table(
     return pd.DataFrame(rows)
 
 
+def first_race_capture_points(odds: pd.DataFrame) -> dict[int, str]:
+    """Work out which snapshot each season's race 1 ``Odds`` were taken from.
+
+    A season with no race 1 odds has no entry.
+
+    Raises:
+        ValueError: No snapshot matches every driver in a season's race 1.
+    """
+    first_races = odds[odds["Race"] == FIRST_RACE]
+    return {
+        season: odds_capture_points(race)[FIRST_RACE]
+        for season, race in first_races.groupby("Season")
+    }
+
+
 def first_race_table(frame: pd.DataFrame, capture_points: dict[int, str]) -> pd.DataFrame:
     """Score the signals known before race 1, per target and season.
 
@@ -515,10 +530,12 @@ def first_race_table(frame: pd.DataFrame, capture_points: dict[int, str]) -> pd.
     so those can be compared like for like. A season's ``season`` is its year; ``all``
     averages the seasons scored.
 
-    ``frame`` is from ``build_first_race_frame``, and ``capture_points`` maps race number
-    to the snapshot its odds were taken from.
+    ``frame`` is from ``build_first_race_frame``, and ``capture_points`` is from
+    ``first_race_capture_points``. Odds are scored for the seasons it names, unless their
+    snapshot knew qualifying.
     """
-    usable_odds = _usable_odds_races(frame, capture_points)
+    snapshots = frame["Season"].map(capture_points)
+    usable_odds = frame[snapshots.notna() & (snapshots != ODDS_LEAK_SNAPSHOT)]
     common = frame.dropna(subset=list(FIRST_RACE_COMPARED_SIGNALS))
     candidates = [
         *(("own", signal, frame) for signal in (*FIRST_RACE_COMPARED_SIGNALS, "grid")),
@@ -730,8 +747,7 @@ def main() -> None:
         frame, odds_capture_points(held_out_odds[held_out_odds["Race"].isin(analysed_races)])
     )
     report["first_race"] = first_race_table(
-        build_first_race_frame(metrics, archive),
-        odds_capture_points(held_out_odds[held_out_odds["Race"] == FIRST_RACE]),
+        build_first_race_frame(metrics, archive), first_race_capture_points(odds)
     )
     DEFAULT_OUTPUT_DIRECTORY.mkdir(parents=True, exist_ok=True)
     for name, table in report.items():

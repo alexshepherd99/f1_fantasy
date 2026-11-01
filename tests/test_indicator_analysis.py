@@ -10,6 +10,7 @@ from fast_f1.indicator_analysis import (
     build_first_race_frame,
     combination_signal,
     compare_scores,
+    first_race_capture_points,
     first_race_table,
     fit_weights,
     fitted_signal,
@@ -959,20 +960,51 @@ def test_first_race_own_scope_includes_grid_as_a_reference():
     assert _first_race_cell(table, "grid", 2024)["races"] == 1
 
 
-def test_first_race_odds_are_scored_on_the_held_out_season_only():
+def test_first_race_odds_are_scored_for_every_season_that_captured_them():
     frame = pd.concat([
         _first_race_season(2025, [1.0, 2.0, 3.0], odds=[0.0, 0.0, 0.0]),
         _first_race_season(2026, [1.0, 2.0, 3.0]),
+        _first_race_season(2027, [1.0, 2.0, 3.0], odds=[3.0, 2.0, 1.0]),
     ], ignore_index=True)
-    table = first_race_table(frame, {1: "Odds_Post_FP2"})
+    table = first_race_table(frame, {2026: "Odds_Post_FP2", 2027: "Odds_Pre_Weekend"})
+    seasons = table[
+        (table["signal"] == "odds") & (table["target"] == "target_fantasy")
+    ]["season"]
+    assert sorted(map(str, seasons)) == ["2026", "2027", "all"]
+    assert _first_race_cell(table, "odds", 2027)["spearman"] == pytest.approx(-1.0)
+    assert _first_race_cell(table, "odds", "all")["spearman"] == pytest.approx(0.0)
+
+
+def test_first_race_odds_captured_after_qualifying_are_not_scored():
+    frame = pd.concat([
+        _first_race_season(2026, [1.0, 2.0, 3.0]),
+        _first_race_season(2027, [1.0, 2.0, 3.0]),
+    ], ignore_index=True)
+    table = first_race_table(frame, {2026: "Odds_Post_FP2", 2027: "Odds_Post_Quali"})
     seasons = table[
         (table["signal"] == "odds") & (table["target"] == "target_fantasy")
     ]["season"]
     assert sorted(map(str, seasons)) == ["2026", "all"]
-
-
-def test_first_race_odds_captured_after_qualifying_are_not_scored():
-    frame = _first_race_season(2026, [1.0, 2.0, 3.0])
-    table = first_race_table(frame, {1: "Odds_Post_Quali"})
-    assert "odds" not in set(table["signal"])
     assert "price" in set(table["signal"])
+
+
+def test_first_race_capture_points_are_per_season_and_ignore_later_races():
+    odds = pd.DataFrame({
+        "Season": [2026, 2026, 2026, 2027, 2027],
+        "Race": [1, 1, 2, 1, 1],
+        "Odds": ["2-1", "3-1", "9-1", "4-1", "5-1"],
+        "Odds_Pre_Weekend": ["9:1", "9:1", "9:1", "4/1", "5/1"],
+        "Odds_Post_FP2": ["2/1", "3/1", "8/1", "7/1", "7/1"],
+    })
+    assert first_race_capture_points(odds) == {2026: "Odds_Post_FP2", 2027: "Odds_Pre_Weekend"}
+
+
+def test_first_race_capture_points_are_not_disturbed_by_other_races():
+    odds = pd.DataFrame({
+        "Season": [2026, 2026, 2027],
+        "Race": [1, 2, 2],
+        "Odds": ["2-1", "9-1", "4-1"],
+        "Odds_Post_FP2": ["2/1", "1/1", "4/1"],
+    })
+    # 2026 race 2 matches no snapshot, and 2027 has no race 1 odds at all.
+    assert first_race_capture_points(odds) == {2026: "Odds_Post_FP2"}

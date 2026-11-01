@@ -344,3 +344,20 @@ all for fantasy points, the primary target.
 
 Alex will keep capturing race 1 odds in future seasons, to build up the evidence. 2026
 race 1 used the post-FP2 price, and a post-qualifying price cannot be scored (R2).
+
+## 2026-11-01 — Race 1 odds scored for every season
+
+The first-race report scored odds for 2026 alone, which would have dropped later seasons
+without warning and defeated the plan above. It now scores any season with race 1 odds
+in `data/f1_betting_odds.xlsx`, unless they are a post-qualifying price. R9's odds
+comparison is unchanged, and stays within 2026.
+
+Copying 2026 race 1 in memory as a pretend 2027, with its odds reversed, gave a 2027 row
+of −0.872 beside 2026's 0.872 and a mean of 0.000, and marking the copy post-qualifying
+removed it. No real 2027 data exists, so an actual 2027 run is still untested. On today's
+data all seven output files came out byte-identical.
+
+**When rerunning with 2027 data:** add the season to `F1_SEASON_CONSTRUCTORS`. The main
+analysis also treats every season except `HOLDOUT_SEASON` as development, so 2027 would
+join the data the winners are chosen on, and those winners could change. Read that
+before relying on anything but the `first_race` table from such a run.
