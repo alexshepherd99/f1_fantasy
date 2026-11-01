@@ -11,7 +11,8 @@ each season carries a slightly different set of them.
 - User decisions, 2026-10-31, taken in conversation.
 - `BACKLOG.md`, *Regress the FastF1 indicator against rolling points, both versus
   finishing position*. This effort answers that item, which is the go/no-go gate
-  for *Build a strategy on the FastF1 indicators*.
+  for *Build a strategy on the FastF1 indicators*. [2026-11-01: removed from the backlog,
+  its last text being at commit `0a99751`. Answered in `log.md`.]
 
 ## R1 — Targets
 
