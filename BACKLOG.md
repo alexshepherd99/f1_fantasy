@@ -302,22 +302,10 @@ That matches the odds strategy's recommended timing and rules out using it for
 Raised 2026-07-27, on completing `docs/fastf1_v1/` — the module works and is
 unused, which is the whole point of the next step rather than a defect in it.
 
-## Optimise rolling points directly, and model DRS inside the objective
-
-See `docs/max_points_v1/proposal.md`. [Done 2026-09-29: `max_points_v1` is
-complete. Rolling points lost to P2PM, and the in-objective DRS strategies were
-dropped. See `BACKTEST_LOG.md`.]
-
-## Refine P2PM: back-test it without the race-4 reset
-
-Picked up 2026-09-29 as the final piece of `max_points_v1`. See
-`docs/max_points_v1/log.md`, *Next session — P2PM without the race-4 reset*.
-[Done 2026-09-29: the chip is worth keeping. See `BACKTEST_LOG.md`.]
-
 ## Refine P2PM: better DRS nomination
 
-Not a priority. As above, P2PM must not change before the 2026 season ends, so
-build this as a subclass.
+Not a priority. P2PM must not change before the 2026 season ends, so build this as a
+subclass.
 
 A perfect-hindsight DRS pick would have scored +226 (2023), +103 (2024) and +98
 (2025) points a season more than P2PM's current rule. That rule nominates the
@@ -344,7 +332,9 @@ does not use it. See `docs/odds_drs_v1/log.md`.] What it can and cannot buy:
   `AggregateRank`. Either works as a post-hoc `get_drs_driver()` override, or as
   the helper's values if team selection should respond too. This overlaps with
   *Build a strategy on the FastF1 indicators* and its regression prerequisite
-  above. A DRS signal is a narrower first use of `AggregateRank`.
+  above. [2026-11-01: that prerequisite is answered, in
+  `docs/indicator_analysis_v1/log.md`, and is off this list.] A DRS signal is a narrower
+  first use of `AggregateRank`.
 - Perfect hindsight is not achievable, so the realistic gain is some unknown
   fraction of the ceiling.
 
