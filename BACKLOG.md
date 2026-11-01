@@ -20,9 +20,6 @@ An entry that runs past ~350 words gets its own `docs/<effort-name>/proposal.md`
 Raised by Alex 2026-10-31, to start in a fresh session. Findings are in
 `docs/indicator_analysis_v1/log.md`.
 
-- **Best signal for the first race of a season.** There are no previous points to
-  refer to there, and `indicator_analysis_v1` excludes race 1 for that reason (its R4),
-  so this is unanswered. [Picked up 2026-11-01: `indicator_analysis_v1`'s R12.]
 - **Clarify one sentence for Alex:** "Fitted weights: not worth using, as simple equal
   weights match them on normal weekends and clearly beat them on sprint weekends."
 - **What a Spearman gain might translate to in a strategy.** Get some understanding of

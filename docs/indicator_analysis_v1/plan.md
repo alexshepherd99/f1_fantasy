@@ -1,7 +1,7 @@
 # indicator_analysis_v1 — Plan
 
 **Status**: agreed 2026-10-31. Requirements: `requirements.md`. [2026-10-31: all seven
-steps done. See `log.md`.]
+steps done. See `log.md`.] [2026-11-01: step 8 added and done.]
 
 One commit per step. Each behavioural change is seen failing before it passes, and
 the full suite is green at the end of every step. Code lives in

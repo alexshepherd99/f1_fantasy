@@ -9,6 +9,7 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Steps 2–6 completed 2026-10-31: analysis frame, scoring, the bar, selection and
   fitted weights, and the report, all in `fast_f1/indicator_analysis.py`.
 - Step 7 completed 2026-10-31: findings below. The effort is done.
+- Step 8, the first race, added and completed 2026-11-01: last entry below.
 
 ## 2026-10-31 — Scoping
 
@@ -171,3 +172,78 @@ no weather flag.
 R9's capture point split reads the `Odds_*` snapshot columns, which `CLAUDE.md` says
 consumers should not use without asking. It was covered by the agreed proposal. They
 are read only to label each race, and no score uses their prices.
+
+## 2026-11-01 — The first race (R12)
+
+### In plain language
+
+**There is no clear best signal for race 1, and four races cannot produce one.** Last
+season's fantasy points, the race 1 fantasy price and FP3 all score about 0.6 on
+Spearman against fantasy points. That is broadly in line with the 0.60 the best
+combination reaches at later normal weekends, though those are different races. Any of
+the three is a usable starting point, and this does not rank them.
+
+Odds scored highest, but only 2026 has them, and FP2 scored almost the same in that
+race. Practice alone has been unsteady: FP2 ranged from 0.29 to 0.85.
+
+None of this says which signal picks the better opening team. Budget and transfers sit
+in between, and only a back-test can show that.
+
+### Results: fantasy points (primary)
+
+Mean Spearman is per season, then averaged. "Own data" scores each signal on what it
+has. "Same drivers" uses only the drivers and seasons that every listed signal has,
+which removes 2023 and anyone with no previous season.
+
+| Signal | 2023 | 2024 | 2025 | 2026 | Own data | Same drivers |
+| --- | --- | --- | --- | --- | --- | --- |
+| Odds | - | - | - | 0.872 | 0.872 (1 race) | - |
+| Last season's points | - | 0.802 | 0.405 | 0.735 | 0.647 (3 races) | 0.647 |
+| FP3 | 0.538 | 0.631 | 0.451 | 0.760 | 0.595 | 0.590 |
+| Race 1 price | 0.375 | 0.779 | 0.559 | 0.663 | 0.594 | 0.622 |
+| FP2 + FP3 | 0.522 | 0.530 | 0.450 | 0.837 | 0.585 | 0.614 |
+| FP2 | 0.435 | 0.356 | 0.286 | 0.854 | 0.483 | 0.549 |
+| Grid (reference) | 0.403 | 0.677 | 0.342 | 0.522 | 0.486 | - |
+
+Every signal with more than one season moves by at least 0.3 between its best and
+worst, while the top three on the same drivers sit within about 0.03 of each other. So
+the gaps between signals are far smaller than the swing within any one. Grid is too
+late to pick a team, and it scores level with FP2 and below the others.
+
+Top-3 and top-5 hit rates are in the output and are not used here. With one race a
+season, one driver moves a season's top-3 figure by a third.
+
+### Results: finishing position (secondary)
+
+On the same drivers, FP2 + FP3 scores 0.714, FP3 0.688, last season's points 0.661,
+price 0.648 and FP2 0.637. Odds score 0.809 on 2026 alone, with FP2 at 0.837 in that
+race. The order differs from the fantasy-points one, which is more reason not to rank
+them.
+
+### Limits
+
+- The season-to-season changes could be down to the circuit, weather or a regulation
+  change. The data here cannot separate those, and no weather flag exists.
+- Last season's points are a plain total, so a part-season driver reads as weak. A
+  driver who missed the season before, rookie or returnee, has no score.
+- A driver with no practice time scores 0 on that session, as in the main analysis.
+- FP1 on normal weekends and pre-season testing were not tried, as they are not in the
+  metrics file.
+- 2026 race 1's odds are the post-FP2 price, so they match that season's routine of
+  picking the team after FP2.
+
+### Checks
+
+Neither new function could fail meaningfully before it existed, so each behaviour was
+confirmed by breaking the finished code instead, 27 mutations in all. One went uncaught
+at first: reporting the top-5 figure as the top-3 one. A test was added and caught it.
+
+The season figures against fantasy points were recomputed from the raw workbooks with
+pandas alone, without importing the module. Price, last season's points, FP2, FP3,
+FP2 + FP3 and odds all matched to three decimals, as did price on the same drivers. The
+grid row, finishing position and the other same-drivers figures were not recomputed. A
+shuffled price scored about zero in each season, so the recomputation can show no
+relationship.
+
+The real entry point was run, and the six existing output files came out byte-identical,
+so the main analysis did not move.
