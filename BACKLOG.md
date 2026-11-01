@@ -20,8 +20,6 @@ An entry that runs past ~350 words gets its own `docs/<effort-name>/proposal.md`
 Raised by Alex 2026-10-31, to start in a fresh session. Findings are in
 `docs/indicator_analysis_v1/log.md`.
 
-- **Clarify one sentence for Alex:** "Fitted weights: not worth using, as simple equal
-  weights match them on normal weekends and clearly beat them on sprint weekends."
 - **What a Spearman gain might translate to in a strategy.** Get some understanding of
   what the gain could be worth when a strategy is built. Pure approximation is fine in
   the first instance.
