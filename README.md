@@ -181,8 +181,8 @@ Strategy selection defined as soon as the fantasy prices were released pre-seaso
 | 16 | Max P2PM | | LIN,VER,HAD,HUL,ANT | MER,AUD | 128.8 | 264 | 3679 |
 | 17 | Betting odds | Limitless | VER,ANT,HAM,NOR,LEC | RED,MER | | 364 | 4043 |
 | 18 | Max P2PM | | BEA,HAD,HUL,LIN,VER | RED,MER | 134.6 | 184 | 4227 |
-| 19 | Max P2PM | | LAW,HAD,HUL,LIN,VER | RED,FER | 136.4 | | |
-| 20 | Max P2PM | | | | | | |
+| 19 | Max P2PM | | LAW,HAD,HUL,LIN,VER | RED,FER | 136.4 | 283 | 4510 |
+| 20 | Max P2PM | | LAW,LEC,HUL,PER,VER | RED,FER | 137.7 | | |
 | 21 | Max P2PM | | | | | | |
 | 22 | Max P2PM | | | | | | |
 | 23 | Max P2PM | | | | | | |
