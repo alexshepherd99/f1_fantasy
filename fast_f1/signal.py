@@ -248,7 +248,9 @@ class SignalTables:
                     "Negatives": _recent_negatives(archive, asset_type, season, race, raced).to_numpy(),
                     "Negative": (raced["Points"] < 0).to_numpy(),
                 }))
-        self._negatives = pd.concat(frames, ignore_index=True)
+        self._negatives = pd.concat(frames, ignore_index=True).astype(
+            {"Negatives": int, "Negative": bool}
+        )
         return self._negatives
 
     def _ranked_history(self) -> pd.DataFrame:
