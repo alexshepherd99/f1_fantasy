@@ -21,6 +21,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   run on every stored race. Step 5 is next.
 - Step 5 done 2026-11-06: expected points and the chance of going negative, with means forced
   to fall by position and negatives split on any recent one. Step 6 is next.
+- Step 6 done 2026-11-06: `StrategyFastF1` in `linear/strategy_fastf1.py`, with its DRS term,
+  budget reward and negative penalty, run once on a real race with no signal. Step 7 is next.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -778,3 +780,85 @@ From a throwaway script, not kept, on the real metrics file and archive:
 | Peak memory | 200MB |
 
 Not run: a race before its results exist, as in step 4.
+
+## 2026-11-06 — Step 6: the strategy
+
+### In plain language
+
+- **Done.** `StrategyFastF1` in `linear/strategy_fastf1.py` picks the team with the most
+  expected fantasy points, within the usual budget, team size and move limit. It does not
+  play the race-4 chip.
+- **Three tuning settings, each off at its default except DRS:**
+  - `drs_coefficient` (default 1) counts the DRS driver's expected points again;
+  - `budget_reward` (default 0) adds points per 1m spent;
+  - `negative_penalty` (default 0) takes points off for each selected asset's chance of
+    going negative.
+- **DRS goes to the selected driver with the best expected points,** at any coefficient,
+  with a tie going to the first identifier. With no selected driver above zero, the default
+  picks the highest-priced driver.
+- **Bad data raises an error rather than being scored around.** This covers expected points
+  or chances naming an asset the race does not have, and an available asset with no chance.
+  An asset with no signal position, such as SAR in 2024 race 3, still scores zero.
+- **A race with no signal solves,** with every asset at zero, as for 2026 race 19.
+
+### Choices Alex made in this step
+
+- **No fixture file.** The plan named `data/test_fastf1_metrics.xlsx`, but the tables need
+  real 2023–25 metrics rows matched to the real archive, which no small file can give. The
+  unit tests stub `load_signal_tables`, a first-party function, with set values. One test
+  builds the strategy on the real files for 2025 race 5. The plan is annotated.
+- **Each keyword parameter arrived with the part that uses it,** so none was ever accepted
+  and ignored.
+- **The chances are read only when the penalty is not zero, and the DRS driver's chance is
+  not doubled.** The game doubles a DRS driver's negative score too. Doubling it here would
+  tie the penalty to the DRS variables, and the penalty is a variant to tune anyway.
+- **Live use is a backlog item.** The strategy reads only the stored metrics file, so a live
+  pick is two stages, and today's route has gaps. They matter only if the strategy wins.
+  See *Live mid-season picks with `StrategyFastF1`* in `BACKLOG.md`.
+
+### Tests
+
+29 tests in `tests/test_strategy_fastf1.py`, with every LP scenario's best team found by
+brute force first, so each is the only best team. Each behaviour was seen failing first,
+against a stub objective or with its parameter accepted but unused. The exceptions were
+checked by mutation: a coefficient or penalty of zero, the race-4 move limit, and a race with
+no signal. Each of these mutations fails a test:
+
+- pasting in P2PM's race-4 chip;
+- scoring an asset with no signal as a missing key rather than zero;
+- swapping season and race, or ignoring `fn_metrics`;
+- leaving constructors out of the objective, or out of the penalty;
+- always adding the DRS term, leaving its coefficient off, or dropping its constraints;
+- the DRS driver by the race's order, a tie going to the last, ignoring the selection,
+  taking the helper's nominee, or no floor at zero;
+- a reward fixed at 1, or rewarding unspent budget;
+- a penalty not scaled, or chances read at zero;
+- dropping or loosening any of the asset checks;
+- raising on a race with no signal.
+
+Two of the DRS mutations at first failed only through a `KeyError` from a second dictionary
+lookup, not on the value. The code now looks the points up once, and both fail on the value.
+
+A test of a race with no signal found that PuLP gives `None`, not 0, as the value of an
+objective whose coefficients are all zero, as it swaps in a `__dummy` variable that CBC never
+sets. Nothing on the run path reads the objective's value (checked by grep), so the test does
+not assert it.
+
+Full suite 456 passed.
+
+### Real-data check
+
+The real-race test builds the strategy by the factory for 2025 race 5, with and without a
+penalty. It solves with a full team, every selected asset has positive expected points, and
+every available asset has a chance. It was checked by mutation: a race with no signal fails
+it, identifiers that disagree raise naming all 30 assets, and chances from a race not run
+raise for all 30.
+
+From a throwaway script, not kept, on 2026 race 19, which is priced but has no metrics rows:
+
+| Settings | Status | Expected points | Chances | Selected | DRS |
+| --- | --- | --- | --- | --- | --- |
+| Defaults | Optimal | None | Not read | 7 | Default |
+| Penalty 6, reward 0.5 | Optimal | None | All 33 assets | 7 | Default |
+
+Not run: the strategy through a season. Steps 8 and 9 do that.
