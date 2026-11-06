@@ -11,8 +11,9 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   written and no step has started.
 - Step 1.1 done 2026-11-06: `TeamId` survives the rename, but the fix links names through the
   drivers instead. See the entry of that date.
-- Step 1 done 2026-11-06, with the fix in code and tested. Step 2 waits for Alex to agree its
-  check plan.
+- Step 1 done 2026-11-06, with the fix in code and tested.
+- Step 2 done 2026-11-06: 2024 race 24 recomputed, with only its 8 affected rows changed.
+- Step 3b added 2026-11-06, at Alex's request: a driver's team before the race has results.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -444,3 +445,48 @@ under that mutation, because the "exactly one team" condition also blocks the li
 `fast_f1` test for a driver changing team before this, so there were no existing ones to run.
 
 Full suite 381 passed. Not run against real data: that is step 2, after Alex agrees its checks.
+
+## 2026-11-06 — Step 2: 2024 race 24 recomputed
+
+Run with the checks in `plan.md`, which Alex agreed, plus two found to be needed after step 1.
+Race 24 was in neither cache, so it needed a live fetch. And since `--historical` skips races it
+already has, its rows were removed first, so the run would recompute that race alone.
+
+### In plain language
+
+- **Fixed.** The four teams now have their rolling points at race 24, and nothing else in the
+  file moved.
+- **The new code was not what fixed it.** This time FastF1 served race 24 from live timing, so
+  its team names match races 21–23 and the old join would have worked too. The new code guards
+  against the next time FastF1 falls back to Ergast.
+- **The four teams' stored names changed back** to the live timing ones, for example "Red Bull"
+  to "Red Bull Racing". That was allowed for in the agreed checks.
+
+### What was run
+
+1. The metrics file was copied outside the repo, and the copy's checksum matched.
+2. The comparison script was first run on the copy against itself. It reported no changed cells
+   and found the 8 known rows with missing constructor points, so it could catch a fault.
+3. A script using `fast_f1.output`'s own reader and writer removed the 20 race 24 rows. Compared
+   with the copy, only those 20 rows had gone and no cell had changed.
+4. `fast_f1.cli --historical --season 2024` signed in through `fast_f1`'s credentials loader
+   and computed race 24 only, skipping the other 23. It exited 0 and logged no link warnings.
+5. Cell by cell, against the copy:
+
+| Check | Result |
+| --- | --- |
+| Rows and keys | 1,794 before and after, none added or lost, no duplicates |
+| Changed | 32 cells in 8 rows, all 2024 race 24, all Red Bull, Alpine, RB and Sauber drivers |
+| Columns changed | `ConstructorRollingPoints` and its rank, and `Constructor` and `TeamName` for the names |
+| `AggregateRank` and `RankPosition` | No cell changed |
+| Missing `ConstructorRollingPoints` from race 2 onwards, all seasons | None, against 8 before |
+
+| Team at race 24 | Rolling points | Rank | Before |
+| --- | --- | --- | --- |
+| Red Bull Racing | 62 | 0.91 | Missing, rank 0 |
+| Alpine | 43 | 0.63 | Missing, rank 0 |
+| RB | 10 | 0.15 | Missing, rank 0 |
+| Kick Sauber | 4 | 0.06 | Missing, rank 0 |
+
+The other six teams' ranks did not move, so the corrected teams fell inside the range the six
+already set.
