@@ -20,6 +20,7 @@ from fast_f1.metrics import (
     calculate_practice_performance,
     calculate_rolling_points,
     get_rolling_window_races,
+    link_renamed_constructors,
 )
 
 from common import AssetType
@@ -142,13 +143,6 @@ def build_race_metrics(
         race_num=race_num,
         rolling_window=rolling_window,
     )
-    constructor_rolling = calculate_constructor_rolling_points(
-        previous_results,
-        season_year=season_year,
-        race_num=race_num,
-        rolling_window=rolling_window,
-    )
-
     current_results = get_race_results(season_year, race_num)
 
     # If official race results are not yet available, derive a minimal
@@ -193,6 +187,15 @@ def build_race_metrics(
 
     current_results = current_results.copy()
     current_results["Driver"] = current_results["Abbreviation"]
+
+    # Linked against the current race's names, so a team FastF1 has renamed
+    # still finds its points in the merge below.
+    constructor_rolling = calculate_constructor_rolling_points(
+        link_renamed_constructors(previous_results, current_results),
+        season_year=season_year,
+        race_num=race_num,
+        rolling_window=rolling_window,
+    )
 
     merged = current_results.merge(
         driver_rolling,

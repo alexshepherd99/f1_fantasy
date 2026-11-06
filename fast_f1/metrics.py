@@ -121,6 +121,53 @@ def calculate_rolling_points(
     )
 
 
+def link_renamed_constructors(
+    previous_results: pd.DataFrame,
+    current_results: pd.DataFrame,
+) -> pd.DataFrame:
+    """Relabel prior races' constructor names to the names the current race uses.
+
+    FastF1 can give one team two names, as in 2024 race 24, where its fallback
+    source named four teams differently from the races before. A prior name
+    that is also in the current race keeps its own points. A prior name missing
+    from the current race is relabelled to the one current team its drivers
+    now race for. That covers a name changing back and forth, while leaving a
+    driver swap between two teams that both race on untouched. A missing name
+    whose drivers lead to no team or to several is left as it is and logged.
+
+    Both frames need ``Abbreviation`` and ``Constructor``. Returns a copy of
+    ``previous_results``.
+    """
+    linked = previous_results.copy()
+    if linked.empty:
+        return linked
+
+    current_names = set(current_results["Constructor"].dropna())
+    current_team_by_driver = (
+        current_results.dropna(subset=["Abbreviation", "Constructor"])
+        .drop_duplicates(subset=["Abbreviation"])
+        .set_index("Abbreviation")["Constructor"]
+    )
+
+    relabel: dict[str, str] = {}
+    for old_name in sorted(set(linked["Constructor"].dropna()) - current_names):
+        drivers = linked.loc[linked["Constructor"] == old_name, "Abbreviation"].unique()
+        new_names = set(current_team_by_driver.reindex(drivers).dropna())
+        if len(new_names) == 1:
+            relabel[old_name] = new_names.pop()
+        else:
+            logger.warning(
+                "Constructor %r is missing from the current race and its drivers %s now race for %s; "
+                "its rolling points are not carried over",
+                old_name,
+                sorted(drivers),
+                sorted(new_names) or "no team",
+            )
+
+    linked["Constructor"] = linked["Constructor"].replace(relabel)
+    return linked
+
+
 def calculate_constructor_rolling_points(
     df_all_race_results: pd.DataFrame,
     season_year: int,

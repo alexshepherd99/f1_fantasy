@@ -659,6 +659,131 @@ def test_build_race_metrics_does_not_multiply_rows_for_repeated_drivers(monkeypa
     assert len(metrics) == len(repeated)
 
 
+def _patch_race_with_history(monkeypatch, season_year, results_by_race):
+    """Wire build_race_metrics to per-race results given as (driver, constructor, points).
+
+    The last race in ``results_by_race`` is the one being built, and its
+    drivers are the ones given practice laps.
+    """
+    race_num = max(results_by_race)
+    drivers = [driver for driver, _, _ in results_by_race[race_num]]
+    laps = pd.DataFrame(
+        {
+            "Driver": drivers,
+            "LapTime": [80.0 + i for i in range(len(drivers))],
+            "Stint": [1] * len(drivers),
+            "Season": [season_year] * len(drivers),
+            "Race": [race_num] * len(drivers),
+            "SessionType": ["FP2"] * len(drivers),
+        }
+    )
+
+    def fake_get_race_results(season, race):
+        rows = results_by_race[race]
+        return pd.DataFrame(
+            {
+                "Abbreviation": [driver for driver, _, _ in rows],
+                "Constructor": [constructor for _, constructor, _ in rows],
+                "Points": [points for _, _, points in rows],
+                "Season": [season] * len(rows),
+                "Race": [race] * len(rows),
+            }
+        )
+
+    monkeypatch.setattr(
+        "fast_f1.output.get_event_for_race",
+        lambda season, race: DummyEvent({"FP2": DummySession(pd.DataFrame()), "FP3": DummySession(pd.DataFrame())}),
+    )
+    monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", lambda event: ("FP2", "FP3"))
+    monkeypatch.setattr("fast_f1.output.get_session_laps", lambda season, race, session_type: laps)
+    monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
+    return race_num
+
+
+def _constructor_points(metrics: pd.DataFrame) -> dict[str, float]:
+    return metrics.set_index("Driver")["ConstructorRollingPoints"].to_dict()
+
+
+def test_build_race_metrics_keeps_rolling_points_for_a_renamed_team(monkeypatch):
+    """2024 race 24: a team renamed in the race being built keeps its history."""
+    season_year = 2024
+    before = [("VER", "Red Bull Racing", 25), ("PER", "Red Bull Racing", 10),
+              ("HAM", "Mercedes", 18), ("RUS", "Mercedes", 12)]
+    after = [("VER", "Red Bull", 25), ("PER", "Red Bull", 10),
+             ("HAM", "Mercedes", 18), ("RUS", "Mercedes", 12)]
+    race_num = _patch_race_with_history(monkeypatch, season_year, {1: before, 2: before, 3: before, 4: after})
+
+    metrics = build_race_metrics(season_year, race_num)
+
+    assert _constructor_points(metrics) == {"VER": 105, "PER": 105, "HAM": 90, "RUS": 90}
+    by_driver = metrics.set_index("Driver")
+    assert by_driver.loc["VER", "ConstructorRollingPointsRank"] == pytest.approx(1.0)
+    # The stored name stays as FastF1 gave it for the race
+    assert by_driver.loc["VER", "Constructor"] == "Red Bull"
+
+
+def test_build_race_metrics_keeps_rolling_points_when_a_name_flips_back_and_forth(monkeypatch):
+    """The current name having some history must not drop the races under the other name."""
+    season_year = 2024
+
+    def race(red_bull_name):
+        return [("VER", red_bull_name, 25), ("PER", red_bull_name, 10),
+                ("HAM", "Mercedes", 18), ("RUS", "Mercedes", 12)]
+
+    race_num = _patch_race_with_history(
+        monkeypatch,
+        season_year,
+        {1: race("Red Bull Racing"), 2: race("Red Bull"), 3: race("Red Bull Racing"), 4: race("Red Bull")},
+    )
+
+    metrics = build_race_metrics(season_year, race_num)
+
+    assert _constructor_points(metrics) == {"VER": 105, "PER": 105, "HAM": 90, "RUS": 90}
+
+
+def test_build_race_metrics_does_not_move_points_when_drivers_swap_teams(monkeypatch, caplog):
+    """2025's Tsunoda/Lawson swap: both names race on, so neither takes the other's history."""
+    season_year = 2025
+    before_swap = [("VER", "Red Bull Racing", 25), ("LAW", "Red Bull Racing", 1),
+                   ("TSU", "Racing Bulls", 6), ("HAD", "Racing Bulls", 4)]
+    after_swap = [("VER", "Red Bull Racing", 18), ("TSU", "Red Bull Racing", 2),
+                  ("LAW", "Racing Bulls", 0), ("HAD", "Racing Bulls", 8)]
+    race_num = _patch_race_with_history(
+        monkeypatch, season_year, {1: before_swap, 2: before_swap, 3: after_swap, 4: after_swap}
+    )
+
+    caplog.set_level("WARNING", logger="fast_f1")
+    metrics = build_race_metrics(season_year, race_num)
+
+    # Both teams still race, so there is nothing to link and nothing to warn about
+    assert "Constructor" not in caplog.text
+
+    red_bull = 2 * (25 + 1) + (18 + 2)
+    racing_bulls = 2 * (6 + 4) + (0 + 8)
+    assert _constructor_points(metrics) == {
+        "VER": red_bull, "TSU": red_bull, "LAW": racing_bulls, "HAD": racing_bulls,
+    }
+
+
+def test_build_race_metrics_warns_when_a_vanished_name_cannot_be_linked(monkeypatch, caplog):
+    """A missing name whose drivers now race for two teams is not guessed at."""
+    season_year = 2024
+    before = [("HUL", "Kick Sauber", 4), ("BOT", "Kick Sauber", 2),
+              ("HAM", "Mercedes", 18), ("RUS", "Mercedes", 12)]
+    after = [("HUL", "Sauber", 4), ("BOT", "Mercedes", 2),
+             ("HAM", "Mercedes", 18), ("RUS", "Sauber", 12)]
+    race_num = _patch_race_with_history(monkeypatch, season_year, {1: before, 2: before, 3: before, 4: after})
+
+    caplog.set_level("WARNING", logger="fast_f1")
+    metrics = build_race_metrics(season_year, race_num)
+
+    assert "Kick Sauber" in caplog.text
+    # Neither current team takes Kick Sauber's history, so Sauber has none
+    points = _constructor_points(metrics)
+    assert pd.isna(points["HUL"]) and pd.isna(points["RUS"])
+    assert points["HAM"] == points["BOT"] == 90
+
+
 def test_build_race_metrics_survives_a_corrupt_odds_workbook(monkeypatch, tmp_path, caplog):
     """A damaged spreadsheet must degrade the odds indicator, not abort the run."""
     season_year, race_num = 2025, 1
