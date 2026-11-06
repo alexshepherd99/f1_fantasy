@@ -318,7 +318,7 @@ def test_a_table_with_no_other_season_to_draw_on_is_an_error():
         .race(2026, 2, {"VER@RED": 30, "HAM@MER": 10}, {"RED": 50, "MER": 20})
         .tables()
     )
-    with pytest.raises(ValueError, match="No 2023-25 history for 2024's Driver table"):
+    with pytest.raises(ValueError, match="No 2023-25 history for 2024's Driver points table"):
         tables.expected_points(2024, 2)
 
 
@@ -330,3 +330,84 @@ def test_a_race_priced_but_without_signal_has_no_expected_points():
         .tables()
     )
     assert tables.expected_points(2026, 19) == {}
+
+
+def _archive_only(*races: tuple) -> SignalTables:
+    history = _History()
+    for season, race, drivers, constructors in races:
+        history.race(season, race, drivers, constructors, with_metrics=False)
+    return history.tables()
+
+
+# 2023's table: race 2 has VER after one negative going negative and HAM after none not;
+# race 3 has VER after two not and HAM after none going negative. Race 1 builds no row,
+# which BOT and ALF, negative there alone, would show. RED and MER follow VER and HAM.
+_NEGATIVES_2023 = [
+    (2023, 1, {"VER@RED": -5, "HAM@MER": 10, "BOT@ALF": -5}, {"RED": -5, "MER": 10, "ALF": -5}),
+    (2023, 2, {"VER@RED": -5, "HAM@MER": 10}, {"RED": -5, "MER": 10}),
+    (2023, 3, {"VER@RED": 10, "HAM@MER": -3}, {"RED": 10, "MER": -3}),
+]
+
+
+def test_negative_chance_is_by_asset_type_and_recent_negatives():
+    tables = _archive_only(
+        *_NEGATIVES_2023,
+        (2024, 1, {"VER@RED": 5, "HAM@MER": 5}, {"RED": -5, "MER": 5}),
+        (2024, 2, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
+    )
+    assert tables.negative_chance(2024, 2) == {"VER@RED": 0.5, "HAM@MER": 0.5, "RED": 1.0, "MER": 0.5}
+
+
+def test_only_the_previous_three_rounds_count():
+    tables = _archive_only(
+        *_NEGATIVES_2023,
+        (2024, 1, {"VER@RED": -5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
+        (2024, 2, {"VER@RED": 5, "HAM@MER": -5}, {"RED": 5, "MER": 5}),
+        (2024, 3, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
+        (2024, 4, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
+        (2024, 5, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
+    )
+    chance = tables.negative_chance(2024, 5)
+    assert (chance["VER@RED"], chance["HAM@MER"]) == (0.5, 1.0)
+
+
+def test_a_driver_carries_their_negatives_to_a_new_team():
+    tables = _archive_only(
+        *_NEGATIVES_2023,
+        (2024, 1, {"LAW@VRB": -5}, {"VRB": 5}),
+        (2024, 2, {"LAW@RED": 5}, {"RED": 5}),
+    )
+    assert tables.negative_chance(2024, 2)["LAW@RED"] == 1.0
+
+
+def test_an_asset_with_no_history_counts_as_no_negatives():
+    tables = _archive_only(*_NEGATIVES_2023, (2024, 2, {"CAM@HAA": 5}, {"HAA": 5}))
+    assert tables.negative_chance(2024, 2) == {"CAM@HAA": 0.5, "HAA": 0.5}
+
+
+def test_more_negatives_than_the_table_has_seen_takes_its_last_value():
+    tables = _archive_only(
+        *_NEGATIVES_2023,
+        (2024, 1, {"VER@RED": -5}, {"RED": -5}),
+        (2024, 2, {"VER@RED": -5}, {"RED": -5}),
+        (2024, 3, {"VER@RED": -5}, {"RED": -5}),
+        (2024, 4, {"VER@RED": 5}, {"RED": 5}),
+    )
+    assert tables.negative_chance(2024, 4) == {"VER@RED": 0.0, "RED": 0.0}
+
+
+def _negatives_varying(points: int) -> SignalTables:
+    """2024 race 1 fixed; 2024 race 2 on and all of 2026 at ``points``."""
+    varying = ({"VER@RED": points, "HAM@MER": points}, {"RED": points, "MER": points})
+    return _archive_only(
+        *_NEGATIVES_2023,
+        (2024, 1, {"VER@RED": -5, "HAM@MER": 5}, {"RED": -5, "MER": 5}),
+        *((2024, race, *varying) for race in (2, 3)),
+        *((2026, race, *varying) for race in (1, 2, 3)),
+    )
+
+
+def test_negative_chance_reads_neither_the_race_its_own_season_nor_2026():
+    low, high = _negatives_varying(-1000), _negatives_varying(1000)
+    expected = {"VER@RED": 1.0, "HAM@MER": 0.5, "RED": 1.0, "MER": 0.5}
+    assert low.negative_chance(2024, 2) == high.negative_chance(2024, 2) == expected

@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 # strategy is judged on (see docs/fastf1_v2/requirements.md, question 7).
 TABLE_SEASONS = (2023, 2024, 2025)
 
+# How many previous rounds a negative counts for, in the chance of going negative.
+RECENT_RACES = 3
+
 # The slots added on each weekend format. A 2023 sprint weekend, which the analysis
 # left out, takes the sprint rule, as that needs no practice session.
 SIGNAL_SLOTS = {
@@ -129,7 +132,8 @@ class SignalTables:
             AssetType.CONSTRUCTOR: constructor_archive,
         }
         self._history: pd.DataFrame | None = None
-        self._tables: dict[int, dict[AssetType, pd.Series]] = {}
+        self._negatives: pd.DataFrame | None = None
+        self._tables: dict[tuple[str, int, AssetType], pd.Series] = {}
 
     def expected_points(self, season: int, race: int) -> dict[str, float]:
         """Each ranked asset's expected fantasy points in one race.
@@ -146,23 +150,76 @@ class SignalTables:
         for asset_type, ranking in _RANKINGS.items():
             places = ranking(self._metrics, self._pairs, season, race)
             if places:
-                table = self._points_table(season, asset_type)
+                table = self._table("points", season, asset_type)
                 expected |= {asset: _look_up(table, place) for asset, place in places.items()}
         return expected
 
-    def _points_table(self, season: int, asset_type: AssetType) -> pd.Series:
-        if season not in self._tables:
-            history = self._ranked_history()
-            used = history[history["Season"] != season]
-            self._tables[season] = {
-                t: _falling_means(used[used["AssetType"] == t]) for t in _RANKINGS
+    def negative_chance(self, season: int, race: int) -> dict[str, float]:
+        """Each priced asset's chance of going negative in one race.
+
+        Looked up by asset type and by the asset's negatives in the previous three rounds
+        of the season. A driver carries their negatives to a new team, and a round an
+        asset was not in counts for nothing. Reads no result from the race itself.
+
+        Returns:
+            Chances keyed by driver identifier and constructor code, for every asset
+            priced in the race.
+
+        Raises:
+            ValueError: A table has no history to draw on.
+        """
+        chances = {}
+        for asset_type, archive in self._archive.items():
+            priced = archive[(archive["Season"] == season) & (archive["Race"] == race)
+                             & archive["Price"].notna()]
+            if priced.empty:
+                continue
+            table = self._table("negatives", season, asset_type)
+            counts = _recent_negatives(archive, asset_type, season, race, priced)
+            chances |= {
+                asset: _look_up(table, count)
+                for asset, count in zip(priced[asset_type.value], counts)
             }
-        table = self._tables[season][asset_type]
+        return chances
+
+    def _table(self, name: str, season: int, asset_type: AssetType) -> pd.Series:
+        """A season's table, built from the other table seasons on first use."""
+        key = (name, season, asset_type)
+        if key not in self._tables:
+            history, summarise = {
+                "points": (self._ranked_history, _falling_means),
+                "negatives": (self._negative_history, _negative_shares),
+            }[name]
+            rows = history()
+            self._tables[key] = summarise(
+                rows[(rows["Season"] != season) & (rows["AssetType"] == asset_type)]
+            )
+        table = self._tables[key]
         if table.empty:
-            msg = f"No 2023-25 history for {season}'s {asset_type.value} table"
+            msg = f"No 2023-25 history for {season}'s {asset_type.value} {name} table"
             logger.error(msg)
             raise ValueError(msg)
         return table
+
+    def _negative_history(self) -> pd.DataFrame:
+        """Every table season's assets from race 2 on: their recent negatives, and whether
+        they then went negative."""
+        if self._negatives is not None:
+            return self._negatives
+        frames = [pd.DataFrame(columns=["AssetType", "Season", "Race", "Negatives", "Negative"])]
+        for asset_type, archive in self._archive.items():
+            scored = archive[archive["Season"].isin(TABLE_SEASONS) & archive["Points"].notna()
+                             & (archive["Race"] > FIRST_RACE)]
+            for (season, race), raced in scored.groupby(["Season", "Race"]):
+                frames.append(pd.DataFrame({
+                    "AssetType": asset_type,
+                    "Season": season,
+                    "Race": race,
+                    "Negatives": _recent_negatives(archive, asset_type, season, race, raced).to_numpy(),
+                    "Negative": (raced["Points"] < 0).to_numpy(),
+                }))
+        self._negatives = pd.concat(frames, ignore_index=True)
+        return self._negatives
 
     def _ranked_history(self) -> pd.DataFrame:
         """Every table season's ranked assets from race 2 on, with their fantasy points."""
@@ -208,9 +265,31 @@ def _falling_means(history: pd.DataFrame) -> pd.Series:
     return pd.Series(fitted, index=stats.index)
 
 
-def _look_up(table: pd.Series, place: int) -> float:
-    """A place's value, a place past the table's end taking the last one."""
-    return float(table[min(place, table.index.max())])
+def _negative_shares(history: pd.DataFrame) -> pd.Series:
+    """The share of rows that went negative, by the number of recent negatives."""
+    return history.groupby("Negatives")["Negative"].mean()
+
+
+def _recent_negatives(
+    archive: pd.DataFrame, asset_type: AssetType, season: int, race: int, rows: pd.DataFrame
+) -> pd.Series:
+    """Each row's negatives in the previous ``RECENT_RACES`` rounds of the season."""
+    prior = archive[(archive["Season"] == season)
+                    & archive["Race"].between(race - RECENT_RACES, race - 1)
+                    & archive["Points"].notna()]
+    counts = (prior["Points"] < 0).groupby(_carrier(prior, asset_type)).sum()
+    return _carrier(rows, asset_type).map(counts).fillna(0).astype(int)
+
+
+def _carrier(rows: pd.DataFrame, asset_type: AssetType) -> pd.Series:
+    """Who a negative history belongs to: the driver whatever their team, or the constructor."""
+    ids = rows[asset_type.value]
+    return ids.str.split("@").str[0] if asset_type == AssetType.DRIVER else ids
+
+
+def _look_up(table: pd.Series, key: int) -> float:
+    """A key's value, a key past the table's end taking the last one."""
+    return float(table[min(key, table.index.max())])
 
 
 def _race_rows(
