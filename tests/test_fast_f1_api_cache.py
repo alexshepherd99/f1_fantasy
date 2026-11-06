@@ -11,6 +11,7 @@ from fast_f1.api import (
     get_event_for_race,
     get_race_numbers_for_season,
     get_race_results,
+    get_session_drivers,
     get_session_laps,
 )
 from fast_f1.cache import setup_fastf1_cache
@@ -302,6 +303,50 @@ def test_api_returns_empty_dataframe_when_session_data_is_missing(monkeypatch, t
     assert "Could not load session laps for season 2025 race 99 session FP2" in caplog.text
 
 
+def test_api_returns_each_drivers_team_in_a_session_and_caches_it(monkeypatch, tmp_path):
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+    driver_list = pd.DataFrame(
+        {
+            "Abbreviation": ["CAM", "VER"],
+            "TeamName": ["Haas F1 Team", "Red Bull Racing"],
+            "Position": [float("nan")] * 2,
+        }
+    )
+    session = FakeRaceSession(driver_list)
+    monkeypatch.setattr("fast_f1.api.get_event_for_race", lambda season, race: FakeEvent({"FP2": session}))
+
+    first = get_session_drivers(2026, 19, "FP2")
+
+    assert first[["Abbreviation", "TeamName"]].to_dict("records") == [
+        {"Abbreviation": "CAM", "TeamName": "Haas F1 Team"},
+        {"Abbreviation": "VER", "TeamName": "Red Bull Racing"},
+    ]
+    assert first["SessionType"].tolist() == ["FP2", "FP2"]
+    # The driver list comes with the session's results, so laps need not load
+    assert session.load_kwargs["laps"] is False
+    assert (tmp_path / "local_cache" / "session_drivers_2026_19_FP2.pkl").exists()
+
+    monkeypatch.setattr(
+        "fast_f1.api.get_event_for_race",
+        lambda season, race: (_ for _ in ()).throw(RuntimeError("Should not be called")),
+    )
+    assert get_session_drivers(2026, 19, "FP2").equals(first)
+
+
+def test_api_returns_empty_session_drivers_when_session_data_is_missing(monkeypatch, tmp_path, caplog):
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+    monkeypatch.setattr(
+        "fast_f1.api.get_event_for_race",
+        lambda season, race: (_ for _ in ()).throw(SessionDataUnavailable("Event unavailable")),
+    )
+
+    result = get_session_drivers(2026, 99, "FP2")
+
+    assert result.empty
+    assert {"Abbreviation", "TeamName"} <= set(result.columns)
+    assert "Could not load the driver list for season 2026 race 99 session FP2" in caplog.text
+
+
 def test_api_returns_the_race_numbers_a_season_actually_scheduled(monkeypatch, tmp_path):
     setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
 
@@ -347,3 +392,6 @@ def test_api_lets_an_unexpected_failure_propagate(monkeypatch, tmp_path):
 
     with pytest.raises(ConnectionError):
         get_session_laps(2025, 1, "FP2")
+
+    with pytest.raises(ConnectionError):
+        get_session_drivers(2025, 1, "FP2")

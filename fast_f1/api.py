@@ -336,6 +336,57 @@ def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.D
     return session_laps
 
 
+def _empty_session_drivers_dataframe(season_year: int, race_num: int, session_type: str) -> pd.DataFrame:
+    df = pd.DataFrame(columns=["Abbreviation", "TeamName", "Season", "Race", "SessionType"])
+    df["Season"] = season_year
+    df["Race"] = race_num
+    df["SessionType"] = session_type
+    return df
+
+
+def get_session_drivers(season_year: int, race_num: int, session_type: str) -> pd.DataFrame:
+    """Return each driver in a session with the team FastF1 names for them.
+
+    This gives a driver's team for the weekend before the race has results.
+    Returns ``Abbreviation``, ``TeamName``, ``Season``, ``Race`` and ``SessionType``,
+    or an empty frame with those columns when the session has no data.
+    """
+    cache_path = _get_cache_file_path("session_drivers", season_year, race_num, session_type)
+    if cache_path is not None:
+        cache_df = _load_cached_dataframe(cache_path)
+        if cache_df is not None:
+            return cache_df
+
+    try:
+        event = get_event_for_race(season_year, race_num)
+        session = _get_session(event, session_type)
+        _load_session(session, laps=False)
+        drivers = getattr(session, "results", pd.DataFrame())
+        if (
+            not isinstance(drivers, pd.DataFrame)
+            or drivers.empty
+            or not {"Abbreviation", "TeamName"} <= set(drivers.columns)
+        ):
+            raise SessionDataUnavailable("Session driver list is unavailable or malformed")
+    except (SessionDataUnavailable, SessionNotAvailableError) as exc:
+        logger.warning(
+            "Could not load the driver list for season %s race %s session %s: %s",
+            season_year,
+            race_num,
+            session_type,
+            exc,
+        )
+        return _empty_session_drivers_dataframe(season_year, race_num, session_type)
+
+    drivers = drivers[["Abbreviation", "TeamName"]].reset_index(drop=True)
+    drivers["Season"] = season_year
+    drivers["Race"] = race_num
+    drivers["SessionType"] = session_type
+    if cache_path is not None:
+        _save_cached_dataframe(drivers, cache_path)
+    return drivers
+
+
 def get_available_sessions_from_event(event: Any) -> list[str]:
     """Extract available session type names from a FastF1 Event object.
 
