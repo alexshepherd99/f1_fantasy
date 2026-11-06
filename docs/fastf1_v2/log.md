@@ -19,6 +19,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   São Paulo, 2026 race 20.
 - Step 4 done 2026-11-06: `fast_f1/signal.py` gives driver positions and constructor places,
   run on every stored race. Step 5 is next.
+- Step 5 done 2026-11-06: expected points and the chance of going negative, with means forced
+  to fall by position and negatives split on any recent one. Step 6 is next.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -664,3 +666,115 @@ The order check was run again with the analysis side scored on driver rolling al
 
 Not run: a race before its results exist. Step 3b's checks cover the metrics rows for such a
 race, and the signal reads no results.
+
+## 2026-11-06 — Step 5: the tables
+
+### In plain language
+
+- **Done, and run on every stored race.** `SignalTables` in `fast_f1/signal.py` gives each
+  asset in a race its expected fantasy points and its chance of going negative.
+  `load_signal_tables` reads the files once per process.
+- **Expected points use means forced to fall by position.** They predicted the left-out
+  season better than plain means in every season, for drivers and constructors both. The gain
+  is small, under 1%. The stronger reason is that plain means have bumps an LP would chase,
+  such as driver position 18 at 6.2 points against 3.6 at position 12.
+- **The chance of going negative splits on whether there was any negative in the last three
+  races, as Alex chose.** In 2023–25, two recent negatives were no riskier than one, and three
+  were too rare to measure. The "more negatives, more risk" pattern came mostly from 2026,
+  which Alex expects to be an odd season, with AST and CAD poor all year.
+- **2026's penalty will understate AST and CAD,** at 17.8% after any recent negative for a
+  constructor. The working assumptions already note the same gap at constructor place 11.
+
+### Plain means against forced means
+
+From a throwaway script, not kept. It is the out-of-sample test from *One table or two*: each
+of 2023–25 is scored on a table from the other two, by RMSE after taking each race's mean
+off both the actual and the predicted points.
+
+The script first reproduced that entry's figures exactly (drivers 12.70 and 14.97,
+constructors 20.79 and 23.19), so the test is the same one. Doing so found that the entry
+had dropped drivers who never started, as `build_analysis_frame` does. Those 11 drivers
+mostly scored −20 to −3, and dropping them is look-ahead. The run below keeps them, and
+also 2024 race 24, which that entry left out only for the fault fixed in step 2.
+
+| Error, lower is better | Plain | Forced |
+| --- | --- | --- |
+| Drivers, all weekends | 13.547 | 13.450 |
+| Drivers, held-out 2023 / 2024 / 2025 | 14.01 / 13.16 / 13.50 | 13.87 / 13.07 / 13.44 |
+| Constructors, all weekends | 21.481 | 21.440 |
+| Constructors, held-out 2023 / 2024 / 2025 | 20.07 / 20.44 / 23.64 | 20.05 / 20.33 / 23.64 |
+
+Forced also errs less on normal and sprint weekends taken apart. Constructors in 2025 are a
+tie to two decimals.
+
+### The negatives rule
+
+With the agreed definition (the previous three rounds of the season, the driver carrying
+their history to a new team, races 2 onwards), 2023–25 gave:
+
+| Negatives in the last three | Drivers | Constructors |
+| --- | --- | --- |
+| 0 | 14.9% of 817 | 9.6% of 479 |
+| 1 | 19.0% of 416 | 18.4% of 152 |
+| 2 | 18.6% of 102 | 10.8% of 37 |
+| 3 | 0% of 5 | 100% of 2 |
+
+Across 2023–26 the same definition gives drivers 15%, 20% and 22%, and constructors 9%, 19%
+and 32%, close to the 12/20/23% and 9/19/34% in the sizing entry. So it measures the same
+thing. Fifteen of the 19 constructor negatives after two recent negatives are in 2026.
+
+Alex chose none against any (option A) over capping at two and forcing a rise (B, which came
+out almost the same) and exact counts (C).
+
+### What changed
+
+- `SignalTables(metrics, driver_archive, constructor_archive)`, with
+  `expected_points(season, race)` and `negative_chance(season, race)`, each a dict keyed by
+  driver identifier and constructor code.
+- A season's tables come from `TABLE_SEASONS` (2023–25) less itself, races 2 onwards, so no
+  season sees its own results and 2026 enters none. Every table is built once, and each race's
+  values are computed once, with every caller getting its own copy.
+- Expected points cover assets with a position or place, and a position past a table's end
+  takes the last value. A race with no signal, such as 2026 race 19, gives none.
+- The chance of going negative covers every asset priced in the race, including SAR and STR,
+  which have no position. It never reads the race's own result.
+- `load_signal_tables(fn_metrics, fn_archive)` reuses `load_existing_metrics` and
+  `load_all_archive_data`, and raises if the metrics file is missing or empty.
+
+### Tests
+
+21 new tests, 40 in `tests/test_fast_f1_signal.py`. Each was seen failing first, against a stub
+or, for the negatives rule, against exact counts. Two needed rework: the negatives history first
+gave both buckets 50%, so it could not tell the rules apart, and the table first made no
+difference with race 1 left in. The exceptions to red first were checked by mutation: 2026
+staying out of every table, a race with no signal, and the per-race cache handing out copies.
+Each of these mutations fails a test:
+
+- reading the own season or 2026;
+- adding race 1;
+- plain means;
+- no carry past a table's end;
+- filling unranked assets with zero;
+- reading the race's own result;
+- four rounds instead of three;
+- the seat carrying the history instead of the driver;
+- sharing the cached dict.
+
+Full suite 427 passed.
+
+### Real-data check
+
+From a throwaway script, not kept, on the real metrics file and archive:
+
+| Check | Result |
+| --- | --- |
+| Races 2 onwards, all seasons | 84, none raised |
+| Expected points per race | 29–30 assets in 2023–25, 33 in 2026 |
+| Chances per race | Every priced asset: 30 in 2023–25, 33 in 2026 |
+| 2026's points tables against the measurement script's forced means on all of 2023–25 | Equal to one decimal, every position and place |
+| 2026's negative tables | Drivers 14.9% and 18.7%, constructors 9.6% and 17.8% |
+| 2026 race 19 | No expected points, chances for all 33 assets |
+| Time | 1.8s to load, 5.7s to build every table and race, under 1ms a race after |
+| Peak memory | 200MB |
+
+Not run: a race before its results exist, as in step 4.

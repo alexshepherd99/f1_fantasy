@@ -1,7 +1,7 @@
 # fastf1_v2 — Plan
 
 **Status**: written 2026-11-01. Requirements: `requirements.md`, whose eight questions and working
-assumptions are all answered. [2026-11-06: steps 1 to 4 done. Step 5 is next.]
+assumptions are all answered. [2026-11-06: steps 1 to 5 done. Step 6 is next.]
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,
@@ -77,9 +77,12 @@ rather than defining the signal a second time.
   2023–25, and one table stands. See `log.md`, *One table or two*.]
 - Plain means are out of order in places, such as driver position 11 above position 10 (same
   entry). Compare them with means forced to fall by position, using that entry's out-of-sample test
-  on 2023–25 only, and use whichever errs less.
+  on 2023–25 only, and use whichever errs less. [2026-11-06: forced means erred less for both
+  tables. See `log.md`, *Step 5*.]
 - The chance of going negative, by asset type and by the number of negatives in its last three
   races, for the negative penalty. Same seasons rule, using only races before the one picked.
+  [2026-11-06: by whether there was any negative in them, not how many, as Alex chose. See
+  `log.md`, *Step 5*.]
 - Cached once per process, as a strategy is built per team per race.
 - Tests: a season's own results cannot change its table, and 2026 cannot change a 2023–25 table.
 
