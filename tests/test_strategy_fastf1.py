@@ -1,7 +1,13 @@
 import pytest
+from pulp import LpStatusOptimal
 
+from common import AssetType
+from helpers import load_with_derivations
 from linear.strategy_base import VarType
+from linear.strategy_factory import factory_strategy
 from linear.strategy_fastf1 import StrategyFastF1
+from races.season import factory_season
+from races.team import Team
 
 _DRIVER_PAIRS = {
     "D1@C1": "C1",
@@ -137,3 +143,28 @@ def test_strategy_fastf1_keeps_the_move_limit_at_race_four(stub_tables):
     assert strat._max_moves == 2
     assert strat._lp_variables[VarType.TeamMoves].value() == pytest.approx(2.0)
     assert _selected(strat) == {"D2@C1", "D6@C3", "C2", "C3"}
+
+
+def test_strategy_fastf1_solves_a_real_race():
+    """Built by the factory on the real metrics file and archive, for 2025 race 5.
+
+    The signal's identifiers match the race's, every selected asset has positive
+    expected points, and the LP solves with a full team.
+    """
+    season = factory_season(*load_with_derivations(season=2025), 2025)
+    team = Team(num_drivers=5, num_constructors=2, unused_budget=50.0)
+    for driver in ["BOR@KCK", "HAD@VRB", "DOO@ALP", "ALO@AST", "HUL@KCK"]:
+        team.add_asset(AssetType.DRIVER, driver)
+    for constructor in ["KCK", "AST"]:
+        team.add_asset(AssetType.CONSTRUCTOR, constructor)
+
+    strat = factory_strategy(
+        season.races[5], season.races[4], team, StrategyFastF1, max_moves=2, season_year=2025
+    )
+    problem = strat.execute()
+
+    selected = _selected(strat)
+    assert problem.status == LpStatusOptimal
+    assert len(selected) == 7
+    assert strat._lp_variables[VarType.TeamMoves].value() == pytest.approx(2.0)
+    assert all(strat._expected_points.get(a, 0.0) > 0.0 for a in selected)

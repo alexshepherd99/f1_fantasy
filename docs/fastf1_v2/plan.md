@@ -90,6 +90,10 @@ rather than defining the signal a second time.
 
 `StrategyFastF1(StrategyBase)`, with keyword parameters `fn_metrics`, `drs_coefficient=1.0`,
 `negative_penalty=0.0` and `budget_reward=0.0`, and `data/test_fastf1_metrics.xlsx` as a fixture.
+[2026-11-06: no fixture file, as Alex agreed. The tables need real 2023–25 metrics rows matched
+to the real archive, which no small file can give. Unit tests stub `load_signal_tables` with set
+expected points, and one test builds the strategy on the real files for 2025 race 5. Each
+keyword parameter arrives with the part that uses it.]
 Add one part per commit:
 
 1. Objective of expected points, respecting the base budget, team size and move constraints. **No
