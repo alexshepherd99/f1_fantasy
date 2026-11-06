@@ -1,7 +1,7 @@
 # fastf1_v2 — Plan
 
 **Status**: written 2026-11-01. Requirements: `requirements.md`, whose eight questions and working
-assumptions are all answered. [2026-11-06: steps 1 to 3b done. Step 4 is next.]
+assumptions are all answered. [2026-11-06: steps 1 to 4 done. Step 5 is next.]
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,

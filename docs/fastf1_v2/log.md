@@ -17,6 +17,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
 - Step 3 done 2026-11-06: the winners hold, and one robustness check moved from pass to fail.
 - Step 3b done 2026-11-06, and checked on two past races. Its first real pre-race run is
   São Paulo, 2026 race 20.
+- Step 4 done 2026-11-06: `fast_f1/signal.py` gives driver positions and constructor places,
+  run on every stored race. Step 5 is next.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -603,3 +605,62 @@ Lawson swapped at 2025 race 4. So the check can fail.
 The run added `session_drivers` files to the FastF1 wrapper's own cache, as any normal run
 now does. The step 3b.3 check found no stored row built before its race had results, so
 no data needed repair.
+
+## 2026-11-06 — Step 4: the signal
+
+### In plain language
+
+- **Done, and run on every stored race.** `fast_f1/signal.py` gives each driver a signal
+  position and each constructor a place, for any race from 2 onwards. It agrees with the
+  indicator analysis's own signal on every one of the 84 stored races.
+- **Two rules agreed by Alex before any code.** 2023 sprint weekends, which had only FP1
+  before team lock and which the analysis left out, use the sprint rule: driver + constructor
+  rolling. A fantasy driver with no row in the metrics file gets no position, and step 6
+  scores them zero, as for a race with no signal. There are two such drivers, SAR in 2024
+  race 3 and STR in 2025 race 9.
+- **Bad data raises an error rather than being ranked around.** This covers a driver with no
+  fantasy pair or two of them, a missing input, and two drivers disagreeing on their
+  constructor's points. None of these happens in the stored file.
+
+### What changed
+
+- `indicator_analysis.py` gained `add_signal_inputs`, which sets up the weekend format and the
+  inputs from metrics rows alone. The analysis needs fantasy points on every row, which a race
+  not yet run lacks, so it could not be reused as it was. Behaviour is unchanged: with the FP3
+  input pointed at the wrong session, 4 existing tests fail.
+- `signal.py` has `driver_positions` and `constructor_places`, each taking the metrics rows,
+  the archive's per-race pairs, a season and a race. Each returns a dict keyed by fantasy
+  identifier, `VER@RED` or `RED`, with 1 as best. Ties break on that identifier. A sum that
+  differs only by floating point noise also counts as a tie.
+- No race result is read. A test changes a race's status, finishing and grid positions and
+  points, and shows that no position or place moves, and that a driver who did not start keeps
+  a position. Nothing filters on results, so this was checked by mutation: dropping
+  non-starters, or ranking on the race's points, fails it.
+
+### Tests
+
+19 new tests. Each was seen failing first, against a stub or with the check missing. The
+exceptions are the look-ahead test and the empty race test, which were checked by mutation.
+Every slot choice was also mutated: adding FP2 or odds, dropping FP3, adding Sprint
+Qualifying on a sprint weekend, dropping the 2023 sprint rule, reversing the tie-break,
+dropping the rounding, and ranking constructors on driver points. Each one fails a test.
+Full suite 406 passed.
+
+### Real-data check
+
+From a throwaway script, not kept, on `data/fastf1_practice_rolling_metrics.xlsx` and the
+archive's pairs:
+
+| Check | Result |
+| --- | --- |
+| Races 2 onwards, all seasons | 84, none raised |
+| Positions per race | One per metrics row, numbered 1 to n |
+| Constructors per race | 10 in 2023–25, 11 in 2026 |
+| Driver order against the analysis's own signal, where it puts one driver strictly ahead | 16,100 pairs, 0 disagree |
+| SAR 2024 race 3, STR 2025 race 9 | No position |
+
+The order check was run again with the analysis side scored on driver rolling alone. It found
+1,313 disagreements, so it can catch a different signal.
+
+Not run: a race before its results exist. Step 3b's checks cover the metrics rows for such a
+race, and the signal reads no results.
