@@ -1,6 +1,6 @@
 import pandas as pd
 
-from fast_f1.signal import driver_positions
+from fast_f1.signal import constructor_places, driver_positions
 
 
 def _row(race: int, driver: str, driver_rolling: float, constructor_rolling: float,
@@ -15,6 +15,7 @@ def _row(race: int, driver: str, driver_rolling: float, constructor_rolling: flo
         "GridPosition": 1.0,
         "Points": 25.0,
         "RollingPointsRank": driver_rolling,
+        "ConstructorRollingPoints": constructor_rolling * 100,
         "ConstructorRollingPointsRank": constructor_rolling,
         "OddsRank": 0.0,
         "FP1_MinLapTime_rank": None,
@@ -111,3 +112,43 @@ def test_only_the_requested_race_is_ranked_and_keys_use_that_races_pairs():
         race=3,
     )
     assert positions == {"LAW@RED": 1, "TSU@VRB": 2}
+
+
+def _places(rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024) -> dict:
+    return constructor_places(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
+
+
+def test_constructors_rank_on_their_own_rolling_points_not_their_drivers_signal():
+    places = _places(
+        [
+            _row(2, "VER", 0.0, 0.3, fp3=0.0),
+            _row(2, "PER", 0.0, 0.3, fp3=0.0),
+            _row(2, "HAM", 1.0, 0.2, fp3=1.0),
+            _row(2, "RUS", 1.0, 0.2, fp3=1.0),
+            _row(2, "NOR", 0.0, 0.4, fp3=0.0),
+        ],
+        _pairs(2, "VER@RED", "PER@RED", "HAM@MER", "RUS@MER", "NOR@MCL"),
+    )
+    assert places == {"MCL": 1, "RED": 2, "MER": 3}
+
+
+def test_a_constructor_tie_breaks_on_the_code():
+    places = _places(
+        [_row(2, "VER", 0.0, 0.2), _row(2, "ALB", 0.0, 0.2)],
+        _pairs(2, "VER@RED", "ALB@WIL"),
+    )
+    assert places == {"RED": 1, "WIL": 2}
+
+
+def test_constructors_are_reached_through_the_requested_races_pairs():
+    places = _places(
+        [
+            _row(2, "LAW", 0.0, 0.1),
+            _row(3, "LAW", 0.0, 0.9),
+            _row(3, "TSU", 0.0, 0.0),
+            _row(2, "TSU", 0.0, 0.0),
+        ],
+        _pairs(2, "LAW@VRB", "TSU@RED") + _pairs(3, "LAW@RED", "TSU@VRB"),
+        race=3,
+    )
+    assert places == {"RED": 1, "VRB": 2}
