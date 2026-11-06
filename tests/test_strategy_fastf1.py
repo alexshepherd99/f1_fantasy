@@ -220,6 +220,30 @@ def test_strategy_fastf1_breaks_a_drs_tie_on_the_identifier(stub_tables):
     assert strat.get_drs_driver() == "D3@C2"
 
 
+@pytest.mark.parametrize(
+    "budget_reward, team, objective",
+    [
+        (0.0, {"D2@C1", "D3@C2", "C1", "C2"}, 20.0),
+        (0.25, {"D2@C1", "D3@C2", "C1", "C2"}, 25.0),
+        (1.0, {"D2@C1", "D6@C3", "C1", "C2"}, 42.5),
+    ],
+)
+def test_strategy_fastf1_rewards_each_1m_spent(stub_tables, budget_reward, team, objective):
+    """The reward adds points per 1m of the team's cost, and at zero changes nothing.
+
+    One move: D3 (price 4) on 10 points is best without a reward, and D6 (price 7.5)
+    on 9 points is best at a reward of 1, found by brute force.
+    """
+    tables, _ = stub_tables
+    tables._expected_points = {"D2@C1": 10.0, "D3@C2": 10.0, "D6@C3": 9.0}
+    strat = _strategy(max_cost=999.0, max_moves=1, drs_coefficient=0.0, budget_reward=budget_reward)
+
+    strat.execute()
+
+    assert _selected(strat) == team
+    assert strat._lp_variables[VarType.OptimiseMax].value() == pytest.approx(objective)
+
+
 def test_strategy_fastf1_keeps_the_move_limit_at_race_four(stub_tables):
     """No race-4 unlimited-moves chip: two moves stay two, where four would pick another team."""
     strat = _strategy(max_cost=999.0, max_moves=2, race_num=4, drs_coefficient=0.0)

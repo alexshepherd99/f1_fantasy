@@ -25,6 +25,8 @@ class StrategyFastF1(StrategyBase):
     drs_coefficient : float
         Scales the DRS term in the objective, the DRS driver's expected points counted
         a second time. At zero the term is left out.
+    budget_reward : float
+        Points added to the objective per 1m of the team's total cost. Zero adds nothing.
 
     Raises
     ------
@@ -37,10 +39,12 @@ class StrategyFastF1(StrategyBase):
         *args,
         fn_metrics: Path | str = DEFAULT_HISTORICAL_OUTPUT,
         drs_coefficient: float = 1.0,
+        budget_reward: float = 0.0,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._drs_coefficient = drs_coefficient
+        self._budget_reward = budget_reward
         tables = load_signal_tables(fn_metrics)
         self._expected_points = tables.expected_points(self._season_year, self._race_num)
 
@@ -66,7 +70,8 @@ class StrategyFastF1(StrategyBase):
             self._expected_points.get(i, 0.0) * constructors[i] for i in self._all_available_constructors
         ]
 
-        objective = lpSum(points_drivers + points_constructors)
+        # Points per 1m spent, so budget left unspent counts against a team
+        objective = lpSum(points_drivers + points_constructors) + self._budget_reward * self._lp_variables[VarType.TotalCost]
 
         # DRS x2 counts the DRS driver's expected points a second time, so they can decide the team
         if self._drs_coefficient != 0.0:
