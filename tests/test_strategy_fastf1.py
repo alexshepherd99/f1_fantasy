@@ -100,6 +100,20 @@ def test_strategy_fastf1_reads_the_tables_for_its_race(stub_tables):
     assert tables.requested == [(2025, 7)]
 
 
+@pytest.mark.parametrize("unknown", ["D7@C9", "C9"])
+def test_strategy_fastf1_raises_on_a_signal_for_an_asset_not_in_the_race(stub_tables, unknown):
+    """A signal naming an asset the race does not have means the identifiers disagree.
+
+    Left alone, a disagreement over every identifier would score each asset zero and
+    still solve, so it raises instead.
+    """
+    tables, _ = stub_tables
+    tables._expected_points = _EXPECTED_POINTS | {unknown: 1.0}
+
+    with pytest.raises(ValueError, match=unknown):
+        _strategy(max_cost=25.0, max_moves=2)
+
+
 def test_strategy_fastf1_maximises_expected_points_within_budget_and_moves(stub_tables):
     """The best team on expected points that the budget and two moves allow.
 

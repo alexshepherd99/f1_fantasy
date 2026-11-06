@@ -2,6 +2,7 @@
 
 See ``docs/fastf1_v2/plan.md``, step 6.
 """
+import logging
 from pathlib import Path
 
 from pulp import LpMaximize, LpProblem, lpSum
@@ -21,11 +22,25 @@ class StrategyFastF1(StrategyBase):
     fn_metrics : Path | str
         The FastF1 metrics file the signal is built from, read once per process by
         `load_signal_tables`.
+
+    Raises
+    ------
+    ValueError
+        If the signal names an asset the race does not have, as identifiers that
+        disagree would otherwise score every asset zero and still solve.
     """
     def __init__(self, *args, fn_metrics: Path | str = DEFAULT_HISTORICAL_OUTPUT, **kwargs):
         super().__init__(*args, **kwargs)
         tables = load_signal_tables(fn_metrics)
         self._expected_points = tables.expected_points(self._season_year, self._race_num)
+
+        available = set(self._all_available_drivers) | set(self._all_available_constructors)
+        unknown = sorted(set(self._expected_points) - available)
+        if unknown:
+            msg = (f"Signal for {self._season_year} race {self._race_num} names assets not in the race: "
+                   f"{unknown}")
+            logging.error(msg)
+            raise ValueError(msg)
 
     def get_problem(self) -> LpProblem:
         """Build an LP problem whose objective is the expected points of the selected assets.
