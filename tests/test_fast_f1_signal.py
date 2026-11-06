@@ -344,23 +344,42 @@ def _archive_only(*races: tuple) -> SignalTables:
     return history.tables()
 
 
-# 2023's table: race 2 has VER after one negative going negative and HAM after none not;
-# race 3 has VER after two not and HAM after none going negative. Race 1 builds no row,
-# which BOT and ALF, negative there alone, would show. RED and MER follow VER and HAM.
+# 2023's table, from races 2 and 3. After a recent negative, 3 of 4 go negative: VER both
+# times and PER once, which as exact counts would be all of those after one and half of
+# those after two. After none, 1 of 4: HAM at race 3, never RUS. Race 1 builds no row,
+# which BOT, negative there alone, would show. The constructors follow their drivers.
 _NEGATIVES_2023 = [
-    (2023, 1, {"VER@RED": -5, "HAM@MER": 10, "BOT@ALF": -5}, {"RED": -5, "MER": 10, "ALF": -5}),
-    (2023, 2, {"VER@RED": -5, "HAM@MER": 10}, {"RED": -5, "MER": 10}),
-    (2023, 3, {"VER@RED": 10, "HAM@MER": -3}, {"RED": 10, "MER": -3}),
+    (2023, 1, {"VER@RED": -5, "PER@ALP": -5, "HAM@MER": 10, "RUS@WIL": 10, "BOT@ALF": -5},
+     {"RED": -5, "ALP": -5, "MER": 10, "WIL": 10, "ALF": -5}),
+    (2023, 2, {"VER@RED": -5, "PER@ALP": -5, "HAM@MER": 10, "RUS@WIL": 10},
+     {"RED": -5, "ALP": -5, "MER": 10, "WIL": 10}),
+    (2023, 3, {"VER@RED": -5, "PER@ALP": 10, "HAM@MER": -3, "RUS@WIL": 10},
+     {"RED": -5, "ALP": 10, "MER": -3, "WIL": 10}),
 ]
 
 
-def test_negative_chance_is_by_asset_type_and_recent_negatives():
+def test_negative_chance_is_by_asset_type_and_any_recent_negative():
     tables = _archive_only(
         *_NEGATIVES_2023,
         (2024, 1, {"VER@RED": 5, "HAM@MER": 5}, {"RED": -5, "MER": 5}),
         (2024, 2, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
     )
-    assert tables.negative_chance(2024, 2) == {"VER@RED": 0.5, "HAM@MER": 0.5, "RED": 1.0, "MER": 0.5}
+    assert tables.negative_chance(2024, 2) == {
+        "VER@RED": 0.25, "HAM@MER": 0.25, "RED": 0.75, "MER": 0.25,
+    }
+
+
+def test_two_or_three_recent_negatives_count_the_same_as_one():
+    tables = _archive_only(
+        *_NEGATIVES_2023,
+        (2024, 1, {"VER@RED": -5, "HAM@MER": 5}, {"RED": -5, "MER": 5}),
+        (2024, 2, {"VER@RED": -5, "HAM@MER": 5}, {"RED": -5, "MER": 5}),
+        (2024, 3, {"VER@RED": -5, "HAM@MER": -5}, {"RED": -5, "MER": -5}),
+        (2024, 4, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
+    )
+    assert tables.negative_chance(2024, 4) == {
+        "VER@RED": 0.75, "HAM@MER": 0.75, "RED": 0.75, "MER": 0.75,
+    }
 
 
 def test_only_the_previous_three_rounds_count():
@@ -373,7 +392,7 @@ def test_only_the_previous_three_rounds_count():
         (2024, 5, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
     )
     chance = tables.negative_chance(2024, 5)
-    assert (chance["VER@RED"], chance["HAM@MER"]) == (0.5, 1.0)
+    assert (chance["VER@RED"], chance["HAM@MER"]) == (0.25, 0.75)
 
 
 def test_a_driver_carries_their_negatives_to_a_new_team():
@@ -382,23 +401,12 @@ def test_a_driver_carries_their_negatives_to_a_new_team():
         (2024, 1, {"LAW@VRB": -5}, {"VRB": 5}),
         (2024, 2, {"LAW@RED": 5}, {"RED": 5}),
     )
-    assert tables.negative_chance(2024, 2)["LAW@RED"] == 1.0
+    assert tables.negative_chance(2024, 2)["LAW@RED"] == 0.75
 
 
 def test_an_asset_with_no_history_counts_as_no_negatives():
     tables = _archive_only(*_NEGATIVES_2023, (2024, 2, {"CAM@HAA": 5}, {"HAA": 5}))
-    assert tables.negative_chance(2024, 2) == {"CAM@HAA": 0.5, "HAA": 0.5}
-
-
-def test_more_negatives_than_the_table_has_seen_takes_its_last_value():
-    tables = _archive_only(
-        *_NEGATIVES_2023,
-        (2024, 1, {"VER@RED": -5}, {"RED": -5}),
-        (2024, 2, {"VER@RED": -5}, {"RED": -5}),
-        (2024, 3, {"VER@RED": -5}, {"RED": -5}),
-        (2024, 4, {"VER@RED": 5}, {"RED": 5}),
-    )
-    assert tables.negative_chance(2024, 4) == {"VER@RED": 0.0, "RED": 0.0}
+    assert tables.negative_chance(2024, 2) == {"CAM@HAA": 0.25, "HAA": 0.25}
 
 
 def _negatives_varying(points: int) -> SignalTables:
@@ -414,7 +422,7 @@ def _negatives_varying(points: int) -> SignalTables:
 
 def test_negative_chance_reads_neither_the_race_its_own_season_nor_2026():
     low, high = _negatives_varying(-1000), _negatives_varying(1000)
-    expected = {"VER@RED": 1.0, "HAM@MER": 0.5, "RED": 1.0, "MER": 0.5}
+    expected = {"VER@RED": 0.75, "HAM@MER": 0.25, "RED": 0.75, "MER": 0.25}
     assert low.negative_chance(2024, 2) == high.negative_chance(2024, 2) == expected
 
 

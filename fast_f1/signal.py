@@ -187,9 +187,10 @@ class SignalTables:
     def negative_chance(self, season: int, race: int) -> dict[str, float]:
         """Each priced asset's chance of going negative in one race.
 
-        Looked up by asset type and by the asset's negatives in the previous three rounds
-        of the season. A driver carries their negatives to a new team, and a round an
-        asset was not in counts for nothing. Reads no result from the race itself.
+        Looked up by asset type and by whether the asset went negative in any of the
+        previous three rounds of the season. A driver carries their negatives to a new
+        team, and a round an asset was not in counts for nothing. Reads no result from
+        the race itself.
 
         Returns:
             Chances keyed by driver identifier and constructor code, for every asset
@@ -205,10 +206,10 @@ class SignalTables:
             if priced.empty:
                 continue
             table = self._table("negatives", season, asset_type)
-            counts = _recent_negatives(archive, asset_type, season, race, priced)
+            recent = _any_recent_negative(archive, asset_type, season, race, priced)
             chances |= {
-                asset: _look_up(table, count)
-                for asset, count in zip(priced[asset_type.value], counts)
+                asset: _look_up(table, flag)
+                for asset, flag in zip(priced[asset_type.value], recent)
             }
         return chances
 
@@ -232,11 +233,11 @@ class SignalTables:
         return table
 
     def _negative_history(self) -> pd.DataFrame:
-        """Every table season's assets from race 2 on: their recent negatives, and whether
-        they then went negative."""
+        """Every table season's assets from race 2 on: whether they had a recent negative,
+        and whether they then went negative."""
         if self._negatives is not None:
             return self._negatives
-        frames = [pd.DataFrame(columns=["AssetType", "Season", "Race", "Negatives", "Negative"])]
+        frames = [pd.DataFrame(columns=["AssetType", "Season", "Race", "RecentNegative", "Negative"])]
         for asset_type, archive in self._archive.items():
             scored = archive[archive["Season"].isin(TABLE_SEASONS) & archive["Points"].notna()
                              & (archive["Race"] > FIRST_RACE)]
@@ -245,11 +246,13 @@ class SignalTables:
                     "AssetType": asset_type,
                     "Season": season,
                     "Race": race,
-                    "Negatives": _recent_negatives(archive, asset_type, season, race, raced).to_numpy(),
+                    "RecentNegative": _any_recent_negative(
+                        archive, asset_type, season, race, raced
+                    ).to_numpy(),
                     "Negative": (raced["Points"] < 0).to_numpy(),
                 }))
         self._negatives = pd.concat(frames, ignore_index=True).astype(
-            {"Negatives": int, "Negative": bool}
+            {"RecentNegative": int, "Negative": bool}
         )
         return self._negatives
 
@@ -298,19 +301,21 @@ def _falling_means(history: pd.DataFrame) -> pd.Series:
 
 
 def _negative_shares(history: pd.DataFrame) -> pd.Series:
-    """The share of rows that went negative, by the number of recent negatives."""
-    return history.groupby("Negatives")["Negative"].mean()
+    """The share of rows that went negative, without and with a recent negative."""
+    return history.groupby("RecentNegative")["Negative"].mean()
 
 
-def _recent_negatives(
+def _any_recent_negative(
     archive: pd.DataFrame, asset_type: AssetType, season: int, race: int, rows: pd.DataFrame
 ) -> pd.Series:
-    """Each row's negatives in the previous ``RECENT_RACES`` rounds of the season."""
+    """1 for each row with a negative in the previous ``RECENT_RACES`` rounds of the
+    season, else 0. One negative counts the same as several, as in 2023-25 several were
+    no riskier than one (fastf1_v2 log, step 5)."""
     prior = archive[(archive["Season"] == season)
                     & archive["Race"].between(race - RECENT_RACES, race - 1)
                     & archive["Points"].notna()]
-    counts = (prior["Points"] < 0).groupby(_carrier(prior, asset_type)).sum()
-    return _carrier(rows, asset_type).map(counts).fillna(0).astype(int)
+    went_negative = set(_carrier(prior[prior["Points"] < 0], asset_type))
+    return _carrier(rows, asset_type).isin(went_negative).astype(int)
 
 
 def _carrier(rows: pd.DataFrame, asset_type: AssetType) -> pd.Series:
