@@ -10,6 +10,7 @@ from fast_f1.api import (
     get_event_for_race,
     get_race_numbers_for_season,
     get_race_results,
+    get_session_drivers,
     get_session_laps,
     select_practice_sessions_from_event,
 )
@@ -80,6 +81,17 @@ def _load_driver_odds(season_year: int, race_num: int) -> dict[str, float]:
             exc,
         )
         return {}
+
+
+def _practice_teams(season_year: int, race_num: int, session_codes: Iterable[str]) -> pd.Series:
+    """Each driver's team for the weekend, keyed by driver, from the practice driver lists.
+
+    Before a race has results these are the only source of a driver's current
+    team. Where sessions disagree, the latest one listing the driver wins.
+    """
+    session_drivers = [get_session_drivers(season_year, race_num, code) for code in session_codes]
+    teams = pd.concat(session_drivers, ignore_index=True).dropna(subset=["Abbreviation", "TeamName"])
+    return teams.drop_duplicates(subset=["Abbreviation"], keep="last").set_index("Abbreviation")["TeamName"]
 
 
 def build_race_metrics(
@@ -171,16 +183,16 @@ def build_race_metrics(
         current_results["Season"] = season_year
         current_results["Race"] = race_num
 
-        # Attempt to infer constructors from previous results if present.
-        if "Abbreviation" in previous_results.columns and "Constructor" in previous_results.columns:
-            mapping = (
-                previous_results.dropna(subset=["Abbreviation", "Constructor"]).
-                drop_duplicates(subset=["Abbreviation"]).
-                set_index("Abbreviation")["Constructor"]
+        team_by_driver = _practice_teams(season_year, race_num, practice_session_codes)
+        unplaced = sorted(set(driver_list) - set(team_by_driver.index))
+        if unplaced:
+            msg = (
+                f"No practice session names a team for {', '.join(unplaced)} in season {season_year} "
+                f"race {race_num}, so their constructor points cannot be found."
             )
-            current_results["Constructor"] = current_results["Abbreviation"].map(mapping)
-        else:
-            current_results["Constructor"] = None
+            logger.error(msg)
+            raise RuntimeError(msg)
+        current_results["Constructor"] = current_results["Abbreviation"].map(team_by_driver)
 
     if "Constructor" not in current_results.columns:
         current_results["Constructor"] = current_results.get("TeamName")

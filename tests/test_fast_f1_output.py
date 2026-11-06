@@ -272,7 +272,7 @@ def test_build_race_metrics_adds_final_position_from_aggregate_rank(monkeypatch)
 
 def test_build_race_metrics_works_when_race_results_missing(monkeypatch):
     """If official Race results are not yet published, metrics should still be computed
-    using practice session drivers and prior-results constructor mapping."""
+    using practice session drivers and the teams the sessions name for them."""
     season_year = 2026
     race_num = 6
 
@@ -366,12 +366,18 @@ def test_build_race_metrics_works_when_race_results_missing(monkeypatch):
     monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", fake_select_practice_sessions_from_event)
     monkeypatch.setattr("fast_f1.output.get_session_laps", fake_get_session_laps)
     monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
+    monkeypatch.setattr(
+        "fast_f1.output.get_session_drivers",
+        lambda season, race, session_type: pd.DataFrame(
+            {"Abbreviation": ["ALO", "PER"], "TeamName": ["Alfa", "Perse"]}
+        ),
+    )
 
     metrics = build_race_metrics(season_year, race_num)
 
     # Drivers derived from practice should be present
     assert set(metrics["Driver"]) >= {"ALO", "PER"}
-    # Constructor mapping from prior results should be present
+    # Constructor ranks should be present
     assert "ConstructorRollingPointsRank" in metrics.columns
     assert "AggregateRank" in metrics.columns
 
@@ -782,6 +788,131 @@ def test_build_race_metrics_warns_when_a_vanished_name_cannot_be_linked(monkeypa
     points = _constructor_points(metrics)
     assert pd.isna(points["HUL"]) and pd.isna(points["RUS"])
     assert points["HAM"] == points["BOT"] == 90
+
+
+def _patch_race_before_results(monkeypatch, season_year, race_num, prior_by_race, session_teams):
+    """Wire build_race_metrics to a race with no results yet.
+
+    ``prior_by_race`` gives earlier races as (driver, constructor, points), and
+    ``session_teams`` the driver list both practice sessions report.
+    """
+    drivers = list(session_teams)
+    laps = pd.DataFrame(
+        {
+            "Driver": drivers,
+            "LapTime": [80.0 + i for i in range(len(drivers))],
+            "Stint": [1] * len(drivers),
+            "Season": [season_year] * len(drivers),
+            "Race": [race_num] * len(drivers),
+            "SessionType": ["FP2"] * len(drivers),
+        }
+    )
+
+    def fake_get_race_results(season, race):
+        if race == race_num:
+            return pd.DataFrame()
+        rows = prior_by_race[race]
+        return pd.DataFrame(
+            {
+                "Abbreviation": [driver for driver, _, _ in rows],
+                "Constructor": [constructor for _, constructor, _ in rows],
+                "Points": [points for _, _, points in rows],
+                "Season": [season] * len(rows),
+                "Race": [race] * len(rows),
+            }
+        )
+
+    monkeypatch.setattr(
+        "fast_f1.output.get_event_for_race",
+        lambda season, race: DummyEvent({"FP2": DummySession(pd.DataFrame()), "FP3": DummySession(pd.DataFrame())}),
+    )
+    monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", lambda event: ("FP2", "FP3"))
+    monkeypatch.setattr("fast_f1.output.get_session_laps", lambda season, race, session_type: laps)
+    monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
+    monkeypatch.setattr(
+        "fast_f1.output.get_session_drivers",
+        lambda season, race, session_type: pd.DataFrame(
+            {"Abbreviation": drivers, "TeamName": [session_teams[d] for d in drivers]}
+        ),
+    )
+
+
+def test_build_race_metrics_before_results_uses_the_team_a_driver_moved_to(monkeypatch):
+    """A team change inside the rolling window must not leave a driver on the old team."""
+    before_swap = [("VER", "Red Bull Racing", 25), ("LAW", "Red Bull Racing", 1),
+                   ("TSU", "Racing Bulls", 6), ("HAD", "Racing Bulls", 4)]
+    after_swap = [("VER", "Red Bull Racing", 18), ("TSU", "Red Bull Racing", 2),
+                  ("LAW", "Racing Bulls", 0), ("HAD", "Racing Bulls", 8)]
+    _patch_race_before_results(
+        monkeypatch, 2025, 4, {1: before_swap, 2: before_swap, 3: after_swap},
+        {"VER": "Red Bull Racing", "TSU": "Red Bull Racing", "LAW": "Racing Bulls", "HAD": "Racing Bulls"},
+    )
+
+    metrics = build_race_metrics(2025, 4)
+
+    assert metrics.set_index("Driver").loc["TSU", "Constructor"] == "Red Bull Racing"
+    red_bull = 2 * (25 + 1) + (18 + 2)
+    assert _constructor_points(metrics)["TSU"] == red_bull
+
+
+def test_build_race_metrics_before_results_gives_a_new_driver_a_team(monkeypatch):
+    """CAM at Haas in 2026 race 20: a driver with no recent results still gets a team."""
+    prior = [("OCO", "Haas F1 Team", 4), ("BEA", "Haas F1 Team", 2),
+             ("HAM", "Ferrari", 18), ("LEC", "Ferrari", 12)]
+    _patch_race_before_results(
+        monkeypatch, 2026, 20, {17: prior, 18: prior, 19: prior},
+        {"CAM": "Haas F1 Team", "BEA": "Haas F1 Team", "HAM": "Ferrari", "LEC": "Ferrari"},
+    )
+
+    metrics = build_race_metrics(2026, 20)
+
+    assert metrics.set_index("Driver").loc["CAM", "Constructor"] == "Haas F1 Team"
+    assert _constructor_points(metrics)["CAM"] == 3 * (4 + 2)
+
+
+def test_build_race_metrics_before_results_takes_the_latest_session_team(monkeypatch):
+    """Where practice sessions disagree on a driver's team, the later session wins."""
+    prior = [("OCO", "Haas F1 Team", 4), ("BEA", "Haas F1 Team", 2),
+             ("HAM", "Ferrari", 18), ("LEC", "Ferrari", 12)]
+    _patch_race_before_results(
+        monkeypatch, 2026, 20, {17: prior, 18: prior, 19: prior},
+        {"CAM": "Haas F1 Team", "BEA": "Haas F1 Team", "HAM": "Ferrari", "LEC": "Ferrari"},
+    )
+    cam_team_by_session = {"FP2": "Ferrari", "FP3": "Haas F1 Team"}
+    monkeypatch.setattr(
+        "fast_f1.output.get_session_drivers",
+        lambda season, race, session_type: pd.DataFrame(
+            {
+                "Abbreviation": ["CAM", "BEA", "HAM", "LEC"],
+                "TeamName": [cam_team_by_session[session_type], "Haas F1 Team", "Ferrari", "Ferrari"],
+            }
+        ),
+    )
+
+    metrics = build_race_metrics(2026, 20)
+
+    assert metrics.set_index("Driver").loc["CAM", "Constructor"] == "Haas F1 Team"
+
+
+def test_build_race_metrics_before_results_raises_when_no_session_names_a_drivers_team(monkeypatch, caplog):
+    """A driver left without a team would silently drop out of the constructor signal."""
+    prior = [("HAM", "Ferrari", 18), ("LEC", "Ferrari", 12)]
+    _patch_race_before_results(
+        monkeypatch, 2026, 20, {17: prior, 18: prior, 19: prior},
+        {"HAM": "Ferrari", "LEC": "Ferrari"},
+    )
+    monkeypatch.setattr(
+        "fast_f1.output.get_session_drivers",
+        lambda season, race, session_type: pd.DataFrame(
+            {"Abbreviation": ["HAM"], "TeamName": ["Ferrari"]}
+        ),
+    )
+
+    caplog.set_level("ERROR", logger="fast_f1.output")
+    with pytest.raises(RuntimeError, match="LEC"):
+        build_race_metrics(2026, 20)
+
+    assert "LEC" in caplog.text
 
 
 def test_build_race_metrics_survives_a_corrupt_odds_workbook(monkeypatch, tmp_path, caplog):
