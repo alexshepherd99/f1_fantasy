@@ -28,6 +28,10 @@ alongside in `requirements.md`, and the steps in `plan.md`.
 - Step 8 done 2026-11-06: none of the six variants cleared the bar against the base, so
   step 9 runs `StrategyFastF1` at its defaults. Every label trailed P2PM in all of 2023–25.
   Step 9 is next.
+- Stepped back 2026-11-06, before step 9, at Alex's request. The signal ranks well, but the
+  expected-points table loses how far ahead an asset is, and in 2023 it never bought VER.
+  Step 9 is on hold, and the signal design is to be redone in a fresh session. See the entry
+  of that date, *Stepping back*.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -987,3 +991,106 @@ whether that is raised with Alex, as the plan says. The reward variants moved it
 in 2023–24 and lowered it in 2025, so a reward per 1m spent does not close the gap.
 
 Not run: 2026, and any combination of settings.
+
+## 2026-11-06 — Stepping back: why the strategy trails P2PM
+
+Alex was surprised by how badly step 8 went, and asked for the assumptions to be checked
+before step 9, starting with the table that maps signal position to fantasy points.
+
+### In plain language
+
+- **The signal is not the problem.** Per race, it puts drivers and constructors in order of
+  fantasy points at least as well as rolling points or price, and much better than P2PM's
+  own value measure. P2PM wins on value for money, not on predicting points.
+- **The table is.** It gives every position a fixed number of points, so it cannot tell
+  first by a mile from first by a whisker. Each season's table comes from the other seasons,
+  so it also cannot know when one driver dominates.
+- **In 2023 that cost the whole gap.** 2023's table, from 2024–25, gave positions 1 and 2
+  the same 29.0 points. The signal ranked VER first, but he cost 6m to 9m more than the
+  driver ranked second, for no extra points in the table, so the LP left him out. He then
+  scored 46 to 68 points a race. FastF1 led P2PM until race 9 and then lost about 540 points
+  in four races without him.
+- **2024 shows the same fault the other way.** Its table, from 2023 and 2025, expected 38.6
+  points at position 1, and position 1 scored 25.6 on average that season.
+- **Budget is a second, smaller effect.** The strategy pays top prices for top-ranked assets,
+  which do not rise, so it ends 2025 about 13m behind P2PM. Step 8's reward per 1m spent did
+  not help.
+- **Consequences.** Step 9 is on hold. Step 8's results describe a strategy with this fault,
+  so they do not carry over to a redesign. The signal design, from step 4's use of
+  position onwards, is to be redone in a fresh session. No fix has been designed.
+- **My step 5 choice made 2023 worse, but is not the cause.** Forcing means to fall tied
+  positions 1 and 2. Plain means would have put position 1 below position 2.
+
+### What was run
+
+Two throwaway scripts, not kept, on the real metrics file and archive, reading no 2026
+result.
+
+**The table and the signal**, for every race from 2 onwards in 2023–25:
+
+| Mean per-race rank correlation with points | Signal's table | Rolling 3-race points | Price | P2PM (3) |
+| --- | --- | --- | --- | --- |
+| Drivers, 2023 / 2024 / 2025 | 0.583 / 0.617 / 0.527 | 0.441 / 0.570 / 0.436 | 0.560 / 0.636 / 0.500 | 0.342 / 0.527 / 0.354 |
+| Constructors, 2023 / 2024 / 2025 | 0.698 / 0.708 / 0.551 | 0.640 / 0.666 / 0.557 | 0.702 / 0.723 / 0.607 | 0.558 / 0.650 / 0.465 |
+
+Rolling points and P2PM here are the archive's `Points Cumulative (3)` and
+`P2PM Cumulative (3)`, which read only earlier races. The mean points of the top five drivers
+a race by the table, rolling points and price were within 1.2 points of each other in every
+season, with P2PM's top five 1.4 to 4.1 points below the best.
+
+Split into fifths by expected points, the table is calibrated to within 1.4 points for the
+lower four fifths of drivers, and overstates the top fifth: 27.7 expected against 25.1 scored.
+
+The 228 asset-races with no expected points, which the strategy scores zero, are all drivers
+not in that race. All have zero points and price except SAR in 2024 race 3 and STR in 2025
+race 9, who withdrew during the weekend.
+
+Plain mean driver points by signal position, the input to the table before means are forced
+to fall:
+
+| Position | 2023 | 2024 | 2025 | All three |
+| --- | --- | --- | --- | --- |
+| 1 | 46.3 | 25.6 | 31.6 | 34.1 |
+| 2 | 28.3 | 27.6 | 31.3 | 29.1 |
+| 3 | 19.3 | 35.8 | 21.4 | 25.7 |
+
+Constructor place 1 varies the same way: 79.2, 64.4 and 68.2. The standard deviation at
+driver position 1 is 18.4 points, from 67 races.
+
+**Race by race.** 15 teams a season (5 a band, seed 2) re-simulated through `run_for_team`
+for `StrategyMaxP2PM`, `StrategyMaxP2PMNoReset` and `StrategyFastF1`, as the stores hold only
+the last race. Cumulative mean gap, FastF1 minus P2PM:
+
+| Season | After race 9 | End of season | Worst single races |
+| --- | --- | --- | --- |
+| 2023 | +116 | −312 | 17: −201, 10: −126, 16: −112, 12: −100 |
+| 2024 | −81 | −356 | 23: −66, 20: −64, 9: −63 |
+| 2025 | −131 | −379 | 15: −102, 22: −86, 10: −77 |
+
+In each of 2023's four worst races, every FastF1 team was without VER and every P2PM team held
+him, as its DRS driver in three of the four. The signal ranked him first in all four, at 27.9m
+to 29.1m, against 19.9m to 21.8m for the driver ranked second. Share of team-races holding VER:
+
+| Season | FastF1 | P2PM |
+| --- | --- | --- |
+| 2023 | 28% | 96% |
+| 2024 | 22% | 11% |
+| 2025 | 18% | 28% |
+
+2024–25's worst races show no single cause like this. FastF1 often held both McLaren drivers
+in 2025, where P2PM held one and spent the difference elsewhere.
+
+Mean budget, P2PM against FastF1, at the end of each season: 2023 135.6m and 134.0m (FastF1
+was ahead to race 15), 2024 127.3m and 123.1m, 2025 139.5m and 126.6m.
+
+Moves are not a cause. Mean moves used per race were 1.76 to 1.97 for FastF1 and 1.82 to 1.92
+for P2PM, and the race-4 chip again explains little: the gap against P2PM without the chip
+ends 2025 at −243 rather than −379, and is the same in 2023.
+
+### What this changes
+
+- The plan is revised: step 9 and step 10 wait for a new signal design, and step 8 is to be
+  rerun on it. See `plan.md`.
+- Question 1's answer, expected points by signal position, is reopened in `requirements.md`.
+- The indicator analysis judged the signal on rank correlation, which cannot see this fault.
+  A redesign needs a check on how much each asset scores, not just their order.
