@@ -9,6 +9,7 @@ from __future__ import annotations
 import functools
 import logging
 from pathlib import Path
+from typing import Callable
 
 import pandas as pd
 from scipy.optimize import isotonic_regression
@@ -164,6 +165,7 @@ class SignalTables:
         self._history: pd.DataFrame | None = None
         self._negatives: pd.DataFrame | None = None
         self._tables: dict[tuple[str, int, AssetType], pd.Series] = {}
+        self._race_values: dict[tuple[str, int, int], dict[str, float]] = {}
 
     def expected_points(self, season: int, race: int) -> dict[str, float]:
         """Each ranked asset's expected fantasy points in one race.
@@ -176,6 +178,9 @@ class SignalTables:
             ValueError: A ranked asset in a table season has no fantasy points, a table
                 has no history to draw on, or as for ``driver_positions``.
         """
+        return self._per_race("points", season, race, self._expected_points)
+
+    def _expected_points(self, season: int, race: int) -> dict[str, float]:
         expected = {}
         for asset_type, ranking in _RANKINGS.items():
             places = ranking(self._metrics, self._pairs, season, race)
@@ -199,6 +204,9 @@ class SignalTables:
         Raises:
             ValueError: A table has no history to draw on.
         """
+        return self._per_race("negatives", season, race, self._negative_chance)
+
+    def _negative_chance(self, season: int, race: int) -> dict[str, float]:
         chances = {}
         for asset_type, archive in self._archive.items():
             priced = archive[(archive["Season"] == season) & (archive["Race"] == race)
@@ -212,6 +220,15 @@ class SignalTables:
                 for asset, flag in zip(priced[asset_type.value], recent)
             }
         return chances
+
+    def _per_race(
+        self, name: str, season: int, race: int, compute: Callable[[int, int], dict[str, float]]
+    ) -> dict[str, float]:
+        """A race's values, computed once, as a copy the caller may change."""
+        key = (name, season, race)
+        if key not in self._race_values:
+            self._race_values[key] = compute(season, race)
+        return dict(self._race_values[key])
 
     def _table(self, name: str, season: int, asset_type: AssetType) -> pd.Series:
         """A season's table, built from the other table seasons on first use."""

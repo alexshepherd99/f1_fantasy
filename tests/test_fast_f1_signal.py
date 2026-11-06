@@ -426,6 +426,18 @@ def test_negative_chance_reads_neither_the_race_its_own_season_nor_2026():
     assert low.negative_chance(2024, 2) == high.negative_chance(2024, 2) == expected
 
 
+def test_changing_a_returned_dict_does_not_change_the_next_call():
+    history = _History()
+    for season in (2023, 2024):
+        history.race(season, 2, {"VER@RED": 30, "HAM@MER": 10}, {"RED": 50, "MER": 20})
+    tables = history.tables()
+    for method in (tables.expected_points, tables.negative_chance):
+        first = method(2024, 2)
+        expected = dict(first)
+        first["VER@RED"] = 999.0
+        assert method(2024, 2) == expected
+
+
 def test_load_signal_tables_refuses_a_missing_metrics_file(tmp_path):
     missing = tmp_path / "no_such_metrics.xlsx"
     with pytest.raises(FileNotFoundError, match="no_such_metrics.xlsx"):
