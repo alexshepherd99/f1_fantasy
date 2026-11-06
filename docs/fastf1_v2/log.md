@@ -14,6 +14,7 @@ alongside in `requirements.md`, and the steps in `plan.md`.
 - Step 1 done 2026-11-06, with the fix in code and tested.
 - Step 2 done 2026-11-06: 2024 race 24 recomputed, with only its 8 affected rows changed.
 - Step 3b added 2026-11-06, at Alex's request: a driver's team before the race has results.
+- Step 3 done 2026-11-06: the winners hold, and one robustness check moved from pass to fail.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -490,3 +491,55 @@ already has, its rows were removed first, so the run would recompute that race a
 
 The other six teams' ranks did not move, so the corrected teams fell inside the range the six
 already set.
+
+## 2026-11-06 — Step 3: the indicator analysis on the corrected file
+
+### In plain language
+
+- **The winners hold.** Both targets on both weekend formats pick the same combinations as
+  `indicator_analysis_v1`. So steps 4 onwards stand as planned.
+- **One robustness check no longer passes.** That check picks the normal-weekend combination
+  without each season in turn, then scores it on the left-out season. Its 2024 score was about
+  zero before (+0.00004) and is about zero now (−0.003). That is enough to fail the bar's
+  "positive in every season" condition. This does not say the check got worse, only that 2024
+  never supported it. Every other verdict is unchanged.
+- **Race 24 accounts for all of it.** Run on the file as it was before step 2, the analysis
+  reproduces the saved v1 outputs exactly.
+
+### What was run
+
+`fast_f1.indicator_analysis` was run as-is on the corrected file. Its own `main()` was also
+run on the copy taken before step 2, writing to a scratch directory. The outputs saved on
+2026-11-01 were set aside first.
+
+| Outputs compared | Result |
+| --- | --- |
+| Saved v1 outputs and the run on the copy | All seven tables identical, byte for byte |
+| Run on the copy and the run on the corrected file | Winners and race 1 tables identical, five others differ |
+
+Across the five that differ:
+
+| Check | Result |
+| --- | --- |
+| Winners, both targets and formats | Unchanged |
+| Combination chosen with each season left out | Unchanged |
+| Top combination in every target, format and split | Unchanged |
+| Verdicts, of 82 comparison rows | 1 changed |
+| Largest move in any mean gain | 0.0018 |
+
+The rows that moved, on normal weekends against fantasy points, the primary target:
+
+| Comparison | 2024 gain before | 2024 gain after | Mean gain | Verdict |
+| --- | --- | --- | --- | --- |
+| Winner vs rolling | +0.008 | +0.004 | 0.039, from +0.020 to +0.058 | Pass, unchanged |
+| Choice made without each season vs rolling | +0.00004 | −0.003 | 0.034, from +0.011 to +0.055 | Pass to fail |
+| Winner vs aggregate | | | 0.016, from −0.006 to +0.041 | Fail, unchanged |
+
+Only 2024's figures moved. The other seasons' gains are identical to the fourth decimal.
+
+Why the corrected data scores slightly lower in 2024 was not checked. One possible reason: in
+the archive, PER scored −18 at Abu Dhabi 2024, 19th of 20, though VER was 5th on 23. So for PER,
+a constructor rank of 0 for Red Bull predicted better than the true 0.91. That is reasoned, and
+not run.
+
+The `indicator_analysis_v1` log's table now carries a dated marker on the row that changed.

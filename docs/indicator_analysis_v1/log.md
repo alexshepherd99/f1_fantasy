@@ -12,6 +12,8 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Step 8, the first race, added and completed 2026-11-01: below.
 - A rough estimate of what a Spearman gain is worth, 2026-11-01: below.
 - Alex's conclusions, 2026-11-01: below, with two later entries after them.
+- Rerun 2026-11-06 by fastf1_v2 on the corrected 2024 race 24 data. Same winners, and
+  one robustness row no longer passes. See `docs/fastf1_v2/log.md`, *Step 3*.
 
 ## 2026-10-31 — Scoping
 
@@ -65,6 +67,10 @@ per-race Spearman with the 95% interval. "Pass" means R8's two conditions both h
 | Winner vs rebuilt aggregate | 60 | +0.017 | −0.004 to +0.042 | No |
 | Rebuilt aggregate vs rolling | 60 | +0.023 | −0.009 to +0.053 | No |
 | Fitted weights vs unseen-season choice | 60 | +0.006 | −0.006 to +0.018 | No |
+
+[2026-11-06: after 2024 race 24's constructor points were corrected, the "choice made without
+each season" row no longer passes. Its 2024 gain went from +0.00004 to −0.003. The winners and
+every other verdict here hold. See `docs/fastf1_v2/log.md`, *Step 3*.]
 
 | Sprint weekends | Races | Gain | Interval | Pass |
 | --- | --- | --- | --- | --- |
