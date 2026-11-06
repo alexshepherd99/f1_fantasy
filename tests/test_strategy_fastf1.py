@@ -124,9 +124,9 @@ def test_strategy_fastf1_maximises_expected_points_within_budget_and_moves(stub_
     """The best team on expected points that the budget and two moves allow.
 
     With the budget lifted, or with four moves and the budget lifted, the best team
-    differs, so both limits bind. D1 has no signal and scores zero.
+    differs, so both limits bind. D1 has no signal and scores zero. DRS is left out.
     """
-    strat = _strategy(max_cost=25.0, max_moves=2)
+    strat = _strategy(max_cost=25.0, max_moves=2, drs_coefficient=0.0)
 
     strat.execute()
 
@@ -134,9 +134,43 @@ def test_strategy_fastf1_maximises_expected_points_within_budget_and_moves(stub_
     assert strat._lp_variables[VarType.OptimiseMax].value() == pytest.approx(70.0)
 
 
+@pytest.mark.parametrize(
+    "drs_coefficient, team, objective",
+    [
+        (0.0, {"D1@C1", "D3@C2", "C1", "C3"}, 54.0),
+        (0.5, {"D1@C1", "D6@C3", "C1", "C2"}, 60.0),
+        (1.0, {"D1@C1", "D6@C3", "C1", "C2"}, 75.0),
+    ],
+)
+def test_strategy_fastf1_scales_the_drs_term_by_its_coefficient(
+    stub_tables, drs_coefficient, team, objective
+):
+    """The DRS driver's expected points count again, times the coefficient.
+
+    At a budget of 23 the best team without DRS differs from the best with it, and
+    each is the only best team, found by brute force.
+    """
+    strat = _strategy(max_cost=23.0, max_moves=2, drs_coefficient=drs_coefficient)
+
+    strat.execute()
+
+    assert _selected(strat) == team
+    assert strat._lp_variables[VarType.OptimiseMax].value() == pytest.approx(objective)
+
+
+def test_strategy_fastf1_leaves_the_drs_term_out_at_zero(stub_tables):
+    """A coefficient of zero adds no DRS variables or constraints to the problem."""
+    strat = _strategy(max_cost=23.0, max_moves=2, drs_coefficient=0.0)
+
+    problem = strat.execute()
+
+    assert VarType.DrsDriver not in strat._lp_variables
+    assert not any(name.startswith("drs") for name in problem.constraints)
+
+
 def test_strategy_fastf1_keeps_the_move_limit_at_race_four(stub_tables):
     """No race-4 unlimited-moves chip: two moves stay two, where four would pick another team."""
-    strat = _strategy(max_cost=999.0, max_moves=2, race_num=4)
+    strat = _strategy(max_cost=999.0, max_moves=2, race_num=4, drs_coefficient=0.0)
 
     strat.execute()
 

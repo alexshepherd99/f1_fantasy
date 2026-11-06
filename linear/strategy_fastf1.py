@@ -22,6 +22,9 @@ class StrategyFastF1(StrategyBase):
     fn_metrics : Path | str
         The FastF1 metrics file the signal is built from, read once per process by
         `load_signal_tables`.
+    drs_coefficient : float
+        Scales the DRS term in the objective, the DRS driver's expected points counted
+        a second time. At zero the term is left out.
 
     Raises
     ------
@@ -29,8 +32,15 @@ class StrategyFastF1(StrategyBase):
         If the signal names an asset the race does not have, as identifiers that
         disagree would otherwise score every asset zero and still solve.
     """
-    def __init__(self, *args, fn_metrics: Path | str = DEFAULT_HISTORICAL_OUTPUT, **kwargs):
+    def __init__(
+        self,
+        *args,
+        fn_metrics: Path | str = DEFAULT_HISTORICAL_OUTPUT,
+        drs_coefficient: float = 1.0,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
+        self._drs_coefficient = drs_coefficient
         tables = load_signal_tables(fn_metrics)
         self._expected_points = tables.expected_points(self._season_year, self._race_num)
 
@@ -56,6 +66,15 @@ class StrategyFastF1(StrategyBase):
             self._expected_points.get(i, 0.0) * constructors[i] for i in self._all_available_constructors
         ]
 
-        self._lp_variables[VarType.OptimiseMax] = lpSum(points_drivers + points_constructors)
+        objective = lpSum(points_drivers + points_constructors)
+
+        # DRS x2 counts the DRS driver's expected points a second time, so they can decide the team
+        if self._drs_coefficient != 0.0:
+            drs_values = {i: self._expected_points.get(i, 0.0) for i in self._all_available_drivers}
+            drs_term, drs_constraints = self.get_drs_objective_term(drs_values)
+            problem.extend(drs_constraints)
+            objective += self._drs_coefficient * drs_term
+
+        self._lp_variables[VarType.OptimiseMax] = objective
         problem += self._lp_variables[VarType.OptimiseMax]
         return problem
