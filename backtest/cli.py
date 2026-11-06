@@ -5,8 +5,10 @@ from collections.abc import Sequence
 
 from backtest.runner import run_backtest
 from backtest.sample import DEFAULT_BAND_EDGES, validate_band_edges
+from backtest.variants import make_variant
 from common import F1_SEASON_CONSTRUCTORS, setup_logging
 from linear.strategy_budget import StrategyMaxBudget
+from linear.strategy_fastf1 import StrategyFastF1
 from linear.strategy_max_points import StrategyMaxPoints
 from linear.strategy_odds import StrategyBettingOdds
 from linear.strategy_p2pm import StrategyMaxP2PM
@@ -17,12 +19,22 @@ from linear.strategy_zero_stop import StrategyZeroStop
 # progress is left out unless named with --seasons (R6)
 COMPLETED_SEASONS = [2023, 2024, 2025]
 
+# fastf1_v2's tuning variants, each one change from StrategyFastF1's defaults (docs/fastf1_v2/plan.md, step 7)
+FASTF1_VARIANTS = [
+    make_variant(StrategyFastF1, "FastF1_Drs0", drs_coefficient=0.0),
+    make_variant(StrategyFastF1, "FastF1_Neg6", negative_penalty=6.0),
+    make_variant(StrategyFastF1, "FastF1_Neg12", negative_penalty=12.0),
+    make_variant(StrategyFastF1, "FastF1_Bud025", budget_reward=0.25),
+    make_variant(StrategyFastF1, "FastF1_Bud05", budget_reward=0.5),
+    make_variant(StrategyFastF1, "FastF1_Bud1", budget_reward=1.0),
+]
+
 # Strategies that can be named with --strategies, by label
 STRATEGIES = {
     s.__name__: s
     for s in [
         StrategyMaxP2PM, StrategyZeroStop, StrategyMaxBudget, StrategyMaxPoints, StrategyMaxP2PMNoReset,
-        StrategyBettingOdds,
+        StrategyBettingOdds, StrategyFastF1, *FASTF1_VARIANTS,
     ]
 }
 

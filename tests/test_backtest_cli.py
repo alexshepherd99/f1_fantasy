@@ -4,6 +4,7 @@ import backtest.cli as cli
 from backtest.cli import COMPLETED_SEASONS, STRATEGIES, main, parse_arguments
 from backtest.sample import DEFAULT_BAND_EDGES
 from linear.strategy_budget import StrategyMaxBudget
+from linear.strategy_fastf1 import StrategyFastF1
 from linear.strategy_max_points import StrategyMaxPoints
 from linear.strategy_odds import StrategyBettingOdds
 from linear.strategy_p2pm import StrategyMaxP2PM
@@ -27,7 +28,7 @@ def test_completed_seasons_leave_out_the_season_in_progress():
 
 
 def test_registry_holds_the_existing_strategies_by_name():
-    assert STRATEGIES == {
+    assert {name: s for name, s in STRATEGIES.items() if name not in _FASTF1_SETTINGS} == {
         "StrategyMaxP2PM": StrategyMaxP2PM,
         "StrategyZeroStop": StrategyZeroStop,
         "StrategyMaxBudget": StrategyMaxBudget,
@@ -35,6 +36,55 @@ def test_registry_holds_the_existing_strategies_by_name():
         "StrategyMaxP2PMNoReset": StrategyMaxP2PMNoReset,
         "StrategyBettingOdds": StrategyBettingOdds,
     }
+
+
+# fastf1_v2's tuning variants, each one change from the base: (DRS coefficient, penalty, reward)
+_FASTF1_SETTINGS = {
+    "StrategyFastF1": (1.0, 0.0, 0.0),
+    "FastF1_Drs0": (0.0, 0.0, 0.0),
+    "FastF1_Neg6": (1.0, 6.0, 0.0),
+    "FastF1_Neg12": (1.0, 12.0, 0.0),
+    "FastF1_Bud025": (1.0, 0.0, 0.25),
+    "FastF1_Bud05": (1.0, 0.0, 0.5),
+    "FastF1_Bud1": (1.0, 0.0, 1.0),
+}
+
+
+class _EmptyTables:
+    """Stands in for ``SignalTables`` for a race with no assets."""
+
+    def expected_points(self, season: int, race: int) -> dict[str, float]:
+        return {}
+
+    def negative_chance(self, season: int, race: int) -> dict[str, float]:
+        return {}
+
+
+@pytest.mark.parametrize("label, settings", _FASTF1_SETTINGS.items())
+def test_fastf1_variants_are_registered_with_their_settings(monkeypatch, label, settings):
+    """Each fastf1_v2 variant is nameable, is a StrategyFastF1, and is built with its settings."""
+    monkeypatch.setattr("linear.strategy_fastf1.load_signal_tables", lambda fn_metrics: _EmptyTables())
+
+    args = parse_arguments(["--strategies", label])
+    strategy = STRATEGIES[args.strategies[0]]
+    strat = strategy(
+        team_drivers=[],
+        team_constructors=[],
+        all_available_drivers=[],
+        all_available_constructors=[],
+        all_available_driver_pairs={},
+        prev_available_driver_pairs={},
+        max_cost=0.0,
+        max_moves=0,
+        prices_assets={},
+        derivs_assets={},
+        race_num=5,
+        season_year=2025,
+    )
+
+    assert strategy.__name__ == label
+    assert isinstance(strat, StrategyFastF1)
+    assert (strat._drs_coefficient, strat._negative_penalty, strat._budget_reward) == settings
 
 
 def test_max_points_is_selectable_as_a_challenger():
