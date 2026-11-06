@@ -251,3 +251,34 @@ does not use it. See `docs/odds_drs_v1/log.md`.] What it can and cannot buy:
   fraction of the ceiling.
 
 Raised 2026-09-28, from `max_points_v1`.
+
+## Live mid-season picks with `StrategyFastF1`
+
+**Only if** `fastf1_v2`'s back-test finds `StrategyFastF1` more effective than
+`StrategyMaxP2PM`, and Alex wants to use it for mid-season picks. Otherwise drop
+this item.
+
+The strategy reads only the stored metrics file,
+`data/fastf1_practice_rolling_metrics.xlsx`, and never calls FastF1. So a live pick
+is two stages: build the race's metrics rows (after FP3 on a normal weekend), then
+run the strategy. Today that route has three gaps, reasoned from the code on
+2026-11-06 and not run:
+
+- **Single-race mode writes elsewhere.** `fast_f1.cli --season S --race N` saves to
+  `outputs/fastf1_race_S_N.xlsx`, which the strategy does not read. Pointing the
+  strategy at that file fails, as the expected-points tables need the 2023–25 rows.
+- **Historical mode freezes the row.** `--historical --season S` does add the race to
+  the strategy's file, but it skips stored races, so the row built before the race
+  had results is never rebuilt. Step 3b.3 of `fastf1_v2` had to check for such rows.
+  It also exits 1 for the rounds not yet run.
+- **A missing race fails quietly.** With no metrics rows for the race, the strategy
+  scores every asset zero and still returns a team. That is right for the back-test
+  (2026 race 19, plan step 6.5) and wrong for a live pick, which should raise.
+
+The work: a way to put the current race's rows into the strategy's file and rebuild
+them once results exist, a live-pick entry point that raises when the race has no
+signal, and one command or documented sequence running both stages.
+`load_signal_tables` caches per process, so a single process doing both stages
+would have to build the rows before its first strategy call.
+
+Raised by Alex 2026-11-06, during `fastf1_v2` step 6.
