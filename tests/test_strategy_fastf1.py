@@ -72,7 +72,8 @@ def stub_tables(monkeypatch) -> tuple[_StubTables, list]:
 
 
 def _strategy(max_cost: float, max_moves: int, race_num: int = 5, **kwargs) -> StrategyFastF1:
-    return StrategyFastF1(
+    """The fixture race and team, with any argument overridden by ``kwargs``."""
+    arguments = dict(
         team_drivers=["D1@C1", "D2@C1"],
         team_constructors=["C1", "C2"],
         all_available_drivers=list(_DRIVER_PAIRS),
@@ -85,8 +86,8 @@ def _strategy(max_cost: float, max_moves: int, race_num: int = 5, **kwargs) -> S
         derivs_assets={},
         race_num=race_num,
         season_year=2025,
-        **kwargs,
     )
+    return StrategyFastF1(**(arguments | kwargs))
 
 
 def _selected(strat: StrategyFastF1) -> set[str]:
@@ -166,6 +167,57 @@ def test_strategy_fastf1_leaves_the_drs_term_out_at_zero(stub_tables):
 
     assert VarType.DrsDriver not in strat._lp_variables
     assert not any(name.startswith("drs") for name in problem.constraints)
+
+
+@pytest.mark.parametrize(
+    "drs_coefficient, drs_driver",
+    [
+        # D6 has the best points of any driver, but is not selected at zero
+        (0.0, "D3@C2"),
+        (1.0, "D6@C3"),
+    ],
+)
+def test_strategy_fastf1_gives_drs_to_the_selected_driver_with_the_best_points(
+    stub_tables, drs_coefficient, drs_driver
+):
+    """The same rule at any coefficient: the best expected points on the selected team."""
+    strat = _strategy(max_cost=23.0, max_moves=2, drs_coefficient=drs_coefficient)
+
+    strat.execute()
+
+    assert strat.get_drs_driver() == drs_driver
+
+
+@pytest.mark.parametrize("drs_coefficient", [0.0, 1.0])
+def test_strategy_fastf1_leaves_drs_to_the_default_with_no_signal(stub_tables, drs_coefficient):
+    """With no selected driver worth anything, an empty string lets the default pick.
+
+    At a coefficient of 1 the DRS binaries still nominate someone, arbitrarily.
+    """
+    tables, _ = stub_tables
+    tables._expected_points = {}
+    strat = _strategy(max_cost=23.0, max_moves=2, drs_coefficient=drs_coefficient)
+
+    strat.execute()
+
+    assert strat.get_drs_driver() == ""
+
+
+def test_strategy_fastf1_breaks_a_drs_tie_on_the_identifier(stub_tables):
+    """Two selected drivers on equal points: the first identifier wins, whatever the race's order."""
+    tables, _ = stub_tables
+    tables._expected_points = {"D3@C2": 10.0, "D4@C2": 10.0}
+    strat = _strategy(
+        max_cost=999.0,
+        max_moves=2,
+        drs_coefficient=0.0,
+        all_available_drivers=list(reversed(_DRIVER_PAIRS)),
+    )
+
+    strat.execute()
+
+    assert _selected(strat) >= {"D3@C2", "D4@C2"}
+    assert strat.get_drs_driver() == "D3@C2"
 
 
 def test_strategy_fastf1_keeps_the_move_limit_at_race_four(stub_tables):

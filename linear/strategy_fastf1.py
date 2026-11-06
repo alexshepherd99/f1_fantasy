@@ -78,3 +78,19 @@ class StrategyFastF1(StrategyBase):
         self._lp_variables[VarType.OptimiseMax] = objective
         problem += self._lp_variables[VarType.OptimiseMax]
         return problem
+
+    def get_drs_driver(self) -> str:
+        """Return the selected driver with the best expected points, the same rule at any coefficient.
+
+        A tie goes to the first identifier, so runs repeat. Returns an empty string if no selected
+        driver has expected points above zero, so the default team selection picks, taking the
+        highest-priced driver.
+        """
+        drivers = self._lp_variables[VarType.TeamDrivers]
+        best_driver, best_points = "", 0.0
+        for d in sorted(self._all_available_drivers):
+            # Called after the strategy has run, so the binaries hold the selected team
+            points = self._expected_points.get(d, 0.0)
+            if drivers[d].value() > 0.5 and points > best_points:
+                best_driver, best_points = d, points
+        return best_driver
