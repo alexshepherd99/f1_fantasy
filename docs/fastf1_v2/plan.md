@@ -1,7 +1,7 @@
 # fastf1_v2 — Plan
 
 **Status**: written 2026-11-01. Requirements: `requirements.md`, whose eight questions and working
-assumptions are all answered. [2026-11-06: step 1 done. Step 2 waits for its check plan to be agreed.]
+assumptions are all answered. [2026-11-06: steps 1 and 2 done.]
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,
@@ -37,6 +37,22 @@ Question 8 and `log.md`, *Reaching fantasy assets, and a fault in 2024 race 24*.
 Run `fast_f1.indicator_analysis` on the corrected file and compare it with
 `docs/indicator_analysis_v1/log.md`. Log whether the winning combinations and their verdicts hold.
 **If a winner changes, stop and raise it with Alex,** as every later step is built on them.
+
+## Step 3b — A driver's team before the race has results
+
+Added 2026-11-06, as Alex asked for it to be fixed within this effort. It must land before step 4,
+which reads the constructor on each driver's row.
+
+Before a race has results, as when picking a live team, `build_race_metrics` takes each driver's
+team from the oldest of the previous three races. A driver who changed team in that window gets the
+old team's points. A driver with no results in it, such as CAM at Haas in 2026 race 19, gets no
+team, so step 4 would give them no position. Read from the code, and not run.
+
+1. Agree with Alex where a driver with no recent results gets their team from, before any code.
+   The practice sessions' driver lists are one candidate, as they name each driver's team.
+2. A failing test for each case: a team change in the window, and a driver new to it.
+3. Fix `fast_f1`, and check the stored file for rows that were built before their race had
+   results, as a historical run on a race weekend would save one and never redo it.
 
 ## Step 4 — `fast_f1/signal.py`: the signal
 
