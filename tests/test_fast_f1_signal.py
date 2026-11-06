@@ -1,7 +1,12 @@
 import pandas as pd
 import pytest
 
-from fast_f1.signal import SignalTables, constructor_places, driver_positions
+from fast_f1.signal import (
+    SignalTables,
+    constructor_places,
+    driver_positions,
+    load_signal_tables,
+)
 
 
 def _row(race: int, driver: str, driver_rolling: float, constructor_rolling: float,
@@ -411,3 +416,15 @@ def test_negative_chance_reads_neither_the_race_its_own_season_nor_2026():
     low, high = _negatives_varying(-1000), _negatives_varying(1000)
     expected = {"VER@RED": 1.0, "HAM@MER": 0.5, "RED": 1.0, "MER": 0.5}
     assert low.negative_chance(2024, 2) == high.negative_chance(2024, 2) == expected
+
+
+def test_load_signal_tables_refuses_a_missing_metrics_file(tmp_path):
+    missing = tmp_path / "no_such_metrics.xlsx"
+    with pytest.raises(FileNotFoundError, match="no_such_metrics.xlsx"):
+        load_signal_tables(missing)
+
+
+def test_load_signal_tables_reads_the_files_once_per_process(tmp_path):
+    metrics = tmp_path / "metrics.xlsx"
+    pd.DataFrame([_row(2, "VER", 0.5, 0.5, season=2023)]).to_excel(metrics, index=False)
+    assert load_signal_tables(metrics) is load_signal_tables(metrics)

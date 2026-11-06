@@ -4,7 +4,11 @@ The signal is the combination `indicator_analysis_v1` chose for fantasy points (
 log's *Conclusions*), built from metrics rows alone so that a race not yet run can be
 ranked. See ``docs/fastf1_v2/plan.md``, step 4.
 """
+from __future__ import annotations
+
+import functools
 import logging
+from pathlib import Path
 
 import pandas as pd
 from scipy.optimize import isotonic_regression
@@ -18,7 +22,9 @@ from fast_f1.indicator_analysis import (
     add_signal_inputs,
     combination_signal,
 )
+from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, load_existing_metrics
 from import_data.derivations import get_race_driver_constructor_pairs
+from import_data.import_history import _FILE_ARCHIVE_INPUTS, load_all_archive_data
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +108,30 @@ def constructor_places(
     )
     constructors = rows.drop_duplicates("AssetConstructor")
     return _ranked(constructors, "ConstructorRollingPoints", "AssetConstructor")
+
+
+@functools.cache
+def load_signal_tables(
+    fn_metrics: Path | str = DEFAULT_HISTORICAL_OUTPUT, fn_archive: str = _FILE_ARCHIVE_INPUTS
+) -> SignalTables:
+    """The ``SignalTables`` for a metrics file and the archive, read once per process.
+
+    A strategy is built per team per race, so its tables must not be rebuilt each time.
+    A file changed while the process runs is not read again.
+
+    Raises:
+        FileNotFoundError: The metrics file is missing or holds no rows.
+    """
+    metrics = load_existing_metrics(fn_metrics)
+    if metrics.empty:
+        msg = f"No metrics rows in {fn_metrics}"
+        logger.error(msg)
+        raise FileNotFoundError(msg)
+    return SignalTables(
+        metrics,
+        load_all_archive_data(AssetType.DRIVER, fn=fn_archive),
+        load_all_archive_data(AssetType.CONSTRUCTOR, fn=fn_archive),
+    )
 
 
 class SignalTables:
