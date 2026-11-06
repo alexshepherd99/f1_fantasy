@@ -42,15 +42,21 @@ _EXPECTED_POINTS = {
 
 
 class _StubTables:
-    """Stands in for ``SignalTables``, returning set points and recording what was asked."""
+    """Stands in for ``SignalTables``, returning set values and recording what was asked."""
 
     def __init__(self, expected_points: dict[str, float]):
         self._expected_points = expected_points
+        self._negative_chance = {asset: 0.0 for asset in _PRICES}
         self.requested: list[tuple[int, int]] = []
+        self.negatives_requested: list[tuple[int, int]] = []
 
     def expected_points(self, season: int, race: int) -> dict[str, float]:
         self.requested.append((season, race))
         return dict(self._expected_points)
+
+    def negative_chance(self, season: int, race: int) -> dict[str, float]:
+        self.negatives_requested.append((season, race))
+        return dict(self._negative_chance)
 
 
 @pytest.fixture
@@ -242,6 +248,43 @@ def test_strategy_fastf1_rewards_each_1m_spent(stub_tables, budget_reward, team,
 
     assert _selected(strat) == team
     assert strat._lp_variables[VarType.OptimiseMax].value() == pytest.approx(objective)
+
+
+@pytest.mark.parametrize(
+    "negative_penalty, team, objective",
+    [
+        (0.0, {"D2@C1", "D3@C2", "C1", "C2"}, 20.0),
+        (1.0, {"D2@C1", "D3@C2", "C1", "C2"}, 19.0),
+        (6.0, {"D2@C1", "D6@C3", "C1", "C2"}, 15.4),
+    ],
+)
+def test_strategy_fastf1_penalises_each_selected_assets_chance_of_going_negative(
+    stub_tables, negative_penalty, team, objective
+):
+    """The penalty takes points per unit of chance, for drivers and constructors alike.
+
+    One move: D3 on 10 points with a 50% chance is best below a penalty of 2.5, and D6
+    on 9 points with a 10% chance above it. C1's 50% chance counts on every team.
+    """
+    tables, _ = stub_tables
+    tables._expected_points = {"D2@C1": 10.0, "D3@C2": 10.0, "D6@C3": 9.0}
+    tables._negative_chance |= {"D3@C2": 0.5, "D6@C3": 0.1, "C1": 0.5}
+    strat = _strategy(max_cost=999.0, max_moves=1, drs_coefficient=0.0, negative_penalty=negative_penalty)
+
+    strat.execute()
+
+    assert _selected(strat) == team
+    assert strat._lp_variables[VarType.OptimiseMax].value() == pytest.approx(objective)
+
+
+@pytest.mark.parametrize("negative_penalty, requested", [(0.0, []), (6.0, [(2025, 7)])])
+def test_strategy_fastf1_reads_the_chances_only_with_a_penalty(stub_tables, negative_penalty, requested):
+    """At zero the chances are never read. Otherwise they are this season and race's."""
+    tables, _ = stub_tables
+
+    _strategy(max_cost=25.0, max_moves=2, race_num=7, negative_penalty=negative_penalty)
+
+    assert tables.negatives_requested == requested
 
 
 def test_strategy_fastf1_keeps_the_move_limit_at_race_four(stub_tables):

@@ -27,6 +27,9 @@ class StrategyFastF1(StrategyBase):
         a second time. At zero the term is left out.
     budget_reward : float
         Points added to the objective per 1m of the team's total cost. Zero adds nothing.
+    negative_penalty : float
+        Points taken from the objective per unit of each selected asset's chance of going
+        negative. The DRS driver's chance is not doubled. At zero the chances are not read.
 
     Raises
     ------
@@ -40,11 +43,13 @@ class StrategyFastF1(StrategyBase):
         fn_metrics: Path | str = DEFAULT_HISTORICAL_OUTPUT,
         drs_coefficient: float = 1.0,
         budget_reward: float = 0.0,
+        negative_penalty: float = 0.0,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._drs_coefficient = drs_coefficient
         self._budget_reward = budget_reward
+        self._negative_penalty = negative_penalty
         tables = load_signal_tables(fn_metrics)
         self._expected_points = tables.expected_points(self._season_year, self._race_num)
 
@@ -55,6 +60,11 @@ class StrategyFastF1(StrategyBase):
                    f"{unknown}")
             logging.error(msg)
             raise ValueError(msg)
+
+        # Read only when they count, as a penalty of zero leaves them out of the objective
+        self._negative_chance = {}
+        if self._negative_penalty != 0.0:
+            self._negative_chance = tables.negative_chance(self._season_year, self._race_num)
 
     def get_problem(self) -> LpProblem:
         """Build an LP problem whose objective is the expected points of the selected assets.
@@ -79,6 +89,13 @@ class StrategyFastF1(StrategyBase):
             drs_term, drs_constraints = self.get_drs_objective_term(drs_values)
             problem.extend(drs_constraints)
             objective += self._drs_coefficient * drs_term
+
+        if self._negative_penalty != 0.0:
+            chance_drivers = [self._negative_chance[i] * drivers[i] for i in self._all_available_drivers]
+            chance_constructors = [
+                self._negative_chance[i] * constructors[i] for i in self._all_available_constructors
+            ]
+            objective -= self._negative_penalty * lpSum(chance_drivers + chance_constructors)
 
         self._lp_variables[VarType.OptimiseMax] = objective
         problem += self._lp_variables[VarType.OptimiseMax]
