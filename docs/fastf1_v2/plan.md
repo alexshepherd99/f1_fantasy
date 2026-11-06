@@ -1,7 +1,7 @@
 # fastf1_v2 — Plan
 
 **Status**: written 2026-11-01. Requirements: `requirements.md`, whose eight questions and working
-assumptions are all answered. [2026-11-06: steps 1 to 3 done.]
+assumptions are all answered. [2026-11-06: steps 1 to 3b done. Step 4 is next.]
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,
@@ -45,7 +45,7 @@ which reads the constructor on each driver's row.
 
 Before a race has results, as when picking a live team, `build_race_metrics` takes each driver's
 team from the oldest of the previous three races. A driver who changed team in that window gets the
-old team's points. A driver with no results in it, such as CAM at Haas in 2026 race 19, gets no
+old team's points. A driver with no results in it, such as CAM at Haas in 2026 race 20, gets no
 team, so step 4 would give them no position. Read from the code, and not run.
 
 1. Agree with Alex where a driver with no recent results gets their team from, before any code.

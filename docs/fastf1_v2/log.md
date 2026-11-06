@@ -15,6 +15,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
 - Step 2 done 2026-11-06: 2024 race 24 recomputed, with only its 8 affected rows changed.
 - Step 3b added 2026-11-06, at Alex's request: a driver's team before the race has results.
 - Step 3 done 2026-11-06: the winners hold, and one robustness check moved from pass to fail.
+- Step 3b done 2026-11-06, and checked on two past races. Its first real pre-race run is
+  São Paulo, 2026 race 20.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -543,3 +545,61 @@ a constructor rank of 0 for Red Bull predicted better than the true 0.91. That i
 not run.
 
 The `indicator_analysis_v1` log's table now carries a dated marker on the row that changed.
+
+## 2026-11-06 — Step 3b: a driver's team before the race has results
+
+Alex chose the practice sessions' driver lists as the source.
+
+### In plain language
+
+- **Fixed and checked on real data.** Before a race has results, each driver's team now comes
+  from that weekend's practice sessions. Two past races were rebuilt with their own results
+  hidden, and both match the stored rows exactly.
+- **The fault was real.** The code from before the fix put Tsunoda and Lawson in each other's
+  teams at 2025 race 4. That gave Tsunoda 4 constructor points instead of 55.
+- **Not yet run for real before a race.** São Paulo, 2026 race 20, has its last practice
+  session on 7 November. So the first true pre-race run, and the first real check of a new
+  driver such as CAM, is Alex's usual run that weekend.
+
+### What changed
+
+- `get_session_drivers` in `fast_f1/api.py` gives each driver in a session and the team FastF1
+  names for them. It has its own cache files, as the cached laps do not keep the team.
+- When the race has no results, `build_race_metrics` takes each driver's team from the
+  practice sessions it already uses, with the latest session winning. A driver no session
+  names raises an error. It used to take the team from the oldest of the previous three races.
+
+### Tests
+
+Five new tests, plus one updated. The updated one is the existing test for a race without
+results, which now supplies the practice driver lists.
+
+| Test | Before the fix |
+| --- | --- |
+| `get_session_drivers` returns and caches the driver list | Failed, against a stub returning nothing |
+| It returns an empty frame when the session has no data | Failed, the same way |
+| A network failure propagates, added to the existing test | Failed, nothing raised |
+| A driver who moved team in the window gets the new team | Failed: Racing Bulls, not Red Bull Racing |
+| A driver new to the window gets a team | Failed: no team |
+| A driver no session names raises an error | Failed, nothing raised |
+
+"Latest session wins" was added after the fix. It was checked by mutation: with the first
+session winning instead, the test failed. Full suite 387 passed.
+
+### Real-data check
+
+Each race was rebuilt through `build_race_metrics`, set up as `fast_f1.cli` sets it up, with
+only that race's own results hidden. It was then compared with the stored rows, which were built
+with results.
+
+| Race | Teams | Constructor points and rank | `AggregateRank`, `RankPosition` |
+| --- | --- | --- | --- |
+| 2025 race 4, after the Tsunoda–Lawson swap at race 3 | All 20 match | All match | All match |
+| 2026 race 18, a sprint weekend | All 22 match | All match | All match |
+
+The same script, run on the code before the fix in a throwaway worktree, found Tsunoda and
+Lawson swapped at 2025 race 4. So the check can fail.
+
+The run added `session_drivers` files to the FastF1 wrapper's own cache, as any normal run
+now does. The step 3b.3 check found no stored row built before its race had results, so
+no data needed repair.
