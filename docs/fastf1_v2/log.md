@@ -9,6 +9,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   are being asked one at a time, and no code has been written.
 - All eight questions answered and the working assumptions confirmed 2026-11-01. `plan.md` is
   written and no step has started.
+- Step 1.1 done 2026-11-06: `TeamId` survives the rename, but the fix links names through the
+  drivers instead. See the entry of that date.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -366,3 +368,55 @@ position.
 | Driver position, normal weekends | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 18 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Mean fantasy points | 16.4 | 17.4 | 11.9 | 10.1 | 4.6 | 7.2 | 2.5 | 4.8 | 6.6 |
+
+## 2026-11-06 — Step 1.1: does `TeamId` survive the rename?
+
+Read-only checks from a throwaway script, not kept. It loaded 2024 races 21–24 from the FastF1 cache
+in offline mode. One public request went to the Ergast mirror (`api.jolpi.ca`) for 2024 race 24,
+which needs no sign-in. No data file and no cache was changed.
+
+### In plain language
+
+- **Yes, `TeamId` stays the same across the rename.** The four race 24 names are Ergast's names
+  for the same teams. Ergast gives the same team id under both names.
+- **This confirms the earlier guess.** Race 24 was served by FastF1's Ergast fallback, not by live
+  timing.
+- **The code cannot use `TeamId` today.** The wrapper's own cache keeps `TeamName` and not
+  `TeamId`, for every race in every season.
+
+### What was run
+
+| Race | Source | Red Bull | Alpine | RB | Sauber |
+| --- | --- | --- | --- | --- | --- |
+| 21–23 | FastF1 cache, live timing names | Red Bull Racing / `red_bull` | Alpine / `alpine` | RB / `rb` | Kick Sauber / `sauber` |
+| 24 | Ergast mirror | Red Bull / `red_bull` | Alpine F1 Team / `alpine` | RB F1 Team / `rb` | Sauber / `sauber` |
+
+Each cell is the name, then the team id. The other six teams had the same name and id in all four
+races. The race 24 names match the stored metrics file exactly.
+
+FastF1 3.9.0 always takes `TeamId` from Ergast's `constructorId` (`fastf1/core.py`, the
+`rename_return` mapping). It takes `TeamName` from live timing when it has the race, and from Ergast
+when it does not. That is why the name moves and the id does not.
+
+### What else this found
+
+- **Race 24 is in neither cache.** FastF1 has no live timing or Ergast responses for it, and the
+  wrapper has no `race_results_2024_24`. Races 21–23 are in both. So the stored race 24 row was
+  built before the current cache, and cannot be rebuilt offline.
+- **`TeamId` comes only from Ergast.** FastF1 warns that Ergast often has no results for recent
+  sessions. So in a live season the latest race may have no `TeamId` for a while. This is reasoned
+  from FastF1's warning, and was not checked against a 2026 race.
+
+### Decision: link through the drivers
+
+Agreed with Alex 2026-11-06. Keying on `TeamId` would mean fetching every cached race again with
+sign-in. It would also still need a fallback for races Ergast has not reached yet. So the join links
+names through the drivers, under a rule that also covers a name changing back and forth:
+
+- A name from the previous races that is also in the current race keeps its own points.
+- A name that is missing from the current race goes to the current team its drivers now race
+  for, if that is exactly one team.
+- A missing name that cannot be linked logs a warning, so a failed link is never silent.
+
+The second condition leaves a mid-season driver swap alone, since both names are in the
+current race.
