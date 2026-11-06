@@ -1,3 +1,5 @@
+import functools
+
 import pytest
 from pulp import LpStatusOptimal
 
@@ -287,6 +289,26 @@ def test_strategy_fastf1_reads_the_chances_only_with_a_penalty(stub_tables, nega
     assert tables.negatives_requested == requested
 
 
+@pytest.mark.parametrize("unknown", ["D7@C9", "C9"])
+def test_strategy_fastf1_raises_on_a_chance_for_an_asset_not_in_the_race(stub_tables, unknown):
+    """As for expected points, a chance naming an asset the race does not have raises."""
+    tables, _ = stub_tables
+    tables._negative_chance[unknown] = 0.1
+
+    with pytest.raises(ValueError, match=unknown):
+        _strategy(max_cost=25.0, max_moves=2, negative_penalty=6.0)
+
+
+@pytest.mark.parametrize("missing", ["D1@C1", "C3"])
+def test_strategy_fastf1_raises_on_an_available_asset_with_no_chance(stub_tables, missing):
+    """Every priced asset has a chance, so one missing is a defect rather than a zero."""
+    tables, _ = stub_tables
+    del tables._negative_chance[missing]
+
+    with pytest.raises(ValueError, match=missing):
+        _strategy(max_cost=25.0, max_moves=2, negative_penalty=6.0)
+
+
 def test_strategy_fastf1_keeps_the_move_limit_at_race_four(stub_tables):
     """No race-4 unlimited-moves chip: two moves stay two, where four would pick another team."""
     strat = _strategy(max_cost=999.0, max_moves=2, race_num=4, drs_coefficient=0.0)
@@ -298,11 +320,13 @@ def test_strategy_fastf1_keeps_the_move_limit_at_race_four(stub_tables):
     assert _selected(strat) == {"D2@C1", "D6@C3", "C2", "C3"}
 
 
-def test_strategy_fastf1_solves_a_real_race():
+@pytest.mark.parametrize("negative_penalty", [0.0, 6.0])
+def test_strategy_fastf1_solves_a_real_race(negative_penalty):
     """Built by the factory on the real metrics file and archive, for 2025 race 5.
 
     The signal's identifiers match the race's, every selected asset has positive
-    expected points, and the LP solves with a full team.
+    expected points, and the LP solves with a full team. With a penalty, every
+    available asset has a chance of going negative.
     """
     season = factory_season(*load_with_derivations(season=2025), 2025)
     team = Team(num_drivers=5, num_constructors=2, unused_budget=50.0)
@@ -311,9 +335,8 @@ def test_strategy_fastf1_solves_a_real_race():
     for constructor in ["KCK", "AST"]:
         team.add_asset(AssetType.CONSTRUCTOR, constructor)
 
-    strat = factory_strategy(
-        season.races[5], season.races[4], team, StrategyFastF1, max_moves=2, season_year=2025
-    )
+    strategy = functools.partial(StrategyFastF1, negative_penalty=negative_penalty)
+    strat = factory_strategy(season.races[5], season.races[4], team, strategy, max_moves=2, season_year=2025)
     problem = strat.execute()
 
     selected = _selected(strat)

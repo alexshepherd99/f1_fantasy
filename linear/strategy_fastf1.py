@@ -34,8 +34,9 @@ class StrategyFastF1(StrategyBase):
     Raises
     ------
     ValueError
-        If the signal names an asset the race does not have, as identifiers that
-        disagree would otherwise score every asset zero and still solve.
+        If the expected points or chances name an asset the race does not have, as
+        identifiers that disagree would otherwise score every asset zero and still solve,
+        or an available asset has no chance of going negative.
     """
     def __init__(
         self,
@@ -52,19 +53,28 @@ class StrategyFastF1(StrategyBase):
         self._negative_penalty = negative_penalty
         tables = load_signal_tables(fn_metrics)
         self._expected_points = tables.expected_points(self._season_year, self._race_num)
-
-        available = set(self._all_available_drivers) | set(self._all_available_constructors)
-        unknown = sorted(set(self._expected_points) - available)
-        if unknown:
-            msg = (f"Signal for {self._season_year} race {self._race_num} names assets not in the race: "
-                   f"{unknown}")
-            logging.error(msg)
-            raise ValueError(msg)
+        # An asset with no signal position is left out, so only unknown assets are checked
+        self._check_assets(self._expected_points, "Expected points", every_asset=False)
 
         # Read only when they count, as a penalty of zero leaves them out of the objective
         self._negative_chance = {}
         if self._negative_penalty != 0.0:
             self._negative_chance = tables.negative_chance(self._season_year, self._race_num)
+            # Every priced asset has a chance, so one missing is a defect
+            self._check_assets(self._negative_chance, "Negative chance", every_asset=True)
+
+    def _check_assets(self, values: dict[str, float], what: str, every_asset: bool) -> None:
+        """Raise if `values` names an asset the race does not have or, with `every_asset`, misses one."""
+        available = set(self._all_available_drivers) | set(self._all_available_constructors)
+        problems = {"names assets not in the race": sorted(set(values) - available)}
+        if every_asset:
+            problems["has no value for available assets"] = sorted(available - set(values))
+
+        for problem, assets in problems.items():
+            if assets:
+                msg = f"{what} for {self._season_year} race {self._race_num} {problem}: {assets}"
+                logging.error(msg)
+                raise ValueError(msg)
 
     def get_problem(self) -> LpProblem:
         """Build an LP problem whose objective is the expected points of the selected assets.
