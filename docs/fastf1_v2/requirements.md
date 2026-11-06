@@ -281,7 +281,8 @@ step,** so that a refresh cannot bring it back, with the data edit's check plan 
 Alex asked for the "rolling indicators use championship points" claim to be checked before
 question 1. It is true, and swapping in fantasy rolling points gave no measurable gain (see
 `log.md`). Alex has not yet ruled on it, so the signal stays on championship rolling points
-for now as a working assumption.
+for now as a working assumption. [2026-11-01: ruled. Alex confirmed this working assumption
+below, so the signal stays on championship rolling points.]
 
 ## Working assumptions, confirmed by Alex 2026-11-01
 
