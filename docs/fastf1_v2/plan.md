@@ -4,7 +4,28 @@
 assumptions are all answered. [2026-11-06: steps 1 to 5 done. Step 6 is next.] [2026-11-06:
 steps 1 to 6 done. Step 7 is next.] [2026-11-06: steps 1 to 7 done. Step 8 is next.]
 [2026-11-06: steps 1 to 8 done. No variant cleared the bar, so step 9 runs the base settings.
-Step 9 is next.]
+Step 9 is next.] [2026-11-06: revised. Step 9 is on hold. Stepping back before it found that
+the expected-points table loses how far ahead an asset is (`log.md`, *Stepping back*). The
+signal design is to be redone in a fresh session, as *Revision: signal redesign* below.]
+
+## Revision: signal redesign (added 2026-11-06)
+
+Next, in a fresh session, before any other step:
+
+1. Reopen requirements question 1, how the signal becomes points the LP adds up, with the
+   findings in `log.md`, *Stepping back*. The design must keep the size of an asset's lead,
+   not just its order, and must still build only from other seasons. Agree it with Alex
+   before any code.
+2. Revise steps 4 to 6 to match, annotating what they replace. Step 4's positions may stay
+   if the agreed design still uses them. Step 5's tables and step 6's objective are what
+   carried the fault.
+3. Add a check that a redesign scores assets in the right amounts, not only the right
+   order, as the indicator analysis's rank correlation cannot see this fault. 2023's VER is
+   the known case it must pass.
+4. Then rerun step 8 on the new design, in new stores, before step 9.
+
+Steps 1 to 3b stand: the 2024 race 24 fix, the recomputed file, the indicator analysis and a
+driver's team before the race are all independent of how the signal is scored.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,
@@ -72,6 +93,10 @@ rather than defining the signal a second time.
 
 ## Step 5 — `fast_f1/signal.py`: the tables
 
+> [2026-11-06: reopened by *Revision: signal redesign*. A table of mean points by position
+> gives first by a mile the same points as first by a whisker, and in 2023 tied positions 1
+> and 2. The negatives table is not at fault, but is revisited with the design.]
+
 - Expected fantasy points by driver position and by constructor place, as plain means from the
   archive. A season's table uses 2023–25 minus that season, so 2026's uses all three.
 - A position with no history carries the last known value.
@@ -90,6 +115,9 @@ rather than defining the signal a second time.
 - Tests: a season's own results cannot change its table, and 2026 cannot change a 2023–25 table.
 
 ## Step 6 — `linear/strategy_fastf1.py`
+
+> [2026-11-06: built and tested as below, and to be revised for the new signal design. Its
+> objective adds up step 5's table values.]
 
 `StrategyFastF1(StrategyBase)`, with keyword parameters `fn_metrics`, `drs_coefficient=1.0`,
 `negative_penalty=0.0` and `budget_reward=0.0`, and `data/test_fastf1_metrics.xlsx` as a fixture.
@@ -122,6 +150,10 @@ Add the strategy to `STRATEGIES` in `backtest/cli.py`, with its tuning variants 
 
 ## Step 8 — Tuning on 2023–25 (real run)
 
+> [2026-11-06: run, and to be rerun on the new signal design. Its results describe a
+> strategy with the table fault, so its choice of the base settings does not carry over.
+> The rerun uses new stores, not `outputs/fastf1_v2_tuning_*`.]
+
 Run the variants above at 100 teams a band, in stores of their own (`outputs/fastf1_v2_tuning_*`).
 2026 is not run or looked at. Time a small run first, and run in the background. [2026-11-06:
 run at seed 2, one store per season, as Alex chose. Seed 1 at 100 teams a band draws the first
@@ -132,6 +164,9 @@ mean delta in each of 2023–25. Otherwise it stays at zero. If one of each clea
 run too and must clear the same bar. Log every variant tried, including the failures.
 
 ## Step 9 — The back-test (real run)
+
+> [2026-11-06: on hold until the redesign and step 8's rerun. Not started, so its one run is
+> still unspent.]
 
 **Run once, with the choice from step 8 logged before it starts.** All at 500 teams a band, seed 1,
 in `outputs/fastf1_v2_results.parquet` and `outputs/fastf1_v2_summary.csv`, for 2023–26 with 2026

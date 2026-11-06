@@ -2,12 +2,15 @@
 
 **Status**: agreed 2026-11-01. All eight questions are answered and the working assumptions are
 confirmed. `plan.md` is written, and no code has been written. Findings so far are in `log.md`.
+[2026-11-06: steps 1 to 8 are built and run. Question 1 is reopened: the table its answer
+chose loses how far ahead an asset is. See `log.md`, *Stepping back*.]
 
 ## Picking this up
 
 1. Read this file and `log.md`. Read the `log.md` correction before quoting any field-wide
    driver figure from its first entry.
-2. Carry on from `plan.md`.
+2. Carry on from `plan.md`. [2026-11-06: start with its *Revision: signal redesign*, which
+   reopens question 1 below.]
 
 Build a team-selection strategy on the FastF1 indicators and back-test it against
 `StrategyMaxP2PM`. Whether the indicators pick better teams than P2PM is the open
@@ -64,6 +67,14 @@ Recommendation put to Alex: B, with A also run as a comparison. Neither has been
 whether B picks better teams is unknown. The question put was "A, B or both?"
 
 **Agreed 2026-11-01: B alone.** A is not run as a comparison.
+
+[Reopened 2026-11-06: B was built and back-tested (plan steps 5 to 8), and its table is why the
+strategy trailed P2PM. Mean points by position cannot tell first by a mile from first by a
+whisker. Built from other seasons, it gave positions 1 and 2 the same 29.0 points in 2023, so
+the LP never bought VER. The size of a lead is lost when plan step 4 turns the signal into
+positions: the component columns it sums, such as `RollingPointsRank`, are min-max scaled
+values despite their names (`fast_f1/metrics.py`), so they still hold it. The new design is to
+be agreed in a fresh session. See `log.md`, *Stepping back*.]
 
 ### 2. How is a constructor scored? (agreed 2026-11-01: B)
 
@@ -255,7 +266,7 @@ step,** so that a refresh cannot bring it back, with the data edit's check plan 
 
 - **No hard rule on maximum spend; a soft term gets tested.** Agreed 2026-11-01.
 - **The objective scores in expected fantasy points, by signal position.** Agreed 2026-11-01.
-  The 0–1 signal is not run as a comparison.
+  The 0–1 signal is not run as a comparison. [Reopened 2026-11-06, see question 1.]
 - **A constructor scores on its own rolling place, converted to expected points.** Agreed
   2026-11-01.
 - **Negatives get no separate term in the base strategy.** A soft penalty, with a coefficient
