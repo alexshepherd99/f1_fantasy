@@ -4,6 +4,8 @@ The signal is the combination `indicator_analysis_v1` chose for fantasy points (
 log's *Conclusions*), built from metrics rows alone so that a race not yet run can be
 ranked. See ``docs/fastf1_v2/plan.md``, step 4.
 """
+import logging
+
 import pandas as pd
 
 from fast_f1.indicator_analysis import (
@@ -13,6 +15,8 @@ from fast_f1.indicator_analysis import (
     add_signal_inputs,
     combination_signal,
 )
+
+logger = logging.getLogger(__name__)
 
 # The slots added on each weekend format. A 2023 sprint weekend, which the analysis
 # left out, takes the sprint rule, as that needs no practice session.
@@ -42,7 +46,12 @@ def driver_positions(
 
     Returns:
         Positions keyed by the ``DRIVERCODE@CONSTRUCTOR`` identifier. Ties break on
-        that identifier.
+        that identifier. Empty when the metrics hold no rows for the race. A fantasy
+        driver with no metrics row has no position.
+
+    Raises:
+        ValueError: A driver in the race matches no fantasy pair or more than one, or
+            lacks a value the signal adds up.
     """
     rows = add_signal_inputs(_race_rows(metrics, pairs, season, race))
     rows["signal"] = pd.Series(float("nan"), index=rows.index, dtype=float)
@@ -50,6 +59,7 @@ def driver_positions(
         mask = rows["format"] == race_format
         rows.loc[mask, "signal"] = combination_signal(rows[mask], slots)
 
+    _raise_for(rows[rows["signal"].isna()]["Driver"], "Missing signal input", season, race)
     rows["signal"] = rows["signal"].round(_SIGNAL_DECIMALS)
     return _ranked(rows, "signal", "Asset")
 
@@ -64,8 +74,21 @@ def constructor_places(
 
     Returns:
         Places keyed by the archive's constructor code. Ties break on that code.
+
+    Raises:
+        ValueError: As for ``driver_positions``, or a constructor's drivers disagree on
+            its rolling points.
     """
     rows = _race_rows(metrics, pairs, season, race)
+    values_per_constructor = rows.groupby("AssetConstructor")["ConstructorRollingPoints"].nunique(
+        dropna=False
+    )
+    _raise_for(
+        values_per_constructor[values_per_constructor > 1].index.to_series(),
+        "Drivers disagree on constructor rolling points",
+        season,
+        race,
+    )
     constructors = rows.drop_duplicates("AssetConstructor")
     return _ranked(constructors, "ConstructorRollingPoints", "AssetConstructor")
 
@@ -81,7 +104,18 @@ def _race_rows(
         "AssetConstructor": race_pairs["Constructor"],
     })
     rows = metrics[(metrics["Season"] == season) & (metrics["Race"] == race)]
+    pair_counts = rows["Driver"].map(ids["Driver"].value_counts())
+    _raise_for(rows[pair_counts != 1]["Driver"], "No single fantasy pair", season, race)
     return rows.merge(ids, on="Driver")
+
+
+def _raise_for(names: pd.Series, problem: str, season: int, race: int) -> None:
+    """Log and raise a ``ValueError`` naming each offender, if there are any."""
+    if names.empty:
+        return
+    msg = f"{problem} for {season} race {race}: {', '.join(sorted(names))}"
+    logger.error(msg)
+    raise ValueError(msg)
 
 
 def _ranked(rows: pd.DataFrame, value: str, key: str) -> dict[str, int]:

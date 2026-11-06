@@ -167,3 +167,36 @@ def test_a_races_own_results_do_not_move_its_signal(rank):
     after = [row | result for row, result in zip(before, results)]
     assert rank(after, pairs) == rank(before, pairs)
     assert len(rank(after, pairs)) == 3
+
+
+@pytest.mark.parametrize("rank", [_positions, _places])
+def test_a_race_with_no_metrics_rows_gives_no_ranking(rank):
+    assert rank([_row(3, "VER", 0.5, 0.5)], _pairs(2, "VER@RED")) == {}
+
+
+@pytest.mark.parametrize("rank", [_positions, _places])
+def test_a_driver_with_no_fantasy_pair_is_an_error(rank):
+    with pytest.raises(ValueError, match="2024 race 2: HAM"):
+        rank([_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3)], _pairs(2, "VER@RED"))
+
+
+@pytest.mark.parametrize("rank", [_positions, _places])
+def test_a_driver_matching_two_fantasy_pairs_is_an_error(rank):
+    with pytest.raises(ValueError, match="2024 race 2: VER"):
+        rank([_row(2, "VER", 0.5, 0.5)], _pairs(2, "VER@RED", "VER@VRB"))
+
+
+def test_a_missing_signal_input_is_an_error_not_a_last_place():
+    with pytest.raises(ValueError, match="2024 race 2: HAM"):
+        _positions(
+            [_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3, fp3=None)],
+            _pairs(2, "VER@RED", "HAM@MER"),
+        )
+
+
+def test_a_constructors_drivers_disagreeing_on_its_rolling_points_is_an_error():
+    with pytest.raises(ValueError, match="2024 race 2: RED"):
+        _places(
+            [_row(2, "VER", 0.5, 0.5), _row(2, "PER", 0.3, 0.3)],
+            _pairs(2, "VER@RED", "PER@RED"),
+        )
