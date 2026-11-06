@@ -23,6 +23,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   to fall by position and negatives split on any recent one. Step 6 is next.
 - Step 6 done 2026-11-06: `StrategyFastF1` in `linear/strategy_fastf1.py`, with its DRS term,
   budget reward and negative penalty, run once on a real race with no signal. Step 7 is next.
+- Step 7 done 2026-11-06: the strategy and its six tuning variants are in `backtest/cli.py`,
+  and a 3-team run went through the harness. Step 8 is next.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -862,3 +864,30 @@ From a throwaway script, not kept, on 2026 race 19, which is priced but has no m
 | Penalty 6, reward 0.5 | Optimal | None | All 33 assets | 7 | Default |
 
 Not run: the strategy through a season. Steps 8 and 9 do that.
+
+## 2026-11-06 — Step 7: the harness
+
+### In plain language
+
+- **Done.** `backtest/cli.py` can now run `StrategyFastF1` and the six tuning variants in the
+  plan's table, each built by `make_variant` with one change from the base: `FastF1_Drs0`,
+  `FastF1_Neg6`, `FastF1_Neg12`, `FastF1_Bud025`, `FastF1_Bud05` and `FastF1_Bud1`.
+- **Nothing outside `backtest/cli.py` changed.** `make_variant` passes the settings
+  through, so `factory_strategy` needed nothing, as question 8 expected.
+
+### Tests
+
+One test per label shows it is accepted by `--strategies`, has its label as its name, is a
+`StrategyFastF1`, and is built with its three settings, against a stubbed
+`load_signal_tables`. They failed first as the labels were not registered. The settings were
+then checked by mutation: Neg12 given 6, Bud05 given 0.25, Drs0 given a second change, and
+Bud1 changing the penalty instead each fail a test. Full suite 463 passed.
+
+### Real run
+
+`--seasons 2025 --sample-size 1 --strategies StrategyFastF1 FastF1_Neg6`, into the
+scratchpad rather than `outputs/`. It exited 0 in 15s with no error or warning. It stored 9
+rows, one per strategy per team, all at race 24 with the right labels, and `FastF1_Neg6`'s
+totals differ from the base's, so its setting reaches the harness. Three teams are too few to
+read anything from the results, and nothing is read from them here. Step 8's small timing
+run is still to come, as the store's growth slows a run.

@@ -2,7 +2,7 @@
 
 **Status**: written 2026-11-01. Requirements: `requirements.md`, whose eight questions and working
 assumptions are all answered. [2026-11-06: steps 1 to 5 done. Step 6 is next.] [2026-11-06:
-steps 1 to 6 done. Step 7 is next.]
+steps 1 to 6 done. Step 7 is next.] [2026-11-06: steps 1 to 7 done. Step 8 is next.]
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,
