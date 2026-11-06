@@ -342,7 +342,8 @@ a fixture. The odds pattern is the closer fit — `AggregateRank` is a per-race
 external file, not a derivation of archive data — and its file-path parameter
 should be copied, not its hardcoded-default habit. A
 `data/test_fastf1_metrics.xlsx` fixture will be needed, as
-`tests/test_strategy_odds.py` has for odds.
+`tests/test_strategy_odds.py` has for odds. [2026-11-06: not built. The tables need real
+2023–25 rows, so the tests stub `load_signal_tables` instead. See `log.md`, *Step 6*.]
 
 Five things to settle before writing any of it.
 
