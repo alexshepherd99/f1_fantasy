@@ -11,6 +11,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   written and no step has started.
 - Step 1.1 done 2026-11-06: `TeamId` survives the rename, but the fix links names through the
   drivers instead. See the entry of that date.
+- Step 1 done 2026-11-06, with the fix in code and tested. Step 2 waits for Alex to agree its
+  check plan.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -420,3 +422,25 @@ names through the drivers, under a rule that also covers a name changing back an
 
 The second condition leaves a mid-season driver swap alone, since both names are in the
 current race.
+
+## 2026-11-06 — Steps 1.2 and 1.3: the fix
+
+`link_renamed_constructors` in `fast_f1/metrics.py` applies the rule above. `build_race_metrics`
+now works out constructor rolling points after the current race's teams are known, and links them
+first. The stored `Constructor` and `TeamName` values are unchanged.
+
+Four tests in `tests/test_fast_f1_output.py`, seen failing before the fix:
+
+| Test | Before the fix |
+| --- | --- |
+| Single rename, as in 2024 race 24 | Points missing |
+| Name changing back and forth | 35 points from one race, not 105 from three |
+| Missing name with drivers split across two teams | No warning |
+| 2025-style driver swap | Passed, as a guard |
+
+The swap test was checked by mutation instead. With the "missing from the current race" condition
+dropped, it failed on the warnings logged for two teams that still race. Its points did not move
+under that mutation, because the "exactly one team" condition also blocks the link. There was no
+`fast_f1` test for a driver changing team before this, so there were no existing ones to run.
+
+Full suite 381 passed. Not run against real data: that is step 2, after Alex agrees its checks.
