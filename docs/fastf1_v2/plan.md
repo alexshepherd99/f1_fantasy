@@ -3,6 +3,8 @@
 **Status**: written 2026-11-01. Requirements: `requirements.md`, whose eight questions and working
 assumptions are all answered. [2026-11-06: steps 1 to 5 done. Step 6 is next.] [2026-11-06:
 steps 1 to 6 done. Step 7 is next.] [2026-11-06: steps 1 to 7 done. Step 8 is next.]
+[2026-11-06: steps 1 to 8 done. No variant cleared the bar, so step 9 runs the base settings.
+Step 9 is next.]
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,
@@ -121,7 +123,9 @@ Add the strategy to `STRATEGIES` in `backtest/cli.py`, with its tuning variants 
 ## Step 8 — Tuning on 2023–25 (real run)
 
 Run the variants above at 100 teams a band, in stores of their own (`outputs/fastf1_v2_tuning_*`).
-2026 is not run or looked at. Time a small run first, and run in the background.
+2026 is not run or looked at. Time a small run first, and run in the background. [2026-11-06:
+run at seed 2, one store per season, as Alex chose. Seed 1 at 100 teams a band draws the first
+100 of step 9's 500. See `log.md`, *Step 8*.]
 
 A penalty or reward is kept only if it clears the harness's bar against the base: a positive pooled
 mean delta in each of 2023–25. Otherwise it stays at zero. If one of each clears, the combination is

@@ -25,6 +25,9 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   budget reward and negative penalty, run once on a real race with no signal. Step 7 is next.
 - Step 7 done 2026-11-06: the strategy and its six tuning variants are in `backtest/cli.py`,
   and a 3-team run went through the harness. Step 8 is next.
+- Step 8 done 2026-11-06: none of the six variants cleared the bar against the base, so
+  step 9 runs `StrategyFastF1` at its defaults. Every label trailed P2PM in all of 2023–25.
+  Step 9 is next.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -891,3 +894,96 @@ rows, one per strategy per team, all at race 24 with the right labels, and `Fast
 totals differ from the base's, so its setting reaches the harness. Three teams are too few to
 read anything from the results, and nothing is read from them here. Step 8's small timing
 run is still to come, as the store's growth slows a run.
+
+## 2026-11-06 — Step 8: tuning on 2023–25
+
+### In plain language
+
+- **No variant cleared the bar, so nothing is tuned.** Step 9 runs `StrategyFastF1` at its
+  defaults: DRS coefficient 1, no negative penalty and no budget reward. No combination run
+  was needed, as no penalty or reward cleared.
+- **Six variants tried,** all listed below with the failures. 2026 was not run or looked at.
+- **Every FastF1 label trailed P2PM in every season,** by 200 to 700 points a team. The base
+  trailed by 315 to 385 and beat P2PM on 0 to 7% of teams. These are the seasons that flatter
+  the signal, so step 9 is very unlikely to clear the verdict in 2023–25.
+- **The race-4 chip explains little of the gap.** P2PM without it trailed P2PM by +1.8, −32.3
+  and −168.0 in 2023–25 (`BACKTEST_LOG.md`), against a gap of 315 to 385 here.
+- **The DRS term and the budget reward pull the opposite way in 2025 from 2023–24.** Leaving
+  DRS out or rewarding budget gained 100 to 120 points a team in 2024, and lost 90 to 360 in
+  2025. No setting is positive in all three.
+
+### Choices Alex made in this step
+
+- **Seed 2, not seed 1.** The plan named no seed. With pandas' sampling, seed 1 at 100 teams a
+  band draws exactly the first 100 of the 500 that step 9 draws at seed 1, so tuning there
+  would choose settings on the teams it is later judged on. Checked on a synthetic frame: the
+  seed-1 100 equal the first 100 of the seed-1 500, and a seed-2 100 shares 10 of them.
+- **One store per season,** `outputs/fastf1_v2_tuning_2023.parquet`, `_2024` and `_2025`,
+  each with its own `_summary.csv`, run in parallel. Each store's summary and verdict cover
+  one season, so the cross-season comparison below was computed from the three stores together.
+
+### What was run
+
+A timing run first: 2025, 10 teams a band, base strategy only, into the scratchpad. 60
+simulations in 40.5s at a peak RSS of 266 MB, about 0.4s a simulation for P2PM and 0.7s for
+FastF1.
+
+Then, for each of 2023, 2024 and 2025, one background process:
+
+`backtest.cli --seasons <season> --sample-size 100 --seed 2 --strategies StrategyFastF1
+FastF1_Drs0 FastF1_Neg6 FastF1_Neg12 FastF1_Bud025 FastF1_Bud05 FastF1_Bud1
+--output outputs/fastf1_v2_tuning_<season>.parquet --summary outputs/fastf1_v2_tuning_<season>_summary.csv`
+
+All three exited 0 with no error or warning in their logs, in 38 to 43 minutes, at a peak RSS
+of 255 to 279 MB each. Each store holds 300 rows per label for its season, 7,200 in all.
+
+The bar against the base is the harness's own: `pair_with_baseline`, `season_summary` and
+`verdict` from `backtest/metrics.py`, run with `StrategyFastF1` as the baseline from a
+throwaway script, not kept.
+
+### Against the base, `StrategyFastF1`
+
+Pooled mean delta, in points a team, with the share of teams that beat the base:
+
+| Label | 2023 | 2024 | 2025 | Seasons positive |
+| --- | --- | --- | --- | --- |
+| `FastF1_Drs0` | +69.7 (59%) | +121.7 (69%) | −355.8 (16%) | 2 of 3 |
+| `FastF1_Neg6` | −26.6 (18%) | +6.5 (51%) | −31.9 (39%) | 1 of 3 |
+| `FastF1_Neg12` | +15.0 (45%) | −15.5 (46%) | −34.0 (39%) | 1 of 3 |
+| `FastF1_Bud025` | +13.9 (53%) | +103.7 (75%) | −91.5 (33%) | 2 of 3 |
+| `FastF1_Bud05` | +110.9 (65%) | +119.1 (72%) | −97.3 (32%) | 2 of 3 |
+| `FastF1_Bud1` | −2.0 (55%) | +118.5 (76%) | −148.8 (26%) | 1 of 3 |
+
+Each band gives the same sign as the pooled row in every season for every label except
+`FastF1_Neg6` in 2024 and `FastF1_Bud1` in 2023, both close to zero pooled. The reward is not
+monotonic: 0.5 beat 0.25 and 1 in 2023.
+
+### Against P2PM, for context
+
+| Label | 2023 | 2024 | 2025 |
+| --- | --- | --- | --- |
+| `StrategyFastF1` | −315.0 | −385.4 | −357.8 |
+| `FastF1_Drs0` | −245.3 | −263.7 | −713.7 |
+| `FastF1_Neg6` | −341.6 | −379.0 | −389.7 |
+| `FastF1_Neg12` | −300.0 | −401.0 | −391.8 |
+| `FastF1_Bud025` | −301.1 | −281.7 | −449.3 |
+| `FastF1_Bud05` | −204.1 | −266.4 | −455.1 |
+| `FastF1_Bud1` | −316.9 | −266.9 | −506.6 |
+
+The base beat P2PM on 0%, 5% and 7% of teams.
+
+### Final budgets
+
+Mean `total_budget` at the last race, in millions:
+
+| Label | 2023 | 2024 | 2025 |
+| --- | --- | --- | --- |
+| `StrategyMaxP2PM` | 135.8 | 127.3 | 138.5 |
+| `StrategyFastF1` | 133.9 | 122.5 | 124.6 |
+| Variants, range | 133.5–135.9 | 122.1–124.6 | 121.2–124.5 |
+
+The base ends 2 to 14m behind P2PM. Step 9's budget report on the 500-team run decides
+whether that is raised with Alex, as the plan says. The reward variants moved it by under 2m
+in 2023–24 and lowered it in 2025, so a reward per 1m spent does not close the gap.
+
+Not run: 2026, and any combination of settings.
