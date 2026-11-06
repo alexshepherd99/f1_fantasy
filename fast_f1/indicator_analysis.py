@@ -135,16 +135,10 @@ def _frame_from_kept_rows(kept: pd.DataFrame, archive: pd.DataFrame) -> pd.DataF
         logger.error(msg)
         raise ValueError(msg)
 
-    frame["format"] = _weekend_formats(frame)
+    frame = add_signal_inputs(frame)
     frame["target_finish"] = -frame["Position"]
     frame["finished"] = frame["Status"].isin(FINISHED_STATUSES)
     frame["grid"] = -frame["GridPosition"].replace(0.0, _PIT_LANE_GRID)
-    frame["driver_rolling"] = frame["RollingPointsRank"]
-    frame["constructor_rolling"] = frame["ConstructorRollingPointsRank"]
-    frame["odds"] = frame["OddsRank"]
-
-    frame["early"] = _slot_values(frame, 0, "MinLapTime_rank")
-    frame["late"] = _slot_values(frame, 1, "MinLapTime_rank")
     frame["early_laps"] = _slot_values(frame, 0, "TotalLapCount")
     frame["late_laps"] = _slot_values(frame, 1, "TotalLapCount")
     frame["early_stint"] = _slot_values(frame, 0, "MaxLapsInStint")
@@ -156,6 +150,25 @@ def _frame_from_kept_rows(kept: pd.DataFrame, archive: pd.DataFrame) -> pd.DataF
         late_time.isna() & (frame["format"] != FORMAT_SPRINT_FP1)
     )
     return frame.reset_index(drop=True)
+
+
+def add_signal_inputs(metrics: pd.DataFrame) -> pd.DataFrame:
+    """Add each row's weekend format and the indicator slots, from metrics rows alone.
+
+    Reads no race results, so it suits a race not yet run. Returns a copy holding
+    ``format``, the four ``COMBINATION_SLOTS`` and ``odds``. Higher is better for each.
+
+    Raises:
+        ValueError: A race has no practice sessions.
+    """
+    frame = metrics.copy()
+    frame["format"] = _weekend_formats(frame)
+    frame["driver_rolling"] = frame["RollingPointsRank"]
+    frame["constructor_rolling"] = frame["ConstructorRollingPointsRank"]
+    frame["odds"] = frame["OddsRank"]
+    frame["early"] = _slot_values(frame, 0, "MinLapTime_rank")
+    frame["late"] = _slot_values(frame, 1, "MinLapTime_rank")
+    return frame
 
 
 def _first_race_prices(archive: pd.DataFrame) -> pd.DataFrame:
