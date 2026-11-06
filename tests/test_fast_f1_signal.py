@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from fast_f1.signal import constructor_places, driver_positions
+from fast_f1.signal import SignalTables, constructor_places, driver_positions
 
 
 def _row(race: int, driver: str, driver_rolling: float, constructor_rolling: float,
@@ -200,3 +200,133 @@ def test_a_constructors_drivers_disagreeing_on_its_rolling_points_is_an_error():
             [_row(2, "VER", 0.5, 0.5), _row(2, "PER", 0.3, 0.3)],
             _pairs(2, "VER@RED", "PER@RED"),
         )
+
+
+class _History:
+    """Metrics and archive rows for ``SignalTables``, built one race at a time."""
+
+    def __init__(self):
+        self.metrics, self.drivers, self.constructors = [], [], []
+
+    def race(self, season: int, race: int, drivers: dict, constructors: dict,
+             with_metrics: bool = True) -> "_History":
+        """Add a race. Each dict maps an identifier to its fantasy points, best signal first.
+
+        ``with_metrics=False`` adds the archive rows alone, as for a race priced but not run.
+        """
+        con_rolling = {con: 0.9 - 0.1 * i for i, con in enumerate(constructors)}
+        for i, (driver_id, points) in enumerate(drivers.items()):
+            code, con = driver_id.split("@")
+            if with_metrics:
+                self.metrics.append(_row(race, code, 10.0 - i, con_rolling[con], season=season))
+            self.drivers.append({"Constructor": con, "Driver": driver_id, "Race": race,
+                                 "Points": points, "Season": season, "Price": 10.0})
+        for con, points in constructors.items():
+            self.constructors.append({"Constructor": con, "Race": race, "Points": points,
+                                      "Season": season, "Price": 20.0})
+        return self
+
+    def tables(self) -> SignalTables:
+        return SignalTables(
+            pd.DataFrame(self.metrics), pd.DataFrame(self.drivers), pd.DataFrame(self.constructors)
+        )
+
+
+def test_expected_points_are_mean_points_by_position_from_the_other_seasons():
+    tables = (
+        _History()
+        .race(2023, 2, {"VER@RED": 30, "HAM@MER": 10}, {"RED": 50, "MER": 20})
+        .race(2025, 2, {"VER@RED": 20, "HAM@MER": 0}, {"RED": 30, "MER": 0})
+        .race(2024, 2, {"HAM@MER": 1000, "VER@RED": -1000}, {"MER": 1000, "RED": -1000})
+        .tables()
+    )
+    assert tables.expected_points(2024, 2) == {"HAM@MER": 25, "VER@RED": 5, "MER": 40, "RED": 10}
+
+
+def test_race_one_does_not_build_the_table():
+    tables = (
+        _History()
+        .race(2023, 1, {"VER@RED": 500, "HAM@MER": 500}, {"RED": 500, "MER": 500})
+        .race(2023, 2, {"VER@RED": 30, "HAM@MER": 10}, {"RED": 50, "MER": 20})
+        .race(2024, 2, {"VER@RED": 0, "HAM@MER": 0}, {"RED": 0, "MER": 0})
+        .tables()
+    )
+    assert tables.expected_points(2024, 2) == {"VER@RED": 30, "HAM@MER": 10, "RED": 50, "MER": 20}
+
+
+def test_means_are_forced_to_fall_by_position():
+    drivers = {"VER@RED": 30, "HAM@MER": 0, "NOR@MCL": 10}
+    constructors = {"RED": 50, "MER": 10, "MCL": 20}
+    tables = (
+        _History()
+        .race(2023, 2, drivers, constructors)
+        .race(2024, 2, drivers, constructors)
+        .tables()
+    )
+    assert tables.expected_points(2024, 2) == {
+        "VER@RED": 30, "HAM@MER": 5, "NOR@MCL": 5, "RED": 50, "MER": 15, "MCL": 15,
+    }
+
+
+def test_a_position_past_the_tables_end_carries_the_last_value():
+    tables = (
+        _History()
+        .race(2023, 2, {"VER@RED": 30, "HAM@MER": 10}, {"RED": 50, "MER": 20})
+        .race(2026, 2, {"VER@RED": 0, "HAM@MER": 0, "BOT@CAD": 0},
+              {"RED": 0, "MER": 0, "CAD": 0})
+        .tables()
+    )
+    assert tables.expected_points(2026, 2) == {
+        "VER@RED": 30, "HAM@MER": 10, "BOT@CAD": 10, "RED": 50, "MER": 20, "CAD": 20,
+    }
+
+
+def _three_seasons_and_2026(points_2026: int) -> SignalTables:
+    history = _History()
+    for season, points in ((2023, 30), (2024, 20), (2025, 10)):
+        history.race(season, 2, {"VER@RED": points, "HAM@MER": 0}, {"RED": points, "MER": 0})
+    history.race(2026, 2, {"VER@RED": points_2026, "HAM@MER": 0}, {"RED": points_2026, "MER": 0})
+    history.race(2026, 3, {"VER@RED": points_2026, "HAM@MER": 0}, {"RED": points_2026, "MER": 0})
+    return history.tables()
+
+
+@pytest.mark.parametrize("season, race", [(2023, 2), (2024, 2), (2025, 2), (2026, 3)])
+def test_2026_results_never_enter_a_table(season, race):
+    low, high = _three_seasons_and_2026(-1000), _three_seasons_and_2026(1000)
+    assert low.expected_points(season, race) == high.expected_points(season, race)
+
+
+def test_2026s_table_comes_from_all_three_earlier_seasons():
+    assert _three_seasons_and_2026(1000).expected_points(2026, 3)["VER@RED"] == 20
+
+
+def test_a_ranked_driver_without_fantasy_points_is_an_error():
+    tables = (
+        _History()
+        .race(2023, 2, {"VER@RED": 30, "HAM@MER": None}, {"RED": 50, "MER": 20})
+        .race(2024, 2, {"VER@RED": 0, "HAM@MER": 0}, {"RED": 0, "MER": 0})
+        .tables()
+    )
+    with pytest.raises(ValueError, match="2023 race 2: HAM@MER"):
+        tables.expected_points(2024, 2)
+
+
+def test_a_table_with_no_other_season_to_draw_on_is_an_error():
+    tables = (
+        _History()
+        .race(2024, 2, {"VER@RED": 30, "HAM@MER": 10}, {"RED": 50, "MER": 20})
+        .race(2026, 2, {"VER@RED": 30, "HAM@MER": 10}, {"RED": 50, "MER": 20})
+        .tables()
+    )
+    with pytest.raises(ValueError, match="No 2023-25 history for 2024's Driver table"):
+        tables.expected_points(2024, 2)
+
+
+def test_a_race_priced_but_without_signal_has_no_expected_points():
+    tables = (
+        _History()
+        .race(2023, 2, {"VER@RED": 30, "HAM@MER": 10}, {"RED": 50, "MER": 20})
+        .race(2026, 19, {"VER@RED": 0, "HAM@MER": 0}, {"RED": 0, "MER": 0}, with_metrics=False)
+        .tables()
+    )
+    assert tables.expected_points(2026, 19) == {}
