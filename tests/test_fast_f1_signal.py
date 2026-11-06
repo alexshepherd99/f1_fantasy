@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from fast_f1.signal import constructor_places, driver_positions
 
@@ -152,3 +153,17 @@ def test_constructors_are_reached_through_the_requested_races_pairs():
         race=3,
     )
     assert places == {"RED": 1, "VRB": 2}
+
+
+@pytest.mark.parametrize("rank", [_positions, _places])
+def test_a_races_own_results_do_not_move_its_signal(rank):
+    pairs = _pairs(2, "VER@RED", "HAM@MER", "NOR@MCL")
+    before = [_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3), _row(2, "NOR", 0.1, 0.1)]
+    results = [
+        {"Status": "Finished", "Position": 1.0, "GridPosition": 1.0, "Points": 25.0},
+        {"Status": "Did not start", "Position": 20.0, "GridPosition": 0.0, "Points": 0.0},
+        {"Status": "Retired", "Position": 19.0, "GridPosition": 20.0, "Points": 0.0},
+    ]
+    after = [row | result for row, result in zip(before, results)]
+    assert rank(after, pairs) == rank(before, pairs)
+    assert len(rank(after, pairs)) == 3
