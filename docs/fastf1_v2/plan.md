@@ -5,6 +5,11 @@ stepping back found that the expected-points table loses how far ahead an asset 
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 are done.
 Step 17 is next. Steps 17 and 18 were numbered 9 and 10 before 2026-11-07.
+
+**On hold before step 17, at Alex's request on 2026-11-07:** Alex has the game's price-change
+rules and will assess, in a fresh session, whether a rule change explains why 2025's price moves
+followed recent points per 1m so closely (`log.md`, *Step 16*, *Why 2025 ends 10m behind on
+budget*), and what that means for step 17. Step 17 does not start until that is settled.
 Requirements: `requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
