@@ -2835,3 +2835,95 @@ no further gain to give. Its worth, 155 points a team in 2025 by step 16, is alr
 - **Drop step 17's DRS coefficient 0 comparison.** Step 16 showed `FastF1_Drs0` losing to the
   base by 65.5, 28.3 and 155.5 points a team in 2023–25, so step 17 would mostly repeat it.
   No label for it is needed.
+
+## 2026-11-07 — Step 23: lower rewards on fresh teams
+
+### In plain language
+
+A reward of 2.5 is clearly the best of the three, and on these teams it beats P2PM. Against
+the base it gains 186 points a team and wins on 82% of teams, against 103 and 61% for reward 5.
+Against P2PM it gains 31 points a team on the mean and 95 on the median, and wins on 70% of
+teams, in every band. It is the first FastF1 setting to beat P2PM in a season on these
+measures. **By the rule fixed in `plan.md` before the run, `FastF1_RuleRise2p5` replaces
+`FastF1_RuleRise5` as the chosen strategy for step 17.**
+
+Reward 1.25 is too weak: it gains only 36 points a team on the base. So the best value lies
+between 1.25 and 5, and 2.5 is no longer at the edge of the values tried.
+
+### What was run
+
+A timing run first: 2025, the four labels, 3 teams a band, seed 3, into the scratchpad. 45
+simulations in 36s at a peak RSS of 266 MB.
+
+Then one background process:
+
+`backtest.cli --seasons 2025 --sample-size 100 --seed 3 --strategies StrategyFastF1
+FastF1_RuleRise5 FastF1_RuleRise2p5 FastF1_RuleRise1p25 --output
+outputs/fastf1_v2_step23_2025.parquet --summary outputs/fastf1_v2_step23_2025_summary.csv`
+
+It exited 0 with no error or warning in its log, in 14.3 minutes, at a peak RSS of 266 MB.
+The comparisons use `pair_with_baseline` from `backtest/metrics.py`, from a throwaway script,
+not kept.
+
+### The checks
+
+- **No old row reused.** Before the run, neither `outputs/fastf1_v2_step23_2025*` file existed,
+  and the timing run went to the scratchpad. After it, the log reads "skipped 0 simulations
+  already in the store", and the store holds 300 rows for each of the five labels, P2PM among
+  them, with no duplicate label, season and team. Both pass, so the results are used.
+- **The teams are fresh.** 4 of seed 3's 300 teams were also drawn by step 22, all in the
+  (99.5, 100] band.
+- **The control repeats.** Reward 5 gains 103.4 points a team on the base here, against 123.4
+  on step 22's teams.
+
+### Against the base, `StrategyFastF1`
+
+Mean delta in points a team, with the share of teams that beat the base:
+
+| Label | (90, 95] | (95, 99.5] | (99.5, 100] | Pooled | Median |
+| --- | --- | --- | --- | --- | --- |
+| `FastF1_RuleRise1p25` | +23.2 (61%) | +44.0 (58%) | +41.2 (54%) | **+36.1 (58%)** | +37.0 |
+| `FastF1_RuleRise2p5` | +191.4 (83%) | +183.7 (85%) | +182.7 (79%) | **+186.0 (82%)** | +178.0 |
+| `FastF1_RuleRise5` | +140.0 (66%) | +103.9 (65%) | +66.4 (53%) | **+103.4 (61%)** | +67.0 |
+| `StrategyMaxP2PM` | +143.2 (76%) | +141.9 (75%) | +180.2 (75%) | **+155.1 (75%)** | +113.0 |
+
+The rule: a lower reward replaces 5 if its pooled mean delta is positive and above 5's 103.4.
+`FastF1_RuleRise2p5` qualifies, and `FastF1_RuleRise1p25` does not.
+
+### Against P2PM
+
+| Label | (90, 95] | (95, 99.5] | (99.5, 100] | Pooled | Median |
+| --- | --- | --- | --- | --- | --- |
+| `StrategyFastF1` | −143.2 (24%) | −141.9 (25%) | −180.2 (25%) | **−155.1 (25%)** | −113.0 |
+| `FastF1_RuleRise1p25` | −120.0 (26%) | −98.0 (29%) | −139.0 (25%) | **−119.0 (27%)** | −115.0 |
+| `FastF1_RuleRise5` | −3.2 (35%) | −38.0 (35%) | −113.9 (23%) | **−51.7 (31%)** | −71.5 |
+| `FastF1_RuleRise2p5` | +48.2 (72%) | +41.8 (70%) | +2.5 (67%) | **+30.9 (70%)** | +94.5 |
+
+For reward 2.5 the median beats the mean, so the typical team gains: it is not a few large
+wins lifting the average, as it was for reward 5 in step 22.
+
+### Final totals and budgets, 2025
+
+| Label | Mean points | Mean final budget (1m) | Budget against P2PM |
+| --- | --- | --- | --- |
+| `StrategyMaxP2PM` | 4,972.3 | 138.71 | — |
+| `StrategyFastF1` | 4,817.2 | 128.36 | −10.36 |
+| `FastF1_RuleRise1p25` | 4,853.3 | 131.89 | −6.83 |
+| `FastF1_RuleRise2p5` | 5,003.1 | 135.59 | −3.12 |
+| `FastF1_RuleRise5` | 4,920.6 | 139.44 | +0.73 |
+
+Reward 2.5 ends 3m behind P2PM on budget but ahead on points. Reward 5 buys more budget than the
+points it gives up are worth.
+
+### What to bear in mind
+
+- **One season, 2025, the only one the lever runs in.** In step 17 the reward is off in
+  2023–24, so the chosen strategy's 2023–24 results are the base's. 2026 stays the fair read.
+- **Five reward values have now been tried on 2025.** Step 17's 2025 result is flattered by
+  that choice, though seed 3's teams kept it away from the teams step 22 looked at.
+- **The response is sharp:** +36, +186 and +103 at 1.25, 2.5 and 5. Values between them were
+  not tried and are not to be, so that the choice is not tuned further on 2025.
+
+### Not run
+
+Step 17 has not started.

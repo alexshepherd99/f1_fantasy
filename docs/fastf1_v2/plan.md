@@ -3,8 +3,8 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 22 are done.
-Step 23 is next: lower price-rise rewards on fresh teams, before step 17. Steps 17 and 18 were
+redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 23 are done.
+Step 17 is next, with `FastF1_RuleRise2p5` as the chosen strategy. Steps 17 and 18 were
 numbered 9 and 10 before 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
@@ -284,8 +284,8 @@ silently. The values stay at 5, 10 and 20, as they come from what 1m of budget i
 
 ### Step 22 — The price-rise reward on 2025 (real run)
 
-Done 2026-11-07: `FastF1_RuleRise5` is chosen, +123.4 points a team against the base, unless
-step 23 finds a lower reward better. See `log.md`, *Step 22: the price-rise reward on 2025*.
+Done 2026-11-07: `FastF1_RuleRise5` was chosen, +123.4 points a team against the base, and
+step 23 then replaced it with reward 2.5. See `log.md`, *Step 22: the price-rise reward on 2025*.
 
 Run `StrategyFastF1` and the three new labels on 2025 only, at 100 teams a band, seed 2, in a
 new store, `outputs/fastf1_v2_step22_2025.parquet`, with its own summary. Time a small run first
@@ -300,6 +300,9 @@ into the scratchpad, and run in the background.
 - Log the choice before step 17 starts.
 
 ### Step 23 — Lower rewards on fresh teams (real run)
+
+Done 2026-11-07: `FastF1_RuleRise2p5` replaces `FastF1_RuleRise5`, +186.0 points a team against
+the base and +30.9 against P2PM. See `log.md`, *Step 23: lower rewards on fresh teams*.
 
 Agreed with Alex on 2026-11-07, after step 22 (`log.md`, *Step 23 agreed*). Reward 5 was the
 lowest value tried and did best, so lower values may do better. They are tested on teams step
