@@ -38,16 +38,26 @@ def test_registry_holds_the_existing_strategies_by_name():
     }
 
 
-# fastf1_v2's tuning variants, each one change from the base: (DRS coefficient, penalty, reward)
+# fastf1_v2's tuning variants, each one change from the base, with values from step 15.1:
+# (DRS coefficient, negative penalty, budget reward, price-rise reward)
 _FASTF1_SETTINGS = {
-    "StrategyFastF1": (1.0, 0.0, 0.0),
-    "FastF1_Drs0": (0.0, 0.0, 0.0),
-    "FastF1_Neg6": (1.0, 6.0, 0.0),
-    "FastF1_Neg12": (1.0, 12.0, 0.0),
-    "FastF1_Bud025": (1.0, 0.0, 0.25),
-    "FastF1_Bud05": (1.0, 0.0, 0.5),
-    "FastF1_Bud1": (1.0, 0.0, 1.0),
+    "StrategyFastF1": (1.0, 0.0, 0.0, 0.0),
+    "FastF1_Drs0": (0.0, 0.0, 0.0, 0.0),
+    "FastF1_Neg6p5": (1.0, 6.5, 0.0, 0.0),
+    "FastF1_Neg13": (1.0, 13.0, 0.0, 0.0),
+    "FastF1_Neg26": (1.0, 26.0, 0.0, 0.0),
+    "FastF1_Bud01": (1.0, 0.0, 0.1, 0.0),
+    "FastF1_Bud025": (1.0, 0.0, 0.25, 0.0),
+    "FastF1_Bud05": (1.0, 0.0, 0.5, 0.0),
+    "FastF1_Rise5": (1.0, 0.0, 0.0, 5.0),
+    "FastF1_Rise10": (1.0, 0.0, 0.0, 10.0),
+    "FastF1_Rise20": (1.0, 0.0, 0.0, 20.0),
 }
+
+
+def test_fastf1_registry_holds_exactly_the_tuning_labels():
+    """Step 7's labels give way to step 15's, so no other FastF1 label is nameable."""
+    assert {name for name, s in STRATEGIES.items() if issubclass(s, StrategyFastF1)} == set(_FASTF1_SETTINGS)
 
 
 class _EmptyTables:
@@ -57,6 +67,9 @@ class _EmptyTables:
         return {}
 
     def negative_chance(self, season: int, race: int) -> dict[str, float]:
+        return {}
+
+    def price_rise(self, season: int, race: int) -> dict[str, float]:
         return {}
 
 
@@ -84,7 +97,9 @@ def test_fastf1_variants_are_registered_with_their_settings(monkeypatch, label, 
 
     assert strategy.__name__ == label
     assert isinstance(strat, StrategyFastF1)
-    assert (strat._drs_coefficient, strat._negative_penalty, strat._budget_reward) == settings
+    assert (
+        strat._drs_coefficient, strat._negative_penalty, strat._budget_reward, strat._price_rise_reward
+    ) == settings
 
 
 def test_max_points_is_selectable_as_a_challenger():

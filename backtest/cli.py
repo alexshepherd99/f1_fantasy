@@ -19,14 +19,19 @@ from linear.strategy_zero_stop import StrategyZeroStop
 # progress is left out unless named with --seasons (R6)
 COMPLETED_SEASONS = [2023, 2024, 2025]
 
-# fastf1_v2's tuning variants, each one change from StrategyFastF1's defaults (docs/fastf1_v2/plan.md, step 7)
+# fastf1_v2's tuning variants, each one change from StrategyFastF1's defaults, at the values
+# fixed in step 15.1 (docs/fastf1_v2/plan.md, step 15; log.md, *Step 15.1*)
 FASTF1_VARIANTS = [
     make_variant(StrategyFastF1, "FastF1_Drs0", drs_coefficient=0.0),
-    make_variant(StrategyFastF1, "FastF1_Neg6", negative_penalty=6.0),
-    make_variant(StrategyFastF1, "FastF1_Neg12", negative_penalty=12.0),
+    make_variant(StrategyFastF1, "FastF1_Neg6p5", negative_penalty=6.5),
+    make_variant(StrategyFastF1, "FastF1_Neg13", negative_penalty=13.0),
+    make_variant(StrategyFastF1, "FastF1_Neg26", negative_penalty=26.0),
+    make_variant(StrategyFastF1, "FastF1_Bud01", budget_reward=0.1),
     make_variant(StrategyFastF1, "FastF1_Bud025", budget_reward=0.25),
     make_variant(StrategyFastF1, "FastF1_Bud05", budget_reward=0.5),
-    make_variant(StrategyFastF1, "FastF1_Bud1", budget_reward=1.0),
+    make_variant(StrategyFastF1, "FastF1_Rise5", price_rise_reward=5.0),
+    make_variant(StrategyFastF1, "FastF1_Rise10", price_rise_reward=10.0),
+    make_variant(StrategyFastF1, "FastF1_Rise20", price_rise_reward=20.0),
 ]
 
 # Strategies that can be named with --strategies, by label
