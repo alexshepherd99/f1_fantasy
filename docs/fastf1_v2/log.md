@@ -1110,3 +1110,18 @@ is given here.
   the other working assumptions on 2026-11-01, after the check in *Checking the rolling
   indicators' source* found that fantasy rolling points gave no measurable gain. The
   requirements still called it unruled until commit `49b0c54` corrected them on 2026-11-06.
+
+## 2026-11-07 — Plan and requirements converted to living documents
+
+`plan.md` and `requirements.md` now follow `agentic`'s living-documents rule: they say what is
+true now, with no dated notes, and the reasoning stays here. Every note removed had a log
+entry first, two of them written in the entry above. Nothing was decided or changed in meaning.
+
+- **Plan.** Finished steps 1 to 4 and 7 are one line each, pointing to their entries. Steps 5,
+  6 and 8 keep their detail, now in the present tense, as the redesign revises them. Step 7's
+  variant table moved into step 8, which runs it. *Revision: signal redesign* is now *Next:
+  signal redesign*, and its step 2 says to log what changes, where it said to annotate.
+- **Requirements.** The status, question 1 and the decisions read as current state. The
+  withdrawn race-4 chip assumption is one line under the working assumptions. The original
+  backlog entry keeps the notes it carried in `BACKLOG.md`. The two added to it during this
+  effort moved to the list of what has since changed.

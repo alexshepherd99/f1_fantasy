@@ -1,16 +1,15 @@
 # fastf1_v2 — Requirements
 
-**Status**: agreed 2026-11-01. All eight questions are answered and the working assumptions are
-confirmed. `plan.md` is written, and no code has been written. Findings so far are in `log.md`.
-[2026-11-06: steps 1 to 8 are built and run. Question 1 is reopened: the table its answer
-chose loses how far ahead an asset is. See `log.md`, *Stepping back*.]
+**Status**: agreed 2026-11-01, with all eight questions answered and the working assumptions
+confirmed. Plan steps 1 to 8 are built and run. Question 1 is reopened, as the table its answer
+chose loses how far ahead an asset is. See `log.md`, *Stepping back*.
 
 ## Picking this up
 
 1. Read this file and `log.md`. Read the `log.md` correction before quoting any field-wide
    driver figure from its first entry.
-2. Carry on from `plan.md`. [2026-11-06: start with its *Revision: signal redesign*, which
-   reopens question 1 below.]
+2. Carry on from `plan.md`, starting with its *Next: signal redesign*, which reopens question 1
+   below.
 
 Build a team-selection strategy on the FastF1 indicators and back-test it against
 `StrategyMaxP2PM`. Whether the indicators pick better teams than P2PM is the open
@@ -32,7 +31,8 @@ question `fast_f1` was built to answer.
 
 ## What the original entry says that has since changed
 
-The entry below is kept as written. These points in it no longer hold:
+The entry below is kept as it stood in `BACKLOG.md` when it moved, including its dated notes from
+there. These points in it no longer hold:
 
 - **"The back-test data does not exist yet."** It does: the metrics file now holds
   every race of 2023–25 and 2026 races 1–18.
@@ -46,10 +46,15 @@ The entry below is kept as written. These points in it no longer hold:
   and no name mapping is needed. See `log.md`, *Reaching fantasy assets*.
 - **"Bias the objective towards getting P1 right."** The DRS helper now exists on
   `StrategyBase`, with `StrategyBettingOdds` as its one caller.
+- **"Bring `AggregateRank` into line with those conclusions."** That work is back in
+  `BACKLOG.md` as its own item. See question 6.
+- **"A `data/test_fastf1_metrics.xlsx` fixture will be needed."** It was not built, as the
+  tables need real 2023–25 rows, so the tests stub `load_signal_tables` instead. See `log.md`,
+  *Step 6*.
 
 ## Open questions, in the order they will be asked
 
-### 1. What does the objective score in? (agreed 2026-11-01: B, without A)
+### 1. What does the objective score in? (agreed 2026-11-01: B, without A; reopened 2026-11-06)
 
 The indicator work showed only that the signal puts drivers in the right order. The LP adds
 the values up, so the gaps matter too, and they are uneven: on average 1st scores 35 points
@@ -68,13 +73,13 @@ whether B picks better teams is unknown. The question put was "A, B or both?"
 
 **Agreed 2026-11-01: B alone.** A is not run as a comparison.
 
-[Reopened 2026-11-06: B was built and back-tested (plan steps 5 to 8), and its table is why the
-strategy trailed P2PM. Mean points by position cannot tell first by a mile from first by a
+**Reopened 2026-11-06.** B was built and back-tested (plan steps 5 to 8), and its table is why
+the strategy trailed P2PM. Mean points by position cannot tell first by a mile from first by a
 whisker. Built from other seasons, it gave positions 1 and 2 the same 29.0 points in 2023, so
 the LP never bought VER. The size of a lead is lost when plan step 4 turns the signal into
 positions: the component columns it sums, such as `RollingPointsRank`, are min-max scaled
-values despite their names (`fast_f1/metrics.py`), so they still hold it. The new design is to
-be agreed in a fresh session. See `log.md`, *Stepping back*.]
+values despite their names (`fast_f1/metrics.py`), so they still hold it. The new design is
+still to be agreed. See `log.md`, *Stepping back*.
 
 ### 2. How is a constructor scored? (agreed 2026-11-01: B)
 
@@ -265,8 +270,8 @@ step,** so that a refresh cannot bring it back, with the data edit's check plan 
 ## Decisions so far
 
 - **No hard rule on maximum spend; a soft term gets tested.** Agreed 2026-11-01.
-- **The objective scores in expected fantasy points, by signal position.** Agreed 2026-11-01.
-  The 0–1 signal is not run as a comparison. [Reopened 2026-11-06, see question 1.]
+- **The objective scores in expected fantasy points, by signal position.** Agreed 2026-11-01,
+  and reopened 2026-11-06, see question 1. The 0–1 signal is not run as a comparison.
 - **A constructor scores on its own rolling place, converted to expected points.** Agreed
   2026-11-01.
 - **Negatives get no separate term in the base strategy.** A soft penalty, with a coefficient
@@ -291,16 +296,11 @@ step,** so that a refresh cannot bring it back, with the data edit's check plan 
 
 Alex asked for the "rolling indicators use championship points" claim to be checked before
 question 1. It is true, and swapping in fantasy rolling points gave no measurable gain (see
-`log.md`). Alex has not yet ruled on it, so the signal stays on championship rolling points
-for now as a working assumption. [2026-11-01: ruled. Alex confirmed this working assumption
-below, so the signal stays on championship rolling points.]
+`log.md`). Alex ruled on 2026-11-01, with the working assumptions below, that the signal stays
+on championship rolling points.
 
 ## Working assumptions, confirmed by Alex 2026-11-01
 
-
-- [2026-11-01: withdrawn. Alex decided the strategy does not implement the chip, see *Decisions
-  so far*.] The race-4 unlimited-moves chip is copied from P2PM, so that the comparison does not
-  also measure the chip.
 - Race 1 needs nothing built. A back-test's race 1 team is the sampled one, and live
   picks already have `scripts/select_odds_start.py`.
 - Odds stay out of the signal after race 1. Within 2026 they add nothing measurable, and
@@ -311,6 +311,10 @@ below, so the signal stays on championship rolling points.]
   constructor place 10 for place 11, and driver position 20 for 21 and 22. This understates
   the risk at constructor place 11, which went negative 59% of the time in 2026.
 
+Withdrawn: copying P2PM's race-4 chip, so that the comparison would not also measure it. Alex
+withdrew it on 2026-11-01 and decided the strategy does not play the chip (*Decisions so far*;
+`log.md`, *Two decisions from 2026-11-01, logged late*).
+
 ## Original entry, moved from `BACKLOG.md` 2026-11-01
 
 [2026-10-31: `docs/indicator_analysis_v1/log.md` has the best-performing indicator
@@ -320,7 +324,6 @@ worth, about 50 to 130 points a season against rolling points. It is not a compa
 with P2PM. Its *Conclusions* entry records the combinations Alex accepted, including
 odds for race 1.]
 
-[2026-11-01: this paragraph's work is back in `BACKLOG.md` as its own item; see question 6.]
 **Bring `AggregateRank` into line with those conclusions** (raised by Alex 2026-11-01).
 It still adds every rank column at weight 1.0, so driver rolling points, both practice
 sessions and odds count equally, and only `METRIC_WEIGHTS` in `fast_f1/metrics.py` sets
@@ -353,8 +356,7 @@ a fixture. The odds pattern is the closer fit — `AggregateRank` is a per-race
 external file, not a derivation of archive data — and its file-path parameter
 should be copied, not its hardcoded-default habit. A
 `data/test_fastf1_metrics.xlsx` fixture will be needed, as
-`tests/test_strategy_odds.py` has for odds. [2026-11-06: not built. The tables need real
-2023–25 rows, so the tests stub `load_signal_tables` instead. See `log.md`, *Step 6*.]
+`tests/test_strategy_odds.py` has for odds.
 
 Five things to settle before writing any of it.
 
