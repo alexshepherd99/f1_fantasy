@@ -93,12 +93,19 @@ def driver_values(
         value.
 
     Raises:
-        ValueError: As for ``driver_positions``.
+        ValueError: As for ``driver_positions``, or every driver's signal is equal, which
+            leaves nothing to stretch.
     """
     rows = _signal_rows(metrics, pairs, season, race)
+    spread = rows["signal"].max() - rows["signal"].min()
+    if spread == 0:
+        msg = f"Every signal equal for {season} race {race}, so none can be stretched"
+        logger.error(msg)
+        raise ValueError(msg)
+
     per_race = rows["RollingPoints"] / len(get_rolling_window_races(race))
     low, high = per_race.min(), per_race.max()
-    share = (rows["signal"] - rows["signal"].min()) / (rows["signal"].max() - rows["signal"].min())
+    share = (rows["signal"] - rows["signal"].min()) / spread
     return dict(zip(rows["Asset"], (low + share * (high - low)).astype(float)))
 
 

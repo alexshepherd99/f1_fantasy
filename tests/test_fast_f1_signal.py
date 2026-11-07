@@ -154,6 +154,14 @@ def test_a_driver_with_no_recent_points_is_left_out_of_the_range():
     assert values == pytest.approx({"VER@RED": 25.0, "BEA@FER": 15.0, "ALB@WIL": 5.0})
 
 
+def test_a_race_where_every_signal_is_equal_is_an_error():
+    with pytest.raises(ValueError, match="Every signal equal for 2024 race 2"):
+        _values(
+            [_row(2, "VER", 0.5, 0.0, RollingPoints=25), _row(2, "ALB", 0.0, 0.5, RollingPoints=5)],
+            _pairs(2, "VER@RED", "ALB@WIL"),
+        )
+
+
 def _places(rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024) -> dict:
     return constructor_places(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
 
