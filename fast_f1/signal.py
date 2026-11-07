@@ -249,6 +249,22 @@ class SignalTables:
                 expected |= {asset: _look_up(table, place) for asset, place in places.items()}
         return expected
 
+    def values(self, season: int, race: int) -> dict[str, float]:
+        """Each asset's value in one race: ``driver_values`` and ``constructor_values`` together.
+
+        Returns:
+            Values keyed by driver identifier and constructor code. Empty when the race has
+            no signal, and a driver with no metrics row is left out.
+
+        Raises:
+            ValueError: As for ``driver_values``.
+        """
+        return self._per_race("values", season, race, self._values)
+
+    def _values(self, season: int, race: int) -> dict[str, float]:
+        return (driver_values(self._metrics, self._pairs, season, race)
+                | constructor_values(self._metrics, self._pairs, season, race))
+
     def negative_chance(self, season: int, race: int) -> dict[str, float]:
         """Each priced asset's chance of going negative in one race.
 

@@ -635,12 +635,26 @@ def test_price_rise_reads_neither_its_own_season_nor_2026(season, varied):
     assert tables(1).price_rise(season, 2) == tables(100).price_rise(season, 2)
 
 
+def test_values_are_the_drivers_and_constructors_values_for_the_race():
+    # Each driver is their constructor's only one, so a constructor's value is its driver's.
+    tables = _rising(*_RISES_2023, (2024, 2, _LOOK_UP))
+    assert tables.values(2024, 2) == pytest.approx({
+        "VER@RED": 30.0, "HAM@MER": 15.0, "ALB@WIL": 0.0, "RED": 30.0, "MER": 15.0, "WIL": 0.0,
+    })
+
+
+def test_a_race_priced_but_without_signal_has_no_values():
+    unsignalled = {driver: (None, *prices) for driver, (_, *prices) in _LOOK_UP.items()}
+    tables = _rising(*_RISES_2023, (2026, 19, unsignalled))
+    assert tables.values(2026, 19) == {}
+
+
 def test_changing_a_returned_dict_does_not_change_the_next_call():
     history = _History()
     for season in (2023, 2024):
         history.race(season, 2, {"VER@RED": 30, "HAM@MER": 10}, {"RED": 50, "MER": 20})
     tables = history.tables()
-    for method in (tables.expected_points, tables.negative_chance):
+    for method in (tables.expected_points, tables.negative_chance, tables.values):
         first = method(2024, 2)
         expected = dict(first)
         first["VER@RED"] = 999.0
