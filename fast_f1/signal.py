@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Callable
 
 import pandas as pd
-from scipy.optimize import isotonic_regression
 
 from common import AssetType
 from fast_f1.indicator_analysis import (
@@ -192,15 +191,13 @@ def load_signal_tables(
 
 
 class SignalTables:
-    """Tables of what an asset's place in a race predicts, looked up for any race.
+    """Each asset's signal value in a race, and tables of what its place predicts.
 
-    Three measures, each by asset type: expected fantasy points by signal position,
-    the chance of going negative by price third, and the expected price rise by third
-    on value per 1m. A season's tables come from the ``TABLE_SEASONS`` other than
-    itself, races 2 onwards, so a season never sees its own results and 2026 never
-    enters a table. The points table holds the mean points at each position, forced to
-    fall by position. A key past a table's end takes the last value. Each table is built
-    once per instance.
+    Two measures, each by asset type: the chance of going negative by price third, and
+    the expected price rise by third on value per 1m. A season's tables come from the
+    ``TABLE_SEASONS`` other than itself, races 2 onwards, so a season never sees its own
+    results and 2026 never enters a table. A key past a table's end takes the last value.
+    Each table is built once per instance, and each race's figures once.
 
     Args:
         metrics: Rows in the shape of ``data/fastf1_practice_rolling_metrics.xlsx``.
@@ -221,33 +218,10 @@ class SignalTables:
             AssetType.DRIVER: driver_archive,
             AssetType.CONSTRUCTOR: constructor_archive,
         }
-        self._history: pd.DataFrame | None = None
         self._negatives: pd.DataFrame | None = None
         self._rises: pd.DataFrame | None = None
         self._tables: dict[tuple[str, int, AssetType], pd.Series] = {}
         self._race_values: dict[tuple[str, int, int], dict[str, float]] = {}
-
-    def expected_points(self, season: int, race: int) -> dict[str, float]:
-        """Each ranked asset's expected fantasy points in one race.
-
-        Returns:
-            Points keyed by driver identifier and constructor code. Empty when the race
-            has no signal, and an asset with no position or place is left out.
-
-        Raises:
-            ValueError: A ranked asset in a table season has no fantasy points, a table
-                has no history to draw on, or as for ``driver_positions``.
-        """
-        return self._per_race("points", season, race, self._expected_points)
-
-    def _expected_points(self, season: int, race: int) -> dict[str, float]:
-        expected = {}
-        for asset_type, ranking in _RANKINGS.items():
-            places = ranking(self._metrics, self._pairs, season, race)
-            if places:
-                table = self._table("points", season, asset_type)
-                expected |= {asset: _look_up(table, place) for asset, place in places.items()}
-        return expected
 
     def values(self, season: int, race: int) -> dict[str, float]:
         """Each asset's value in one race: ``driver_values`` and ``constructor_values`` together.
@@ -345,7 +319,6 @@ class SignalTables:
         key = (name, season, asset_type)
         if key not in self._tables:
             history, summarise = {
-                "points": (self._ranked_history, _falling_means),
                 "negatives": (self._negative_history, _negative_shares),
                 "rises": (self._rise_history, _mean_rises),
             }[name]
@@ -405,49 +378,6 @@ class SignalTables:
                    else pd.DataFrame(columns=["AssetType", "Season", "Third", "Rise"]))
         self._rises = history.astype({"Third": int, "Rise": float})
         return self._rises
-
-    def _ranked_history(self) -> pd.DataFrame:
-        """Every table season's ranked assets from race 2 on, with their fantasy points."""
-        if self._history is not None:
-            return self._history
-        rows = []
-        for season in TABLE_SEASONS:
-            in_season = self._metrics[self._metrics["Season"] == season]
-            for race in sorted(in_season.loc[in_season["Race"] > FIRST_RACE, "Race"].unique()):
-                for asset_type, ranking in _RANKINGS.items():
-                    for asset, place in ranking(self._metrics, self._pairs, season, race).items():
-                        rows.append({"AssetType": asset_type, "Season": season, "Race": race,
-                                     "Asset": asset, "Place": place})
-        history = pd.DataFrame(rows, columns=["AssetType", "Season", "Race", "Asset", "Place"])
-
-        # Driver identifiers hold an "@" and constructor codes do not, so one join serves both.
-        points = pd.concat(
-            archive[["Season", "Race", asset_type.value, "Points"]].rename(
-                columns={asset_type.value: "Asset"}
-            )
-            for asset_type, archive in self._archive.items()
-        )
-        history = history.merge(points, on=["Season", "Race", "Asset"], how="left", validate="m:1")
-
-        missing = history[history["Points"].isna()]
-        if not missing.empty:
-            names = ", ".join(f"{r.Season} race {r.Race}: {r.Asset}" for r in missing.itertuples())
-            msg = f"No fantasy points for ranked assets in {names}"
-            logger.error(msg)
-            raise ValueError(msg)
-        self._history = history
-        return history
-
-
-def _falling_means(history: pd.DataFrame) -> pd.Series:
-    """Mean points by place, forced to fall by place and weighted by each place's count."""
-    stats = history.groupby("Place")["Points"].agg(["mean", "count"])
-    if stats.empty:
-        return pd.Series(dtype=float)
-    fitted = isotonic_regression(
-        stats["mean"].to_numpy(), weights=stats["count"].to_numpy(), increasing=False
-    ).x
-    return pd.Series(fitted, index=stats.index)
 
 
 def _negative_shares(history: pd.DataFrame) -> pd.Series:

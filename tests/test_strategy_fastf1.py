@@ -31,7 +31,7 @@ _PRICES = {
     "C3": 12.0,
 }
 # D1 has no signal, as SAR in 2024 race 3, so scores zero
-_EXPECTED_POINTS = {
+_VALUES = {
     "D2@C1": 3.0,
     "D3@C2": 9.0,
     "D4@C2": 10.0,
@@ -46,15 +46,15 @@ _EXPECTED_POINTS = {
 class _StubTables:
     """Stands in for ``SignalTables``, returning set values and recording what was asked."""
 
-    def __init__(self, expected_points: dict[str, float]):
-        self._expected_points = expected_points
+    def __init__(self, values: dict[str, float]):
+        self._values = values
         self._negative_chance = {asset: 0.0 for asset in _PRICES}
         self.requested: list[tuple[int, int]] = []
         self.negatives_requested: list[tuple[int, int]] = []
 
-    def expected_points(self, season: int, race: int) -> dict[str, float]:
+    def values(self, season: int, race: int) -> dict[str, float]:
         self.requested.append((season, race))
-        return dict(self._expected_points)
+        return dict(self._values)
 
     def negative_chance(self, season: int, race: int) -> dict[str, float]:
         self.negatives_requested.append((season, race))
@@ -66,9 +66,9 @@ def stub_tables(monkeypatch) -> tuple[_StubTables, list]:
     """Replace ``load_signal_tables`` as the strategy sees it, recording the file asked for.
 
     The real tables need 2023-25 metrics rows matched to the real archive, which no
-    small fixture file can give, so the unit tests set the expected points directly.
+    small fixture file can give, so the unit tests set the values directly.
     """
-    tables = _StubTables(_EXPECTED_POINTS)
+    tables = _StubTables(_VALUES)
     files_loaded = []
 
     def _load(fn_metrics):
@@ -106,7 +106,7 @@ def _selected(strat: StrategyFastF1) -> set[str]:
 
 
 def test_strategy_fastf1_reads_the_tables_for_its_race(stub_tables):
-    """The metrics file given is loaded, and the points asked for are this season and race's."""
+    """The metrics file given is loaded, and the values asked for are this season and race's."""
     tables, files_loaded = stub_tables
 
     _strategy(max_cost=25.0, max_moves=2, race_num=7, fn_metrics="some/metrics.xlsx")
@@ -123,14 +123,14 @@ def test_strategy_fastf1_raises_on_a_signal_for_an_asset_not_in_the_race(stub_ta
     still solve, so it raises instead.
     """
     tables, _ = stub_tables
-    tables._expected_points = _EXPECTED_POINTS | {unknown: 1.0}
+    tables._values = _VALUES | {unknown: 1.0}
 
     with pytest.raises(ValueError, match=unknown):
         _strategy(max_cost=25.0, max_moves=2)
 
 
-def test_strategy_fastf1_maximises_expected_points_within_budget_and_moves(stub_tables):
-    """The best team on expected points that the budget and two moves allow.
+def test_strategy_fastf1_maximises_values_within_budget_and_moves(stub_tables):
+    """The best team on values that the budget and two moves allow.
 
     With the budget lifted, or with four moves and the budget lifted, the best team
     differs, so both limits bind. D1 has no signal and scores zero. DRS is left out.
@@ -154,7 +154,7 @@ def test_strategy_fastf1_maximises_expected_points_within_budget_and_moves(stub_
 def test_strategy_fastf1_scales_the_drs_term_by_its_coefficient(
     stub_tables, drs_coefficient, team, objective
 ):
-    """The DRS driver's expected points count again, times the coefficient.
+    """The DRS driver's value counts again, times the coefficient.
 
     At a budget of 23 the best team without DRS differs from the best with it, and
     each is the only best team, found by brute force.
@@ -180,15 +180,15 @@ def test_strategy_fastf1_leaves_the_drs_term_out_at_zero(stub_tables):
 @pytest.mark.parametrize(
     "drs_coefficient, drs_driver",
     [
-        # D6 has the best points of any driver, but is not selected at zero
+        # D6 has the best value of any driver, but is not selected at zero
         (0.0, "D3@C2"),
         (1.0, "D6@C3"),
     ],
 )
-def test_strategy_fastf1_gives_drs_to_the_selected_driver_with_the_best_points(
+def test_strategy_fastf1_gives_drs_to_the_selected_driver_with_the_best_value(
     stub_tables, drs_coefficient, drs_driver
 ):
-    """The same rule at any coefficient: the best expected points on the selected team."""
+    """The same rule at any coefficient: the best value on the selected team."""
     strat = _strategy(max_cost=23.0, max_moves=2, drs_coefficient=drs_coefficient)
 
     strat.execute()
@@ -203,7 +203,7 @@ def test_strategy_fastf1_leaves_drs_to_the_default_with_no_signal(stub_tables, d
     At a coefficient of 1 the DRS binaries still nominate someone, arbitrarily.
     """
     tables, _ = stub_tables
-    tables._expected_points = {}
+    tables._values = {}
     strat = _strategy(max_cost=23.0, max_moves=2, drs_coefficient=drs_coefficient)
 
     strat.execute()
@@ -212,9 +212,9 @@ def test_strategy_fastf1_leaves_drs_to_the_default_with_no_signal(stub_tables, d
 
 
 def test_strategy_fastf1_breaks_a_drs_tie_on_the_identifier(stub_tables):
-    """Two selected drivers on equal points: the first identifier wins, whatever the race's order."""
+    """Two selected drivers on equal values: the first identifier wins, whatever the race's order."""
     tables, _ = stub_tables
-    tables._expected_points = {"D3@C2": 10.0, "D4@C2": 10.0}
+    tables._values = {"D3@C2": 10.0, "D4@C2": 10.0}
     strat = _strategy(
         max_cost=999.0,
         max_moves=2,
@@ -243,7 +243,7 @@ def test_strategy_fastf1_rewards_each_1m_spent(stub_tables, budget_reward, team,
     on 9 points is best at a reward of 1, found by brute force.
     """
     tables, _ = stub_tables
-    tables._expected_points = {"D2@C1": 10.0, "D3@C2": 10.0, "D6@C3": 9.0}
+    tables._values = {"D2@C1": 10.0, "D3@C2": 10.0, "D6@C3": 9.0}
     strat = _strategy(max_cost=999.0, max_moves=1, drs_coefficient=0.0, budget_reward=budget_reward)
 
     strat.execute()
@@ -269,7 +269,7 @@ def test_strategy_fastf1_penalises_each_selected_assets_chance_of_going_negative
     on 9 points with a 10% chance above it. C1's 50% chance counts on every team.
     """
     tables, _ = stub_tables
-    tables._expected_points = {"D2@C1": 10.0, "D3@C2": 10.0, "D6@C3": 9.0}
+    tables._values = {"D2@C1": 10.0, "D3@C2": 10.0, "D6@C3": 9.0}
     tables._negative_chance |= {"D3@C2": 0.5, "D6@C3": 0.1, "C1": 0.5}
     strat = _strategy(max_cost=999.0, max_moves=1, drs_coefficient=0.0, negative_penalty=negative_penalty)
 
@@ -291,7 +291,7 @@ def test_strategy_fastf1_reads_the_chances_only_with_a_penalty(stub_tables, nega
 
 @pytest.mark.parametrize("unknown", ["D7@C9", "C9"])
 def test_strategy_fastf1_raises_on_a_chance_for_an_asset_not_in_the_race(stub_tables, unknown):
-    """As for expected points, a chance naming an asset the race does not have raises."""
+    """As for values, a chance naming an asset the race does not have raises."""
     tables, _ = stub_tables
     tables._negative_chance[unknown] = 0.1
 
@@ -317,7 +317,7 @@ def test_strategy_fastf1_solves_a_race_with_no_signal(stub_tables):
     never sets, so ``value()`` gives None rather than 0.
     """
     tables, _ = stub_tables
-    tables._expected_points = {}
+    tables._values = {}
     strat = _strategy(max_cost=25.0, max_moves=2)
 
     problem = strat.execute()
@@ -342,8 +342,8 @@ def test_strategy_fastf1_keeps_the_move_limit_at_race_four(stub_tables):
 def test_strategy_fastf1_solves_a_real_race(negative_penalty):
     """Built by the factory on the real metrics file and archive, for 2025 race 5.
 
-    The signal's identifiers match the race's, every selected asset has positive
-    expected points, and the LP solves with a full team. With a penalty, every
+    The signal's identifiers match the race's, every selected asset has a positive
+    value, and the LP solves with a full team. With a penalty, every
     available asset has a chance of going negative.
     """
     season = factory_season(*load_with_derivations(season=2025), 2025)
@@ -361,4 +361,4 @@ def test_strategy_fastf1_solves_a_real_race(negative_penalty):
     assert problem.status == LpStatusOptimal
     assert len(selected) == 7
     assert strat._lp_variables[VarType.TeamMoves].value() == pytest.approx(2.0)
-    assert all(strat._expected_points.get(a, 0.0) > 0.0 for a in selected)
+    assert all(strat._values.get(a, 0.0) > 0.0 for a in selected)

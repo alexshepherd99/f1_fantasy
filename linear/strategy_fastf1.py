@@ -1,6 +1,6 @@
-"""fastf1_v2's strategy: maximise expected fantasy points from the FastF1 signal.
+"""fastf1_v2's strategy: maximise the FastF1 signal's values.
 
-See ``docs/fastf1_v2/plan.md``, step 6.
+See ``docs/fastf1_v2/plan.md``, steps 6 and 13.
 """
 import logging
 from pathlib import Path
@@ -13,7 +13,7 @@ from linear.strategy_base import StrategyBase, VarType
 
 
 class StrategyFastF1(StrategyBase):
-    """Strategy that maximises expected fantasy points, from each asset's signal position.
+    """Strategy that maximises the selected assets' signal values, in championship points per race.
 
     Unlike `StrategyMaxP2PM`, it does not play the race-4 unlimited-moves chip.
 
@@ -23,20 +23,20 @@ class StrategyFastF1(StrategyBase):
         The FastF1 metrics file the signal is built from, read once per process by
         `load_signal_tables`.
     drs_coefficient : float
-        Scales the DRS term in the objective, the DRS driver's expected points counted
-        a second time. At zero the term is left out.
+        Scales the DRS term in the objective, the DRS driver's value counted a second
+        time. At zero the term is left out.
     budget_reward : float
-        Points added to the objective per 1m of the team's total cost. Zero adds nothing.
+        Value added to the objective per 1m of the team's total cost. Zero adds nothing.
     negative_penalty : float
-        Points taken from the objective per unit of each selected asset's chance of going
+        Value taken from the objective per unit of each selected asset's chance of going
         negative. The DRS driver's chance is not doubled. At zero the chances are not read.
 
     Raises
     ------
     ValueError
-        If the expected points or chances name an asset the race does not have, as
-        identifiers that disagree would otherwise score every asset zero and still solve,
-        or an available asset has no chance of going negative.
+        If the values or chances name an asset the race does not have, as identifiers
+        that disagree would otherwise score every asset zero and still solve, or an
+        available asset has no chance of going negative.
     """
     def __init__(
         self,
@@ -52,9 +52,9 @@ class StrategyFastF1(StrategyBase):
         self._budget_reward = budget_reward
         self._negative_penalty = negative_penalty
         tables = load_signal_tables(fn_metrics)
-        self._expected_points = tables.expected_points(self._season_year, self._race_num)
-        # An asset with no signal position is left out, so only unknown assets are checked
-        self._check_assets(self._expected_points, "Expected points", every_asset=False)
+        self._values = tables.values(self._season_year, self._race_num)
+        # An asset with no value is left out, so only unknown assets are checked
+        self._check_assets(self._values, "Values", every_asset=False)
 
         # Read only when they count, as a penalty of zero leaves them out of the objective
         self._negative_chance = {}
@@ -77,25 +77,25 @@ class StrategyFastF1(StrategyBase):
                 raise ValueError(msg)
 
     def get_problem(self) -> LpProblem:
-        """Build an LP problem whose objective is the expected points of the selected assets.
+        """Build an LP problem whose objective is the values of the selected assets.
 
-        An available asset with no signal position scores zero.
+        An available asset with no value scores zero.
         """
         problem = LpProblem(self.__class__.__name__, LpMaximize)
 
         drivers = self._lp_variables[VarType.TeamDrivers]
         constructors = self._lp_variables[VarType.TeamConstructors]
-        points_drivers = [self._expected_points.get(i, 0.0) * drivers[i] for i in self._all_available_drivers]
-        points_constructors = [
-            self._expected_points.get(i, 0.0) * constructors[i] for i in self._all_available_constructors
+        values_drivers = [self._values.get(i, 0.0) * drivers[i] for i in self._all_available_drivers]
+        values_constructors = [
+            self._values.get(i, 0.0) * constructors[i] for i in self._all_available_constructors
         ]
 
-        # Points per 1m spent, so budget left unspent counts against a team
-        objective = lpSum(points_drivers + points_constructors) + self._budget_reward * self._lp_variables[VarType.TotalCost]
+        # Value per 1m spent, so budget left unspent counts against a team
+        objective = lpSum(values_drivers + values_constructors) + self._budget_reward * self._lp_variables[VarType.TotalCost]
 
-        # DRS x2 counts the DRS driver's expected points a second time, so they can decide the team
+        # DRS x2 counts the DRS driver's value a second time, so it can decide the team
         if self._drs_coefficient != 0.0:
-            drs_values = {i: self._expected_points.get(i, 0.0) for i in self._all_available_drivers}
+            drs_values = {i: self._values.get(i, 0.0) for i in self._all_available_drivers}
             drs_term, drs_constraints = self.get_drs_objective_term(drs_values)
             problem.extend(drs_constraints)
             objective += self._drs_coefficient * drs_term
@@ -112,17 +112,17 @@ class StrategyFastF1(StrategyBase):
         return problem
 
     def get_drs_driver(self) -> str:
-        """Return the selected driver with the best expected points, the same rule at any coefficient.
+        """Return the selected driver with the best value, the same rule at any coefficient.
 
         A tie goes to the first identifier, so runs repeat. Returns an empty string if no selected
-        driver has expected points above zero, so the default team selection picks, taking the
+        driver has a value above zero, so the default team selection picks, taking the
         highest-priced driver.
         """
         drivers = self._lp_variables[VarType.TeamDrivers]
-        best_driver, best_points = "", 0.0
+        best_driver, best_value = "", 0.0
         for d in sorted(self._all_available_drivers):
             # Called after the strategy has run, so the binaries hold the selected team
-            points = self._expected_points.get(d, 0.0)
-            if drivers[d].value() > 0.5 and points > best_points:
-                best_driver, best_points = d, points
+            value = self._values.get(d, 0.0)
+            if drivers[d].value() > 0.5 and value > best_value:
+                best_driver, best_value = d, value
         return best_driver

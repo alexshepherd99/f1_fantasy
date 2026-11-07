@@ -53,7 +53,7 @@ _FASTF1_SETTINGS = {
 class _EmptyTables:
     """Stands in for ``SignalTables`` for a race with no assets."""
 
-    def expected_points(self, season: int, race: int) -> dict[str, float]:
+    def values(self, season: int, race: int) -> dict[str, float]:
         return {}
 
     def negative_chance(self, season: int, race: int) -> dict[str, float]:
