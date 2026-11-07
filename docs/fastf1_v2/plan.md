@@ -3,8 +3,8 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16, 19 and 20 are done.
-Step 21 is next. Steps 17 and 18 were numbered 9 and 10 before 2026-11-07.
+redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 21 are done.
+Step 22 is next. Steps 17 and 18 were numbered 9 and 10 before 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
 settled.** The game moved to a three-race price model in 2025. It is unchanged in 2026, and
@@ -272,6 +272,8 @@ Test-first, one concern per commit.
   estimate.
 
 ### Step 21 — The labels
+
+Done 2026-11-07. See `log.md`, *Step 21: the labels*.
 
 Replace `FastF1_Rise5`, `FastF1_Rise10` and `FastF1_Rise20` in `STRATEGIES` with
 `FastF1_RuleRise5`, `FastF1_RuleRise10` and `FastF1_RuleRise20`, at the same values. The old

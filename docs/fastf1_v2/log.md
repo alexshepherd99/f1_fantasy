@@ -2704,3 +2704,26 @@ each changes these figures.
 ### Not run
 
 No back-test was run. That is step 22.
+
+## 2026-11-07 — Step 21: the labels
+
+### In plain language
+
+The three price-rise labels are renamed, so step 22 starts from no stored rows. Under the old
+names, step 16's stores hold rows built from the old rise tables. A run that pointed at one of
+those stores would have reused them without saying so.
+
+### What was done
+
+`FastF1_Rise5`, `FastF1_Rise10` and `FastF1_Rise20` in `STRATEGIES` became
+`FastF1_RuleRise5`, `FastF1_RuleRise10` and `FastF1_RuleRise20`, at the same values. The
+test's table of labels was renamed first. Five tests failed: the registry still held the old
+names, and the command line refused the new ones. After the rename, the full suite passes,
+514 tests.
+
+A read of each store's label column in `outputs/` found the old names only in
+`fastf1_v2_step16_2023`, `_2024` and `_2025`. The new names appear in none.
+
+### Not run
+
+No back-test was run. That is step 22.
