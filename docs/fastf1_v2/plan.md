@@ -4,7 +4,7 @@
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11, 14.1 and 12 are done, and
-so are steps 13.1 to 13.3. Step 13.4 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
+so are steps 13.1 to 13.4. Step 13.5 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
 Requirements: `requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
@@ -116,7 +116,8 @@ checks of the code against each item below, logged, with a change only where it 
 3. Done 2026-11-07, with no code change and one test added. See `log.md`, *Step 13.3*.
    Minus `negative_penalty * chance`, from step 12, with a test that zero leaves the team
    unchanged.
-4. `budget_reward * TotalCost`, with the same test at zero.
+4. Done 2026-11-07, with no change needed. See `log.md`, *Step 13.4*.
+   `budget_reward * TotalCost`, with the same test at zero.
 5. Plus `price_rise_reward * expected rise`, from step 12, with the same test at zero.
 6. A race with no signal scores every asset zero, and solves.
 

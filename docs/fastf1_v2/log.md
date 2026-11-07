@@ -48,6 +48,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   Step 13.3 is next.
 - Step 13.3 done 2026-11-07: the negative penalty already matches the plan. One rule had no
   test, so one was added. Step 13.4 is next.
+- Step 13.4 done 2026-11-07: the budget reward already matches the plan, with no change
+  needed. Step 13.5 is next.
 - Decisions so far: see `requirements.md`, *Decisions so far*, which is kept current.
 
 ## 2026-11-01 — Sizing the two levers in the brief
@@ -1736,3 +1738,27 @@ as predicted, so the test fails. On the real code it passes. This is a test only
 change to the strategy.
 
 The full suite is green, 468 tests, up from 467.
+
+## 2026-11-07 — Step 13.4: the budget reward checked against the plan
+
+### In plain language
+
+- **The budget reward already does what the plan asks, so nothing changed.** It adds
+  `budget_reward` times the team's total cost to the objective, and at zero it adds nothing.
+- **The tests would catch it drifting.** Five ways of breaking it each failed a test.
+
+### What was checked
+
+Against plan item 13.4, in `linear/strategy_fastf1.py`. Five mutations, each restored from a
+copy with a green run after it, and each failing the suite:
+
+| Mutation | Failed |
+| --- | --- |
+| Reward dropped | The reward test at 0.25 and 1 |
+| Reward applied at zero as 1 | The reward test at 0, and ten others that run at zero, among them both real-race solves |
+| Sign flipped | The reward test at 0.25 and 1 |
+| Reward on unused budget, not total cost | The reward test at 0.25 and 1 |
+| Reward doubled | The reward test at 0.25 and 1 |
+
+The reward is on the whole team's cost, so DRS plays no part in it, and the plan's rule
+against doubling covers only the chance and the expected rise.
