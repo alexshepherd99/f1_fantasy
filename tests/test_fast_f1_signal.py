@@ -4,6 +4,7 @@ import pytest
 from fast_f1.signal import (
     SignalTables,
     constructor_places,
+    constructor_values,
     driver_positions,
     driver_values,
     load_signal_tables,
@@ -215,7 +216,55 @@ def test_constructors_are_reached_through_the_requested_races_pairs():
     assert places == {"RED": 1, "VRB": 2}
 
 
-@pytest.mark.parametrize("rank", [_positions, _values, _places])
+def _constructor_values(
+    rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024
+) -> dict:
+    return constructor_values(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
+
+
+def test_a_constructors_value_is_the_sum_of_its_drivers_values():
+    # Driver values: VER 25, PER 15, RUS 10, HAM 5.
+    values = _constructor_values(
+        [
+            _row(2, "VER", 0.5, 0.5, RollingPoints=25),
+            _row(2, "PER", 0.25, 0.25, RollingPoints=10),
+            _row(2, "RUS", 0.125, 0.125, RollingPoints=10),
+            _row(2, "HAM", 0.0, 0.0, RollingPoints=5),
+        ],
+        _pairs(2, "VER@RED", "PER@RED", "HAM@MER", "RUS@MER"),
+    )
+    assert values == pytest.approx({"RED": 40.0, "MER": 15.0})
+
+
+def test_a_constructors_driver_with_no_value_counts_as_zero():
+    # SAR is in the fantasy pairs but has no metrics row, as in 2024 race 3.
+    values = _constructor_values(
+        [
+            _row(2, "VER", 0.5, 0.5, RollingPoints=25),
+            _row(2, "PER", 0.25, 0.25, RollingPoints=10),
+            _row(2, "ALB", 0.0, 0.0, RollingPoints=5),
+        ],
+        _pairs(2, "VER@RED", "PER@RED", "ALB@WIL", "SAR@WIL"),
+    )
+    assert values == pytest.approx({"RED": 40.0, "WIL": 5.0})
+
+
+def test_constructor_values_are_reached_through_the_requested_races_pairs():
+    values = _constructor_values(
+        [
+            _row(2, "LAW", 0.0, 0.0, RollingPoints=0),
+            _row(3, "LAW", 0.5, 0.5, RollingPoints=30),
+            _row(3, "TSU", 0.0, 0.0, RollingPoints=0),
+            _row(2, "TSU", 0.5, 0.5, RollingPoints=30),
+        ],
+        # HAS raced in race 2 only, so has no value in race 3.
+        _pairs(2, "LAW@VRB", "TSU@RED", "BEA@HAS") + _pairs(3, "LAW@RED", "TSU@VRB"),
+        race=3,
+    )
+    assert values == pytest.approx({"RED": 15.0, "VRB": 0.0})
+
+
+@pytest.mark.parametrize("rank", [_positions, _values, _places, _constructor_values])
 def test_a_races_own_results_do_not_move_its_signal(rank):
     pairs = _pairs(2, "VER@RED", "HAM@MER", "NOR@MCL")
     before = [_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3), _row(2, "NOR", 0.1, 0.1)]
@@ -229,18 +278,18 @@ def test_a_races_own_results_do_not_move_its_signal(rank):
     assert len(rank(after, pairs)) == 3
 
 
-@pytest.mark.parametrize("rank", [_positions, _values, _places])
+@pytest.mark.parametrize("rank", [_positions, _values, _places, _constructor_values])
 def test_a_race_with_no_metrics_rows_gives_no_ranking(rank):
     assert rank([_row(3, "VER", 0.5, 0.5)], _pairs(2, "VER@RED")) == {}
 
 
-@pytest.mark.parametrize("rank", [_positions, _values, _places])
+@pytest.mark.parametrize("rank", [_positions, _values, _places, _constructor_values])
 def test_a_driver_with_no_fantasy_pair_is_an_error(rank):
     with pytest.raises(ValueError, match="2024 race 2: HAM"):
         rank([_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3)], _pairs(2, "VER@RED"))
 
 
-@pytest.mark.parametrize("rank", [_positions, _values, _places])
+@pytest.mark.parametrize("rank", [_positions, _values, _places, _constructor_values])
 def test_a_driver_matching_two_fantasy_pairs_is_an_error(rank):
     with pytest.raises(ValueError, match="2024 race 2: VER"):
         rank([_row(2, "VER", 0.5, 0.5)], _pairs(2, "VER@RED", "VER@VRB"))

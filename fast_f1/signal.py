@@ -115,6 +115,32 @@ def driver_values(
     return dict(zip(rows["Asset"], (low + share * (high - low)).astype(float)))
 
 
+def constructor_values(
+    metrics: pd.DataFrame, pairs: pd.DataFrame, season: int, race: int
+) -> dict[str, float]:
+    """Each constructor's value in one race: the sum of its drivers' ``driver_values``.
+
+    A constructor is reached through the archive's per-race pairs, and a driver with no
+    value counts as zero, as a team that lost a driver still runs one car. See
+    ``docs/fastf1_v2/requirements.md``, question 2. Arguments are as for
+    ``driver_positions``.
+
+    Returns:
+        Values keyed by the archive's constructor code. Empty when the metrics hold no
+        rows for the race.
+
+    Raises:
+        ValueError: As for ``driver_values``.
+    """
+    values = driver_values(metrics, pairs, season, race)
+    if not values:
+        return {}
+    race_pairs = pairs[(pairs["Season"] == season) & (pairs["Race"] == race)]
+    # The sum skips a driver with no value, which counts them as zero.
+    totals = race_pairs["Driver"].map(values).groupby(race_pairs["Constructor"]).sum()
+    return {constructor: float(total) for constructor, total in totals.items()}
+
+
 def constructor_places(
     metrics: pd.DataFrame, pairs: pd.DataFrame, season: int, race: int
 ) -> dict[str, int]:
