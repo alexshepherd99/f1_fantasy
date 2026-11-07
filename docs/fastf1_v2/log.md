@@ -1762,3 +1762,61 @@ copy with a green run after it, and each failing the suite:
 
 The reward is on the whole team's cost, so DRS plays no part in it, and the plan's rule
 against doubling covers only the chance and the expected rise.
+
+## 2026-11-07 — Step 13.5: the price-rise reward
+
+### In plain language
+
+- **The strategy can now reward assets expected to rise in price.** This was new code, not a
+  check: until now, nothing in the strategy read step 12's expected rises.
+- **At its default of zero, nothing changes.** The rises are not even read.
+- **The tests would catch it drifting.** Eight ways of breaking it each failed a test.
+
+### What was built
+
+In `linear/strategy_fastf1.py`, as proposed to Alex and agreed:
+
+- **A keyword `price_rise_reward=0.0`,** the name and default the requirements set.
+- **The objective adds `price_rise_reward` times each selected asset's expected rise,** from
+  `SignalTables.price_rise`, drivers and constructors alike.
+- **The DRS driver's rise is not doubled,** as DRS does not double a price change.
+- **An asset with no rise scores zero for it.** `price_rise` gives a rise only to an asset
+  with a value, so a missing rise is expected, unlike a missing chance of going negative,
+  which raises.
+- **A rise naming an asset the race does not have raises,** as for values and chances.
+- **At zero the rises are not read,** as for the chances.
+
+### Tests
+
+Nine new test cases, written first. All nine failed because the strategy did not accept the
+keyword, a weak failure that says nothing of the behaviour, so the mutations below carry it:
+
+- the reward at 0, 1 and 5, with teams and objectives found by brute force: 20, 20.3, and
+  22.5 once the reward is past 2.5 and D6's higher rise outweighs D3's higher value;
+- the DRS driver's rise counted once: 31.2, where doubling gives 31.7;
+- the rises read only with a reward, and then for this season and race;
+- a rise for an unknown driver, and one for an unknown constructor, raising;
+- the real 2025 race 5 test, now also run with a reward of 5.
+
+Eight mutations, each on a copy and restored after, and each failing the suite:
+
+| Mutation | Failed |
+| --- | --- |
+| Constructors' rises left out | The reward test at 1 and 5, and the DRS test |
+| Drivers' rises left out | The reward test at 1 and 5, and the DRS test |
+| Sign flipped | The reward test at 1 and 5, and the DRS test |
+| Rises read at zero | The read-only-with-a-reward test at 0 |
+| Reward applied at zero as 1 | The reward test at 0, and the read-only-with-a-reward test at 0 |
+| The DRS driver's rise doubled | The DRS test |
+| A missing rise raising | The reward test at 1 and 5, the DRS test, and the read test at 5 |
+| An unknown rise not checked | Both unknown-asset tests |
+
+A missing rise raising did not fail the real 2025 race 5 test, so in that race every
+available asset has a rise.
+
+The full suite is green, 477 tests, up from 468.
+
+### Not run
+
+The reward through the back-test harness. Only the 2025 race 5 solve has run on real data
+with it.
