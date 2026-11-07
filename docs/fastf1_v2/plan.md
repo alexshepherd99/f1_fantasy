@@ -3,8 +3,8 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Steps 11, 14.1 and 12 are done, and
-so is step 13. Step 14.2 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
+redesign agreed*), and steps 11 to 16 build and tune it. Steps 11, 12, 13 and 14 are done.
+Step 15 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
 Requirements: `requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
@@ -138,7 +138,8 @@ with Alex,** rather than tuning around it.
    11's values and for the old table's expected points, by season on 2023–25. **Pass:** step
    11's values do at least as well as the table in every season. Also report actual fantasy
    points by fifths of value, to show whether the top fifth's lead is real.
-2. **VER check, once step 13 is done.** Re-simulate 2023 race by race, for the 15 teams of
+2. Done 2026-11-07, and passed at 93%. See `log.md`, *Step 14.2*.
+   **VER check, once step 13 is done.** Re-simulate 2023 race by race, for the 15 teams of
    *Stepping back* (5 a band, seed 2), with the rebuilt strategy at its defaults. **Pass:** it
    holds VER in more than half of team-races from race 10 onwards, where the old design held
    him in 28% of all team-races and P2PM in 96%.

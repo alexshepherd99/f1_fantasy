@@ -50,6 +50,11 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   test, so one was added. Step 13.4 is next.
 - Step 13.4 done 2026-11-07: the budget reward already matches the plan, with no change
   needed. Step 13.5 is next.
+- Step 13.5 done 2026-11-07: the price-rise reward, new code. Step 13.6 is next.
+- Step 13.6 done 2026-11-07: a race with no signal already solves at every setting, with the
+  test extended. Step 13 is done, and step 14.2 is next.
+- Step 14.2 done 2026-11-07: the VER check passes, with VER held in 93% of 2023's team-races
+  from race 10 onwards against a mark of more than half. Step 15 is next.
 - Decisions so far: see `requirements.md`, *Decisions so far*, which is kept current.
 
 ## 2026-11-01 — Sizing the two levers in the brief
@@ -1874,3 +1879,58 @@ races 18 and 19 and the two cheapest constructors, with two moves.
 The objective is None where every coefficient is zero, as step 6 found of PuLP.
 
 Not run: the strategy through a season. Step 14.2 is the first to do that.
+
+## 2026-11-07 — Step 14.2: the VER check
+
+### In plain language
+
+- **The check passes.** The rebuilt strategy, at its defaults, holds VER in 93% of 2023's
+  team-races from race 10 onwards. The mark, fixed before the run, was more than half.
+- **The fault that stepping back found is gone.** The old design held VER in 28% of team-races
+  and P2PM in 96%. Counted the same way, the rebuilt strategy now holds him in 93%.
+- **It lost him in two races.** In races 17 and 18, 6 of the 15 teams dropped him, and most
+  had him back by race 19. Both were sprint weekends, but 2023's other four sprint weekends
+  show no such drop, so this says nothing yet about format. Step 16's format check is where
+  that gets settled.
+- **It also finished ahead of P2PM on these teams, but that is context, not a result.** On 15
+  teams in one season, the strategy was 290 points ahead after race 9 and 500 ahead at the end.
+  Fifteen teams cannot decide anything, and 2023 is the season that most favours a strategy
+  that buys VER. Steps 16 and 17 give the verdict.
+
+### What was run
+
+A throwaway script, not kept, on the real metrics file and archive. 2023 was re-simulated race
+by race through `run_for_team` for the 15 teams of *Stepping back*: 5 a band, seed 2,
+default edges, starting at race 1. `StrategyFastF1` ran at its defaults: DRS coefficient 1, no
+penalty, no rewards. `StrategyMaxP2PM` ran beside it for comparison. A team holds VER in a race
+if any held driver's identifier starts `VER@`.
+
+| Team-races holding VER | StrategyFastF1 | StrategyMaxP2PM |
+| --- | --- | --- |
+| Races 10 onwards (the check), of 195 | 182, 93.3% | 195, 100% |
+| Races 2 onwards, of 315 | 293, 93.0% | 302, 95.9% |
+| All races, of 330 | 298, 90.3% | 307, 93.0% |
+
+Race 1 is the sampled starting team, which held VER in 5 of 15 for both strategies.
+
+**These are the same teams as before.** P2PM's 95.9% from race 2 onwards matches the 96% of
+*Stepping back*, which shows its shares counted from race 2. The old design's 28% is therefore
+directly comparable with the 93.0% here.
+
+Share of teams holding VER, by race:
+
+| Race | 1 | 2 | 3 | 4 | 5–16 | 17 | 18 | 19 | 20–22 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| StrategyFastF1 | 33% | 60% | 93% | 87% | 100% | 60% | 60% | 93% | 100% |
+| StrategyMaxP2PM | 33% | 33% | 80% | 100% | 100% | 100% | 100% | 100% | 100% |
+
+2023's sprint weekends, which take the sprint rule in the metrics file, are races 4, 9, 12, 17,
+18 and 20. Mean points in race 17 were 299 for FastF1 and 319 for P2PM, and in race 18 219
+and 207.
+
+Mean final total points were 5,971 for FastF1 and 5,472 for P2PM. Budgets were not recorded.
+
+### Not run
+
+2024 and 2025 race by race, and the strategy through the back-test harness. Neither is part of
+this check. Step 16 runs the harness.
