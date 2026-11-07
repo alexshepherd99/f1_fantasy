@@ -49,9 +49,10 @@ _FASTF1_SETTINGS = {
     "FastF1_Bud01": (1.0, 0.0, 0.1, 0.0),
     "FastF1_Bud025": (1.0, 0.0, 0.25, 0.0),
     "FastF1_Bud05": (1.0, 0.0, 0.5, 0.0),
-    "FastF1_Rise5": (1.0, 0.0, 0.0, 5.0),
-    "FastF1_Rise10": (1.0, 0.0, 0.0, 10.0),
-    "FastF1_Rise20": (1.0, 0.0, 0.0, 20.0),
+    # Renamed in step 21 for the rules-based rise, so step 16's rows cannot be reused
+    "FastF1_RuleRise5": (1.0, 0.0, 0.0, 5.0),
+    "FastF1_RuleRise10": (1.0, 0.0, 0.0, 10.0),
+    "FastF1_RuleRise20": (1.0, 0.0, 0.0, 20.0),
 }
 
 

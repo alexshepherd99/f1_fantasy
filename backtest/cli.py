@@ -29,9 +29,11 @@ FASTF1_VARIANTS = [
     make_variant(StrategyFastF1, "FastF1_Bud01", budget_reward=0.1),
     make_variant(StrategyFastF1, "FastF1_Bud025", budget_reward=0.25),
     make_variant(StrategyFastF1, "FastF1_Bud05", budget_reward=0.5),
-    make_variant(StrategyFastF1, "FastF1_Rise5", price_rise_reward=5.0),
-    make_variant(StrategyFastF1, "FastF1_Rise10", price_rise_reward=10.0),
-    make_variant(StrategyFastF1, "FastF1_Rise20", price_rise_reward=20.0),
+    # Named for the rules-based rise in step 21, so a resumed run cannot reuse step 16's rows
+    # stored under the old table-based labels
+    make_variant(StrategyFastF1, "FastF1_RuleRise5", price_rise_reward=5.0),
+    make_variant(StrategyFastF1, "FastF1_RuleRise10", price_rise_reward=10.0),
+    make_variant(StrategyFastF1, "FastF1_RuleRise20", price_rise_reward=20.0),
 ]
 
 # Strategies that can be named with --strategies, by label
