@@ -2810,3 +2810,28 @@ budget. The rules-based rise moves it by 11 to 18m.
 
 Step 17 has not started. It needs a label for the chosen strategy with DRS coefficient 0, as
 its comparison: `FastF1_Drs0` has no price-rise reward.
+
+## 2026-11-07 — Step 23 agreed, and step 17's DRS comparison dropped
+
+### Against P2PM in 2025
+
+Alex asked how step 22's choice compares with P2PM. On step 22's teams, against P2PM:
+
+| Label | Mean | Median | Teams beating P2PM |
+| --- | --- | --- | --- |
+| `StrategyFastF1` | −153.9 | −101.5 | 24% |
+| `FastF1_RuleRise5` | −30.5 | −78.0 | 34% |
+
+By band, `FastF1_RuleRise5` is +0.6, −61.1 and −31.0 on the mean. The reward closes most of
+the mean gap, but the typical team is still 78 points behind and two in three still lose: a
+minority of large wins lifts the mean. DRS is already on in both, at coefficient 1, so it has
+no further gain to give. Its worth, 155 points a team in 2025 by step 16, is already in them.
+
+### Alex's decisions
+
+- **Try lower rewards (step 23).** Reward 5 was the lowest tried and did best. They run on
+  seed 3, so the choice is not made on the teams that suggested it, with reward 5 rerun
+  alongside as the control. The rule is in `plan.md`, step 23.
+- **Drop step 17's DRS coefficient 0 comparison.** Step 16 showed `FastF1_Drs0` losing to the
+  base by 65.5, 28.3 and 155.5 points a team in 2023–25, so step 17 would mostly repeat it.
+  No label for it is needed.

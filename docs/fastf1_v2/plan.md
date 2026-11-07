@@ -4,7 +4,8 @@
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 22 are done.
-Step 17 is next, with `FastF1_RuleRise5` as the chosen strategy. Steps 17 and 18 were numbered 9 and 10 before 2026-11-07.
+Step 23 is next: lower price-rise rewards on fresh teams, before step 17. Steps 17 and 18 were
+numbered 9 and 10 before 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
 settled.** The game moved to a three-race price model in 2025. It is unchanged in 2026, and
@@ -19,7 +20,7 @@ passes, and the full suite is green at the end of every step. No existing file i
 `races/`, `import_data/` or `scripts/` is edited. Anything the code has to work around in them goes
 in the R12 ledger in `docs/backtest_v1/requirements.md`.
 
-Steps run in the order 11, 14.1, 12, 13, 14.2, 15, 16, 19, 20, 21, 22, 17, 18.
+Steps run in the order 11, 14.1, 12, 13, 14.2, 15, 16, 19, 20, 21, 22, 23, 17, 18.
 
 ## Step 1 — The 2024 race 24 fault, in the code
 
@@ -283,8 +284,8 @@ silently. The values stay at 5, 10 and 20, as they come from what 1m of budget i
 
 ### Step 22 — The price-rise reward on 2025 (real run)
 
-Done 2026-11-07: `FastF1_RuleRise5` is chosen, +123.4 points a team against the base. See
-`log.md`, *Step 22: the price-rise reward on 2025*.
+Done 2026-11-07: `FastF1_RuleRise5` is chosen, +123.4 points a team against the base, unless
+step 23 finds a lower reward better. See `log.md`, *Step 22: the price-rise reward on 2025*.
 
 Run `StrategyFastF1` and the three new labels on 2025 only, at 100 teams a band, seed 2, in a
 new store, `outputs/fastf1_v2_step22_2025.parquet`, with its own summary. Time a small run first
@@ -298,18 +299,45 @@ into the scratchpad, and run in the background.
 - Report final budgets for every label, and the gap to P2PM's.
 - Log the choice before step 17 starts.
 
+### Step 23 — Lower rewards on fresh teams (real run)
+
+Agreed with Alex on 2026-11-07, after step 22 (`log.md`, *Step 23 agreed*). Reward 5 was the
+lowest value tried and did best, so lower values may do better. They are tested on teams step
+22 did not look at, so that the choice is not made on the teams that suggested it.
+
+1. Test-first, add `FastF1_RuleRise2p5` and `FastF1_RuleRise1p25` to `STRATEGIES`, at
+   price-rise rewards 2.5 and 1.25, continuing the halving from 5.
+2. Run `StrategyFastF1`, `FastF1_RuleRise5`, `FastF1_RuleRise2p5` and `FastF1_RuleRise1p25` on
+   2025 only, at 100 teams a band, **seed 3**, in a new store,
+   `outputs/fastf1_v2_step23_2025.parquet`, with its own summary. Seed 1 is step 17's and seed 2
+   is step 22's. Time a small run first into the scratchpad, and run in the background.
+
+- **The check that no old row is reused,** as step 22's: before the run, neither file exists;
+  after it, the log's "skipped" line reads 0 and the store holds 300 rows per label.
+- **Report how many seed 3 teams step 22 also drew,** as the bands are finite and seeds can
+  overlap.
+- **The rule, fixed before the run:** a lower reward replaces 5 only if, on seed 3, its pooled
+  mean delta against `StrategyFastF1` is positive and higher than `FastF1_RuleRise5`'s. If both
+  qualify, the higher one is chosen. Otherwise `FastF1_RuleRise5` stands.
+- Report, for every label, the pooled mean and median deltas against the base and against
+  P2PM, the share of teams beating each, and final budgets.
+- Log the choice before step 17 starts.
+
 ## Step 17 — The back-test (real run)
 
-Step 22's choice is logged before this starts. Step 16 chose `StrategyFastF1` at its defaults.
-If step 22 keeps a price-rise reward, the chosen strategy carries it, and it is off in 2023–24.
+The choice from steps 22 and 23 is logged before this starts. Step 16 chose `StrategyFastF1` at
+its defaults. If a price-rise reward is kept, the chosen strategy carries it, and it is off in
+2023–24.
 
 **Run once, with the choice from step 16 logged before it starts.** All at 500 teams a band,
 seed 1, in `outputs/fastf1_v2_results.parquet` and `outputs/fastf1_v2_summary.csv`, for 2023–26
 with 2026 through race 18:
 
 - the chosen strategy, whose result against `StrategyMaxP2PM` is the verdict;
-- the same strategy with DRS coefficient 0, as the comparison;
 - `StrategyMaxP2PMNoReset`, to isolate the chip's effect.
+
+The DRS coefficient 0 comparison was dropped by Alex on 2026-11-07: step 16 already showed it
+losing to the base in all three seasons (`log.md`, *Step 23 agreed*).
 
 Report final budgets for each one.
 
