@@ -10,8 +10,7 @@ Applies linear programming (PuLP) to optimise F1 Fantasy team selection. It back
 
 This repo pulls in reusable agents, skills, and conventions from the
 `agentic` repo, mounted read-only at `../agentic`.
-See its `learning/CONVENTIONS.md` for settled decisions and
-`skills/`/`agents/` for what's available.
+See its `skills/` and `agents/` for what's available.
 
 Start sessions with `./claude.sh` — it mounts `agentic` so the skills
 below actually load. If `how-we-work` is not in your available skills,
@@ -29,7 +28,7 @@ that can write to `agentic`.
 
 ## Commands
 
-Activate the venv or prefix commands with it: `venv/bin/python`. The repo is not an installed package — modules use fully-qualified imports from repo root (`from races.team import Team`, never relative imports), so **`PYTHONPATH` must include the repo root** when running anything outside pytest (pytest's own rootdir insertion handles tests fine).
+Activate the venv or prefix commands with it: `venv/bin/python`. The repo is not an installed package — modules import from repo root (`from races.team import Team`), so **`PYTHONPATH` must include the repo root** when running anything outside pytest (pytest's own rootdir insertion handles tests fine).
 
 ```bash
 # Run full test suite
@@ -53,7 +52,7 @@ PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical               # all sea
 PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical --season 2026 # just one season
 ```
 
-There is no lint/format tooling configured in this repo (no ruff/black/flake8 config) — just PEP 8 by convention.
+There is no lint/format tooling configured in this repo (no ruff/black/flake8 config).
 
 ## Architecture
 
