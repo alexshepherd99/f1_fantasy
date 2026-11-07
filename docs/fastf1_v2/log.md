@@ -2639,3 +2639,68 @@ never as a candidate.
   constructors, 0.148 against 0.317.
 
 Step 20's real-data check is to reproduce (a)'s row.
+
+## 2026-11-07 — Step 20: the rules-based rise, in the code
+
+### In plain language
+
+- **`price_rise` now works the next price move out from the game's rules,** with estimate
+  (a) for the coming race. Its contract is unchanged, so `StrategyFastF1` and `linear/` are
+  untouched. Step 12's rise tables are gone. The negative chances are as they were.
+- **On the real 2025 data it gives exactly step 19's figures for (a).**
+- **One existing test changed, as Alex agreed.** With the reward on, the strategy on 2025
+  race 5 now keeps BOR, valued 0 and expected to hold, over HUL, valued 0.70 and expected to
+  fall 0.6m. That is the reward working: the old tables' rises were almost all positive, so
+  this never happened. The real-race test now checks, with the reward only, that every
+  selected asset has a value rather than a positive one. That still catches identifiers that
+  do not match, which is what the check is for.
+
+### What was built
+
+Two commits, each test-first:
+
+1. `rule_price_move(rating, price, season)`, with each season's split, floor and cap in
+   `PRICE_RULES`. A season after 2026 takes 2026's figures, and one before 2025 is an error.
+   A floor or cap stops a move but never pushes an asset already beyond it back inside. That
+   case is beyond what `plan.md` covers, and Alex agreed it on 2026-11-07. It matters only if
+   a later season prices an asset above 34.0m or below 3.0m.
+2. `price_rise` on the rules, with the points-from-value line in `POINTS_FROM_VALUE`.
+
+### Tests
+
+- **25 for the rules,** all seen failing on assertions against a stub before the code was
+  written. They cover each band at 1.2, 0.9 and 0.6, each tier, the split itself, the floor
+  and cap in each season, 2027 taking 2026's figures, and 2023–24 refused. The guard that
+  stops a limit pushing an asset back was confirmed by mutation: dropping it for the cap or
+  the floor turns its own test red.
+- **12 for `price_rise`,** seen failing against the old code, which asked for a rise table
+  that no longer applies. Because that failure is an error rather than a wrong answer, each
+  rule was also confirmed by mutation, restored from a copy with the suite green between
+  rounds:
+
+| Mutation | Tests turned red |
+| --- | --- |
+| Race 1 inside race 4's window | the rules test |
+| Zero-padding to three races | race 2's held-so-far test |
+| Estimate left out | 5 |
+| Race *r*'s own points read | 4, the own-points test among them |
+| A missing held race skipped, not counted as zero | the missing-row test |
+| A driver not followed by code | 4, the switch test among them |
+| The season ignored, 2025's rules always used | 2026's season-rules test |
+| 2023–24 not emptied | both 2023–24 tests |
+| The constructor fit used for drivers | 2 |
+
+The full suite passes, 514 tests.
+
+### Real-data check
+
+A throwaway script, not kept, ran the built `price_rise` on 2025, races 2 onwards, against the
+actual moves of assets priced at both races under one identifier. It gave 436 driver moves at
+0.1523 mean absolute error, 66.3% exact and 0.727 rank correlation, and 220 constructor moves
+at 0.1482, 72.7% and 0.627. That matches step 19's (a) row to four places. The check would
+have failed had the window, the padding or the estimate differed from step 19's script, as
+each changes these figures.
+
+### Not run
+
+No back-test was run. That is step 22.
