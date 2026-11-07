@@ -37,6 +37,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   before then name them by their old numbers.
 - Step 11 done 2026-11-07: `driver_values` and `constructor_values`, run on every stored race
   from race 2. Step 14.1 is next.
+- Step 14.1 done 2026-11-07: the size check passes in every season of 2023–25, by a small,
+  consistent margin. Step 12 is next.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -1403,3 +1405,68 @@ Both functions on every stored race from race 2, 2023–26:
 
 The lowest driver value is 0 in every race, and the highest runs 15.7 to 26.0. Every
 constructor in a race's pairs gets a value.
+
+## 2026-11-07 — Step 14.1: the size check
+
+### In plain language
+
+- **It passes in every season.** Step 11's values track actual fantasy points slightly better
+  than the old table's expected points: a mean correlation per race of 0.69–0.76 against
+  0.67–0.73. The values do better in 15 or 16 of each season's 21–23 races.
+- **The gain is small, and it is not from ranking drivers better.** The two never order two
+  drivers in opposite directions, so they rank drivers alike. The gain comes from keeping the
+  size of a lead, where the table gave the same figure to many drivers, and from ranking
+  constructors by the sum of their drivers.
+- **The top fifth's lead is real.** On average, the fifth of assets the values rank highest
+  in a race score about 46–50 fantasy points. The next fifth scores about 21–24.
+
+### How it was measured
+
+Agreed with Alex before the run:
+
+- **One correlation per race, over drivers and constructors together, decides pass or
+  fail.** Within-type correlations are reported for context only. Correlating the types
+  together tests the balance between drivers and constructors, which is all step 11's scale
+  can change.
+- **A season's figure is the plain mean of its races' correlations.**
+
+A throwaway script, not kept, ran on 2023–25 from race 2. It used `driver_values`,
+`constructor_values` and `load_signal_tables().expected_points`, with actual points from the
+archive. Each race used the same assets for both measures: 2,008 asset-races. Two dropped
+out: the withdrawn drivers SAR@WIL (2024 race 3) and STR@AST (2025 race 9), who have no
+metrics row and so neither measure.
+
+| Season | Races | Values | Table | Races the values win |
+| --- | --- | --- | --- | --- |
+| 2023 | 21 | 0.754 | 0.728 | 16 |
+| 2024 | 23 | 0.755 | 0.733 | 16 |
+| 2025 | 23 | 0.691 | 0.672 | 15 |
+
+Within type, for context, the values also lead in every season. Drivers are 0.632 / 0.642 /
+0.569 against 0.579 / 0.590 / 0.559. Constructors are 0.777 / 0.772 / 0.679 against
+0.732 / 0.738 / 0.604. A gap of about 0.02 in a figure that moves 0.06 between seasons is a
+consistent lead, not a large one.
+
+Mean actual fantasy points by fifth of value, within each race, drivers and constructors
+together:
+
+| Season | Top fifth | 2nd | 3rd | 4th | Bottom fifth |
+| --- | --- | --- | --- | --- | --- |
+| 2023 | 49.6 | 20.7 | 14.5 | 6.2 | 4.6 |
+| 2024 | 45.8 | 23.8 | 9.0 | 4.5 | 5.3 |
+| 2025 | 45.6 | 22.3 | 12.0 | 5.8 | 6.0 |
+
+The bottom two fifths are close and swap places in 2024 and 2025, so the values do not
+separate the bottom of the field. That is where retirements and negatives fall, which step
+12's penalty is for.
+
+### Checked along the way
+
+- **Drivers: same order, different spread.** Across every race, no pair of drivers is ordered
+  one way by the values and the other way by the table. That fits both being built from the
+  same signal. The table ties 1,444 driver pairs that the values separate, through its
+  isotonic flats. Constructors differ in order, in 189 pairs, as the values sum the drivers
+  where the table used the constructor's own rolling points.
+- **Fifths are reported for the values only.** Within-race fifths need a tie-break, and the
+  table's ties fell back on archive row order. That made its driver fifths an artefact of row
+  order rather than a measure.

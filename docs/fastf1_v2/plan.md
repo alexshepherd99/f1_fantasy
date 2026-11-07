@@ -3,9 +3,9 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Step 11 is done, and step 14.1 is
-next. Steps 17 and 18,
-numbered 9 and 10 before 2026-11-07, follow step 16. Requirements: `requirements.md`.
+redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 and 14.1 are done, and step
+12 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16. Requirements:
+`requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,
@@ -115,7 +115,8 @@ race 5.
 Pass marks fixed on 2026-11-07, before any result. **If either check fails, stop and raise it
 with Alex,** rather than tuning around it.
 
-1. **Size check, once step 11 is done and before step 12 removes the old table.** In each race,
+1. Done 2026-11-07, and passed in every season. See `log.md`, *Step 14.1*.
+   **Size check, once step 11 is done and before step 12 removes the old table.** In each race,
    the linear correlation between each asset's value and its actual fantasy points, for step
    11's values and for the old table's expected points, by season on 2023–25. **Pass:** step
    11's values do at least as well as the table in every season. Also report actual fantasy
