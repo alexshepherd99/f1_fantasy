@@ -279,6 +279,24 @@ def test_strategy_fastf1_penalises_each_selected_assets_chance_of_going_negative
     assert strat._lp_variables[VarType.OptimiseMax].value() == pytest.approx(objective)
 
 
+def test_strategy_fastf1_does_not_double_the_drs_drivers_chance(stub_tables):
+    """DRS doubles a driver's value, but their chance of going negative counts once.
+
+    One move: D3 joins D2 and C1, each with a chance, and D2 or D3 takes DRS on 10.
+    Values 20, DRS 10 and chances 0.2 + 0.5 + 0.5 give 28.8, found by brute force. A
+    doubled chance would give DRS to D2, the lower chance, and 28.6.
+    """
+    tables, _ = stub_tables
+    tables._values = {"D2@C1": 10.0, "D3@C2": 10.0, "D6@C3": 9.0}
+    tables._negative_chance |= {"D2@C1": 0.2, "D3@C2": 0.5, "D6@C3": 0.1, "C1": 0.5}
+    strat = _strategy(max_cost=999.0, max_moves=1, drs_coefficient=1.0, negative_penalty=1.0)
+
+    strat.execute()
+
+    assert _selected(strat) == {"D2@C1", "D3@C2", "C1", "C2"}
+    assert strat._lp_variables[VarType.OptimiseMax].value() == pytest.approx(28.8)
+
+
 @pytest.mark.parametrize("negative_penalty, requested", [(0.0, []), (6.0, [(2025, 7)])])
 def test_strategy_fastf1_reads_the_chances_only_with_a_penalty(stub_tables, negative_penalty, requested):
     """At zero the chances are never read. Otherwise they are this season and race's."""
