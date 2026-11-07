@@ -2727,3 +2727,86 @@ A read of each store's label column in `outputs/` found the old names only in
 ### Not run
 
 No back-test was run. That is step 22.
+
+## 2026-11-07 — Step 22: the price-rise reward on 2025
+
+### In plain language
+
+The rules-based price rise works where the old table did not. At a reward of 5, it beat the base
+by 123 points a team in 2025 and won on 62% of teams, in every band. It also closed the 10m
+budget gap to P2PM that step 16 found: the base ends 2025 on 127.9m, this setting on 139.3m,
+and P2PM on 138.5m. A reward of 10 also clears the bar, by less. A reward of 20 chases price
+rises too hard, ending with the most budget and the fewest points. **The choice is
+`FastF1_RuleRise5`, which step 17 runs as the chosen strategy, with the reward off in
+2023–24.**
+
+It is still 31 points a team behind P2PM in 2025, against the base's 154.
+
+### What was run
+
+A timing run first: 2025, the four labels, 3 teams a band, into the scratchpad. 45
+simulations in 34s at a peak RSS of 266 MB.
+
+Then one background process:
+
+`backtest.cli --seasons 2025 --sample-size 100 --seed 2 --strategies StrategyFastF1
+FastF1_RuleRise5 FastF1_RuleRise10 FastF1_RuleRise20 --output
+outputs/fastf1_v2_step22_2025.parquet --summary outputs/fastf1_v2_step22_2025_summary.csv`
+
+It exited 0 with no error or warning in its log, in 13.6 minutes, at a peak RSS of 266 MB.
+
+The bar against the base is the harness's own: `pair_with_baseline`, `season_summary` and
+`verdict` from `backtest/metrics.py`, run with `StrategyFastF1` as the baseline from a
+throwaway script, not kept.
+
+### The check that no old row was reused
+
+- **Before the run:** neither `outputs/fastf1_v2_step22_2025*` file existed, and the timing run
+  went to the scratchpad.
+- **After the run:** the log reads "skipped 0 simulations already in the store", and the store
+  holds 300 rows for each of the five labels, P2PM among them, with no duplicate label, season
+  and team. Both pass, so the results are used.
+- **The teams are step 16's.** P2PM's and the base's 300 results match step 16's 2025 store
+  team for team, with no points differing, so the base is unchanged by steps 20 and 21.
+
+### Against the base, `StrategyFastF1`
+
+Mean delta in points a team, with the share of teams that beat the base:
+
+| Label | (90, 95] | (95, 99.5] | (99.5, 100] | Pooled | Median | 10th percentile |
+| --- | --- | --- | --- | --- | --- | --- |
+| `FastF1_RuleRise5` | +125.9 (59%) | +140.2 (68%) | +104.0 (60%) | **+123.4 (62%)** | +80.5 | −177.3 |
+| `FastF1_RuleRise10` | +77.9 (56%) | +94.2 (63%) | +62.2 (54%) | **+78.1 (58%)** | +51.0 | −202.3 |
+| `FastF1_RuleRise20` | −84.0 (38%) | −67.4 (37%) | −131.0 (30%) | **−94.2 (35%)** | −161.5 | −396.1 |
+
+`FastF1_RuleRise5` and `FastF1_RuleRise10` clear the bar. `FastF1_RuleRise5` is the better,
+in every band, so it is chosen.
+
+### Final totals and budgets, 2025
+
+| Label | Mean points | Mean final budget (1m) | Points against P2PM | Budget against P2PM |
+| --- | --- | --- | --- | --- |
+| `StrategyMaxP2PM` | 4,953.8 | 138.50 | — | — |
+| `StrategyFastF1` | 4,799.9 | 127.91 | −153.9 | −10.59 |
+| `FastF1_RuleRise5` | 4,923.3 | 139.34 | −30.5 | +0.84 |
+| `FastF1_RuleRise10` | 4,878.0 | 143.76 | −75.8 | +5.26 |
+| `FastF1_RuleRise20` | 4,705.7 | 146.05 | −248.1 | +7.55 |
+
+For comparison, step 16's table-based rise on the same teams gave +35.3, +42.9 and −62.1
+against the base at 5, 10 and 20, with final budgets of 127.4 to 128.4m. It barely moved the
+budget. The rules-based rise moves it by 11 to 18m.
+
+### What to bear in mind
+
+- **One season, and the lowest value tried did best.** The best reward may lie below 5. The
+  values were fixed in step 15.1 from what 1m is worth, and are not re-tuned after seeing these
+  results.
+- **The choice is made on 2025, and step 17 reports 2025 again.** Its 2025 result for the
+  chosen strategy is flattered by this choice, on top of step 16's. 2026 stays the fair read.
+- **The reward is off in 2023–24,** so step 17's 2023–24 results for the chosen strategy are
+  step 16's base.
+
+### Not run
+
+Step 17 has not started. It needs a label for the chosen strategy with DRS coefficient 0, as
+its comparison: `FastF1_Drs0` has no price-rise reward.

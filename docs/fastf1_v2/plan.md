@@ -3,8 +3,8 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 21 are done.
-Step 22 is next. Steps 17 and 18 were numbered 9 and 10 before 2026-11-07.
+redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 22 are done.
+Step 17 is next, with `FastF1_RuleRise5` as the chosen strategy. Steps 17 and 18 were numbered 9 and 10 before 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
 settled.** The game moved to a three-race price model in 2025. It is unchanged in 2026, and
@@ -282,6 +282,9 @@ silently. The values stay at 5, 10 and 20, as they come from what 1m of budget i
 15.1), not from the table.
 
 ### Step 22 — The price-rise reward on 2025 (real run)
+
+Done 2026-11-07: `FastF1_RuleRise5` is chosen, +123.4 points a team against the base. See
+`log.md`, *Step 22: the price-rise reward on 2025*.
 
 Run `StrategyFastF1` and the three new labels on 2025 only, at 100 teams a band, seed 2, in a
 new store, `outputs/fastf1_v2_step22_2025.parquet`, with its own summary. Time a small run first
