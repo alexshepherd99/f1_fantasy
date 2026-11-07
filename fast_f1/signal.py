@@ -93,9 +93,15 @@ def driver_values(
         value.
 
     Raises:
-        ValueError: As for ``driver_positions``, or every driver's signal is equal, which
-            leaves nothing to stretch.
+        ValueError: As for ``driver_positions``; every driver's signal is equal, which
+            leaves nothing to stretch; or the race is the season's first, which has no
+            recent championship points to stretch onto.
     """
+    if race == FIRST_RACE:
+        msg = f"No recent championship points for {season} race {race} to stretch onto"
+        logger.error(msg)
+        raise ValueError(msg)
+
     rows = _signal_rows(metrics, pairs, season, race)
     spread = rows["signal"].max() - rows["signal"].min()
     if spread == 0:

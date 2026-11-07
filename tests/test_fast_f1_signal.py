@@ -162,6 +162,19 @@ def test_a_race_where_every_signal_is_equal_is_an_error():
         )
 
 
+@pytest.mark.parametrize("rolling_points", [None, 25])
+def test_race_one_is_an_error_as_it_has_no_recent_points(rolling_points):
+    with pytest.raises(ValueError, match="No recent championship points for 2024 race 1"):
+        _values(
+            [
+                _row(1, "VER", 0.5, 0.5, RollingPoints=rolling_points),
+                _row(1, "ALB", 0.0, 0.0, RollingPoints=rolling_points),
+            ],
+            _pairs(1, "VER@RED", "ALB@WIL"),
+            race=1,
+        )
+
+
 def _places(rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024) -> dict:
     return constructor_places(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
 
