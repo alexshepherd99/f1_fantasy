@@ -1330,3 +1330,23 @@ above.
   11 to 16 build the values, the risk and price-rise measures, the objective, the two checks,
   the tuning values and labels, and the tuning run. Step 9 now waits for step 16, and no longer
   makes a price-rise reward conditional on falling behind on budget, as the reward is now built.
+
+## 2026-11-07 — Step 11: three cases agreed
+
+Agreed with Alex before any code, after each case was checked against the stored metrics for
+2023–26 with a throwaway script.
+
+- **A race where every driver's signal is equal raises an error.** It has never happened: the
+  narrowest race after race 1 still spreads 1.81 between best and worst signal (2026 race 9).
+  With no spread there is nothing to stretch, and it could only come from broken metrics.
+- **A constructor with a driver who has no value counts that driver as zero.** It has
+  happened twice, both drivers who withdrew and left the team one car: SAR@WIL in 2024 race 3
+  and STR@AST in 2025 race 9. Zero matches step 13 scoring the driver zero, and a team still
+  running one car keeps that car's value.
+- **Race 1 raises an error.** No driver has recent championship points there, so the scale
+  has no top or bottom. Nothing calls the strategy at race 1, as `run_for_team` takes the
+  starting team as given, so a call there is a mistake. This case was not in the plan.
+
+Also found, and handled without a decision: drivers with no rolling points, as newcomers or
+stand-ins with no race in the window (12 rows after race 1), are left out of the field's
+highest and lowest. That changes nothing, as the lowest is 0 in every race after race 1.

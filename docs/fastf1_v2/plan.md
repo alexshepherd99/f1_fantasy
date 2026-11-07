@@ -67,8 +67,11 @@ As requirements question 1 and 2.
   - a fantasy driver with no metrics row gets no value, and step 13 scores them zero;
   - bad data raises an error;
   - no race result is read, and the look-ahead test stays.
-- Two cases get a test each, with how they are handled agreed with Alex before any code: a race
-  where every signal is equal, and a constructor with a driver who has no value.
+- Three cases get a test each, as agreed with Alex on 2026-11-07 (`log.md`, *Step 11: three
+  cases agreed*):
+  - a race where every signal is equal raises an error;
+  - a constructor with a driver who has no value counts that driver as zero;
+  - race 1, which has no recent championship points to stretch onto, raises an error.
 - Position code that nothing uses once steps 12 and 13 land is removed then.
 
 ## Step 12 — `fast_f1/signal.py`: the risk and price-rise measures
