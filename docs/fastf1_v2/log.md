@@ -55,6 +55,9 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   test extended. Step 13 is done, and step 14.2 is next.
 - Step 14.2 done 2026-11-07: the VER check passes, with VER held in 93% of 2023's team-races
   from race 10 onwards against a mark of more than half. Step 15 is next.
+- Step 15 done 2026-11-07: the tuning values were fixed before any run (penalty 6.5/13/26,
+  budget reward 0.1/0.25/0.5, price-rise reward 5/10/20), and the 11 labels are in
+  `backtest/cli.py`. Step 16 is next.
 - Decisions so far: see `requirements.md`, *Decisions so far*, which is kept current.
 
 ## 2026-11-01 — Sizing the two levers in the brief
@@ -2001,3 +2004,50 @@ More detail:
   buys, which leans towards spending everything. So the three values are 0.1, 0.25 and 0.5.
   For comparison, step 8's 0.25 to 1 were in fantasy points, which is 0.14 to 0.58 in value
   units.
+
+## 2026-11-07 — Step 15.2: the tuning labels
+
+### In plain language
+
+- **Done.** `backtest/cli.py` can now run the 11 labels in the plan's table, each built by
+  `make_variant` with one change from the base, at step 15.1's values:
+  - `StrategyFastF1`, the base;
+  - `FastF1_Drs0`;
+  - `FastF1_Neg6p5`, `FastF1_Neg13` and `FastF1_Neg26`;
+  - `FastF1_Bud01`, `FastF1_Bud025` and `FastF1_Bud05`;
+  - `FastF1_Rise5`, `FastF1_Rise10` and `FastF1_Rise20`.
+- **Step 7's labels are gone.** `FastF1_Bud025` and `FastF1_Bud05` keep their names and
+  settings, but now run on the values' scale. Step 8's stores, `outputs/fastf1_v2_tuning_*`,
+  still hold rows under those names from the old design, so step 16 writes to new stores, as
+  the plan says.
+- **The price-rise reward has now been through the harness,** which step 13.5 had not done.
+
+### Tests
+
+The settings test now also checks the price-rise reward. One new test checks that the
+`StrategyFastF1` labels the CLI accepts are exactly these 11. Nine cases failed first, for the
+labels not yet registered and for step 7's still present. `Bud025` and `Bud05` passed from the
+start, as their settings did not change.
+
+Four mutations, each on a copy and restored after, each failed a test:
+
+| Mutation | Failed |
+| --- | --- |
+| `Rise10` given 5 | Its settings case |
+| `Neg26` with a price-rise reward as well | Its settings case |
+| `Bud01` setting the penalty in place of the reward | Its settings case |
+| Step 7's `FastF1_Neg6` left in | Both registry tests |
+
+The full suite is green, 485 tests, up from 480.
+
+### Real run
+
+`--seasons 2025 --sample-size 1 --seed 2 --strategies StrategyFastF1 FastF1_Rise10
+FastF1_Neg13 FastF1_Bud01`, into the scratchpad. It exited 0 in 24s with no error or warning,
+and stored 15 rows: one per label per team, P2PM included, all at race 24. Each variant's
+totals and budgets differ from the base's, so its setting reaches the harness. Nothing is read
+from three teams.
+
+Not run: `Neg6p5`, `Neg26`, `Bud025`, `Bud05`, `Rise5`, `Rise20` and `Drs0` through the
+harness. Each differs from a label that did run only in its value, which the settings test
+covers. Step 16 runs them all.

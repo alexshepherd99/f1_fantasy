@@ -3,8 +3,8 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Steps 11, 12, 13 and 14 are done.
-Step 15 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
+redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 15 are done.
+Step 16 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
 Requirements: `requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
@@ -153,7 +153,8 @@ with Alex,** rather than tuning around it.
    and what 1m of price and an expected rise are worth in them. From that, set three values
    each for the penalty, the budget reward and the price-rise reward. **Log them before any
    run,** so that they cannot be adjusted after seeing results.
-2. Register 11 labels in `STRATEGIES` in `backtest/cli.py`, each built by `make_variant` with
+2. Done 2026-11-07. See `log.md`, *Step 15.2*.
+   Register 11 labels in `STRATEGIES` in `backtest/cli.py`, each built by `make_variant` with
    one change from the base:
 
 | Labels | Change from the base |
