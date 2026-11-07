@@ -441,93 +441,94 @@ def test_a_race_priced_but_without_signal_has_no_expected_points():
     assert tables.expected_points(2026, 19) == {}
 
 
-def _archive_only(*races: tuple) -> SignalTables:
-    history = _History()
-    for season, race, drivers, constructors in races:
-        history.race(season, race, drivers, constructors, with_metrics=False)
-    return history.tables()
+def _priced(*races: tuple) -> SignalTables:
+    """``SignalTables`` on archive rows alone. Each race is ``(season, race, drivers,
+    constructors)``, each dict mapping an identifier to its ``(price, points)``."""
+    drivers, constructors = [], []
+    for season, race, race_drivers, race_constructors in races:
+        for driver_id, (price, points) in race_drivers.items():
+            drivers.append({"Constructor": driver_id.split("@")[1], "Driver": driver_id,
+                            "Race": race, "Points": points, "Season": season, "Price": price})
+        for con, (price, points) in race_constructors.items():
+            constructors.append({"Constructor": con, "Race": race, "Points": points,
+                                 "Season": season, "Price": price})
+    return SignalTables(pd.DataFrame(), pd.DataFrame(drivers), pd.DataFrame(constructors))
 
 
-# 2023's table, from races 2 and 3. After a recent negative, 3 of 4 go negative: VER both
-# times and PER once, which as exact counts would be all of those after one and half of
-# those after two. After none, 1 of 4: HAM at race 3, never RUS. Race 1 builds no row,
-# which BOT, negative there alone, would show. The constructors follow their drivers.
+# 2023's history, from races 2 and 3, with three of each type, cheapest to dearest. Drivers:
+# the cheapest third goes negative both times, the middle once and the dearest never.
+# Constructors run the other way, which a table mixing the types would show. Race 1 builds
+# no row, which every asset going negative there would show. Race 3's prices are double
+# race 2's, which thirds split over the season rather than the race would show.
 _NEGATIVES_2023 = [
-    (2023, 1, {"VER@RED": -5, "PER@ALP": -5, "HAM@MER": 10, "RUS@WIL": 10, "BOT@ALF": -5},
-     {"RED": -5, "ALP": -5, "MER": 10, "WIL": 10, "ALF": -5}),
-    (2023, 2, {"VER@RED": -5, "PER@ALP": -5, "HAM@MER": 10, "RUS@WIL": 10},
-     {"RED": -5, "ALP": -5, "MER": 10, "WIL": 10}),
-    (2023, 3, {"VER@RED": -5, "PER@ALP": 10, "HAM@MER": -3, "RUS@WIL": 10},
-     {"RED": -5, "ALP": 10, "MER": -3, "WIL": 10}),
+    (2023, 1, {"CHP@AAA": (5, -5), "MID@BBB": (10, -5), "DER@CCC": (15, -5)},
+     {"AAA": (5, -5), "BBB": (10, -5), "CCC": (15, -5)}),
+    (2023, 2, {"CHP@AAA": (5, -5), "MID@BBB": (10, -5), "DER@CCC": (15, 5)},
+     {"AAA": (5, 5), "BBB": (10, -5), "CCC": (15, -5)}),
+    (2023, 3, {"CHP@AAA": (10, -5), "MID@BBB": (20, 5), "DER@CCC": (30, 5)},
+     {"AAA": (10, 5), "BBB": (20, 5), "CCC": (30, -5)}),
 ]
 
 
-def test_negative_chance_is_by_asset_type_and_any_recent_negative():
-    tables = _archive_only(
+def test_negative_chance_is_the_share_negative_in_the_assets_price_third_by_type():
+    tables = _priced(
         *_NEGATIVES_2023,
-        (2024, 1, {"VER@RED": 5, "HAM@MER": 5}, {"RED": -5, "MER": 5}),
-        (2024, 2, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
+        (2024, 2, {"VER@RED": (30, 5), "HAM@MER": (20, 5), "NOR@MCL": (10, 5)},
+         {"RED": (30, 5), "MER": (20, 5), "MCL": (10, 5)}),
     )
     assert tables.negative_chance(2024, 2) == {
-        "VER@RED": 0.25, "HAM@MER": 0.25, "RED": 0.75, "MER": 0.25,
+        "VER@RED": 0.0, "HAM@MER": 0.5, "NOR@MCL": 1.0, "RED": 1.0, "MER": 0.5, "MCL": 0.0,
     }
 
 
-def test_two_or_three_recent_negatives_count_the_same_as_one():
-    tables = _archive_only(
-        *_NEGATIVES_2023,
-        (2024, 1, {"VER@RED": -5, "HAM@MER": 5}, {"RED": -5, "MER": 5}),
-        (2024, 2, {"VER@RED": -5, "HAM@MER": 5}, {"RED": -5, "MER": 5}),
-        (2024, 3, {"VER@RED": -5, "HAM@MER": -5}, {"RED": -5, "MER": -5}),
-        (2024, 4, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
-    )
-    assert tables.negative_chance(2024, 4) == {
-        "VER@RED": 0.75, "HAM@MER": 0.75, "RED": 0.75, "MER": 0.75,
+def test_a_remainder_falls_to_the_lower_price_thirds():
+    drivers = {f"D{i}@C{i}": (10 * i, 5) for i in range(1, 6)}
+    constructors = {f"C{i}": (10 * i, 5) for i in range(1, 5)}
+    tables = _priced(*_NEGATIVES_2023, (2024, 2, drivers, constructors))
+    chance = tables.negative_chance(2024, 2)
+    assert [chance[d] for d in drivers] == [1.0, 1.0, 0.5, 0.5, 0.0]
+    assert [chance[c] for c in constructors] == [0.0, 0.0, 0.5, 1.0]
+
+
+def test_assets_on_the_same_price_share_the_lower_third():
+    drivers = {"D1@C1": (10, 5), "D2@C2": (20, 5), "D3@C3": (20, 5), "D4@C4": (30, 5)}
+    tables = _priced(*_NEGATIVES_2023, (2024, 2, drivers, {"C1": (10, 5)}))
+    chance = tables.negative_chance(2024, 2)
+    assert [chance[d] for d in drivers] == [1.0, 1.0, 1.0, 0.0]
+
+
+def test_an_unpriced_asset_gets_no_chance_and_no_place_in_the_thirds():
+    drivers = {"D1@C1": (10, 5), "D2@C2": (20, 5), "D3@C3": (30, 5), "D4@C4": (None, None)}
+    tables = _priced(*_NEGATIVES_2023, (2024, 2, drivers, {"C1": (10, 5)}))
+    assert tables.negative_chance(2024, 2) == {
+        "D1@C1": 1.0, "D2@C2": 0.5, "D3@C3": 0.0, "C1": 0.0,
     }
 
 
-def test_only_the_previous_three_rounds_count():
-    tables = _archive_only(
+def _negatives_varying(points_2024: int, points_2026: int) -> SignalTables:
+    """2023 as above; 2024 races 2 and 3 at ``points_2024``; 2026 races 2 and 3 at
+    ``points_2026``. Every race prices its three assets of each type 10, 20 and 30."""
+    def race(season: int, number: int, points: int) -> tuple:
+        return (season, number,
+                {"VER@RED": (30, points), "HAM@MER": (20, points), "NOR@MCL": (10, points)},
+                {"RED": (30, points), "MER": (20, points), "MCL": (10, points)})
+    return _priced(
         *_NEGATIVES_2023,
-        (2024, 1, {"VER@RED": -5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
-        (2024, 2, {"VER@RED": 5, "HAM@MER": -5}, {"RED": 5, "MER": 5}),
-        (2024, 3, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
-        (2024, 4, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
-        (2024, 5, {"VER@RED": 5, "HAM@MER": 5}, {"RED": 5, "MER": 5}),
-    )
-    chance = tables.negative_chance(2024, 5)
-    assert (chance["VER@RED"], chance["HAM@MER"]) == (0.25, 0.75)
-
-
-def test_a_driver_carries_their_negatives_to_a_new_team():
-    tables = _archive_only(
-        *_NEGATIVES_2023,
-        (2024, 1, {"LAW@VRB": -5}, {"VRB": 5}),
-        (2024, 2, {"LAW@RED": 5}, {"RED": 5}),
-    )
-    assert tables.negative_chance(2024, 2)["LAW@RED"] == 0.75
-
-
-def test_an_asset_with_no_history_counts_as_no_negatives():
-    tables = _archive_only(*_NEGATIVES_2023, (2024, 2, {"CAM@HAA": 5}, {"HAA": 5}))
-    assert tables.negative_chance(2024, 2) == {"CAM@HAA": 0.25, "HAA": 0.25}
-
-
-def _negatives_varying(points: int) -> SignalTables:
-    """2024 race 1 fixed; 2024 race 2 on and all of 2026 at ``points``."""
-    varying = ({"VER@RED": points, "HAM@MER": points}, {"RED": points, "MER": points})
-    return _archive_only(
-        *_NEGATIVES_2023,
-        (2024, 1, {"VER@RED": -5, "HAM@MER": 5}, {"RED": -5, "MER": 5}),
-        *((2024, race, *varying) for race in (2, 3)),
-        *((2026, race, *varying) for race in (1, 2, 3)),
+        *(race(2024, number, points_2024) for number in (2, 3)),
+        *(race(2026, number, points_2026) for number in (2, 3)),
     )
 
 
-def test_negative_chance_reads_neither_the_race_its_own_season_nor_2026():
-    low, high = _negatives_varying(-1000), _negatives_varying(1000)
-    expected = {"VER@RED": 0.75, "HAM@MER": 0.25, "RED": 0.75, "MER": 0.25}
-    assert low.negative_chance(2024, 2) == high.negative_chance(2024, 2) == expected
+@pytest.mark.parametrize("season, varied", [
+    (2024, ("2024", "2026")),
+    (2023, ("2026",)),
+])
+def test_negative_chance_reads_neither_its_own_season_nor_2026(season, varied):
+    def tables(points: int) -> SignalTables:
+        return _negatives_varying(
+            points if "2024" in varied else -5, points if "2026" in varied else -5
+        )
+    assert tables(-1000).negative_chance(season, 2) == tables(1000).negative_chance(season, 2)
 
 
 def test_changing_a_returned_dict_does_not_change_the_next_call():

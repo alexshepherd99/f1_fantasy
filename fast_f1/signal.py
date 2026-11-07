@@ -34,9 +34,6 @@ logger = logging.getLogger(__name__)
 # strategy is judged on (see docs/fastf1_v2/requirements.md, question 7).
 TABLE_SEASONS = (2023, 2024, 2025)
 
-# How many previous rounds a negative counts for, in the chance of going negative.
-RECENT_RACES = 3
-
 # The slots added on each weekend format. A 2023 sprint weekend, which the analysis
 # left out, takes the sprint rule, as that needs no practice session.
 SIGNAL_SLOTS = {
@@ -251,10 +248,8 @@ class SignalTables:
     def negative_chance(self, season: int, race: int) -> dict[str, float]:
         """Each priced asset's chance of going negative in one race.
 
-        Looked up by asset type and by whether the asset went negative in any of the
-        previous three rounds of the season. A driver carries their negatives to a new
-        team, and a round an asset was not in counts for nothing. Reads no result from
-        the race itself.
+        Looked up by asset type and by the asset's price third within the race, as
+        ``_thirds`` splits them. Reads no result from the race itself.
 
         Returns:
             Chances keyed by driver identifier and constructor code, for every asset
@@ -273,10 +268,9 @@ class SignalTables:
             if priced.empty:
                 continue
             table = self._table("negatives", season, asset_type)
-            recent = _any_recent_negative(archive, asset_type, season, race, priced)
             chances |= {
-                asset: _look_up(table, flag)
-                for asset, flag in zip(priced[asset_type.value], recent)
+                asset: _look_up(table, third)
+                for asset, third in zip(priced[asset_type.value], _thirds(priced["Price"]))
             }
         return chances
 
@@ -309,26 +303,22 @@ class SignalTables:
         return table
 
     def _negative_history(self) -> pd.DataFrame:
-        """Every table season's assets from race 2 on: whether they had a recent negative,
-        and whether they then went negative."""
+        """Every table season's priced assets from race 2 on: their price third within the
+        race, and whether they went negative."""
         if self._negatives is not None:
             return self._negatives
-        frames = [pd.DataFrame(columns=["AssetType", "Season", "Race", "RecentNegative", "Negative"])]
+        frames = [pd.DataFrame(columns=["AssetType", "Season", "Third", "Negative"])]
         for asset_type, archive in self._archive.items():
             scored = archive[archive["Season"].isin(TABLE_SEASONS) & archive["Points"].notna()
-                             & (archive["Race"] > FIRST_RACE)]
-            for (season, race), raced in scored.groupby(["Season", "Race"]):
-                frames.append(pd.DataFrame({
-                    "AssetType": asset_type,
-                    "Season": season,
-                    "Race": race,
-                    "RecentNegative": _any_recent_negative(
-                        archive, asset_type, season, race, raced
-                    ).to_numpy(),
-                    "Negative": (raced["Points"] < 0).to_numpy(),
-                }))
+                             & archive["Price"].notna() & (archive["Race"] > FIRST_RACE)]
+            frames.append(pd.DataFrame({
+                "AssetType": asset_type,
+                "Season": scored["Season"],
+                "Third": scored.groupby(["Season", "Race"])["Price"].transform(_thirds),
+                "Negative": scored["Points"] < 0,
+            }))
         self._negatives = pd.concat(frames, ignore_index=True).astype(
-            {"RecentNegative": int, "Negative": bool}
+            {"Third": int, "Negative": bool}
         )
         return self._negatives
 
@@ -377,27 +367,19 @@ def _falling_means(history: pd.DataFrame) -> pd.Series:
 
 
 def _negative_shares(history: pd.DataFrame) -> pd.Series:
-    """The share of rows that went negative, without and with a recent negative."""
-    return history.groupby("RecentNegative")["Negative"].mean()
+    """The share of rows that went negative, by price third."""
+    return history.groupby("Third")["Negative"].mean()
 
 
-def _any_recent_negative(
-    archive: pd.DataFrame, asset_type: AssetType, season: int, race: int, rows: pd.DataFrame
-) -> pd.Series:
-    """1 for each row with a negative in the previous ``RECENT_RACES`` rounds of the
-    season, else 0. One negative counts the same as several, as in 2023-25 several were
-    no riskier than one (fastf1_v2 log, step 5)."""
-    prior = archive[(archive["Season"] == season)
-                    & archive["Race"].between(race - RECENT_RACES, race - 1)
-                    & archive["Points"].notna()]
-    went_negative = set(_carrier(prior[prior["Points"] < 0], asset_type))
-    return _carrier(rows, asset_type).isin(went_negative).astype(int)
+def _thirds(values: pd.Series) -> pd.Series:
+    """Each value's third among ``values``, 1 holding the lowest.
 
-
-def _carrier(rows: pd.DataFrame, asset_type: AssetType) -> pd.Series:
-    """Who a negative history belongs to: the driver whatever their team, or the constructor."""
-    ids = rows[asset_type.value]
-    return ids.str.split("@").str[0] if asset_type == AssetType.DRIVER else ids
+    Rank r of n falls in third ``(r - 1) * 3 // n + 1``, so a remainder goes to the lower
+    thirds: 20 split 7/7/6 and 10 split 4/3/3. Equal values share the third of their
+    lowest rank.
+    """
+    ranks = values.rank(method="min")
+    return ((ranks - 1) * 3 // len(values) + 1).astype(int)
 
 
 def _look_up(table: pd.Series, key: int) -> float:
