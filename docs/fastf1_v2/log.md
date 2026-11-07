@@ -2293,9 +2293,9 @@ What this means for step 17 is for Alex to decide. Step 17 stays on hold until t
 ### Source and status
 
 Reverse-engineered by the player community (F1 Fantasy Tools Discord) and given to this effort
-by Alex on 2026-11-07. Not published by F1. Nothing below has been checked against the archive.
-The step sizes, tiers and thresholds have not been compared with the archive's actual price
-moves.
+by Alex on 2026-11-07. Not published by F1. The 2025 model has since been checked against the
+archive's 2025 and 2026 price moves, and fits them closely once four details are added (*The
+2025 model against the archive*, below). The 2024 model has not been checked.
 
 ### The rules as given
 
@@ -2362,4 +2362,75 @@ This is reasoned from the rules and *Step 16*'s table, and nothing new was run.
   decides the direction.
 - **The archive's own rolling measures are not the game's rating.** How `PPM Cumulative (3)` is
   computed against an equal-weighted average of three per-race PPMs, and whether the game's
-  points are the same fantasy points the archive holds, has not been checked.
+  points are the same fantasy points the archive holds, has not been checked. [2026-11-07:
+  both now answered, in *The 2025 model against the archive*, below.]
+
+### The 2025 model against the archive
+
+Alex asked for the 2025 model to be checked against the archive's 2025 and 2026 prices.
+
+**In plain language:** the rules hold. Applied to the archive's own points and prices, they
+give the exact next price move for about 97% of 2025–26 moves. That needs four details the
+source leaves out, all visible in the data. Applied to 2023–24, the same rules match 3–13%, so
+the check can tell a fit from a miss. The game's three-race model is real, and it continues in
+2026.
+
+**What was compared.** For each asset and race *r* where both prices are present, the actual
+move is the price at race *r*+1 less the price at race *r*. The predicted move comes from the
+rules, using the archive's fantasy points and each race's own price for races *r*−2 to *r*, the
+race just scored included. A driver is followed by their code across a constructor switch.
+Twelve moves around a driver's mid-season team switch were left out (Lawson and Tsunoda in
+2025, Lawson in 2026), and so were 21 where a race in the window has no row for the asset. 2026
+runs through the last scored race.
+
+**The four details, each added on top of the one before:**
+
+1. **No zero-padding at the start of the season.** The source says early races count as if
+   earlier races scored 0. The archive fits better if the rating averages only the races held
+   so far.
+2. **An asset priced exactly at the split is Tier A.** Alpine at exactly 18.5m in 2026 moved
+   by Tier A's steps.
+3. **The 2025 split was 18.5m, not 20m.** Williams priced between 18.5m and 19.2m late in 2025
+   moved by Tier A's steps. Nothing in the archive priced between 18.5m and 20m in 2025 moved by
+   Tier B's.
+4. **Prices stop at a floor, and in 2026 at a cap.** The floor was 4.5m in 2025 and 3.0m in
+   2026. Assets there, such as Colapinto and Bortoleto in 2025 and Bottas and Stroll in 2026,
+   stayed put race after race on ratings that would have cut their price. Mercedes stopped at
+   34.0m in 2026 while rated Great. These limits are read from the archive's lowest and highest
+   prices, so this detail partly explains the data with itself. The floor's repeated zero moves
+   at one price are strong evidence on their own. The 2026 cap rests on one constructor.
+
+Exact match, cumulative:
+
+| Season, type | Moves | As given | + no padding | + at split is A | + 2025 split 18.5m | + floor and cap |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2023 constructors | 210 | 4% | 3% | 3% | 3% | 5% |
+| 2023 drivers | 412 | 3% | 3% | 3% | 3% | 4% |
+| 2024 constructors | 230 | 12% | 12% | 12% | 12% | 13% |
+| 2024 drivers | 441 | 10% | 10% | 10% | 10% | 10% |
+| 2025 constructors | 230 | 91% | 95% | 95% | 97% | 97% |
+| 2025 drivers | 451 | 85% | 88% | 88% | 90% | 97% |
+| 2026 constructors | 209 | 88% | 91% | 92% | 92% | 97% |
+| 2026 drivers | 404 | 84% | 90% | 90% | 90% | 97% |
+
+The move sizes tell the same story. In 2025–26, 93–100% of moves are one of 0.1, 0.2, 0.3 or
+0.6, and in 2023–24, 43–70%.
+
+**The 38 moves still missed in 2025–26.** Every one is one band off, mostly on a rating close
+to a threshold: 20 of them are within 0.03 of 0.6, 0.9 or 1.2. That suggests the game's PPM differs
+slightly from the archive's, perhaps in the points counted or the price used, but this was not
+pursued. Four of 2026's constructor misses fall on race 6 (Aston Martin, Audi, Cadillac and
+Haas), which may be worth a look at that race's archive points.
+
+**What this answers from the section above.**
+
+- The game's points are the archive's fantasy points, or close enough to give a 97% exact
+  match.
+- The archive's `PPM Cumulative (3)` is not the game's rating, and this is read from
+  `import_data/derivations.py`. It is the total points divided by the total price over the
+  three races *before* race *r*, so races *r*−3 to *r*−1. The game's rating for the move after
+  race *r* is the mean of each race's own points per 1m over races *r*−2 to *r*. Two of the
+  three races overlap, which fits how well `PPM Cumulative (3)` ranked 2025's moves, about 0.57
+  for drivers.
+
+One throwaway script, not kept, run on 2023–26 from `load_archive_data_season`.
