@@ -4,6 +4,8 @@
 confirmed. Plan steps 1 to 8 are built and run. Question 1 was reopened on 2026-11-06, as the
 table its answer chose loses how far ahead an asset is, and answered again on 2026-11-07 by the
 signal redesign, which also changes questions 2 to 4. See `log.md`, *Signal redesign agreed*.
+Questions 4 and 7 changed again on 2026-11-07, for the price-rise reward only, once the game's
+price rules were known. See `log.md`, *A rules-based price rise: what it can and cannot show*.
 
 ## Picking this up
 
@@ -128,10 +130,18 @@ This is the second point in Alex's brief.
 
 - **A small reward per 1m spent,** tuned from zero (agreed 2026-11-01). It does not stand in
   for the negative penalty.
-- **A reward for expected price rises, by the asset's third on its signal value per 1m within
-  the race,** for drivers and constructors, tuned from zero. The expected rise for each third
-  comes from the other 2023–25 seasons, races 2 onwards. Of the measures tried, value per 1m
-  ordered rises most evenly across 2023–25. See `log.md`, *Redesign evidence*.
+- **A reward for expected price rises, worked out from the game's price rules** (agreed
+  2026-11-07, replacing the table below), for drivers and constructors, tuned from zero. The
+  game has set prices by a three-race model since 2025, so the next move is largely known
+  when a team is picked: two of its three races are already scored, and the coming one is
+  estimated. 2023–24 had a different model, so the reward is off there. See `plan.md`, *Steps
+  19 to 22*.
+
+  Until 2026-11-07: a reward by the asset's third on its signal value per 1m within the race,
+  with each third's expected rise from the other 2023–25 seasons, races 2 onwards. Of the
+  measures tried, value per 1m ordered rises most evenly across 2023–25 (`log.md`, *Redesign
+  evidence*). Those tables mixed the two price models, so each season ran with the wrong one
+  (`log.md`, *Step 16 read again, in the light of the price rules*).
 
 Final budgets are reported for every variant. The old strategy ended 2–14m behind P2PM, and
 paying top prices for top-ranked assets, which do not rise, was part of why. P2PM leaves
@@ -222,6 +232,12 @@ Recommendation put to Alex:
   when the season finishes. Race 19 is priced but has no signal, so the plan must say how that
   race is handled.
 
+**Changed 2026-11-07, for the price-rise reward only:** it is tuned on 2025 alone, as the only
+completed season under the current price model. Its bar is a positive pooled mean delta against
+the base in 2025, and 2023–24 are not run for it. That is in-sample, so a gain there is weak
+evidence, and Alex accepted the limited back-testing. The verdict against P2PM, in every
+season with 2026 as the fair read, is unchanged.
+
 ### 8. Where does the code go? (agreed 2026-11-01)
 
 A new file in `linear/` needs Alex's OK each time, and strategy classes get a design
@@ -272,6 +288,9 @@ step,** so that a refresh cannot bring it back, with the data edit's check plan 
 - **No hard rule on maximum spend.** A reward per 1m spent and a reward for expected price
   rises by value-per-1m third are each tuned from zero, with final budgets reported for every
   variant. Agreed 2026-11-01 and 2026-11-07.
+- **The price-rise reward is rebuilt from the game's price rules,** off in 2023–24, and tuned on
+  2025 alone, at 5, 10 and 20. The game's rules are taken as unchanged for 2027. Agreed
+  2026-11-07.
 - **Tuning uses one setting across weekend formats first.** Values are set from a measurement
   of the signal's scale and logged before any run. The chosen setting is then checked race by
   race for whether its gains or losses fall on sprint weekends, and a sprint-specific variant
