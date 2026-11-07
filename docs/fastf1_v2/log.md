@@ -2242,7 +2242,10 @@ Alex asked, after the results above.
   in 2025 at 5 and 10, and moved the budget by under 1m.
 - **Not known:** whether the game changed how it sets prices for 2025. The data shows only that
   prices behaved differently. Alex is checking the game's rules. Whether 2026 behaves like 2025
-  matters for step 17, and 2026 has not been looked at.
+  matters for step 17, and 2026 has not been looked at. [2026-11-07: the community's
+  reverse-engineered rules say the game did change, to a three-race model that continues in
+  2026. They are a working hypothesis, not canonical. See *The game's price-change rules*,
+  below.]
 
 How well each measure, known when a team is picked, ranks the next race's price move: the mean
 per-race rank correlation, from race 2 to the second last:
@@ -2266,3 +2269,97 @@ measures and `load_signal_tables().values`, for 2023–25 only.
 ### Not run
 
 2026, any combination of levers, and a sprint variant, as none was called for.
+
+## 2026-11-07 — The game's price-change rules: a working hypothesis, not canonical
+
+### In plain language
+
+Alex brought the game's price-change rules, as a fan community worked them out. **F1 has not
+published them, so they are not canonical.** They are a reasonable working hypothesis, and they
+fit what *Step 16*, *Why 2025 ends 10m behind on budget*, found:
+
+- **2023–24:** a price change was set by the asset's points **in that one race**, relative to
+  the field. A team is picked before that race, so nothing known at the time could predict the
+  move well. That fits the near-zero rank correlations for 2023–24.
+- **2025 onwards:** a price change is set by the asset's **average points per 1m over the last
+  three races**. Two of those three races are already known when a team is picked, so the next
+  move is largely predictable, and from a measure close to P2PM's own. That fits 2025's
+  correlation of about 0.55 for points per 1m and P2PM's measure.
+- **2026:** by these rules, the three-race model continues, so 2026 should price like 2025 and
+  not like 2023–24. This has not been checked against 2026's data.
+
+What this means for step 17 is for Alex to decide. Step 17 stays on hold until then (`plan.md`).
+
+### Source and status
+
+Reverse-engineered by the player community (F1 Fantasy Tools Discord) and given to this effort
+by Alex on 2026-11-07. Not published by F1. Nothing below has been checked against the archive.
+The step sizes, tiers and thresholds have not been compared with the archive's actual price
+moves.
+
+### The rules as given
+
+History:
+
+- 2022: prices followed driver sentiment, so changes were not predictable. The archive starts
+  in 2023.
+- 2023–2024: a single-race model on Normalized Points. The tiers below are given for 2024. The
+  source does not say whether 2023 used the same ones.
+- 2025: a rolling three-race model on points per million (PPM).
+- 2026: the three-race model continues, with the tier split moved to $18.5M.
+
+**The 2024 model, single race.** Normalized Points is the asset's points this race divided by
+the average points of all assets of its type (drivers or constructors) in that race. There are
+three price tiers, each with five possible changes, in $M:
+
+| Tier | Price | Possible changes |
+| --- | --- | --- |
+| A | $25.0M or more | −0.7, −0.5, 0, +0.1, +0.2 |
+| B | $15.0M to $24.9M | −0.5, −0.3, +0.1, +0.3, +1.0 |
+| C | $14.9M or less | −0.2, −0.1, +0.5, +1.0, +1.5 |
+
+The source showed the Normalized Points range for each outcome in an image, and those ranges
+are not captured here. Its example, 2024 Australia: Ferrari scored 92 against a constructor
+average of 25.8, so Normalized Points was 3.566. Ferrari was in Tier B and rose $1.0M. The model
+gave large swings after each race, and a growing gap in cost between the top teams and the rest.
+
+**The 2025 model, three races.** PPM is points divided by price. The rating is the
+equal-weighted average PPM over the last three races. There are two price tiers, split at $20M
+in 2025 and $18.5M in 2026:
+
+| Rating | Average 3-race PPM | Tier A, above the split | Tier B, below the split |
+| --- | --- | --- | --- |
+| Great | Above 1.2 | +0.3 | +0.6 |
+| Good | 0.9 to 1.2 | +0.1 | +0.2 |
+| Poor | 0.6 to 0.9 | −0.1 | −0.2 |
+| Terrible | Below 0.6 | −0.3 | −0.6 |
+
+- At the start of the season, the game behaves as if there were earlier races in which every
+  asset scored 0. That drags early price changes down.
+- Two-thirds of each change is fixed by previous races, so upcoming changes can be predicted.
+
+Other 2025 changes that affect value:
+
+- Disqualification penalties apply to the constructor only, not the driver.
+- Constructors score new pit-stop points, at Grands Prix only, not Sprints.
+
+The source's summary of 2024 against 2025: a single race relative to the field average gave way
+to a three-race average of PPM. Three tiers became two, and five outcomes per tier became four,
+with smaller, symmetric steps. Price changes became smoother and more predictable, and the cost
+of the top assets grew more slowly.
+
+### How it fits this effort's findings
+
+This is reasoned from the rules and *Step 16*'s table, and nothing new was run.
+
+- **Why P2PM gained in 2025.** Its measure, `P2PM Cumulative (3)`, is built on the same three
+  races as the game's rating, so it tends to hold the assets the game is about to raise.
+- **Why the price-rise reward could not help in 2025.** Its expected rises come from the other
+  seasons. For 2025 those were 2023–24, where the single-race model made moves close to
+  unpredictable beforehand.
+- **Why price alone predicts so little in 2025.** Under the three-race model, a cheap asset
+  rises by more than a dear one for the same rating. But the rating itself, not the price,
+  decides the direction.
+- **The archive's own rolling measures are not the game's rating.** How `PPM Cumulative (3)` is
+  computed against an equal-weighted average of three per-race PPMs, and whether the game's
+  points are the same fantasy points the archive holds, has not been checked.
