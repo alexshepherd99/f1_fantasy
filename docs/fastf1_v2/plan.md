@@ -198,6 +198,16 @@ with 2026 through race 18:
 
 Report final budgets for each one.
 
+**A check that no old row is reused, added at Alex's request on 2026-11-07.** The harness
+skips any team already in its store, keyed on label, season and team only. Step 8's
+`outputs/fastf1_v2_tuning_*` stores hold old-design rows under `StrategyFastF1`, `FastF1_Drs0`,
+`FastF1_Bud025` and `FastF1_Bud05`, and would be reused silently (`log.md`, *Step 15.2*).
+
+- **Before the run:** `--output` and `--summary` name the two files above, and
+  `outputs/fastf1_v2_results.parquet` does not exist. If it does, stop and raise it with Alex.
+- **After the run:** every season's "skipped" line in the log reads 0, and the store holds
+  1,500 rows per label per season. If either fails, the results are not reported.
+
 ## Step 18 — Findings and close-out
 
 - Findings in `log.md`, in plain language first: the verdict, 2026 as the fair read, 2023–25 as

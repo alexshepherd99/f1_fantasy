@@ -2016,10 +2016,20 @@ More detail:
   - `FastF1_Neg6p5`, `FastF1_Neg13` and `FastF1_Neg26`;
   - `FastF1_Bud01`, `FastF1_Bud025` and `FastF1_Bud05`;
   - `FastF1_Rise5`, `FastF1_Rise10` and `FastF1_Rise20`.
-- **Step 7's labels are gone.** `FastF1_Bud025` and `FastF1_Bud05` keep their names and
-  settings, but now run on the values' scale. Step 8's stores, `outputs/fastf1_v2_tuning_*`,
-  still hold rows under those names from the old design, so step 16 writes to new stores, as
-  the plan says.
+- **Step 7's labels are gone, but four names carry over, with the new design behind them:**
+  `StrategyFastF1`, `FastF1_Drs0`, `FastF1_Bud025` and `FastF1_Bud05`. Step 8's stores,
+  `outputs/fastf1_v2_tuning_*`, hold rows under all four from the old design. This entry first
+  named only the two budget labels. Alex asked for the correction on 2026-11-07.
+- **A run resumed from an old store would reuse those rows without warning.** The harness
+  skips any team whose key is already in its store. The key is label, season and starting
+  team only, with no seed or setting in it. Step 16 draws the same teams as step 8, so in
+  2025 every one of the 300 teams under each of the four labels is already in
+  `outputs/fastf1_v2_tuning_2025.parquet`. The only sign would be a "skipped" line in the log.
+  This was run, not reasoned. P2PM's 300 are there too, which does no harm as it has not
+  changed. Labels with new names have none.
+- **Only those three stores are exposed.** No other store in `outputs/` holds a FastF1 row,
+  and step 17's `outputs/fastf1_v2_results.parquet` does not exist yet. Step 16 writes to new
+  stores, as the plan says, and step 17 now has a check against this.
 - **The price-rise reward has now been through the harness,** which step 13.5 had not done.
 
 ### Tests
