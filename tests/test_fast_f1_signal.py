@@ -4,9 +4,7 @@ import pytest
 from fast_f1.metrics import get_rolling_window_races
 from fast_f1.signal import (
     SignalTables,
-    constructor_places,
     constructor_values,
-    driver_positions,
     driver_values,
     load_signal_tables,
 )
@@ -53,12 +51,13 @@ def _pairs(race: int, *driver_ids: str, season: int = 2024) -> list[dict]:
     ]
 
 
-def _positions(rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024) -> dict:
-    return driver_positions(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
+def _values(rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024) -> dict:
+    return driver_values(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
 
 
-def test_normal_weekend_ranks_on_driver_constructor_and_fp3():
-    positions = _positions(
+def test_normal_weekend_values_add_up_driver_constructor_and_fp3():
+    # Signals 0.5, 0.4, 0.3 and 0.0, stretched onto VER's 50 recent points and the others' 0.
+    values = _values(
         [
             _row(2, "VER", 0.5, 0.0, fp3=0.0),
             _row(2, "HAM", 0.0, 0.4, fp3=0.0),
@@ -67,22 +66,23 @@ def test_normal_weekend_ranks_on_driver_constructor_and_fp3():
         ],
         _pairs(2, "VER@RED", "HAM@MER", "NOR@MCL", "ALO@AST"),
     )
-    assert positions == {"VER@RED": 1, "HAM@MER": 2, "NOR@MCL": 3, "ALO@AST": 4}
+    assert values == pytest.approx({"VER@RED": 50.0, "HAM@MER": 40.0, "NOR@MCL": 30.0, "ALO@AST": 0.0})
 
 
-def test_sprint_weekend_ranks_on_driver_and_constructor_only():
-    positions = _positions(
+def test_sprint_weekend_values_add_up_driver_and_constructor_only():
+    # Signals 0.4 and 0.3, so VER takes HAM's 30 recent points and HAM VER's 20.
+    values = _values(
         [
             _sprint(2, "VER", 0.2, 0.2, sq=0.0),
             _sprint(2, "HAM", 0.3, 0.0, sq=1.0),
         ],
         _pairs(2, "VER@RED", "HAM@MER"),
     )
-    assert positions == {"VER@RED": 1, "HAM@MER": 2}
+    assert values == pytest.approx({"VER@RED": 30.0, "HAM@MER": 20.0})
 
 
 def test_2023_sprint_weekend_uses_the_sprint_rule():
-    positions = _positions(
+    values = _values(
         [
             _sprint(2, "VER", 0.2, 0.2, sq=None, season=2023),
             _sprint(2, "HAM", 0.3, 0.0, sq=None, season=2023),
@@ -90,28 +90,21 @@ def test_2023_sprint_weekend_uses_the_sprint_rule():
         _pairs(2, "VER@RED", "HAM@MER", season=2023),
         season=2023,
     )
-    assert positions == {"VER@RED": 1, "HAM@MER": 2}
+    assert values == pytest.approx({"VER@RED": 30.0, "HAM@MER": 20.0})
 
 
-def test_a_tie_breaks_on_the_identifier():
-    positions = _positions(
-        [_row(2, "VER", 0.2, 0.2), _row(2, "ALB", 0.2, 0.2)],
-        _pairs(2, "VER@RED", "ALB@WIL"),
-    )
-    assert positions == {"ALB@WIL": 1, "VER@RED": 2}
-
-
-def test_a_tie_hidden_by_floating_point_noise_still_breaks_on_the_identifier():
+def test_signals_apart_only_by_floating_point_noise_count_as_equal():
     # 0.1 + 0.2 is 0.30000000000000004 in floating point, a hair above 0.3 + 0.0.
-    positions = _positions(
-        [_row(2, "VER", 0.1, 0.2), _row(2, "ALB", 0.3, 0.0)],
-        _pairs(2, "VER@RED", "ALB@WIL"),
-    )
-    assert positions == {"ALB@WIL": 1, "VER@RED": 2}
+    with pytest.raises(ValueError, match="Every signal equal for 2024 race 2"):
+        _values(
+            [_row(2, "VER", 0.1, 0.2), _row(2, "ALB", 0.3, 0.0)],
+            _pairs(2, "VER@RED", "ALB@WIL"),
+        )
 
 
-def test_only_the_requested_race_is_ranked_and_keys_use_that_races_pairs():
-    positions = _positions(
+def test_only_the_requested_race_is_valued_and_keys_use_that_races_pairs():
+    # Race 3's window covers two races, so LAW's 90 recent points are 45 a race.
+    values = _values(
         [
             _row(2, "LAW", 0.1, 0.1),
             _row(3, "LAW", 0.9, 0.9),
@@ -121,11 +114,7 @@ def test_only_the_requested_race_is_ranked_and_keys_use_that_races_pairs():
         _pairs(2, "LAW@VRB", "TSU@RED") + _pairs(3, "LAW@RED", "TSU@VRB"),
         race=3,
     )
-    assert positions == {"LAW@RED": 1, "TSU@VRB": 2}
-
-
-def _values(rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024) -> dict:
-    return driver_values(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
+    assert values == pytest.approx({"LAW@RED": 45.0, "TSU@VRB": 0.0})
 
 
 @pytest.mark.parametrize("race, races_covered", [(2, 1), (3, 2), (4, 3), (10, 3)])
@@ -177,46 +166,6 @@ def test_race_one_is_an_error_as_it_has_no_recent_points(rolling_points):
         )
 
 
-def _places(rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024) -> dict:
-    return constructor_places(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
-
-
-def test_constructors_rank_on_their_own_rolling_points_not_their_drivers_signal():
-    places = _places(
-        [
-            _row(2, "VER", 0.0, 0.3, fp3=0.0),
-            _row(2, "PER", 0.0, 0.3, fp3=0.0),
-            _row(2, "HAM", 1.0, 0.2, fp3=1.0),
-            _row(2, "RUS", 1.0, 0.2, fp3=1.0),
-            _row(2, "NOR", 0.0, 0.4, fp3=0.0),
-        ],
-        _pairs(2, "VER@RED", "PER@RED", "HAM@MER", "RUS@MER", "NOR@MCL"),
-    )
-    assert places == {"MCL": 1, "RED": 2, "MER": 3}
-
-
-def test_a_constructor_tie_breaks_on_the_code():
-    places = _places(
-        [_row(2, "VER", 0.0, 0.2), _row(2, "ALB", 0.0, 0.2)],
-        _pairs(2, "VER@RED", "ALB@WIL"),
-    )
-    assert places == {"RED": 1, "WIL": 2}
-
-
-def test_constructors_are_reached_through_the_requested_races_pairs():
-    places = _places(
-        [
-            _row(2, "LAW", 0.0, 0.1),
-            _row(3, "LAW", 0.0, 0.9),
-            _row(3, "TSU", 0.0, 0.0),
-            _row(2, "TSU", 0.0, 0.0),
-        ],
-        _pairs(2, "LAW@VRB", "TSU@RED") + _pairs(3, "LAW@RED", "TSU@VRB"),
-        race=3,
-    )
-    assert places == {"RED": 1, "VRB": 2}
-
-
 def _constructor_values(
     rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024
 ) -> dict:
@@ -265,7 +214,7 @@ def test_constructor_values_are_reached_through_the_requested_races_pairs():
     assert values == pytest.approx({"RED": 15.0, "VRB": 0.0})
 
 
-@pytest.mark.parametrize("rank", [_positions, _values, _places, _constructor_values])
+@pytest.mark.parametrize("rank", [_values, _constructor_values])
 def test_a_races_own_results_do_not_move_its_signal(rank):
     pairs = _pairs(2, "VER@RED", "HAM@MER", "NOR@MCL")
     before = [_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3), _row(2, "NOR", 0.1, 0.1)]
@@ -279,36 +228,28 @@ def test_a_races_own_results_do_not_move_its_signal(rank):
     assert len(rank(after, pairs)) == 3
 
 
-@pytest.mark.parametrize("rank", [_positions, _values, _places, _constructor_values])
+@pytest.mark.parametrize("rank", [_values, _constructor_values])
 def test_a_race_with_no_metrics_rows_gives_no_ranking(rank):
     assert rank([_row(3, "VER", 0.5, 0.5)], _pairs(2, "VER@RED")) == {}
 
 
-@pytest.mark.parametrize("rank", [_positions, _values, _places, _constructor_values])
+@pytest.mark.parametrize("rank", [_values, _constructor_values])
 def test_a_driver_with_no_fantasy_pair_is_an_error(rank):
     with pytest.raises(ValueError, match="2024 race 2: HAM"):
         rank([_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3)], _pairs(2, "VER@RED"))
 
 
-@pytest.mark.parametrize("rank", [_positions, _values, _places, _constructor_values])
+@pytest.mark.parametrize("rank", [_values, _constructor_values])
 def test_a_driver_matching_two_fantasy_pairs_is_an_error(rank):
     with pytest.raises(ValueError, match="2024 race 2: VER"):
         rank([_row(2, "VER", 0.5, 0.5)], _pairs(2, "VER@RED", "VER@VRB"))
 
 
-def test_a_missing_signal_input_is_an_error_not_a_last_place():
+def test_a_missing_signal_input_is_an_error_not_a_zero():
     with pytest.raises(ValueError, match="2024 race 2: HAM"):
-        _positions(
+        _values(
             [_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3, fp3=None)],
             _pairs(2, "VER@RED", "HAM@MER"),
-        )
-
-
-def test_a_constructors_drivers_disagreeing_on_its_rolling_points_is_an_error():
-    with pytest.raises(ValueError, match="2024 race 2: RED"):
-        _places(
-            [_row(2, "VER", 0.5, 0.5), _row(2, "PER", 0.3, 0.3)],
-            _pairs(2, "VER@RED", "PER@RED"),
         )
 
 
