@@ -3,8 +3,8 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 are done.
-Step 19 is next. Steps 17 and 18 were numbered 9 and 10 before 2026-11-07.
+redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 are done.
+Step 20 is next. Steps 17 and 18 were numbered 9 and 10 before 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
 settled.** The game moved to a three-race price model in 2025. It is unchanged in 2026, and
@@ -230,6 +230,9 @@ Only the next move counts, as now. Races *r*−2 and *r*−1 use the archive's a
 are known when the team for race *r* is picked. Race *r* is estimated, never read.
 
 ### Step 19 — Accuracy check on 2025 (real data)
+
+Done 2026-11-07: estimate (a) chosen, and it passed. Race *r*'s points come from a line fitted by
+type, not a single slope, as Alex chose. See `log.md`, *Step 19: the accuracy check on 2025*.
 
 A throwaway script, before any code is written. Pass marks fixed here, before any result.
 

@@ -2586,3 +2586,56 @@ comparison is run:
 | Constructors | 440 | 5.948 + 1.687 × value | 0.71 |
 
 One throwaway script, not kept.
+
+## 2026-11-07 — Step 19: the accuracy check on 2025
+
+### In plain language
+
+- **It passes, and estimate (a) is chosen.** Working the next price move out from the rules,
+  with race *r*'s points estimated from the signal, misses the actual move by 0.15m on
+  average. Step 16's table missed by 0.32 to 0.40m. Alex confirmed the choice of (a) on
+  2026-11-07.
+- **(a) beats (b), leaving race *r* out, by 9.8%,** which clears the 5% bar. The signal adds
+  a little on top of the two races already scored, which carry most of the prediction.
+- **The rules are coded correctly.** Fed race *r*'s actual points instead, the same code gives
+  the exact move 96.5% of the time, as the archive check found.
+
+### Why the fit uses 2023–24, though their price rules differ
+
+Alex asked this on 2026-11-07. The fit turns a signal value into fantasy points scored, and
+price does not enter it. The 2025 change was to how prices move, not to how points are scored,
+so 2023–24 can still say how values relate to points. 2025 is left out because it is the
+season being tested on.
+
+**A limit, reasoned and not measured:** scoring did change a little in 2025. Constructors gained
+pit-stop points, and disqualification penalties fall on the constructor only. The constructor
+line could be slightly off for 2025. Step 15.1 found points per value unit steady across
+2023–25, so the effect is expected to be small.
+
+### What was run
+
+A throwaway script, not kept, on 2025, races 2 onwards. It covers each asset with a value that
+is priced at both race *r* and race *r*+1 under the same identifier, so a driver's move across
+a team switch drops out. The rules are applied as `plan.md` gives them, with 2025's figures:
+split 18.5m, floor 4.5m, no cap. A rating of exactly 1.2 or 0.9 counts as Good, and exactly 0.6
+as Poor. Races *r*−2 and *r*−1 use the archive's points over each race's own price, following a
+driver by code. A window race with no row for the asset counts as zero points, which happened
+3 times. Moves are compared after rounding to 0.1m.
+
+| Estimate | Drivers, 436 moves | Constructors, 220 moves | Pooled, 656 moves |
+| --- | --- | --- | --- |
+| (a) race *r* from the signal | 0.152 / 66% / 0.73 | 0.148 / 73% / 0.63 | 0.151 / 68% / 0.73 |
+| (b) race *r* left out | 0.172 / 65% / 0.69 | 0.158 / 73% / 0.60 | 0.167 / 68% / 0.68 |
+| Step 16's 2025 table | 0.396 / 0% / 0.29 | 0.317 / 0% / 0.24 | 0.370 / 0% / 0.09 |
+| Check: race *r*'s actual points | 0.014 / 96% / 0.99 | 0.012 / 97% / 0.99 | 0.013 / 97% / 0.99 |
+
+Each cell is the mean absolute error in 1m, the share of exact matches, and the rank
+correlation with the actual move. The table's averages never land on a game step, so its exact
+share is zero by design. The check reads race *r*'s result, and is there only to test the code,
+never as a candidate.
+
+- **The choice:** (a)'s pooled error is 9.8% below (b)'s, so (a), against the 5% bar.
+- **The pass:** (a)'s error is below the table's for drivers, 0.152 against 0.396, and for
+  constructors, 0.148 against 0.317.
+
+Step 20's real-data check is to reproduce (a)'s row.
