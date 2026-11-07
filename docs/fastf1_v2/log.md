@@ -46,6 +46,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   expected-points table and position code are gone. Step 13.2 is next.
 - Step 13.2 done 2026-11-07: the DRS code already matches the plan, with no change needed.
   Step 13.3 is next.
+- Step 13.3 done 2026-11-07: the negative penalty already matches the plan. One rule had no
+  test, so one was added. Step 13.4 is next.
 - Decisions so far: see `requirements.md`, *Decisions so far*, which is kept current.
 
 ## 2026-11-01 — Sizing the two levers in the brief
@@ -1693,3 +1695,44 @@ The plan says the default picks "when none has one". The code uses it when no se
 is valued above zero, and values bottom out at exactly 0. The two differ only when all five
 selected drivers are valued 0. The default then takes the dearest of them, who also scores 0,
 so the result is the same.
+
+## 2026-11-07 — Step 13.3: the negative penalty checked against the plan
+
+### In plain language
+
+- **The penalty code already does what the plan asks, so the strategy did not change.**
+- **One rule had no test, and now has one.** The plan says the DRS driver's chance of going
+  negative counts once, not twice. The code does that, but doubling it went unnoticed by the
+  tests, as every penalty test ran with DRS off.
+
+### What was checked
+
+Against plan item 13.3 and the note below the list, in `linear/strategy_fastf1.py`:
+
+- **It subtracts `negative_penalty` times each selected asset's chance,** drivers and
+  constructors alike.
+- **The chances are step 12's,** from `SignalTables.negative_chance` by price third, and every
+  available asset must have one.
+- **A penalty of zero leaves the team unchanged,** and the chances are not even read.
+- **The DRS driver's chance is not doubled.**
+
+Six mutations, each restored from a copy with a green run after it:
+
+| Mutation | Failed |
+| --- | --- |
+| Constructors' chances left out | The penalty test at 1 and 6 |
+| Drivers' chances left out | The penalty test at 1 and 6 |
+| Penalty applied at zero as 1 | The penalty test at 0, and the chances-read-only-with-a-penalty test |
+| Chances read at zero | The chances-read-only-with-a-penalty test |
+| A missing chance not checked | The missing-chance test, for a driver and a constructor |
+| The DRS driver's chance doubled | **Nothing, at first** |
+
+### The test added
+
+`test_strategy_fastf1_does_not_double_the_drs_drivers_chance` turns DRS on and gives the
+likely DRS driver a chance of their own. The best team, worked out by hand, scores 28.8. With
+the doubling mutation, the LP gives DRS to the driver with the lower chance and scores 28.6,
+as predicted, so the test fails. On the real code it passes. This is a test only, with no
+change to the strategy.
+
+The full suite is green, 468 tests, up from 467.
