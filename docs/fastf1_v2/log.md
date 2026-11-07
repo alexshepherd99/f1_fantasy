@@ -1094,3 +1094,19 @@ ends 2025 at −243 rather than −379, and is the same in 2023.
 - Question 1's answer, expected points by signal position, is reopened in `requirements.md`.
 - The indicator analysis judged the signal on rank correlation, which cannot see this fault.
   A redesign needs a check on how much each asset scores, not just their order.
+
+## 2026-11-07 — Two decisions from 2026-11-01, logged late
+
+`requirements.md` recorded these when they were made, but the log did not. They are logged
+now so that the requirements can be rebuilt under the living-documents rule without losing
+them. Neither reason was written down at the time, in the docs or in commit `e53e566`, so none
+is given here.
+
+- **The strategy does not play the race-4 chip.** The working assumptions first had it copy
+  P2PM's chip, so that the comparison would not also measure the chip. Alex withdrew that on
+  2026-11-01. `StrategyMaxP2PM` still plays the chip, so the verdict against it also measures
+  the chip, and `StrategyMaxP2PMNoReset` runs in all four seasons to show how much.
+- **The signal's rolling indicators stay on championship points.** Alex confirmed this with
+  the other working assumptions on 2026-11-01, after the check in *Checking the rolling
+  indicators' source* found that fantasy rolling points gave no measurable gain. The
+  requirements still called it unruled until commit `49b0c54` corrected them on 2026-11-06.
