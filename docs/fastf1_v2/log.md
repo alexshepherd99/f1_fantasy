@@ -2061,3 +2061,159 @@ from three teams.
 Not run: `Neg6p5`, `Neg26`, `Bud025`, `Bud05`, `Rise5`, `Rise20` and `Drs0` through the
 harness. Each differs from a label that did run only in its value, which the settings test
 covers. Step 16 runs them all.
+
+## 2026-11-07 — Step 16: tuning on 2023–25
+
+### In plain language
+
+- **No lever cleared the bar, so nothing is tuned.** Step 17 runs `StrategyFastF1` at its
+  defaults: DRS coefficient 1, no negative penalty, no budget reward and no price-rise reward.
+  Its comparison is `FastF1_Drs0`. No combination run was needed, as no lever cleared.
+- **Ten variants tried,** all listed below with the failures. 2026 was not run or looked at.
+- **Keeping DRS is supported:** leaving it out lost in every season. Every other lever gained in
+  one or two seasons and lost in the rest.
+- **The redesigned base now beats P2PM in 2023 and 2024, and trails it in 2025.** It was
+  +483 points a team in 2023, +190 in 2024 and −154 in 2025, beating P2PM on 98%, 89% and 24%
+  of teams. Step 8's design trailed by 315 to 385 in every season, on the same teams. These
+  are the seasons that flatter the signal, so 2026, in step 17, is the fair read.
+- **2025's loss looks like budget.** The base ends 2025 10.6m behind P2PM, and no reward
+  closed that gap.
+- **The format check finds no sprint effect,** so no sprint variant is added. Alex chose to
+  run it against P2PM, since the chosen setting is the base itself and so has no gap to the base
+  to split. In 2025 the loss falls on normal weekends.
+
+### Choices Alex made in this step
+
+- **The format check runs against P2PM, not the base.** The plan checks whether the chosen
+  setting's gains or losses against the base fall mainly on sprint weekends. With the base
+  chosen, that gap is zero by construction. Alex chose on 2026-11-07 to split the base's gap to
+  P2PM by format instead, as the only form of the check that could find anything. A sprint
+  variant would still have had to clear the bar against the base.
+
+### What was run
+
+A timing run first: 2025, all 11 labels, 3 teams a band, into the scratchpad. 108
+simulations in 87s at a peak RSS of 266 MB.
+
+Then, for each of 2023, 2024 and 2025, one background process, the three in parallel:
+
+`backtest.cli --seasons <season> --sample-size 100 --seed 2 --strategies StrategyFastF1
+FastF1_Drs0 FastF1_Neg6p5 FastF1_Neg13 FastF1_Neg26 FastF1_Bud01 FastF1_Bud025 FastF1_Bud05
+FastF1_Rise5 FastF1_Rise10 FastF1_Rise20 --output outputs/fastf1_v2_step16_<season>.parquet
+--summary outputs/fastf1_v2_step16_<season>_summary.csv`
+
+All three exited 0 with no error or warning in their logs, in 60 to 69 minutes, at a peak RSS
+of 254 to 279 MB each.
+
+The bar against the base is the harness's own: `pair_with_baseline`, `season_summary` and
+`verdict` from `backtest/metrics.py`, run with `StrategyFastF1` as the baseline from a
+throwaway script, not kept.
+
+### The check that no old row was reused
+
+- **Before the run:** none of the nine `outputs/fastf1_v2_step16_*` files existed, and the
+  timing run went to the scratchpad.
+- **After the run:** each season's log reads "skipped 0 simulations already in the store", and
+  each store holds 300 rows per label for its season, 12 labels with P2PM, with no duplicate
+  label, season and team. Both pass, so the results are used.
+- **The teams are step 8's.** P2PM's 300 results in each season match step 8's store team for
+  team, with no points differing, so the comparison with step 8 is like for like.
+
+### Against the base, `StrategyFastF1`
+
+Pooled mean delta, in points a team, with the share of teams that beat the base:
+
+| Label | 2023 | 2024 | 2025 | Seasons positive |
+| --- | --- | --- | --- | --- |
+| `FastF1_Drs0` | −65.5 (11%) | −28.3 (48%) | −155.5 (20%) | 0 of 3 |
+| `FastF1_Neg6p5` | −24.7 (2%) | +32.5 (49%) | −3.0 (40%) | 1 of 3 |
+| `FastF1_Neg13` | −57.7 (40%) | +41.0 (62%) | −71.4 (32%) | 1 of 3 |
+| `FastF1_Neg26` | −164.9 (6%) | +42.4 (60%) | −54.8 (39%) | 1 of 3 |
+| `FastF1_Bud01` | −6.0 (50%) | +9.3 (48%) | −43.7 (29%) | 1 of 3 |
+| `FastF1_Bud025` | +26.5 (61%) | +23.5 (55%) | −28.3 (44%) | 2 of 3 |
+| `FastF1_Bud05` | +63.4 (87%) | +21.7 (55%) | −20.6 (44%) | 2 of 3 |
+| `FastF1_Rise5` | −58.3 (28%) | −31.3 (37%) | +35.3 (58%) | 1 of 3 |
+| `FastF1_Rise10` | −65.7 (25%) | −87.6 (28%) | +42.9 (59%) | 1 of 3 |
+| `FastF1_Rise20` | −42.5 (49%) | −110.1 (24%) | −62.1 (34%) | 0 of 3 |
+
+Each band gives the same sign as the pooled row in every season for every label except five,
+each within 21 points of zero pooled: `Bud01` in 2023 and 2024, `Bud05` in 2025, and
+`Neg6p5` in 2025, twice.
+
+The budget reward is the closest miss, gaining in 2023–24 and losing 21 to 44 in 2025. The
+penalty gains only in 2024, and the price-rise reward only in 2025, at 5 and 10.
+
+### Against P2PM, for context
+
+| Label | 2023 | 2024 | 2025 |
+| --- | --- | --- | --- |
+| `StrategyFastF1` | +482.7 (98%) | +190.4 (89%) | −153.9 (24%) |
+| `FastF1_Drs0` | +417.2 | +162.1 | −309.4 |
+| `FastF1_Neg6p5` | +458.0 | +222.8 | −156.9 |
+| `FastF1_Neg13` | +425.0 | +231.4 | −225.3 |
+| `FastF1_Neg26` | +317.8 | +232.8 | −208.7 |
+| `FastF1_Bud01` | +476.7 | +199.7 | −197.6 |
+| `FastF1_Bud025` | +509.2 | +213.9 | −182.2 |
+| `FastF1_Bud05` | +546.0 | +212.0 | −174.5 |
+| `FastF1_Rise5` | +424.4 | +159.0 | −118.6 |
+| `FastF1_Rise10` | +417.0 | +102.7 | −111.0 |
+| `FastF1_Rise20` | +440.2 | +80.3 | −216.0 |
+
+Every label is positive in 2023–24 and negative in 2025, so none would pass the harness's
+verdict against P2PM on these seasons. Step 8's base, on the same teams, was −315.0, −385.4 and
+−357.8.
+
+### Final budgets
+
+Mean `total_budget` at the last race, in millions:
+
+| Label | 2023 | 2024 | 2025 |
+| --- | --- | --- | --- |
+| `StrategyMaxP2PM` | 135.8 | 127.3 | 138.5 |
+| `StrategyFastF1` | 134.7 | 129.7 | 127.9 |
+| Variants, range | 132.6–135.7 | 129.5–130.3 | 126.2–128.4 |
+
+The base ends 2023 1.1m behind P2PM, 2024 2.4m ahead and 2025 10.6m behind. Step 8's base
+ended 2025 at 124.6, so the redesign closed about 3m of that gap. No reward moved 2025 by more
+than 1m. Step 17's budget report on the 500-team run decides whether the gap is raised with
+Alex, as the plan says.
+
+### The format check
+
+A throwaway script, not kept, re-simulated `StrategyFastF1` at its defaults and
+`StrategyMaxP2PM` race by race through `run_for_team`, for 15 teams a season: 5 a band, seed 2,
+default edges, the draw of step 14.2. Each race's format comes from the metrics file's
+sessions, as `fast_f1/indicator_analysis.py` classifies it, with 2023's sprint weekends
+counted as sprints. Race 1 is the sampled team under both, so it is left out.
+
+The gap is FastF1's points less P2PM's, a team a race, averaged over the 15 teams:
+
+| Season | Format | Races | Mean gap a race | Spread of race gaps (SD) | Share of season's gap |
+| --- | --- | --- | --- | --- | --- |
+| 2023 | Normal | 15 | +23.7 | 28.1 | 71% |
+| 2023 | Sprint | 6 | +24.0 | 30.2 | 29% |
+| 2024 | Normal | 17 | +11.0 | 23.6 | 81% |
+| 2024 | Sprint | 6 | +7.5 | 43.7 | 19% |
+| 2025 | Normal | 17 | −10.8 | 31.5 | 156% |
+| 2025 | Sprint | 6 | +10.9 | 50.7 | −56% |
+
+Sprint weekends are 29%, 26% and 26% of each season's races from race 2.
+
+- **No season's gap falls mainly on sprint weekends.** In 2023 a sprint weekend gains the
+  same as a normal one. In 2024 the two are within 4 points a race. In 2025 the whole loss is
+  on normal weekends, and sprint weekends gained.
+- **Six sprint weekends a season cannot separate the formats either way.** Their race gaps
+  spread by 30 to 51 points, so a difference of 0 to 22 points a race between formats is well
+  inside the noise. The check finds no sign of a sprint effect. It does not show there is none.
+- **A race's gap is not only that race's decision.** It also reflects the team carried in from
+  earlier races.
+- **2023 races 17 and 18,** where step 14.2 saw 6 of 15 teams drop VER, show gaps of −20 and
+  +12, both inside 2023's spread.
+
+On these 15 teams, the mean final totals were 5,971, 4,783 and 4,943 for FastF1 and 5,472,
+4,550 and 5,060 for P2PM, and the final budgets 135.1, 130.5 and 129.0 against 135.6, 127.3 and
+139.5. Each season's gap has the same sign as the 300-team run's.
+
+### Not run
+
+2026, any combination of levers, and a sprint variant, as none was called for.

@@ -3,8 +3,8 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 15 are done.
-Step 16 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
+redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 are done.
+Step 17 is next. Steps 17 and 18 were numbered 9 and 10 before 2026-11-07.
 Requirements: `requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
@@ -169,6 +169,10 @@ Step 7's labels give way to these. Label names follow from the values chosen.
 
 ## Step 16 — Tuning on 2023–25 (real run)
 
+Done 2026-11-07: no lever cleared the bar, so step 17 runs `StrategyFastF1` at its defaults,
+with `FastF1_Drs0` as the comparison. The format check, run against P2PM as Alex chose, found
+no sprint effect. See `log.md`, *Step 16*.
+
 Run the labels at 100 teams a band, seed 2, in new stores of their own, one per season, not
 `outputs/fastf1_v2_tuning_*`. Seed 1 at 100 teams a band draws the first 100 of step 17's 500,
 which is why tuning uses seed 2. 2026 is not run or looked at. Time a small run first, and run
@@ -197,7 +201,7 @@ same bar.
 
 ## Step 17 — The back-test (real run)
 
-Waits for step 16.
+Step 16 is done, and its choice is logged: `StrategyFastF1` at its defaults.
 
 **Run once, with the choice from step 16 logged before it starts.** All at 500 teams a band,
 seed 1, in `outputs/fastf1_v2_results.parquet` and `outputs/fastf1_v2_summary.csv`, for 2023–26
