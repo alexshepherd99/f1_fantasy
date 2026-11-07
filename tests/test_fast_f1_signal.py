@@ -1,6 +1,7 @@
 import pandas as pd
 import pytest
 
+from fast_f1.metrics import get_rolling_window_races
 from fast_f1.signal import (
     SignalTables,
     constructor_places,
@@ -529,6 +530,109 @@ def test_negative_chance_reads_neither_its_own_season_nor_2026(season, varied):
             points if "2024" in varied else -5, points if "2026" in varied else -5
         )
     assert tables(-1000).negative_chance(season, 2) == tables(1000).negative_chance(season, 2)
+
+
+def _rising(*races: tuple) -> SignalTables:
+    """``SignalTables`` for price rises. Each race is ``(season, race, assets)``, each mapping
+    a driver identifier to ``(signal, driver_price, constructor_price)``, the driver being
+    their constructor's only one.
+
+    Every race from 2 holds a signal of 1.0 with 30 recent points a race and one of 0.0 with
+    none, so a driver's value, and their constructor's, is 30 times their signal. A signal
+    of None gives the driver no metrics row.
+    """
+    metrics, drivers, constructors = [], [], []
+    for season, race, assets in races:
+        covered = len(get_rolling_window_races(race))
+        for driver_id, (signal, driver_price, con_price) in assets.items():
+            code, con = driver_id.split("@")
+            if signal is not None:
+                metrics.append(_row(race, code, signal / 2, signal / 2, season=season,
+                                    RollingPoints=30 * signal * covered if covered else None))
+            drivers.append({"Constructor": con, "Driver": driver_id, "Race": race,
+                            "Points": 5, "Season": season, "Price": driver_price})
+            constructors.append({"Constructor": con, "Race": race, "Points": 5,
+                                 "Season": season, "Price": con_price})
+    return SignalTables(pd.DataFrame(metrics), pd.DataFrame(drivers), pd.DataFrame(constructors))
+
+
+# 2023's history, races 2 to 4. Values are 30 for A, 15 for B and 0 for C. Per 1m, C is
+# lowest and B highest in every race. Driver moves to the next race: C -0.2, 0.0, +0.5,
+# whose mean differs from its median; A 0.0, +0.2, +0.4; B +0.2, +0.4, +0.6. Means C 0.1,
+# A 0.2, B 0.4. Constructors run the other way: C +0.4, A 0.0, B -0.4 each time. Race 5
+# is priced only, so has no moves of its own, and race 1 has no value to build from.
+_RISES_2023 = [
+    (2023, 1, {"AAA@AAA": (1.0, 30, 30), "BBB@BBB": (0.5, 5, 5), "CCC@CCC": (0.0, 10, 10)}),
+    (2023, 2, {"AAA@AAA": (1.0, 30, 30), "BBB@BBB": (0.5, 5, 5), "CCC@CCC": (0.0, 10, 10)}),
+    (2023, 3, {"AAA@AAA": (1.0, 30, 30), "BBB@BBB": (0.5, 5.2, 4.6),
+               "CCC@CCC": (0.0, 9.8, 10.4)}),
+    (2023, 4, {"AAA@AAA": (1.0, 30.2, 30), "BBB@BBB": (0.5, 5.6, 4.2),
+               "CCC@CCC": (0.0, 9.8, 10.8)}),
+    (2023, 5, {"AAA@AAA": (None, 30.6, 30), "BBB@BBB": (None, 6.2, 3.8),
+               "CCC@CCC": (None, 10.3, 11.2)}),
+]
+
+# A race to look up. Per 1m ALB is lowest, HAM in the middle and VER highest. By value
+# alone HAM would take B's third, and by price alone ALB would, each changing the answer.
+_LOOK_UP = {"VER@RED": (1.0, 10, 10), "HAM@MER": (0.5, 15, 15), "ALB@WIL": (0.0, 5, 5)}
+
+
+def test_price_rise_is_the_mean_rise_in_the_assets_third_on_value_per_million():
+    tables = _rising(*_RISES_2023, (2024, 2, _LOOK_UP))
+    assert tables.price_rise(2024, 2) == pytest.approx({
+        "ALB@WIL": 0.1, "HAM@MER": 0.2, "VER@RED": 0.4, "WIL": 0.4, "MER": 0.0, "RED": -0.4,
+    })
+
+
+def test_a_move_without_a_price_at_the_next_race_is_left_out():
+    unpriced = {"AAA@AAA": (None, 30.6, 30), "BBB@BBB": (None, None, None),
+                "CCC@CCC": (None, 10.3, 11.2)}
+    tables = _rising(*_RISES_2023[:4], (2023, 5, unpriced), (2024, 2, _LOOK_UP))
+    rise = tables.price_rise(2024, 2)
+    assert (rise["VER@RED"], rise["RED"]) == pytest.approx((0.3, -0.4))
+
+
+def test_an_asset_with_no_value_gets_no_price_rise_and_no_place_in_the_thirds():
+    look_up = _LOOK_UP | {"SAR@SAU": (None, 1, 1)}
+    tables = _rising(*_RISES_2023, (2024, 2, look_up))
+    rise = tables.price_rise(2024, 2)
+    assert "SAR@SAU" not in rise
+    assert [rise[d] for d in _LOOK_UP] == pytest.approx([0.4, 0.2, 0.1])
+
+
+def test_a_race_priced_but_without_signal_has_no_price_rise():
+    unsignalled = {driver: (None, *prices) for driver, (_, *prices) in _LOOK_UP.items()}
+    tables = _rising(*_RISES_2023, (2026, 19, unsignalled))
+    assert tables.price_rise(2026, 19) == {}
+
+
+@pytest.mark.parametrize("season", [2024, 2026])
+def test_a_price_rise_table_with_no_other_season_to_draw_on_is_an_error(season):
+    # 2024 has history of its own to leave out; 2026 has none in a table season at all.
+    tables = _rising((season, 2, _LOOK_UP), (season, 3, _LOOK_UP))
+    with pytest.raises(ValueError, match=f"No 2023-25 history for {season}'s Driver rises table"):
+        tables.price_rise(season, 2)
+
+
+def _rises_varying(price_2024: float, price_2026: float) -> SignalTables:
+    """2023 as above, then 2024 and 2026 races 2 and 3, with every race 3 price at the
+    season's given figure."""
+    def season(year: int, price: float) -> list[tuple]:
+        return [(year, 2, _LOOK_UP),
+                (year, 3, {d: (s, price, price) for d, (s, _, _) in _LOOK_UP.items()})]
+    return _rising(*_RISES_2023, *season(2024, price_2024), *season(2026, price_2026))
+
+
+@pytest.mark.parametrize("season, varied", [
+    (2024, ("2024", "2026")),
+    (2023, ("2026",)),
+])
+def test_price_rise_reads_neither_its_own_season_nor_2026(season, varied):
+    def tables(price: float) -> SignalTables:
+        return _rises_varying(
+            price if "2024" in varied else 20, price if "2026" in varied else 20
+        )
+    assert tables(1).price_rise(season, 2) == tables(100).price_rise(season, 2)
 
 
 def test_changing_a_returned_dict_does_not_change_the_next_call():

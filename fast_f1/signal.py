@@ -192,12 +192,15 @@ def load_signal_tables(
 
 
 class SignalTables:
-    """Expected fantasy points for any race's assets, from their signal positions.
+    """Tables of what an asset's place in a race predicts, looked up for any race.
 
-    A season's tables come from the ``TABLE_SEASONS`` other than itself, races 2
-    onwards, so a season never sees its own results and 2026 never enters a table. A
-    table holds the mean points at each position, forced to fall by position, and a
-    position past its end takes the last value. Each table is built once per instance.
+    Three measures, each by asset type: expected fantasy points by signal position,
+    the chance of going negative by price third, and the expected price rise by third
+    on value per 1m. A season's tables come from the ``TABLE_SEASONS`` other than
+    itself, races 2 onwards, so a season never sees its own results and 2026 never
+    enters a table. The points table holds the mean points at each position, forced to
+    fall by position. A key past a table's end takes the last value. Each table is built
+    once per instance.
 
     Args:
         metrics: Rows in the shape of ``data/fastf1_practice_rolling_metrics.xlsx``.
@@ -220,6 +223,7 @@ class SignalTables:
         }
         self._history: pd.DataFrame | None = None
         self._negatives: pd.DataFrame | None = None
+        self._rises: pd.DataFrame | None = None
         self._tables: dict[tuple[str, int, AssetType], pd.Series] = {}
         self._race_values: dict[tuple[str, int, int], dict[str, float]] = {}
 
@@ -263,8 +267,7 @@ class SignalTables:
     def _negative_chance(self, season: int, race: int) -> dict[str, float]:
         chances = {}
         for asset_type, archive in self._archive.items():
-            priced = archive[(archive["Season"] == season) & (archive["Race"] == race)
-                             & archive["Price"].notna()]
+            priced = _priced_in(archive, season, race)
             if priced.empty:
                 continue
             table = self._table("negatives", season, asset_type)
@@ -273,6 +276,44 @@ class SignalTables:
                 for asset, third in zip(priced[asset_type.value], _thirds(priced["Price"]))
             }
         return chances
+
+    def price_rise(self, season: int, race: int) -> dict[str, float]:
+        """Each priced asset's expected price rise from one race to the next, in 1m.
+
+        Looked up by asset type and by the asset's third within the race on its value per
+        1m, its ``driver_values`` or ``constructor_values`` over its price, as ``_thirds``
+        splits them. Reads no result from the race itself.
+
+        Returns:
+            Rises keyed by driver identifier and constructor code, for every asset priced
+            in the race that has a value. Empty when the race has no signal.
+
+        Raises:
+            ValueError: A table has no history to draw on, or as for ``driver_values``.
+        """
+        return self._per_race("rises", season, race, self._price_rise)
+
+    def _price_rise(self, season: int, race: int) -> dict[str, float]:
+        rises = {}
+        for asset_type, thirds in self._value_thirds(season, race).items():
+            table = self._table("rises", season, asset_type)
+            rises |= {asset: _look_up(table, third) for asset, third in thirds.items()}
+        return rises
+
+    def _value_thirds(self, season: int, race: int) -> dict[AssetType, pd.Series]:
+        """Each priced asset's third on value per 1m within one race, by asset type, for
+        the assets with a value. A type with none is left out."""
+        values = {
+            AssetType.DRIVER: driver_values(self._metrics, self._pairs, season, race),
+            AssetType.CONSTRUCTOR: constructor_values(self._metrics, self._pairs, season, race),
+        }
+        thirds = {}
+        for asset_type, archive in self._archive.items():
+            priced = _priced_in(archive, season, race).set_index(asset_type.value)["Price"]
+            valued = priced.index.to_series().map(values[asset_type]).dropna()
+            if not valued.empty:
+                thirds[asset_type] = _thirds(valued / priced[valued.index])
+        return thirds
 
     def _per_race(
         self, name: str, season: int, race: int, compute: Callable[[int, int], dict[str, float]]
@@ -290,6 +331,7 @@ class SignalTables:
             history, summarise = {
                 "points": (self._ranked_history, _falling_means),
                 "negatives": (self._negative_history, _negative_shares),
+                "rises": (self._rise_history, _mean_rises),
             }[name]
             rows = history()
             self._tables[key] = summarise(
@@ -321,6 +363,32 @@ class SignalTables:
             {"Third": int, "Negative": bool}
         )
         return self._negatives
+
+    def _rise_history(self) -> pd.DataFrame:
+        """Every table season's priced assets with a value from race 2 on: their third on
+        value per 1m within the race, and their price move to the next race, where they
+        are priced at both."""
+        if self._rises is not None:
+            return self._rises
+        frames = []
+        for season in TABLE_SEASONS:
+            in_season = self._metrics[self._metrics["Season"] == season]
+            for race in sorted(in_season.loc[in_season["Race"] > FIRST_RACE, "Race"].unique()):
+                for asset_type, thirds in self._value_thirds(season, race).items():
+                    archive, key = self._archive[asset_type], asset_type.value
+                    now = _priced_in(archive, season, race).set_index(key)["Price"]
+                    after = _priced_in(archive, season, race + 1).set_index(key)["Price"]
+                    rise = (after.reindex(thirds.index) - now[thirds.index]).dropna()
+                    frames.append(pd.DataFrame({
+                        "AssetType": asset_type,
+                        "Season": season,
+                        "Third": thirds[rise.index],
+                        "Rise": rise,
+                    }))
+        history = (pd.concat(frames, ignore_index=True) if frames
+                   else pd.DataFrame(columns=["AssetType", "Season", "Third", "Rise"]))
+        self._rises = history.astype({"Third": int, "Rise": float})
+        return self._rises
 
     def _ranked_history(self) -> pd.DataFrame:
         """Every table season's ranked assets from race 2 on, with their fantasy points."""
@@ -369,6 +437,17 @@ def _falling_means(history: pd.DataFrame) -> pd.Series:
 def _negative_shares(history: pd.DataFrame) -> pd.Series:
     """The share of rows that went negative, by price third."""
     return history.groupby("Third")["Negative"].mean()
+
+
+def _mean_rises(history: pd.DataFrame) -> pd.Series:
+    """The mean price move, by third on value per 1m."""
+    return history.groupby("Third")["Rise"].mean()
+
+
+def _priced_in(archive: pd.DataFrame, season: int, race: int) -> pd.DataFrame:
+    """One race's archive rows with a price."""
+    return archive[(archive["Season"] == season) & (archive["Race"] == race)
+                   & archive["Price"].notna()]
 
 
 def _thirds(values: pd.Series) -> pd.Series:
