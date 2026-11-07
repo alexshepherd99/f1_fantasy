@@ -400,16 +400,22 @@ def test_strategy_fastf1_raises_on_a_rise_for_an_asset_not_in_the_race(stub_tabl
         _strategy(max_cost=25.0, max_moves=2, price_rise_reward=5.0)
 
 
-def test_strategy_fastf1_solves_a_race_with_no_signal(stub_tables):
-    """As 2026 race 19, priced but with no metrics: every asset scores zero and it solves.
+@pytest.mark.parametrize(
+    "settings",
+    [{}, {"negative_penalty": 6.0}, {"budget_reward": 1.0}, {"price_rise_reward": 5.0}],
+)
+def test_strategy_fastf1_solves_a_race_with_no_signal(stub_tables, settings):
+    """As 2026 race 19, priced but with no metrics: every asset's value is zero and it solves.
 
-    At the default settings, DRS falls to the default pick. The objective's value is not
-    checked: with every coefficient zero, PuLP swaps in a ``__dummy`` variable that CBC
-    never sets, so ``value()`` gives None rather than 0.
+    DRS falls to the default pick. A race with no signal has no rises, as the stub gives
+    by default, but chances and cost come from prices, so the penalty and the budget
+    reward still count. The objective's value is not checked: with every coefficient
+    zero, PuLP swaps in a ``__dummy`` variable that CBC never sets, so ``value()`` gives
+    None rather than 0.
     """
     tables, _ = stub_tables
     tables._values = {}
-    strat = _strategy(max_cost=25.0, max_moves=2)
+    strat = _strategy(max_cost=25.0, max_moves=2, **settings)
 
     problem = strat.execute()
 
