@@ -71,15 +71,7 @@ def driver_positions(
         ValueError: A driver in the race matches no fantasy pair or more than one, or
             lacks a value the signal adds up.
     """
-    rows = add_signal_inputs(_race_rows(metrics, pairs, season, race))
-    rows["signal"] = pd.Series(float("nan"), index=rows.index, dtype=float)
-    for race_format, slots in SIGNAL_SLOTS.items():
-        mask = rows["format"] == race_format
-        rows.loc[mask, "signal"] = combination_signal(rows[mask], slots)
-
-    _raise_for(rows[rows["signal"].isna()]["Driver"], "Missing signal input", season, race)
-    rows["signal"] = rows["signal"].round(_SIGNAL_DECIMALS)
-    return _ranked(rows, "signal", "Asset")
+    return _ranked(_signal_rows(metrics, pairs, season, race), "signal", "Asset")
 
 
 def constructor_places(
@@ -344,6 +336,25 @@ def _carrier(rows: pd.DataFrame, asset_type: AssetType) -> pd.Series:
 def _look_up(table: pd.Series, key: int) -> float:
     """A key's value, a key past the table's end taking the last one."""
     return float(table[min(key, table.index.max())])
+
+
+def _signal_rows(
+    metrics: pd.DataFrame, pairs: pd.DataFrame, season: int, race: int
+) -> pd.DataFrame:
+    """One race's metrics rows, as ``_race_rows`` gives them, with each driver's ``signal``.
+
+    Raises:
+        ValueError: As for ``_race_rows``, or a driver lacks a value the signal adds up.
+    """
+    rows = add_signal_inputs(_race_rows(metrics, pairs, season, race))
+    rows["signal"] = pd.Series(float("nan"), index=rows.index, dtype=float)
+    for race_format, slots in SIGNAL_SLOTS.items():
+        mask = rows["format"] == race_format
+        rows.loc[mask, "signal"] = combination_signal(rows[mask], slots)
+
+    _raise_for(rows[rows["signal"].isna()]["Driver"], "Missing signal input", season, race)
+    rows["signal"] = rows["signal"].round(_SIGNAL_DECIMALS)
+    return rows
 
 
 def _race_rows(
