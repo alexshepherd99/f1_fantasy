@@ -23,6 +23,7 @@ from fast_f1.indicator_analysis import (
     add_signal_inputs,
     combination_signal,
 )
+from fast_f1.metrics import get_rolling_window_races
 from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, load_existing_metrics
 from import_data.derivations import get_race_driver_constructor_pairs
 from import_data.import_history import _FILE_ARCHIVE_INPUTS, load_all_archive_data
@@ -72,6 +73,33 @@ def driver_positions(
             lacks a value the signal adds up.
     """
     return _ranked(_signal_rows(metrics, pairs, season, race), "signal", "Asset")
+
+
+def driver_values(
+    metrics: pd.DataFrame, pairs: pd.DataFrame, season: int, race: int
+) -> dict[str, float]:
+    """Each driver's signal value in one race, on a championship points per race scale.
+
+    The race's best signal gets the field's highest recent championship points per race,
+    its worst gets the lowest, and every other driver falls in proportion between. Per
+    race is ``RollingPoints`` divided by the races its window covers. A driver with no
+    ``RollingPoints`` takes no part in setting that range. See
+    ``docs/fastf1_v2/requirements.md``, question 1. Arguments are as for
+    ``driver_positions``.
+
+    Returns:
+        Values keyed by the ``DRIVERCODE@CONSTRUCTOR`` identifier. Empty when the
+        metrics hold no rows for the race. A fantasy driver with no metrics row has no
+        value.
+
+    Raises:
+        ValueError: As for ``driver_positions``.
+    """
+    rows = _signal_rows(metrics, pairs, season, race)
+    per_race = rows["RollingPoints"] / len(get_rolling_window_races(race))
+    low, high = per_race.min(), per_race.max()
+    share = (rows["signal"] - rows["signal"].min()) / (rows["signal"].max() - rows["signal"].min())
+    return dict(zip(rows["Asset"], (low + share * (high - low)).astype(float)))
 
 
 def constructor_places(

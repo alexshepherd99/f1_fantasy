@@ -5,6 +5,7 @@ from fast_f1.signal import (
     SignalTables,
     constructor_places,
     driver_positions,
+    driver_values,
     load_signal_tables,
 )
 
@@ -20,6 +21,7 @@ def _row(race: int, driver: str, driver_rolling: float, constructor_rolling: flo
         "Position": 1.0,
         "GridPosition": 1.0,
         "Points": 25.0,
+        "RollingPoints": driver_rolling * 100,
         "RollingPointsRank": driver_rolling,
         "ConstructorRollingPoints": constructor_rolling * 100,
         "ConstructorRollingPointsRank": constructor_rolling,
@@ -120,6 +122,38 @@ def test_only_the_requested_race_is_ranked_and_keys_use_that_races_pairs():
     assert positions == {"LAW@RED": 1, "TSU@VRB": 2}
 
 
+def _values(rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024) -> dict:
+    return driver_values(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
+
+
+@pytest.mark.parametrize("race, races_covered", [(2, 1), (3, 2), (4, 3), (10, 3)])
+def test_driver_values_stretch_the_signal_onto_recent_points_per_race(race, races_covered):
+    # Signals 1.0, 0.5 and 0.0. The field's recent points run from 6 to 30 a race, and
+    # each driver's own points play no part beyond setting that range.
+    values = _values(
+        [
+            _row(race, "VER", 0.5, 0.5, RollingPoints=30 * races_covered),
+            _row(race, "NOR", 0.25, 0.25, RollingPoints=6 * races_covered),
+            _row(race, "ALB", 0.0, 0.0, RollingPoints=15 * races_covered),
+        ],
+        _pairs(race, "VER@RED", "NOR@MCL", "ALB@WIL"),
+        race=race,
+    )
+    assert values == pytest.approx({"VER@RED": 30.0, "NOR@MCL": 18.0, "ALB@WIL": 6.0})
+
+
+def test_a_driver_with_no_recent_points_is_left_out_of_the_range():
+    values = _values(
+        [
+            _row(2, "VER", 0.5, 0.5, RollingPoints=25),
+            _row(2, "ALB", 0.0, 0.0, RollingPoints=5),
+            _row(2, "BEA", 0.25, 0.25, RollingPoints=None),
+        ],
+        _pairs(2, "VER@RED", "ALB@WIL", "BEA@FER"),
+    )
+    assert values == pytest.approx({"VER@RED": 25.0, "BEA@FER": 15.0, "ALB@WIL": 5.0})
+
+
 def _places(rows: list[dict], pairs: list[dict], race: int = 2, season: int = 2024) -> dict:
     return constructor_places(pd.DataFrame(rows), pd.DataFrame(pairs), season, race)
 
@@ -160,7 +194,7 @@ def test_constructors_are_reached_through_the_requested_races_pairs():
     assert places == {"RED": 1, "VRB": 2}
 
 
-@pytest.mark.parametrize("rank", [_positions, _places])
+@pytest.mark.parametrize("rank", [_positions, _values, _places])
 def test_a_races_own_results_do_not_move_its_signal(rank):
     pairs = _pairs(2, "VER@RED", "HAM@MER", "NOR@MCL")
     before = [_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3), _row(2, "NOR", 0.1, 0.1)]
@@ -174,18 +208,18 @@ def test_a_races_own_results_do_not_move_its_signal(rank):
     assert len(rank(after, pairs)) == 3
 
 
-@pytest.mark.parametrize("rank", [_positions, _places])
+@pytest.mark.parametrize("rank", [_positions, _values, _places])
 def test_a_race_with_no_metrics_rows_gives_no_ranking(rank):
     assert rank([_row(3, "VER", 0.5, 0.5)], _pairs(2, "VER@RED")) == {}
 
 
-@pytest.mark.parametrize("rank", [_positions, _places])
+@pytest.mark.parametrize("rank", [_positions, _values, _places])
 def test_a_driver_with_no_fantasy_pair_is_an_error(rank):
     with pytest.raises(ValueError, match="2024 race 2: HAM"):
         rank([_row(2, "VER", 0.5, 0.5), _row(2, "HAM", 0.3, 0.3)], _pairs(2, "VER@RED"))
 
 
-@pytest.mark.parametrize("rank", [_positions, _places])
+@pytest.mark.parametrize("rank", [_positions, _values, _places])
 def test_a_driver_matching_two_fantasy_pairs_is_an_error(rank):
     with pytest.raises(ValueError, match="2024 race 2: VER"):
         rank([_row(2, "VER", 0.5, 0.5)], _pairs(2, "VER@RED", "VER@VRB"))
