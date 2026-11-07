@@ -42,13 +42,7 @@ alongside in `requirements.md`, and the steps in `plan.md`.
 - Step 12 done 2026-11-07: `negative_chance` by price third and `price_rise` by value-per-1m
   third, run on every stored race from race 2. The expected-points table stays until step
   13.1. Step 13 is next.
-- Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
-  tested; the objective scores in expected fantasy points by signal position; a constructor
-  scores on its own rolling place, converted the same way; negatives get no separate term in
-  the base strategy, with a soft penalty as a tested variant; DRS sits inside the objective at
-  a coefficient of 1, with zero as the comparison; the signal is built from the component
-  columns, leaving `AggregateRank` to its own backlog item; and the verdict is the harness's
-  across four seasons, with coefficients fixed on 2023–25 before 2026 is run.
+- Decisions so far: see `requirements.md`, *Decisions so far*, which is kept current.
 
 ## 2026-11-01 — Sizing the two levers in the brief
 
