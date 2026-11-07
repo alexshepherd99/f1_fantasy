@@ -282,3 +282,32 @@ signal, and one command or documented sequence running both stages.
 would have to build the rows before its first strategy call.
 
 Raised by Alex 2026-11-06, during `fastf1_v2` step 6.
+
+## Re-assess `StrategyFastF1`'s tuning values when 2026 finishes
+
+**For Alex, once the 2026 season is over.** `fastf1_v2` step 15.1 set the
+three values tried for each lever from measures on 2023–25 only:
+
+- negative penalty 6.5, 13 and 26;
+- budget reward 0.1, 0.25 and 0.5;
+- price-rise reward 5, 10 and 20.
+
+2026 was left out deliberately, as it is the season the verdict is judged on.
+Once it finishes, re-run the measures with 2026 included and decide whether the
+values, and the setting step 16 chose from them, still hold. The measures are:
+
+- fantasy points per value unit;
+- what a negative costs, in value units;
+- value per 1m of price;
+- races left after each race.
+
+The method and the 2023–25 figures are in `docs/fastf1_v2/log.md`, *Step 15.1*.
+2026's results so far went negative more often than earlier seasons': 18.5% of
+driver results and 18.2% of constructor results. In 2023–25 the figures were 10%
+to 16% (`docs/fastf1_v2/log.md`, *Sizing the two levers in the brief*). So the
+penalty's values are the likeliest to move.
+
+This sits beside `fastf1_v2` step 18's item to rerun the 2026 back-test when the
+season finishes. Do this one first, as it may change what that rerun tests.
+
+Raised by Alex 2026-11-07, during `fastf1_v2` step 15.1.

@@ -1934,3 +1934,70 @@ Mean final total points were 5,971 for FastF1 and 5,472 for P2PM. Budgets were n
 
 2024 and 2025 race by race, and the strategy through the back-test harness. Neither is part of
 this check. Step 16 runs the harness.
+
+## 2026-11-07 — Step 15.1: the values' scale, and the tuning values
+
+### In plain language
+
+- **The tuning values are fixed, before any run:**
+  - negative penalty 6.5, 13 and 26;
+  - budget reward 0.1, 0.25 and 0.5;
+  - price-rise reward 5, 10 and 20.
+
+  Alex agreed them on 2026-11-07, and they are not to be adjusted after seeing results.
+- **The penalty and the price-rise reward are each centred on what the measure points to,
+  at half, the same and double.** A negative costs about 13 value units. 1m of expected
+  rise is worth about 10.
+- **The budget reward is set well below what 1m buys.** At 0.93, which is what 1m buys, a
+  reward would make spend count as much as the value it buys, and spending the whole budget
+  has lost before: Max Budget trails by 21–36%. So the three values are about a ninth, a
+  quarter and a half of it.
+- **Every measure held steady across 2023–25.** No season's figure was more than 13% from
+  the pooled one.
+- **Alex is to re-assess these values when 2026 finishes,** on measures that then include
+  2026. That is a `BACKLOG.md` item.
+
+### What was measured
+
+A throwaway script, not kept, on 2023–25 from race 2, leaving 2026 out. It took each asset's
+value from `load_signal_tables().values`, and its price and actual fantasy points from the
+archive: 2,008 asset-races, 1,338 drivers and 670 constructors. These are the same
+asset-races as step 14.1.
+
+| Measure | Pooled | By season, 2023 / 2024 / 2025 |
+| --- | --- | --- |
+| Fantasy points per value unit: the slope of points on value | 1.73 | 1.74 / 1.71 / 1.75 |
+| How far a negative falls below what its value predicts, in value units | 13.4 | 12.7 / 14.1 / 13.3 |
+| Value per 1m of price: the median of each race's slope of value on price | 0.93 | 1.01 / 0.98 / 0.81 |
+| Races left after a race | 10.7 mean, 11 median | |
+
+More detail:
+
+- **Negatives:** 299 of the 2,008 went negative, at −11.8 fantasy points on average, and 23.2
+  below the line for their value. Dividing by 1.73 gives 13.4 value units: 12.9 for drivers
+  and 14.8 for constructors.
+- **Price:** value per 1m is 0.70 for drivers and 1.24 for constructors. The pooled figure's
+  interquartile range across races is 0.81 to 1.03.
+
+### How the values follow
+
+- **Negative penalty.** The term is the penalty times the chance, so a penalty equal to the
+  cost of a negative, 13, makes the term an expected cost. The values are half, the same and
+  double: 6.5, 13 and 26.
+
+  The cost may be partly counted twice. The fit of points on value already includes the
+  average rate of negatives, so only the gap in chance between price thirds is new. For
+  drivers that gap is 9% against 21%, about 1.5 value units at 13. Double allows for it
+  mattering more than that.
+- **Price-rise reward.** A 1m rise adds 1m of budget for every race left. 1m buys 0.93 value a
+  race, for 10.7 races on average, so it is worth about 10. The values are half, the same and
+  double: 5, 10 and 20. At 10, the tables' rises of 0 to 0.3m a race are worth 0 to 3 value
+  units, about the size of the penalty's term.
+
+  One setting holds all season, as the plan has it, so the reward overvalues a rise late in
+  the season and undervalues one early on. If the reward clears the bar, a version that
+  shrinks as the races run out is a possible later item.
+- **Budget reward.** A reward at 0.93 would count each 1m of spend as much as the value it
+  buys, which leans towards spending everything. So the three values are 0.1, 0.25 and 0.5.
+  For comparison, step 8's 0.25 to 1 were in fantasy points, which is 0.14 to 0.58 in value
+  units.

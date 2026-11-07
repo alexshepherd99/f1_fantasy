@@ -146,7 +146,10 @@ with Alex,** rather than tuning around it.
 
 ## Step 15 — Tuning values and harness
 
-1. Measure the values' scale on 2023–25: what a negative typically costs in the values' units,
+1. Done 2026-11-07: penalty 6.5, 13 and 26, budget reward 0.1, 0.25 and 0.5, price-rise
+   reward 5, 10 and 20. See `log.md`, *Step 15.1*. A `BACKLOG.md` item has Alex re-assess
+   them when 2026 finishes.
+   Measure the values' scale on 2023–25: what a negative typically costs in the values' units,
    and what 1m of price and an expected rise are worth in them. From that, set three values
    each for the penalty, the budget reward and the price-rise reward. **Log them before any
    run,** so that they cannot be adjusted after seeing results.
