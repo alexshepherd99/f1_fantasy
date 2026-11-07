@@ -3,7 +3,8 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Step 11 is next. Steps 17 and 18,
+redesign agreed*), and steps 11 to 16 build and tune it. Step 11 is done, and step 14.1 is
+next. Steps 17 and 18,
 numbered 9 and 10 before 2026-11-07, follow step 16. Requirements: `requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
@@ -54,7 +55,7 @@ Done, on the design with the table fault, so its choice of settings does not car
 
 ## Step 11 — `fast_f1/signal.py`: signal values
 
-As requirements question 1 and 2.
+Done 2026-11-07. See `log.md`, *Step 11*. As requirements question 1 and 2.
 
 - For a season and race, each driver's value: step 4's signal, stretched onto the race's
   recent championship points per race. That is `RollingPoints` divided by the races it covers,

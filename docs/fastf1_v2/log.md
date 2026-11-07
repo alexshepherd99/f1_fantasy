@@ -35,6 +35,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
 - Signal redesign agreed 2026-11-07, with steps 11 to 16 added to build and tune it. Steps 9
   and 10 were renumbered 17 and 18 the same day, to run in number order; entries dated
   before then name them by their old numbers.
+- Step 11 done 2026-11-07: `driver_values` and `constructor_values`, run on every stored race
+  from race 2. Step 14.1 is next.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -1350,3 +1352,54 @@ Agreed with Alex before any code, after each case was checked against the stored
 Also found, and handled without a decision: drivers with no rolling points, as newcomers or
 stand-ins with no race in the window (12 rows after race 1), are left out of the field's
 highest and lowest. That changes nothing, as the lowest is 0 in every race after race 1.
+
+## 2026-11-07 — Step 11: signal values
+
+### In plain language
+
+- **Each driver and constructor now has a value in championship points per race.** In 2023
+  race 10 VER is 25.7 and LEC 18.7, 7.0 apart, the 21 points the design agreed on the
+  three-race scale. RED is 43.2 and FER 34.7.
+- **It ran on every stored race from race 2, 84 in all, with no error and no missing value.**
+  The two withdrawn drivers leave their teams with one car's value: Williams 3.21 in 2024
+  race 3, Aston Martin 3.23 in 2025 race 9.
+- **Nothing uses the values yet.** Step 13 puts them in the strategy; step 14.1 checks first
+  whether they track fantasy points at least as well as the old table.
+
+### Code
+
+`fast_f1/signal.py` gains `driver_values` and `constructor_values`, keyed as
+`driver_positions` and `constructor_places` are, which stay until steps 12 and 13 stop using
+them. The signal sum moved into `_signal_rows`, shared with `driver_positions`, with no change
+in behaviour.
+
+### Tests
+
+Each behaviour was seen failing before it passed, against a stub returning nothing or as a
+silent return where an error was due. Mutations each failed the suite: reading the next race,
+dividing by 3 at every race, dropping the bottom of the range, counting missing rolling
+points as zero, and, for constructors, leaving a constructor unvalued when a driver has none,
+dropping the empty-race guard, and taking pairs from every race. Two things surfaced and were
+fixed:
+
+- The rule that a missing driver counts as zero passes with any plain sum, so it is checked by
+  mutation, and a redundant `fillna` was removed.
+- Taking pairs from every race first passed, as other races' drivers have no value; the test
+  now holds a constructor in another race only, which that mutation would value at zero.
+
+The look-ahead, no-rows, no-pair and two-pairs tests now run on both new functions too. The
+full suite is green, 482 tests, up from 463.
+
+### Real-data check
+
+Both functions on every stored race from race 2, 2023–26:
+
+| Season | Mean top driver value | Mean top constructor value |
+| --- | --- | --- |
+| 2023 | 24.0 | 42.0 |
+| 2024 | 19.4 | 36.6 |
+| 2025 | 21.2 | 38.5 |
+| 2026 | 21.3 | 38.8 |
+
+The lowest driver value is 0 in every race, and the highest runs 15.7 to 26.0. Every
+constructor in a race's pairs gets a value.
