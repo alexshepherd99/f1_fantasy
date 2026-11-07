@@ -2077,7 +2077,8 @@ covers. Step 16 runs them all.
   of teams. Step 8's design trailed by 315 to 385 in every season, on the same teams. These
   are the seasons that flatter the signal, so 2026, in step 17, is the fair read.
 - **2025's loss looks like budget.** The base ends 2025 10.6m behind P2PM, and no reward
-  closed that gap.
+  closed that gap. In 2025, price moves followed recent points per 1m far more closely than in
+  2023–24, which is what P2PM picks on (*Why 2025 ends 10m behind on budget*, below).
 - **The format check finds no sprint effect,** so no sprint variant is added. Alex chose to
   run it against P2PM, since the chosen setting is the base itself and so has no gap to the base
   to split. In 2025 the loss falls on normal weekends.
@@ -2213,6 +2214,54 @@ Sprint weekends are 29%, 26% and 26% of each season's races from race 2.
 On these 15 teams, the mean final totals were 5,971, 4,783 and 4,943 for FastF1 and 5,472,
 4,550 and 5,060 for P2PM, and the final budgets 135.1, 130.5 and 129.0 against 135.6, 127.3 and
 139.5. Each season's gap has the same sign as the 300-team run's.
+
+### Why 2025 ends 10m behind on budget
+
+Alex asked, after the results above.
+
+- **The gap builds all season, not in one event.** The base is 1m behind by race 4, 3.5m by
+  race 10, 7.7m by race 15 and 10.5m at the end.
+- **Almost all of it is price moves on what each strategy held.** Price moves added 21.8m a
+  team for the base against 33.5m for P2PM.
+- **No single pick causes it.** It is spread across many midfield assets:
+  - P2PM held more of the cheap assets that rose, such as Hülkenberg (10.3 races a team
+    against 3.4), Kick Sauber, Russell, Stroll, Bearman, Racing Bulls and Aston Martin, each 0.6
+    to 2.2m of the gap.
+  - The base held more of the assets whose price fell, such as Sainz at Williams (8 races
+    against 3.6) and Lawson at Racing Bulls (13.9 against 1.3).
+  - Where both held an asset for as many races, P2PM still tended to earn more from it, as with
+    Mercedes, 2.9m against 2.6m, from holding it in the races before it rose.
+  - Only the Williams constructor clearly went the base's way, by 1.4m.
+- **What makes 2025 different.** In 2025, the next price move followed recent points per 1m
+  far more closely than in 2023–24. That is close to what P2PM picks on, so it was holding the
+  assets about to rise. In 2023–24 nothing predicted the moves well, and the base's value did as
+  well as P2PM's measure. P2PM's final budget fits this: 138.5m in 2025, against 127.3 to 135.8m
+  in 2023–24.
+- **Why the price-rise reward did not fix it.** This is reasoned, not run. Its expected rises
+  for 2025 come from 2023–24, where moves were nearly unpredictable. It gained 35 to 43 points
+  in 2025 at 5 and 10, and moved the budget by under 1m.
+- **Not known:** whether the game changed how it sets prices for 2025. The data shows only that
+  prices behaved differently. Alex is checking the game's rules. Whether 2026 behaves like 2025
+  matters for step 17, and 2026 has not been looked at.
+
+How well each measure, known when a team is picked, ranks the next race's price move: the mean
+per-race rank correlation, from race 2 to the second last:
+
+| Measure | Drivers 2023 / 2024 / 2025 | Constructors 2023 / 2024 / 2025 |
+| --- | --- | --- |
+| P2PM's measure, `P2PM Cumulative (3)` | 0.13 / 0.13 / 0.53 | 0.27 / 0.14 / 0.26 |
+| Points per 1m, `PPM Cumulative (3)` | 0.08 / 0.12 / 0.57 | 0.19 / 0.11 / 0.44 |
+| Points, `Points Cumulative (3)` | 0.15 / 0.13 / 0.44 | 0.24 / 0.13 / 0.14 |
+| The base's value | 0.22 / 0.13 / 0.24 | 0.32 / 0.14 / 0.03 |
+| The base's value per 1m | 0.15 / 0.13 / 0.38 | 0.24 / 0.10 / 0.20 |
+| Price | 0.17 / 0.10 / 0.03 | 0.26 / 0.14 / −0.10 |
+
+The constructor figures rest on about 10 assets a race, so they are noisy.
+
+Two throwaway scripts, not kept. The budget figures re-simulate 2025 race by race for the
+format check's 15 teams, and attribute to each held asset its price move from that race to the
+next, with no move missing a price. The correlations use the archive's prices and rolling
+measures and `load_signal_tables().values`, for 2023–25 only.
 
 ### Not run
 
