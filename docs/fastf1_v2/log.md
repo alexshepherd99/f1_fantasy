@@ -44,6 +44,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   13.1. Step 13 is next.
 - Step 13.1 done 2026-11-07: `StrategyFastF1` scores step 11's values, and the
   expected-points table and position code are gone. Step 13.2 is next.
+- Step 13.2 done 2026-11-07: the DRS code already matches the plan, with no change needed.
+  Step 13.3 is next.
 - Decisions so far: see `requirements.md`, *Decisions so far*, which is kept current.
 
 ## 2026-11-01 — Sizing the two levers in the brief
@@ -1651,3 +1653,43 @@ The full suite is green, 467 tests, down from 490: three added and 26 removed.
   untested and serves only a table missing its top third.
 - Not run: the strategy through the back-test harness. Only the single 2025 race 5 solve, in
   the test suite, has run on real data.
+
+## 2026-11-07 — Step 13.2: DRS checked against the plan
+
+### In plain language
+
+- **The DRS code already does what the plan asks, so nothing changed.** As agreed at step
+  13.1, this part is a check rather than a build.
+- **The tests would catch it drifting.** Each of the plan's DRS rules was broken on purpose in
+  turn, and every break failed a test.
+
+### What was checked
+
+Against plan item 13.2, in `linear/strategy_fastf1.py` and `StrategyBase.get_drs_objective_term`:
+
+- **The term is the helper's, on the values.** A driver with no value counts as zero, and the
+  helper's constraints make exactly one selected driver the nominee.
+- **It is scaled by `drs_coefficient`, and left out at zero,** with no DRS variables or
+  constraints added.
+- **The nominee is the selected driver with the best value,** at any coefficient, ties going to
+  the first identifier. When no selected driver is valued above zero, an empty string leaves
+  the pick to the default.
+
+Six mutations, each restored from a copy with a green run after it, and each failing the
+suite:
+
+| Mutation | Failed |
+| --- | --- |
+| Coefficient ignored | The coefficient test at 0.5 |
+| Term kept at zero | The left-out-at-zero test |
+| Term on a flat 1.0, not values | The coefficient test at 0.5 and 1, and the nominee test at 1 |
+| Nominee ignores the selected team | The nominee test at 0 |
+| No default when no driver has a value | Both no-signal DRS tests and the no-signal solve |
+| Ties not broken on the identifier | The tie test |
+
+### One wording difference, left as it is
+
+The plan says the default picks "when none has one". The code uses it when no selected driver
+is valued above zero, and values bottom out at exactly 0. The two differ only when all five
+selected drivers are valued 0. The default then takes the dearest of them, who also scores 0,
+so the result is the same.
