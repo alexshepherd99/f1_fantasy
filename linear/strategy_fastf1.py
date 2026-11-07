@@ -30,11 +30,15 @@ class StrategyFastF1(StrategyBase):
     negative_penalty : float
         Value taken from the objective per unit of each selected asset's chance of going
         negative. The DRS driver's chance is not doubled. At zero the chances are not read.
+    price_rise_reward : float
+        Value added to the objective per 1m of each selected asset's expected price rise.
+        An asset with no value has no rise and scores zero for it. The DRS driver's rise
+        is not doubled. At zero the rises are not read.
 
     Raises
     ------
     ValueError
-        If the values or chances name an asset the race does not have, as identifiers
+        If the values, chances or rises name an asset the race does not have, as identifiers
         that disagree would otherwise score every asset zero and still solve, or an
         available asset has no chance of going negative.
     """
@@ -45,12 +49,14 @@ class StrategyFastF1(StrategyBase):
         drs_coefficient: float = 1.0,
         budget_reward: float = 0.0,
         negative_penalty: float = 0.0,
+        price_rise_reward: float = 0.0,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._drs_coefficient = drs_coefficient
         self._budget_reward = budget_reward
         self._negative_penalty = negative_penalty
+        self._price_rise_reward = price_rise_reward
         tables = load_signal_tables(fn_metrics)
         self._values = tables.values(self._season_year, self._race_num)
         # An asset with no value is left out, so only unknown assets are checked
@@ -62,6 +68,12 @@ class StrategyFastF1(StrategyBase):
             self._negative_chance = tables.negative_chance(self._season_year, self._race_num)
             # Every priced asset has a chance, so one missing is a defect
             self._check_assets(self._negative_chance, "Negative chance", every_asset=True)
+
+        self._price_rise = {}
+        if self._price_rise_reward != 0.0:
+            self._price_rise = tables.price_rise(self._season_year, self._race_num)
+            # Only an asset with a value has a rise, so, as for values, only unknown assets are checked
+            self._check_assets(self._price_rise, "Price rise", every_asset=False)
 
     def _check_assets(self, values: dict[str, float], what: str, every_asset: bool) -> None:
         """Raise if `values` names an asset the race does not have or, with `every_asset`, misses one."""
@@ -106,6 +118,13 @@ class StrategyFastF1(StrategyBase):
                 self._negative_chance[i] * constructors[i] for i in self._all_available_constructors
             ]
             objective -= self._negative_penalty * lpSum(chance_drivers + chance_constructors)
+
+        if self._price_rise_reward != 0.0:
+            rise_drivers = [self._price_rise.get(i, 0.0) * drivers[i] for i in self._all_available_drivers]
+            rise_constructors = [
+                self._price_rise.get(i, 0.0) * constructors[i] for i in self._all_available_constructors
+            ]
+            objective += self._price_rise_reward * lpSum(rise_drivers + rise_constructors)
 
         self._lp_variables[VarType.OptimiseMax] = objective
         problem += self._lp_variables[VarType.OptimiseMax]

@@ -49,8 +49,11 @@ class _StubTables:
     def __init__(self, values: dict[str, float]):
         self._values = values
         self._negative_chance = {asset: 0.0 for asset in _PRICES}
+        # Only assets with a value have a rise, so tests name the ones they need
+        self._price_rise: dict[str, float] = {}
         self.requested: list[tuple[int, int]] = []
         self.negatives_requested: list[tuple[int, int]] = []
+        self.rises_requested: list[tuple[int, int]] = []
 
     def values(self, season: int, race: int) -> dict[str, float]:
         self.requested.append((season, race))
@@ -59,6 +62,10 @@ class _StubTables:
     def negative_chance(self, season: int, race: int) -> dict[str, float]:
         self.negatives_requested.append((season, race))
         return dict(self._negative_chance)
+
+    def price_rise(self, season: int, race: int) -> dict[str, float]:
+        self.rises_requested.append((season, race))
+        return dict(self._price_rise)
 
 
 @pytest.fixture
@@ -327,6 +334,72 @@ def test_strategy_fastf1_raises_on_an_available_asset_with_no_chance(stub_tables
         _strategy(max_cost=25.0, max_moves=2, negative_penalty=6.0)
 
 
+@pytest.mark.parametrize(
+    "price_rise_reward, team, objective",
+    [
+        (0.0, {"D2@C1", "D3@C2", "C1", "C2"}, 20.0),
+        (1.0, {"D2@C1", "D3@C2", "C1", "C2"}, 20.3),
+        (5.0, {"D2@C1", "D6@C3", "C1", "C2"}, 22.5),
+    ],
+)
+def test_strategy_fastf1_rewards_each_selected_assets_expected_price_rise(
+    stub_tables, price_rise_reward, team, objective
+):
+    """The reward adds points per 1m of expected rise, for drivers and constructors alike.
+
+    One move: D3 on 10 points rising 0.1 is best below a reward of 2.5, and D6 on 9
+    points rising 0.5 above it. C1's 0.2 counts on every team. D2 has no rise and
+    scores zero for it, as an asset with no value has none.
+    """
+    tables, _ = stub_tables
+    tables._values = {"D2@C1": 10.0, "D3@C2": 10.0, "D6@C3": 9.0}
+    tables._price_rise = {"D3@C2": 0.1, "D6@C3": 0.5, "C1": 0.2}
+    strat = _strategy(max_cost=999.0, max_moves=1, drs_coefficient=0.0, price_rise_reward=price_rise_reward)
+
+    strat.execute()
+
+    assert _selected(strat) == team
+    assert strat._lp_variables[VarType.OptimiseMax].value() == pytest.approx(objective)
+
+
+def test_strategy_fastf1_does_not_double_the_drs_drivers_rise(stub_tables):
+    """DRS doubles a driver's value, but not their price change, so their rise counts once.
+
+    One move: D3 joins D2 and C1, each with a rise, and D2 or D3 takes DRS on 10.
+    Values 20, DRS 10 and rises 0.2 + 0.5 + 0.5 give 31.2, found by brute force. A
+    doubled rise would give DRS to D3, the higher rise, and 31.7.
+    """
+    tables, _ = stub_tables
+    tables._values = {"D2@C1": 10.0, "D3@C2": 10.0, "D6@C3": 9.0}
+    tables._price_rise = {"D2@C1": 0.2, "D3@C2": 0.5, "D6@C3": 0.1, "C1": 0.5}
+    strat = _strategy(max_cost=999.0, max_moves=1, drs_coefficient=1.0, price_rise_reward=1.0)
+
+    strat.execute()
+
+    assert _selected(strat) == {"D2@C1", "D3@C2", "C1", "C2"}
+    assert strat._lp_variables[VarType.OptimiseMax].value() == pytest.approx(31.2)
+
+
+@pytest.mark.parametrize("price_rise_reward, requested", [(0.0, []), (5.0, [(2025, 7)])])
+def test_strategy_fastf1_reads_the_rises_only_with_a_reward(stub_tables, price_rise_reward, requested):
+    """At zero the rises are never read. Otherwise they are this season and race's."""
+    tables, _ = stub_tables
+
+    _strategy(max_cost=25.0, max_moves=2, race_num=7, price_rise_reward=price_rise_reward)
+
+    assert tables.rises_requested == requested
+
+
+@pytest.mark.parametrize("unknown", ["D7@C9", "C9"])
+def test_strategy_fastf1_raises_on_a_rise_for_an_asset_not_in_the_race(stub_tables, unknown):
+    """As for values, a rise naming an asset the race does not have raises."""
+    tables, _ = stub_tables
+    tables._price_rise[unknown] = 0.1
+
+    with pytest.raises(ValueError, match=unknown):
+        _strategy(max_cost=25.0, max_moves=2, price_rise_reward=5.0)
+
+
 def test_strategy_fastf1_solves_a_race_with_no_signal(stub_tables):
     """As 2026 race 19, priced but with no metrics: every asset scores zero and it solves.
 
@@ -356,13 +429,16 @@ def test_strategy_fastf1_keeps_the_move_limit_at_race_four(stub_tables):
     assert _selected(strat) == {"D2@C1", "D6@C3", "C2", "C3"}
 
 
-@pytest.mark.parametrize("negative_penalty", [0.0, 6.0])
-def test_strategy_fastf1_solves_a_real_race(negative_penalty):
+@pytest.mark.parametrize(
+    "settings", [{}, {"negative_penalty": 6.0}, {"price_rise_reward": 5.0}]
+)
+def test_strategy_fastf1_solves_a_real_race(settings):
     """Built by the factory on the real metrics file and archive, for 2025 race 5.
 
     The signal's identifiers match the race's, every selected asset has a positive
     value, and the LP solves with a full team. With a penalty, every
-    available asset has a chance of going negative.
+    available asset has a chance of going negative. With a reward, every rise names
+    an asset in the race.
     """
     season = factory_season(*load_with_derivations(season=2025), 2025)
     team = Team(num_drivers=5, num_constructors=2, unused_budget=50.0)
@@ -371,7 +447,7 @@ def test_strategy_fastf1_solves_a_real_race(negative_penalty):
     for constructor in ["KCK", "AST"]:
         team.add_asset(AssetType.CONSTRUCTOR, constructor)
 
-    strategy = functools.partial(StrategyFastF1, negative_penalty=negative_penalty)
+    strategy = functools.partial(StrategyFastF1, **settings)
     strat = factory_strategy(season.races[5], season.races[4], team, strategy, max_moves=2, season_year=2025)
     problem = strat.execute()
 
