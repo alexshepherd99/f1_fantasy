@@ -1820,3 +1820,57 @@ The full suite is green, 477 tests, up from 468.
 
 The reward through the back-test harness. Only the 2025 race 5 solve has run on real data
 with it.
+
+## 2026-11-07 — Step 13.6: a race with no signal checked against the plan
+
+### In plain language
+
+- **A race with no signal already solves, so the strategy did not change.** This finishes
+  step 13.
+- **It is now tested with each penalty and reward switched on,** not just at the defaults.
+  The price-rise reward, new in step 13.5, had never been tried on such a race.
+- **On real data, 2026 race 19 solves at every setting,** with a full team and the default
+  DRS pick.
+
+### What "every asset zero" means
+
+Every asset's **value** is zero, and so is its expected rise, as only an asset with a value
+has one. The chance of going negative and the team's cost come from prices, not the signal,
+so the penalty and the budget reward still count. Agreed with Alex to leave it so: 2026 race
+19 has no points to score, so this cannot move the result, as the requirements already note.
+
+### Tests
+
+`test_strategy_fastf1_solves_a_race_with_no_signal` now also runs with a penalty of 6, a
+budget reward of 1 and a price-rise reward of 5. The stub gives no rises by default, as the
+real tables do for a race with no signal. Each case passed on the existing code, as expected
+of a check, so three mutations, each on a copy and restored after, show the cases can fail:
+
+| Mutation | Failed |
+| --- | --- |
+| Rises looked up without a default of zero | The price-rise case, and three step 13.5 tests |
+| No rises raising | The price-rise case, and the read-with-a-reward test |
+| No values raising | All four cases, and both no-signal DRS tests |
+
+The penalty and budget reward cases guard only against a break that stops the solve. No
+mutation specific to them was found that a no-signal race would expose.
+
+The full suite is green, 480 tests, up from 477.
+
+### Real-data check
+
+From a throwaway script, not kept, on 2026 race 19, which is priced but has no metrics rows:
+no values, no rises, and chances for all 33 assets. The team was the five cheapest drivers in
+races 18 and 19 and the two cheapest constructors, with two moves.
+
+| Settings | Status | Objective | Chances read | Rises read | Selected | DRS |
+| --- | --- | --- | --- | --- | --- | --- |
+| Defaults | Optimal | None | 0 | 0 | 7 | Default |
+| Penalty 6 | Optimal | -6.91 | 33 | 0 | 7 | Default |
+| Budget reward 1 | Optimal | 77.1 | 0 | 0 | 7 | Default |
+| Price-rise reward 5 | Optimal | None | 0 | 0 | 7 | Default |
+| All three | Optimal | 70.19 | 33 | 0 | 7 | Default |
+
+The objective is None where every coefficient is zero, as step 6 found of PuLP.
+
+Not run: the strategy through a season. Step 14.2 is the first to do that.
