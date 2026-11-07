@@ -1125,3 +1125,142 @@ entry first, two of them written in the entry above. Nothing was decided or chan
   withdrawn race-4 chip assumption is one line under the working assumptions. The original
   backlog entry keeps the notes it carried in `BACKLOG.md`. The two added to it during this
   effort moved to the list of what has since changed.
+
+## 2026-11-07 — Redesign evidence: the game's rules and three checks
+
+Gathered while agreeing the signal redesign with Alex, which the next entry records.
+
+### In plain language
+
+- **The game's scoring rules are now written down here,** from text Alex pasted, as the rules
+  page could not be fetched. A constructor scores its two drivers' points plus extras of its
+  own, and the −20 for not being classified dominates the negatives.
+- **A retirement cannot be predicted from recent history.** Neither a driver's own recent
+  retirements nor their team's, over three races or the season so far, did better than one flat
+  rate for everyone, in any of 2023–25.
+- **Price does predict going negative.** The cheapest third of drivers went negative twice as
+  often as the dearest third, and constructors in the dearest third almost never did.
+- **Price rises are partly predictable,** weakly in 2023–24 and strongly in 2025. The signal's
+  own value for money is the most even predictor across the three seasons.
+- **Option 3, starting from each asset's own recent fantasy points, was considered and not
+  pursued.** See the last section.
+
+### The game's rules
+
+The rules page builds its content with JavaScript, so a fetch returned only the page's shell.
+Alex pasted the text on 2026-11-07. It covers scoring, not price changes or chips.
+
+- **Team lock:** just before qualifying on a normal weekend, and after sprint qualifying on a
+  sprint weekend.
+- **Qualifying:** 10 points for pole down to 1 for 10th, and −5 for not classified,
+  disqualified or no time set in Q1.
+- **Sprint:** 8 points for 1st down to 1 for 8th, ±1 a place gained or lost (losses capped at
+  −10), +1 an overtake, 5 for fastest lap, and −10 for not classified or disqualified.
+- **Race:** 25-18-15-12-10-8-6-4-2-1 for the top ten, ±1 a place gained or lost with no cap,
+  +1 an overtake, 10 for fastest lap, 10 for Driver of the Day (driver only), and −20 for not
+  classified or disqualified. The −20 applies to a driver who does not start too.
+- **Constructors:** their two drivers' qualifying, sprint and race points, less Driver of the
+  Day, plus:
+  - qualifying progression: −1 if neither driver reaches Q2, 1 for one in Q2, 3 for both in Q2,
+    5 for one in Q3 and 10 for both in Q3;
+  - pit stops: 0 to 20 points a stop by time band, 5 for the fastest, and 15 for a world record;
+  - a further −5, −10 or −20 per driver disqualified in qualifying, the sprint or the race.
+- **Transfers:** −10 per transfer beyond the free allowance.
+
+### Negatives
+
+From a throwaway script, not kept, on the metrics file and the archive, 2023–25 races 2
+onwards: 1,340 driver-races with 220 negatives, and 670 constructor-races with 80. 143 drivers
+were not classified, which here means retired, disqualified or withdrawn, and 140 of those were
+negative. Each season was predicted from bucket rates in the other two.
+
+The score is the chance a measure ranks an asset that hit the outcome above one that did not:
+0.50 is a coin toss. By held-out season, 2023 / 2024 / 2025:
+
+| Measure | Driver not classified | Driver negative | Constructor negative |
+| --- | --- | --- | --- |
+| A. Any negative in the last three races (step 5's) | 0.49 / 0.38 / 0.49 | 0.49 / 0.57 / 0.53 | 0.58 / 0.60 / 0.55 |
+| B. Own non-classification in the last three | 0.50 / 0.43 / 0.47 | 0.49 / 0.46 / 0.51 | 0.53 / 0.53 / 0.51 |
+| C. Team's non-classified cars in the last three | 0.50 / 0.43 / 0.48 | 0.49 / 0.49 / 0.44 | 0.50 / 0.54 / 0.45 |
+| Price third within the race, added as a control | 0.55 / 0.55 / 0.51 | 0.59 / 0.57 / 0.55 | 0.73 / 0.72 / 0.64 |
+
+A first run scored all three seasons together, which mixed their different base rates into the
+score: a flat rate scored 0.46–0.49, not 0.50. The table is scored within each season and
+averaged. The price control was added because every candidate scored near 0.50, which needed a
+measure the check could be seen to detect.
+
+Share going negative by price third, all three seasons together:
+
+| Price third | Drivers | Constructors |
+| --- | --- | --- |
+| Cheapest | 20.9% | 19.9% |
+| Middle | 18.4% | 16.4% |
+| Dearest | 10.2% | 2.6% |
+
+### Team reliability over the season so far
+
+Alex expected an unreliable team to make its drivers' −20 more likely, noting that the view may
+come from 2026, with two teams unreliable all season. 2026 stays out of the design, so this was
+tested on 2023–25 with a longer window than C. A team's rate was its non-classified cars over
+its cars in the season's earlier races, against the whole field's rate over the same races.
+That gave three buckets: none yet, at or below the field's rate, and above it. The script
+stopped with an error if any race at or after the one predicted was read. A control version
+that deliberately included the race itself shows the check would notice a leak.
+
+| Driver not classified, by held-out season | 2023 | 2024 | 2025 |
+| --- | --- | --- | --- |
+| Team's season so far | 0.49 | 0.48 | 0.45 |
+| Control, including the race itself | 0.68 | 0.73 | 0.68 |
+
+Drivers whose team was above the field's rate went on to be not classified 10.7% of the time,
+and drivers whose team had none yet 10.1%. Constructors show the same. 2023–25 may simply hold
+no team that was unreliable all season, which a back-test of 2026 would then show as a cost the
+design could not foresee.
+
+### Price rises
+
+From a second throwaway script, not kept. The target is the asset's price at the next race less
+its price at this one. Each measure was known at team lock, and the archive's points per 1m
+ends at the race before (`shift(1)` in `import_data/derivations.py`). Nothing was fitted, so no
+season is scored on what it taught.
+
+Moves are small: on average +0.11m a race for a driver and +0.18m for a constructor. The
+largest real move was about 1.5m in 2023, 1m in 2024 and 0.6m in 2025, when moves came in fixed
+steps, so the game's price rules differ by season.
+
+Mean within-race rank correlation with the move, 2023 / 2024 / 2025, where 0 is no better than
+chance:
+
+| Measure | Drivers | Constructors |
+| --- | --- | --- |
+| Price | 0.16 / 0.09 / 0.02 | 0.26 / 0.14 / −0.10 |
+| Signal value, option (b) | 0.21 / 0.12 / 0.24 | 0.32 / 0.13 / 0.02 |
+| Option (b) per 1m | 0.14 / 0.13 / 0.38 | 0.24 / 0.09 / 0.20 |
+| Recent fantasy points per 1m, P2PM's idea | 0.08 / 0.12 / 0.57 | 0.19 / 0.11 / 0.44 |
+
+On (b) per 1m, the dearest third rose more than the cheapest third by 0.05, 0.07 and 0.37m a
+race for drivers, and 0.08, 0.02 and 0.24m for constructors. 2025, the season the old strategy
+fell furthest behind on budget, is where every measure predicts best.
+
+A first run gave drivers a spread of 1.24m a race, against 0.32m for constructors. Some archive
+rows price a stand-in driver at 0 for a race and at full price around it, such as BEA in 2024
+and DEV in 2023, which gives moves of ±14m that are not real. The run above drops any move
+with a price of 0, 14 asset-races. Whether those rows fit the archive's rule that a
+non-participant has both points and price null was not checked, and the archive was not edited.
+
+### Option 3, considered and not pursued
+
+Alex asked for this to be recorded in detail.
+
+Option 3 was to start from each asset's own recent fantasy points, such as VER's 45.7 a race
+before 2023 race 10 against LEC's 21.7, and adjust that by the signal. Like (b), it keeps the
+size of a lead in real point totals, which was its purpose. It was not pursued for two reasons:
+
+- **It brings fantasy rolling points back.** Alex ruled on 2026-11-01 that the signal stays on
+  championship rolling points, after fantasy rolling points gave no measurable gain.
+- **Each asset's own total counts too much.** A driver with a poor run hit by retirements would
+  start low whatever FP3 said, where (b) takes only the race's top and bottom totals and lets
+  the signal place everyone between.
+
+It is also close to `StrategyMaxPoints`, which optimised recent fantasy points and trailed P2PM
+in all of 2023–25.
