@@ -2567,3 +2567,22 @@ read on whether the price-rise lever improves results. This is reasoned, and not
 
 **Alex accepted on 2026-11-07 that a rules-based price rise will have limited back-testing,**
 and asked for the change to be planned.
+
+## 2026-11-07 — Step 19: the conversion for estimate (a), fixed before the comparison
+
+Estimate (a) turns an asset's signal value into expected fantasy points for race *r*. Alex
+chose on 2026-11-07 a least-squares line with an intercept, fitted for drivers and
+constructors separately, over the plan's single slope through the origin. A bare slope would
+miss the baseline that fantasy points have and the value lacks, and constructors score
+differently from drivers.
+
+Fitted on 2023–24 only, races 2 onwards, on each scored asset with a value from
+`load_signal_tables().values`. 2025 is not in the fit, and this is logged before any 2025
+comparison is run:
+
+| Type | Asset-races | Fantasy points for race *r* | Correlation |
+| --- | --- | --- | --- |
+| Drivers | 879 | 1.538 + 1.469 × value | 0.58 |
+| Constructors | 440 | 5.948 + 1.687 × value | 0.71 |
+
+One throwaway script, not kept.
