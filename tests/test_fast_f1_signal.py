@@ -344,130 +344,153 @@ def test_negative_chance_reads_neither_its_own_season_nor_2026(season, varied):
     assert tables(-1000).negative_chance(season, 2) == tables(1000).negative_chance(season, 2)
 
 
-def _rising(*races: tuple) -> SignalTables:
-    """``SignalTables`` for price rises. Each race is ``(season, race, assets)``, each mapping
-    a driver identifier to ``(signal, driver_price, constructor_price)``, the driver being
-    their constructor's only one.
+def _signalled(*races: tuple) -> SignalTables:
+    """``SignalTables`` from races of ``(season, race, assets)``, each mapping a driver
+    identifier to ``(signal, price, points)``. Each driver is their constructor's only one,
+    at the same price and points.
 
-    Every race from 2 holds a signal of 1.0 with 30 recent points a race and one of 0.0 with
-    none, so a driver's value, and their constructor's, is 30 times their signal. A signal
-    of None gives the driver no metrics row.
+    A race holding a signal of 1.0 and one of 0.0 gives the first 30 recent points a race
+    and the second none, so a driver's value, and their constructor's, is 30 times their
+    signal. A signal of None gives the driver no metrics row.
     """
     metrics, drivers, constructors = [], [], []
     for season, race, assets in races:
         covered = len(get_rolling_window_races(race))
-        for driver_id, (signal, driver_price, con_price) in assets.items():
+        for driver_id, (signal, price, points) in assets.items():
             code, con = driver_id.split("@")
             if signal is not None:
                 metrics.append(_row(race, code, signal / 2, signal / 2, season=season,
                                     RollingPoints=30 * signal * covered if covered else None))
-            drivers.append({"Constructor": con, "Driver": driver_id, "Race": race,
-                            "Points": 5, "Season": season, "Price": driver_price})
-            constructors.append({"Constructor": con, "Race": race, "Points": 5,
-                                 "Season": season, "Price": con_price})
+            shared = {"Race": race, "Points": points, "Season": season, "Price": price}
+            drivers.append({"Constructor": con, "Driver": driver_id} | shared)
+            constructors.append({"Constructor": con} | shared)
     return SignalTables(pd.DataFrame(metrics), pd.DataFrame(drivers), pd.DataFrame(constructors))
 
 
-# 2023's history, races 2 to 4. Values are 30 for A, 15 for B and 0 for C. Per 1m, C is
-# lowest and B highest in every race. Driver moves to the next race: C -0.2, 0.0, +0.5,
-# whose mean differs from its median; A 0.0, +0.2, +0.4; B +0.2, +0.4, +0.6. Means C 0.1,
-# A 0.2, B 0.4. Constructors run the other way: C +0.4, A 0.0, B -0.4 each time. Race 5
-# is priced only, so has no moves of its own, and race 1 has no value to build from.
-_RISES_2023 = [
-    (2023, 1, {"AAA@AAA": (1.0, 30, 30), "BBB@BBB": (0.5, 5, 5), "CCC@CCC": (0.0, 10, 10)}),
-    (2023, 2, {"AAA@AAA": (1.0, 30, 30), "BBB@BBB": (0.5, 5, 5), "CCC@CCC": (0.0, 10, 10)}),
-    (2023, 3, {"AAA@AAA": (1.0, 30, 30), "BBB@BBB": (0.5, 5.2, 4.6),
-               "CCC@CCC": (0.0, 9.8, 10.4)}),
-    (2023, 4, {"AAA@AAA": (1.0, 30.2, 30), "BBB@BBB": (0.5, 5.6, 4.2),
-               "CCC@CCC": (0.0, 9.8, 10.8)}),
-    (2023, 5, {"AAA@AAA": (None, 30.6, 30), "BBB@BBB": (None, 6.2, 3.8),
-               "CCC@CCC": (None, 10.3, 11.2)}),
-]
-
-# A race to look up. Per 1m ALB is lowest, HAM in the middle and VER highest. By value
-# alone HAM would take B's third, and by price alone ALB would, each changing the answer.
-_LOOK_UP = {"VER@RED": (1.0, 10, 10), "HAM@MER": (0.5, 15, 15), "ALB@WIL": (0.0, 5, 5)}
+def _top_and_low(low_price: float = 10.0, top_price: float = 25.0, points: float = 0.0) -> dict:
+    """A race's assets, TOP valued 30 and LOW 0. LOW's estimate for the race is the fit's
+    intercept alone: 1.538 points for a driver and 5.948 for a constructor."""
+    return {"TOP@TOP": (1.0, top_price, points), "LOW@LOW": (0.0, low_price, points)}
 
 
-def test_price_rise_is_the_mean_rise_in_the_assets_third_on_value_per_million():
-    tables = _rising(*_RISES_2023, (2024, 2, _LOOK_UP))
-    assert tables.price_rise(2024, 2) == pytest.approx({
-        "ALB@WIL": 0.1, "HAM@MER": 0.2, "VER@RED": 0.4, "WIL": 0.4, "MER": 0.0, "RED": -0.4,
-    })
+# Held races for LOW at 1.2 points per 1m and TOP at 1.0, TOP priced below the split.
+_HELD = {"LOW@LOW": (None, 10, 12), "TOP@TOP": (None, 18, 18)}
 
 
-def test_a_move_without_a_price_at_the_next_race_is_left_out():
-    unpriced = {"AAA@AAA": (None, 30.6, 30), "BBB@BBB": (None, None, None),
-                "CCC@CCC": (None, 10.3, 11.2)}
-    tables = _rising(*_RISES_2023[:4], (2023, 5, unpriced), (2024, 2, _LOOK_UP))
-    rise = tables.price_rise(2024, 2)
-    assert (rise["VER@RED"], rise["RED"]) == pytest.approx((0.3, -0.4))
+def test_price_rise_follows_the_rules_on_two_held_races_and_the_signals_estimate():
+    # LOW at 10m: the estimate per 1m is 0.154 for the driver, rating 0.85, Poor, and 0.595
+    # for the constructor, rating 1.00, Good. TOP at 25m: estimates of 1.82 and 2.26 rate
+    # 1.27 and 1.42, Great, at the upper tier's step, as race 4's price sets the tier. Race
+    # 1 is outside race 4's window, and would make LOW Great and TOP Terrible.
+    tables = _signalled(
+        (2025, 1, {"LOW@LOW": (None, 10, 1000), "TOP@TOP": (None, 18, -1000)}),
+        (2025, 2, _HELD),
+        (2025, 3, _HELD),
+        (2025, 4, _top_and_low()),
+    )
+    assert tables.price_rise(2025, 4) == pytest.approx(
+        {"LOW@LOW": -0.2, "LOW": 0.2, "TOP@TOP": 0.3, "TOP": 0.3}
+    )
 
 
-def test_an_asset_with_no_value_gets_no_price_rise_and_no_place_in_the_thirds():
-    look_up = _LOOK_UP | {"SAR@SAU": (None, 1, 1)}
-    tables = _rising(*_RISES_2023, (2024, 2, look_up))
-    rise = tables.price_rise(2024, 2)
+def test_a_races_own_points_do_not_move_its_price_rise():
+    def tables(points: float) -> SignalTables:
+        return _signalled(
+            (2025, 2, _HELD), (2025, 3, _HELD), (2025, 4, _top_and_low(points=points))
+        )
+    assert tables(-1000).price_rise(2025, 4) == tables(1000).price_rise(2025, 4)
+    assert len(tables(0).price_rise(2025, 4)) == 4
+
+
+@pytest.mark.parametrize("race, held_points, move", [
+    # Race 1's 1.2 and the estimate's 0.154 rate 0.68, Poor. Padding with a zero would
+    # give 0.45, Terrible.
+    (2, {1: 12}, -0.2),
+    # 0.0, 1.8 and 0.154 rate 0.65, Poor. Leaving race 1 out would give 0.98, Good.
+    (3, {1: 0, 2: 18}, -0.2),
+])
+def test_price_rise_averages_only_the_races_held_so_far(race, held_points, move):
+    tables = _signalled(
+        *((2025, held, {"LOW@LOW": (None, 10, points)}) for held, points in held_points.items()),
+        (2025, race, _top_and_low()),
+    )
+    assert tables.price_rise(2025, race)["LOW@LOW"] == pytest.approx(move)
+
+
+def test_price_rise_follows_a_driver_by_code_across_a_constructor_switch():
+    # LAW's races at VRB count at RED: 0.85, Poor. Counted as zeros, 0.05, Terrible.
+    held = {"LAW@VRB": (None, 10, 12)}
+    tables = _signalled(
+        (2025, 2, held), (2025, 3, held),
+        (2025, 4, {"TOP@TOP": (1.0, 25, 0), "LAW@RED": (0.0, 10, 0)}),
+    )
+    assert tables.price_rise(2025, 4)["LAW@RED"] == pytest.approx(-0.2)
+
+
+def test_a_held_race_with_no_row_for_the_asset_counts_as_zero_points():
+    # LOW has no row in race 3: 1.2, 0.0 and 0.154 rate 0.45, Terrible. Skipping the race
+    # would give 0.68, Poor.
+    tables = _signalled(
+        (2025, 2, _HELD), (2025, 3, {"TOP@TOP": _HELD["TOP@TOP"]}), (2025, 4, _top_and_low())
+    )
+    assert tables.price_rise(2025, 4)["LOW@LOW"] == pytest.approx(-0.6)
+
+
+@pytest.mark.parametrize("season, move", [(2025, 0.0), (2026, -0.1)])
+def test_price_rise_takes_the_seasons_rules(season, move):
+    # LOW at 3.1m rates 0.17, Terrible. 2026's floor of 3.0m stops the fall at 0.1, and
+    # 3.1m is already below 2025's floor of 4.5m, so it does not move.
+    tables = _signalled((season, 4, _top_and_low(low_price=3.1)))
+    assert tables.price_rise(season, 4)["LOW@LOW"] == pytest.approx(move)
+
+
+@pytest.mark.parametrize("season", [2023, 2024])
+def test_price_rise_is_empty_before_the_three_race_model(season):
+    tables = _signalled((season, 2, _HELD), (season, 3, _HELD), (season, 4, _top_and_low()))
+    assert tables.price_rise(season, 4) == {}
+
+
+def test_an_asset_with_no_value_gets_no_price_rise():
+    tables = _signalled((2025, 4, _top_and_low() | {"SAR@SAU": (None, 5, 0)}))
+    rise = tables.price_rise(2025, 4)
     assert "SAR@SAU" not in rise
-    assert [rise[d] for d in _LOOK_UP] == pytest.approx([0.4, 0.2, 0.1])
+    assert "LOW@LOW" in rise
 
 
 def test_a_race_priced_but_without_signal_has_no_price_rise():
-    unsignalled = {driver: (None, *prices) for driver, (_, *prices) in _LOOK_UP.items()}
-    tables = _rising(*_RISES_2023, (2026, 19, unsignalled))
+    # Race 18 has a signal, as the metrics hold other races.
+    unsignalled = {driver: (None, *rest) for driver, (_, *rest) in _top_and_low().items()}
+    tables = _signalled((2026, 18, _top_and_low()), (2026, 19, unsignalled))
     assert tables.price_rise(2026, 19) == {}
 
 
-@pytest.mark.parametrize("season", [2024, 2026])
-def test_a_price_rise_table_with_no_other_season_to_draw_on_is_an_error(season):
-    # 2024 has history of its own to leave out; 2026 has none in a table season at all.
-    tables = _rising((season, 2, _LOOK_UP), (season, 3, _LOOK_UP))
-    with pytest.raises(ValueError, match=f"No 2023-25 history for {season}'s Driver rises table"):
-        tables.price_rise(season, 2)
-
-
-def _rises_varying(price_2024: float, price_2026: float) -> SignalTables:
-    """2023 as above, then 2024 and 2026 races 2 and 3, with every race 3 price at the
-    season's given figure."""
-    def season(year: int, price: float) -> list[tuple]:
-        return [(year, 2, _LOOK_UP),
-                (year, 3, {d: (s, price, price) for d, (s, _, _) in _LOOK_UP.items()})]
-    return _rising(*_RISES_2023, *season(2024, price_2024), *season(2026, price_2026))
-
-
-@pytest.mark.parametrize("season, varied", [
-    (2024, ("2024", "2026")),
-    (2023, ("2026",)),
-])
-def test_price_rise_reads_neither_its_own_season_nor_2026(season, varied):
-    def tables(price: float) -> SignalTables:
-        return _rises_varying(
-            price if "2024" in varied else 20, price if "2026" in varied else 20
-        )
-    assert tables(1).price_rise(season, 2) == tables(100).price_rise(season, 2)
+# A race whose values are 30, 15 and 0.
+_LOOK_UP = {"VER@RED": (1.0, 10, 5), "HAM@MER": (0.5, 15, 5), "ALB@WIL": (0.0, 5, 5)}
 
 
 def test_values_are_the_drivers_and_constructors_values_for_the_race():
     # Each driver is their constructor's only one, so a constructor's value is its driver's.
-    tables = _rising(*_RISES_2023, (2024, 2, _LOOK_UP))
+    tables = _signalled((2024, 2, _LOOK_UP))
     assert tables.values(2024, 2) == pytest.approx({
         "VER@RED": 30.0, "HAM@MER": 15.0, "ALB@WIL": 0.0, "RED": 30.0, "MER": 15.0, "WIL": 0.0,
     })
 
 
 def test_a_race_priced_but_without_signal_has_no_values():
-    unsignalled = {driver: (None, *prices) for driver, (_, *prices) in _LOOK_UP.items()}
-    tables = _rising(*_RISES_2023, (2026, 19, unsignalled))
+    unsignalled = {driver: (None, *rest) for driver, (_, *rest) in _LOOK_UP.items()}
+    tables = _signalled((2026, 18, _LOOK_UP), (2026, 19, unsignalled))
     assert tables.values(2026, 19) == {}
 
 
 def test_changing_a_returned_dict_does_not_change_the_next_call():
-    tables = _rising(*_RISES_2023, (2024, 2, _LOOK_UP))
-    for method in (tables.negative_chance, tables.values):
-        first = method(2024, 2)
+    # 2023 gives the negative chances a season of history to draw on.
+    tables = _signalled((2023, 2, _LOOK_UP), (2025, 2, _LOOK_UP))
+    for method in (tables.negative_chance, tables.values, tables.price_rise):
+        first = method(2025, 2)
+        assert first
         expected = dict(first)
         first["VER@RED"] = 999.0
-        assert method(2024, 2) == expected
+        assert method(2025, 2) == expected
 
 
 def test_load_signal_tables_refuses_a_missing_metrics_file(tmp_path):

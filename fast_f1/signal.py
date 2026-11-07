@@ -3,7 +3,7 @@ chance of going negative and the expected price rise.
 
 The signal is the combination `indicator_analysis_v1` chose for fantasy points (see its
 log's *Conclusions*), built from metrics rows alone so that a race not yet run can be
-valued. See ``docs/fastf1_v2/plan.md``, steps 4, 11 and 12.
+valued. See ``docs/fastf1_v2/plan.md``, steps 4, 11, 12 and 20.
 """
 from __future__ import annotations
 
@@ -68,6 +68,13 @@ class PriceRules:
 PRICE_RULES = {
     2025: PriceRules(split=18.5, floor=4.5, cap=None),
     2026: PriceRules(split=18.5, floor=3.0, cap=34.0),
+}
+
+# Fantasy points for a race from an asset's value, as (intercept, slope), fitted on 2023-24
+# (docs/fastf1_v2/log.md, *Step 19: the conversion for estimate (a)*).
+POINTS_FROM_VALUE = {
+    AssetType.DRIVER: (1.538, 1.469),
+    AssetType.CONSTRUCTOR: (5.948, 1.687),
 }
 
 # Each rating band's step, as (at or above the split, below it).
@@ -218,13 +225,14 @@ def load_signal_tables(
 
 
 class SignalTables:
-    """Each asset's signal value in a race, and tables of what its price and value predict.
+    """Each asset's signal value in a race, its chance of going negative, and its expected
+    price move.
 
-    Two measures, each by asset type: the chance of going negative by price third, and
-    the expected price rise by third on value per 1m. A season's tables come from the
+    The chance is looked up by asset type and price third. A season's table comes from the
     ``TABLE_SEASONS`` other than itself, races 2 onwards, so a season never sees its own
     results and 2026 never enters a table. A key past a table's end takes the last value.
-    Each table is built once per instance, and each race's figures once.
+    The price move follows the game's rules, in ``price_rise``. Each table is built once per
+    instance, and each race's figures once.
 
     Args:
         metrics: Rows in the shape of ``data/fastf1_practice_rolling_metrics.xlsx``.
@@ -246,8 +254,7 @@ class SignalTables:
             AssetType.CONSTRUCTOR: constructor_archive,
         }
         self._negatives: pd.DataFrame | None = None
-        self._rises: pd.DataFrame | None = None
-        self._tables: dict[tuple[str, int, AssetType], pd.Series] = {}
+        self._tables: dict[tuple[int, AssetType], pd.Series] = {}
         self._race_values: dict[tuple[str, int, int], dict[str, float]] = {}
 
     def values(self, season: int, race: int) -> dict[str, float]:
@@ -287,7 +294,7 @@ class SignalTables:
             priced = _priced_in(archive, season, race)
             if priced.empty:
                 continue
-            table = self._table("negatives", season, asset_type)
+            table = self._negative_table(season, asset_type)
             chances |= {
                 asset: _look_up(table, third)
                 for asset, third in zip(priced[asset_type.value], _thirds(priced["Price"]))
@@ -295,42 +302,44 @@ class SignalTables:
         return chances
 
     def price_rise(self, season: int, race: int) -> dict[str, float]:
-        """Each priced asset's expected price rise from one race to the next, in 1m.
+        """Each priced asset's expected price move from one race to the next, in 1m.
 
-        Looked up by asset type and by the asset's third within the race on its value per
-        1m, its ``driver_values`` or ``constructor_values`` over its price, as ``_thirds``
-        splits them. Reads no result from the race itself.
+        ``rule_price_move`` on the asset's rating: its points per 1m in each of the two
+        races before this one held so far, from the archive, and this race's estimate,
+        averaged. The estimate is the asset's value converted to fantasy points by
+        ``POINTS_FROM_VALUE``, over its price. Reads no result from the race itself.
+
+        A driver is followed by their code across a constructor switch, and a held race
+        with no priced row for the asset counts as zero points.
 
         Returns:
-            Rises keyed by driver identifier and constructor code, for every asset priced
-            in the race that has a value. Empty when the race has no signal.
+            Moves keyed by driver identifier and constructor code, for every asset priced
+            in the race that has a value. Empty when the race has no signal, or the season
+            is before the first in ``PRICE_RULES``.
 
         Raises:
-            ValueError: A table has no history to draw on, or as for ``driver_values``.
+            ValueError: As for ``driver_values``.
         """
         return self._per_race("rises", season, race, self._price_rise)
 
     def _price_rise(self, season: int, race: int) -> dict[str, float]:
+        if season < min(PRICE_RULES):
+            return {}
+        values = self.values(season, race)
         rises = {}
-        for asset_type, thirds in self._value_thirds(season, race).items():
-            table = self._table("rises", season, asset_type)
-            rises |= {asset: _look_up(table, third) for asset, third in thirds.items()}
-        return rises
-
-    def _value_thirds(self, season: int, race: int) -> dict[AssetType, pd.Series]:
-        """Each priced asset's third on value per 1m within one race, by asset type, for
-        the assets with a value. A type with none is left out."""
-        values = {
-            AssetType.DRIVER: driver_values(self._metrics, self._pairs, season, race),
-            AssetType.CONSTRUCTOR: constructor_values(self._metrics, self._pairs, season, race),
-        }
-        thirds = {}
         for asset_type, archive in self._archive.items():
-            priced = _priced_in(archive, season, race).set_index(asset_type.value)["Price"]
-            valued = priced.index.to_series().map(values[asset_type]).dropna()
-            if not valued.empty:
-                thirds[asset_type] = _thirds(valued / priced[valued.index])
-        return thirds
+            held = [_points_per_million(archive, asset_type, season, r)
+                    for r in get_rolling_window_races(race, rolling_window=2)]
+            intercept, slope = POINTS_FROM_VALUE[asset_type]
+            priced = _priced_in(archive, season, race)
+            for asset, price in zip(priced[asset_type.value], priced["Price"]):
+                if asset not in values:
+                    continue
+                code = asset.split("@")[0]
+                estimate = (intercept + slope * values[asset]) / price
+                rating = (sum(ppm.get(code, 0.0) for ppm in held) + estimate) / (len(held) + 1)
+                rises[asset] = rule_price_move(rating, price, season)
+        return rises
 
     def _per_race(
         self, name: str, season: int, race: int, compute: Callable[[int, int], dict[str, float]]
@@ -341,21 +350,17 @@ class SignalTables:
             self._race_values[key] = compute(season, race)
         return dict(self._race_values[key])
 
-    def _table(self, name: str, season: int, asset_type: AssetType) -> pd.Series:
-        """A season's table, built from the other table seasons on first use."""
-        key = (name, season, asset_type)
+    def _negative_table(self, season: int, asset_type: AssetType) -> pd.Series:
+        """A season's negatives table, built from the other table seasons on first use."""
+        key = (season, asset_type)
         if key not in self._tables:
-            history, summarise = {
-                "negatives": (self._negative_history, _negative_shares),
-                "rises": (self._rise_history, _mean_rises),
-            }[name]
-            rows = history()
-            self._tables[key] = summarise(
+            rows = self._negative_history()
+            self._tables[key] = _negative_shares(
                 rows[(rows["Season"] != season) & (rows["AssetType"] == asset_type)]
             )
         table = self._tables[key]
         if table.empty:
-            msg = f"No 2023-25 history for {season}'s {asset_type.value} {name} table"
+            msg = f"No 2023-25 history for {season}'s {asset_type.value} negatives table"
             logger.error(msg)
             raise ValueError(msg)
         return table
@@ -380,41 +385,20 @@ class SignalTables:
         )
         return self._negatives
 
-    def _rise_history(self) -> pd.DataFrame:
-        """Every table season's priced assets with a value from race 2 on: their third on
-        value per 1m within the race, and their price move to the next race, where they
-        are priced at both."""
-        if self._rises is not None:
-            return self._rises
-        frames = []
-        for season in TABLE_SEASONS:
-            in_season = self._metrics[self._metrics["Season"] == season]
-            for race in sorted(in_season.loc[in_season["Race"] > FIRST_RACE, "Race"].unique()):
-                for asset_type, thirds in self._value_thirds(season, race).items():
-                    archive, key = self._archive[asset_type], asset_type.value
-                    now = _priced_in(archive, season, race).set_index(key)["Price"]
-                    after = _priced_in(archive, season, race + 1).set_index(key)["Price"]
-                    rise = (after.reindex(thirds.index) - now[thirds.index]).dropna()
-                    frames.append(pd.DataFrame({
-                        "AssetType": asset_type,
-                        "Season": season,
-                        "Third": thirds[rise.index],
-                        "Rise": rise,
-                    }))
-        history = (pd.concat(frames, ignore_index=True) if frames
-                   else pd.DataFrame(columns=["AssetType", "Season", "Third", "Rise"]))
-        self._rises = history.astype({"Third": int, "Rise": float})
-        return self._rises
-
 
 def _negative_shares(history: pd.DataFrame) -> pd.Series:
     """The share of rows that went negative, by price third."""
     return history.groupby("Third")["Negative"].mean()
 
 
-def _mean_rises(history: pd.DataFrame) -> pd.Series:
-    """The mean price move, by third on value per 1m."""
-    return history.groupby("Third")["Rise"].mean()
+def _points_per_million(
+    archive: pd.DataFrame, asset_type: AssetType, season: int, race: int
+) -> dict[str, float]:
+    """Each priced asset's points per 1m in one race, keyed by driver code or constructor
+    code, so that a driver is followed across a constructor switch."""
+    priced = _priced_in(archive, season, race)
+    codes = priced[asset_type.value].str.split("@").str[0]
+    return dict(zip(codes, priced["Points"] / priced["Price"]))
 
 
 def _priced_in(archive: pd.DataFrame, season: int, race: int) -> pd.DataFrame:

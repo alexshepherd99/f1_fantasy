@@ -444,7 +444,9 @@ def test_strategy_fastf1_solves_a_real_race(settings):
     The signal's identifiers match the race's, every selected asset has a positive
     value, and the LP solves with a full team. With a penalty, every
     available asset has a chance of going negative. With a reward, every rise names
-    an asset in the race.
+    an asset in the race, and every selected asset has a value but not always a
+    positive one: the reward rightly holds BOR, at 0 and expected to hold, over HUL,
+    at 0.70 and expected to fall 0.6m.
     """
     season = factory_season(*load_with_derivations(season=2025), 2025)
     team = Team(num_drivers=5, num_constructors=2, unused_budget=50.0)
@@ -461,4 +463,7 @@ def test_strategy_fastf1_solves_a_real_race(settings):
     assert problem.status == LpStatusOptimal
     assert len(selected) == 7
     assert strat._lp_variables[VarType.TeamMoves].value() == pytest.approx(2.0)
-    assert all(strat._values.get(a, 0.0) > 0.0 for a in selected)
+    if "price_rise_reward" in settings:
+        assert all(a in strat._values for a in selected)
+    else:
+        assert all(strat._values.get(a, 0.0) > 0.0 for a in selected)
