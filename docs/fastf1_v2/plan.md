@@ -3,9 +3,9 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 and 14.1 are done, and step
-12 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16. Requirements:
-`requirements.md`.
+redesign agreed*), and steps 11 to 16 build and tune it. Steps 11, 14.1 and 12 are done, and
+step 13 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
+Requirements: `requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,
@@ -77,7 +77,8 @@ Done 2026-11-07. See `log.md`, *Step 11*. As requirements question 1 and 2.
 
 ## Step 12 — `fast_f1/signal.py`: the risk and price-rise measures
 
-As requirements questions 3 and 4. Replaces step 5's tables.
+Done 2026-11-07. See `log.md`, *Step 12*. As requirements questions 3 and 4. Replaces step
+5's tables.
 
 - The chance of going negative by price third within the race, by asset type.
 - The expected price rise by third on signal value per 1m within the race, by asset type. A

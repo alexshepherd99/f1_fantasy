@@ -39,6 +39,9 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   from race 2. Step 14.1 is next.
 - Step 14.1 done 2026-11-07: the size check passes in every season of 2023–25, by a small,
   consistent margin. Step 12 is next.
+- Step 12 done 2026-11-07: `negative_chance` by price third and `price_rise` by value-per-1m
+  third, run on every stored race from race 2. The expected-points table stays until step
+  13.1. Step 13 is next.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in
@@ -1470,3 +1473,112 @@ separate the bottom of the field. That is where retirements and negatives fall, 
 - **Fifths are reported for the values only.** Within-race fifths need a tie-break, and the
   table's ties fell back on archive row order. That made its driver fifths an artefact of row
   order rather than a measure.
+
+## 2026-11-07 — Step 12: the risk and price-rise measures
+
+### In plain language
+
+- **Each asset now has a chance of going negative, by its price third.** The cheapest third of
+  drivers went negative 20.8% of the time in 2023–25 and the dearest 9.2%. For constructors
+  it was 19.6% and 3.0%. Every season's table keeps that order.
+- **Each asset now has an expected price rise, by its third on value per 1m.** The top third
+  rose more than the bottom third in every season, most of all in 2025: by 0.38m a race for
+  drivers and 0.27m for constructors, against 0.06–0.11m before then.
+- **2025's own price-rise table is weak.** It comes from 2023 and 2024, where the effect was
+  small, so it barely separates drivers. Tuning on 2025 will test the reward on its weakest
+  table.
+- **Both ran on all 84 stored races from race 2, 2023–26, with no error.** Every priced asset
+  got a chance. Every one got a rise except the two withdrawn drivers, who have no value.
+- **Nothing new uses them yet.** Step 13 puts them in the strategy.
+
+### Choices Alex made in this step
+
+Agreed before any code:
+
+- **`negative_chance` keeps its name and changes its basis** from any negative in the last
+  three races to the price third. The recent-negative code is removed.
+- **The expected-points table stays until step 13.1,** as `StrategyFastF1` reads it until then.
+  The plan had it removed here.
+- **How thirds split.** Rank r of n falls in third `(r − 1) × 3 // n + 1`, so a remainder goes
+  to the lower thirds: 20 drivers split 7/7/6, 22 split 8/7/7, and 10 constructors 4/3/3.
+  Equal values share the third of their lowest rank.
+- **Moves priced at 0 need no rule.** No loaded archive row in 2023–26 is priced at 0: an
+  absent driver has no price instead, and the largest move is 1.5m. The ±14m moves in
+  *Redesign evidence* must have come from how that throwaway script loaded prices. A move is
+  taken only where the asset is priced at both races.
+
+### Code
+
+`fast_f1/signal.py`: `SignalTables.negative_chance` looks assets up by price third, and the new
+`SignalTables.price_rise` by third on value per 1m. Both learn from the other 2023–25 seasons,
+races 2 onwards, through the shared `_table`, and each table is built once per instance.
+`load_signal_tables` already keeps one instance per process. An asset with no value gets no
+rise and takes no place in the thirds.
+
+### Tests
+
+- **`negative_chance`:** the new tests first failed by crashing, as the old table had no key
+  for an asset without a recent negative. That proves nothing about behaviour, so each rule
+  was checked by mutation instead. Ten mutations each failed the suite, and every file was
+  restored with a green run in between:
+  - ties broken by row order, at their average rank, or at their highest rank;
+  - a remainder given to the upper thirds;
+  - race 1 counted in the history;
+  - thirds split over the season rather than the race;
+  - the asset types mixed in one table;
+  - a season's own results in its table;
+  - 2026 in the history;
+  - unpriced assets counted in the thirds.
+- **`price_rise`:** against a stub returning nothing, the main test failed on its assertion.
+  Three tests passed vacuously against the stub, so they too rest on mutation. Eleven
+  mutations each failed the suite, among them thirds on value alone or price alone, the move
+  taken from the previous race, a missing next price counted as no move, the median in place
+  of the mean, and the empty-history fallback removed.
+- **Four of those mutations first passed, each from a fixture gap, fixed before commit:**
+  - the race looked up mirrored the history, so thirds on value alone or price alone gave the
+    same answer;
+  - each third had only two moves, whose median equals their mean;
+  - the empty-history test still held history.
+
+The full suite is green, 490 tests, up from 482.
+
+### Real-data check
+
+From a throwaway script, not kept, on the metrics file and the archive. The history behind
+the tables matches *Redesign evidence*: 1,340 driver-races with 220 negatives and 670
+constructor-races with 80. The mean move is +0.109m for drivers and +0.181m for constructors.
+
+Share going negative by price third, all three seasons together:
+
+| Price third | Drivers | Constructors |
+| --- | --- | --- |
+| Cheapest | 20.8% of 480 | 19.6% of 270 |
+| Middle | 18.1% of 459 | 10.6% of 199 |
+| Dearest | 9.2% of 401 | 3.0% of 201 |
+
+The evidence gave 20.9 / 18.4 / 10.2% and 19.9 / 16.4 / 2.6%. The gap, largest for the middle
+constructors, fits a different split. Under the agreed one, the fourth-cheapest of 10
+constructors joins the cheapest third, so the middle third is smaller and dearer.
+
+Mean price move in m a race, by third on value per 1m and season, with the top third less
+the bottom:
+
+| Season | Drivers, bottom / middle / top | Top less bottom | Constructors, bottom / middle / top | Top less bottom |
+| --- | --- | --- | --- | --- |
+| 2023 | 0.19 / 0.18 / 0.24 | 0.06 | 0.12 / 0.16 / 0.23 | 0.11 |
+| 2024 | 0.17 / 0.13 / 0.25 | 0.08 | 0.13 / 0.14 / 0.16 | 0.03 |
+| 2025 | −0.18 / −0.11 / 0.20 | 0.38 | 0.10 / 0.29 / 0.36 | 0.27 |
+
+The evidence gave 0.05, 0.07 and 0.37 for drivers and 0.08, 0.02 and 0.24 for constructors.
+
+Each season's tables, as it sees them from the others:
+
+| Season | Negative, drivers | Negative, constructors | Rise, drivers | Rise, constructors |
+| --- | --- | --- | --- | --- |
+| 2023 | 20.6 / 19.4 / 8.7% | 19.4 / 12.5 / 4.3% | −0.01 / 0.01 / 0.22 | 0.12 / 0.22 / 0.26 |
+| 2024 | 20.0 / 19.3 / 10.6% | 18.2 / 9.1 / 3.0% | −0.01 / 0.03 / 0.22 | 0.11 / 0.23 / 0.30 |
+| 2025 | 21.9 / 15.6 / 8.4% | 21.3 / 10.0 / 1.5% | 0.18 / 0.15 / 0.25 | 0.13 / 0.15 / 0.19 |
+| 2026 | 20.8 / 18.1 / 9.2% | 19.6 / 10.6 / 3.0% | 0.05 / 0.06 / 0.23 | 0.12 / 0.20 / 0.25 |
+
+Every negative table falls from cheapest to dearest. Every rise table rises from bottom to
+top, except 2025's for drivers, whose middle third sits below its bottom.
