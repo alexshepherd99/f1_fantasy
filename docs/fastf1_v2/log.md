@@ -42,6 +42,8 @@ alongside in `requirements.md`, and the steps in `plan.md`.
 - Step 12 done 2026-11-07: `negative_chance` by price third and `price_rise` by value-per-1m
   third, run on every stored race from race 2. The expected-points table stays until step
   13.1. Step 13 is next.
+- Step 13.1 done 2026-11-07: `StrategyFastF1` scores step 11's values, and the
+  expected-points table and position code are gone. Step 13.2 is next.
 - Decisions so far: see `requirements.md`, *Decisions so far*, which is kept current.
 
 ## 2026-11-01 — Sizing the two levers in the brief
@@ -1576,3 +1578,76 @@ Each season's tables, as it sees them from the others:
 
 Every negative table falls from cheapest to dearest. Every rise table rises from bottom to
 top, except 2025's for drivers, whose middle third sits below its bottom.
+
+## 2026-11-07 — Step 13.1: the strategy scores values
+
+### In plain language
+
+- **The strategy now picks the team with the highest total value,** in championship points
+  per race, in place of the old expected points by position. A driver well clear of the field
+  now counts as well clear.
+- **The DRS term, the budget reward and the negative penalty carry over unchanged,** working on
+  values now. The penalty already reads step 12's chance by price third.
+- **The old table and the position code are gone.** Nothing in the repo reads them any more.
+- **It solves on a real race.** On 2025 race 5, built from the real files, every selected asset
+  has a value above zero. Whether it now buys VER in 2023 is step 14.2's check, not run yet.
+
+### Choices Alex made in this step
+
+Agreed before any code:
+
+- **The existing settings stay in 13.1** rather than being removed and added back one part at a
+  time. Parts 13.2 to 13.4 become checks of the code against the plan, changing it only where
+  it differs.
+- **The position code goes now,** as a commit of its own, rather than at the end of step 13.
+
+### Code
+
+- `fast_f1/signal.py`: `SignalTables.values` gives a race's `driver_values` and
+  `constructor_values` together, worked out once per race and returned as a copy, as the other
+  measures are. `expected_points`, the history behind it, the isotonic averaging, the scipy
+  import, `driver_positions`, `constructor_places` and their helpers are removed.
+- `linear/strategy_fastf1.py`: reads `values` in place of `expected_points`. Otherwise the
+  rules are unchanged:
+  - an asset with no value scores zero;
+  - a value naming an asset the race lacks raises an error;
+  - the DRS nominee is the selected driver with the best value;
+  - there is no race-4 chip.
+
+### Tests
+
+- **`SignalTables.values`:** against a stub returning nothing, the main test failed on its
+  assertion. Two tests passed vacuously against the stub, so they rest on mutation: the
+  no-signal test and the copy test. Three mutations each failed the suite:
+  - the cached dict returned uncopied;
+  - the constructor empty-race guard dropped;
+  - drivers only.
+- **The strategy:** the stub kept an `expected_points` returning nothing until the switch, so
+  the unchanged strategy scored every asset zero. Seventeen tests failed on their assertions,
+  and the real-race test on the renamed attribute. After the switch all 29 passed, and the
+  temporary method was removed.
+- **Ported, not dropped:** the position tests that covered rules values share now run on
+  `driver_values`:
+  - the normal and sprint slots;
+  - the 2023 sprint rule;
+  - reading only the requested race and its pairs;
+  - a missing input;
+  - floating-point noise, now as "noise alone counts as every signal equal".
+
+  Each passed on the existing code, so each was checked by mutation and failed it: FP3
+  dropped on normal weekends, SQ added on sprints, the normal rule on 2023 sprints, no
+  rounding, metrics from every race, and pairs from every race. A first try at the
+  every-race metrics mutation kept race 3's row by chance and missed the ported test. It
+  failed the suite elsewhere, and the retry kept race 2's row and failed the ported test.
+- **Removed with their code:** the expected-points table tests, identifier tie-breaks, and
+  constructor places. The copy test moved to the price-rise fixture.
+
+The full suite is green, 467 tests, down from 490: three added and 26 removed.
+
+### Left open
+
+- `_look_up` still lets a key past a table's end take the last value. Positions needed that.
+  Thirds always run 1 to 3 when a race has at least three assets, so the branch is now
+  untested and serves only a table missing its top third.
+- Not run: the strategy through the back-test harness. Only the single 2025 race 5 solve, in
+  the test suite, has run on real data.

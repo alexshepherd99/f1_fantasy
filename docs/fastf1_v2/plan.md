@@ -4,7 +4,7 @@
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11, 14.1 and 12 are done, and
-step 13 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
+so is step 13.1. Step 13.2 is next. Steps 17 and 18, numbered 9 and 10 before 2026-11-07, follow step 16.
 Requirements: `requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
@@ -73,7 +73,8 @@ Done 2026-11-07. See `log.md`, *Step 11*. As requirements question 1 and 2.
   - a race where every signal is equal raises an error;
   - a constructor with a driver who has no value counts that driver as zero;
   - race 1, which has no recent championship points to stretch onto, raises an error.
-- Position code that nothing uses once steps 12 and 13 land is removed then.
+- Position code that nothing uses once steps 12 and 13 land is removed then. Done with step
+  13.1, as Alex agreed.
 
 ## Step 12 — `fast_f1/signal.py`: the risk and price-rise measures
 
@@ -99,7 +100,12 @@ Done 2026-11-07. See `log.md`, *Step 12*. As requirements questions 3 and 4. Rep
 
 Revises step 6, one part per commit, each keyword parameter arriving with the part that uses it.
 
-1. The objective sums step 11's values in place of expected points. The base budget, team
+Step 6 already built `drs_coefficient`, `budget_reward` and `negative_penalty`, so Alex agreed
+on 2026-11-07 that 13.1 keeps them and they move to values with it. Parts 2 to 4 are therefore
+checks of the code against each item below, logged, with a change only where it differs.
+
+1. Done 2026-11-07. See `log.md`, *Step 13.1*.
+   The objective sums step 11's values in place of expected points. The base budget, team
    size and move constraints stay, and so does the test that race 4 keeps its normal move
    limit, as there is **no race-4 chip**. The expected-points tables are removed in the same
    change.
