@@ -2434,3 +2434,95 @@ Haas), which may be worth a look at that race's archive points.
   for drivers.
 
 One throwaway script, not kept, run on 2023–26 from `load_archive_data_season`.
+
+## 2026-11-07 — Step 16 read again, in the light of the price rules
+
+Alex ruled on 2026-11-07 that the rules stayed the same from 2025 to 2026, and that they are to
+be assumed the same in 2027, in the absence of further information. Tuning is to be reviewed and
+refined. Before anything is re-run, Alex asked what step 16's runs can teach, such as whether
+any lever behaved better in 2025 than in 2023–24.
+
+### In plain language
+
+- **One lever did better in 2025: the price-rise reward.** At 5 and 10 it was the only lever
+  to gain in 2025, +35 and +43 points a team, and it lost in both 2023 and 2024. No other
+  lever gained in 2025, and the budget reward went from gaining in 2023–24 to losing.
+- **The reward was working from the wrong table in every season.** Its expected rises come from
+  the other seasons, which mixed the two price models:
+  - In 2023–24, almost everything rose most races, whatever its value. There was little to
+    choose between assets. Their tables, built partly from 2025, said there was.
+  - In 2025, good value rose and poor value fell. For drivers, the gap was about five times
+    what 2023–24 showed.
+    Its table, built from 2023–24, said the gap was small.
+
+  So the reward overrated rises where they did not matter, and lost. It underrated them where
+  they did, and still gained.
+- **2023–24 can no longer tune anything about price.** They ran under a price model that has
+  gone and is not expected back. That also flatters the base against P2PM there: P2PM's edge
+  in reading price moves was much weaker in 2023–24 (*Why 2025 ends 10m behind on budget*).
+- **Under the rules, the next move is largely known when the team is picked.** Two of its
+  three races are already scored. A table of past averages by third is a weak stand-in for a
+  move the game's own rules could compute.
+
+The penalty, the budget reward and DRS show nothing that the rules explain. What follows for
+tuning is for Alex to decide.
+
+### What each lever did in 2025, against 2023–24
+
+From step 16's stores, final race only. Pooled mean delta against the base, in points a team,
+and the change in mean final budget, in 1m:
+
+| Label | Points 2023 / 2024 / 2025 | Budget 2023 / 2024 / 2025 |
+| --- | --- | --- |
+| `FastF1_Rise5` | −58 / −31 / **+35** | −0.1 / +0.2 / +0.5 |
+| `FastF1_Rise10` | −66 / −88 / **+43** | +0.2 / −0.1 / +0.3 |
+| `FastF1_Rise20` | −43 / −110 / −62 | +0.5 / +0.4 / −0.6 |
+| `FastF1_Bud01` | −6 / +9 / −44 | −0.8 / +0.2 / −0.8 |
+| `FastF1_Bud025` | +27 / +24 / −28 | −0.2 / +0.4 / −0.7 |
+| `FastF1_Bud05` | +63 / +22 / −21 | +1.0 / +0.6 / −1.0 |
+| `FastF1_Neg6p5` | −25 / +33 / −3 | −1.1 / +0.4 / −0.1 |
+| `FastF1_Neg13` | −58 / +41 / −71 | −1.5 / +0.3 / −0.4 |
+| `FastF1_Neg26` | −165 / +42 / −55 | −2.1 / +0.1 / −0.6 |
+| `FastF1_Drs0` | −66 / −28 / −156 | +0.1 / −0.2 / −1.7 |
+
+- **The price-rise reward** at 5 and 10 gained points in 2025 but added only 0.3 to 0.5m of
+  budget, against P2PM's 10.6m lead. At 20 it lost in every season.
+- **The budget reward** gained in 2023–24 and lost in 2025, and cost budget in 2025 at every
+  value. The rules give a reason, reasoned and not run: an asset above the split moves by
+  half the step of one below it, so spending on dear assets slows budget growth from 2025.
+- **The penalty** gained only in 2024, at every value. The rules do not explain that. Under
+  them a negative also cuts the asset's price, which the penalty does not count, but 2025 shows
+  no gain from it.
+- **Leaving DRS out** lost in every season, most in 2025. Nothing in the price rules bears on
+  it.
+
+### The price-rise tables, given against the season's own
+
+Step 12's mean price move to the next race, in 1m, by third on value per 1m, third 3 holding
+the best value. "Given" is the table the season ran with, from the other two of 2023–25.
+"Own" is the season's own, which no run saw:
+
+| Type, third | Given 2023 / 2024 / 2025 | Own 2023 / 2024 / 2025 |
+| --- | --- | --- |
+| Drivers, 1 | −0.01 / −0.01 / +0.18 | +0.19 / +0.17 / −0.18 |
+| Drivers, 2 | +0.01 / +0.03 / +0.15 | +0.18 / +0.13 / −0.11 |
+| Drivers, 3 | +0.22 / +0.22 / +0.25 | +0.24 / +0.25 / +0.20 |
+| Constructors, 1 | +0.12 / +0.11 / +0.13 | +0.12 / +0.13 / +0.10 |
+| Constructors, 2 | +0.22 / +0.23 / +0.15 | +0.16 / +0.14 / +0.29 |
+| Constructors, 3 | +0.26 / +0.30 / +0.19 | +0.23 / +0.16 / +0.36 |
+
+Third 3's rise less third 1's, which is all the reward uses to tell assets apart:
+
+| Type | Given 2023 / 2024 / 2025 | Own 2023 / 2024 / 2025 |
+| --- | --- | --- |
+| Drivers | 0.23 / 0.23 / 0.07 | 0.06 / 0.08 / 0.38 |
+| Constructors | 0.15 / 0.19 / 0.07 | 0.11 / 0.03 / 0.27 |
+
+In 2023–24, drivers in every third rose about 0.2m a race on average, so prices drifted up
+across the board. In 2025, the worse two thirds of drivers fell. 2023's and 2024's given tables
+each take half their rows from 2025, which is where their steep gap comes from.
+
+### Not run
+
+Nothing was re-simulated. One throwaway script, not kept, read the step 16 stores and
+`load_signal_tables()`'s rise history.
