@@ -1,15 +1,15 @@
 # fastf1_v2 — Requirements
 
 **Status**: agreed 2026-11-01, with all eight questions answered and the working assumptions
-confirmed. Plan steps 1 to 8 are built and run. Question 1 is reopened, as the table its answer
-chose loses how far ahead an asset is. See `log.md`, *Stepping back*.
+confirmed. Plan steps 1 to 8 are built and run. Question 1 was reopened on 2026-11-06, as the
+table its answer chose loses how far ahead an asset is, and answered again on 2026-11-07 by the
+signal redesign, which also changes questions 2 to 4. See `log.md`, *Signal redesign agreed*.
 
 ## Picking this up
 
 1. Read this file and `log.md`. Read the `log.md` correction before quoting any field-wide
    driver figure from its first entry.
-2. Carry on from `plan.md`, starting with its *Next: signal redesign*, which reopens question 1
-   below.
+2. Carry on from `plan.md`, at step 11.
 
 Build a team-selection strategy on the FastF1 indicators and back-test it against
 `StrategyMaxP2PM`. Whether the indicators pick better teams than P2PM is the open
@@ -54,109 +54,96 @@ there. These points in it no longer hold:
 
 ## Open questions, in the order they will be asked
 
-### 1. What does the objective score in? (agreed 2026-11-01: B, without A; reopened 2026-11-06)
+### 1. What does the objective score in? (agreed 2026-11-07: the signal on a championship points scale)
 
-The indicator work showed only that the signal puts drivers in the right order. The LP adds
-the values up, so the gaps matter too, and they are uneven: on average 1st scores 35 points
-and 5th 23, while 11th to 20th all score about 1–7.
+**Each driver's signal value, stretched onto that race's recent championship points per race.**
+The race's best signal gets the highest per-race recent championship points in the field, the
+worst gets the lowest, and every other driver falls in proportion between. Per race is the
+three-race total divided by the races it covers, so the scale holds steady from race 2 rather
+than growing over the first three races. The signal is still step 4's, with its inputs added
+at equal weight. Nothing is built from other seasons.
 
-- **A. Sum the 0–1 signal directly,** as the entry below planned. It is the simplest, but
-  it treats the gap between 19th and 20th like the gap between 1st and 2nd. Any negative
-  penalty or spending bonus needs an arbitrary weight, as it is not measured in points.
-- **B. Convert signal position into expected fantasy points,** using a table of what each
-  position has historically scored. Average negative risk is then already included, and
-  DRS and budget can be compared in the same unit. The table must be built only from
-  other seasons, or the back-test flatters it, and it is a bit more code.
+This keeps the size of a lead, which the old table lost: in 2023 race 10 VER is 21 points
+ahead of the second-ranked LEC, where the table gave them the same 29.0. It also puts drivers
+and constructors in one unit. Within a race any straight-line conversion picks the same
+drivers, as the LP takes exactly five drivers and two constructors, so the conversion matters
+for the mix of drivers and constructors and for the penalty and rewards, which need a unit.
 
-Recommendation put to Alex: B, with A also run as a comparison. Neither has been run, so
-whether B picks better teams is unknown. The question put was "A, B or both?"
+Not chosen:
 
-**Agreed 2026-11-01: B alone.** A is not run as a comparison.
+- **Summing the 0–1 signal with no unit** (2026-11-01): constructors and the extra terms would
+  have no unit in common with drivers.
+- **Expected fantasy points by signal position** (agreed 2026-11-01, reversed 2026-11-06): it
+  loses the size of a lead, and tied positions 1 and 2 in 2023, so the LP never bought VER.
+  See `log.md`, *Stepping back*.
+- **Championship points by signal position, 25-18-15 and so on** (2026-11-07): top-heavy, but
+  it still loses the size of a lead.
+- **A fitted weight for each input** (2026-11-07): three seasons are too little data to fit
+  them, and Alex prefers equal weights.
+- **Each asset's own recent fantasy points, adjusted by the signal** (option 3, 2026-11-07): it
+  brings back fantasy rolling points, which the signal does not use, and lets a run of
+  retirements outweigh the signal. See `log.md`, *Redesign evidence*.
 
-**Reopened 2026-11-06.** B was built and back-tested (plan steps 5 to 8), and its table is why
-the strategy trailed P2PM. Mean points by position cannot tell first by a mile from first by a
-whisker. Built from other seasons, it gave positions 1 and 2 the same 29.0 points in 2023, so
-the LP never bought VER. The size of a lead is lost when plan step 4 turns the signal into
-positions: the component columns it sums, such as `RollingPointsRank`, are min-max scaled
-values despite their names (`fast_f1/metrics.py`), so they still hold it. The new design is
-still to be agreed. See `log.md`, *Stepping back*.
+### 2. How is a constructor scored? (agreed 2026-11-07: the sum of its drivers)
 
-### 2. How is a constructor scored? (agreed 2026-11-01: B)
+**The sum of its two drivers' values,** reached through the archive's per-race pairs. This is
+how championship points work for a team, and the core of how the game scores a constructor,
+which adds extras of its own for qualifying progression and pit stops (`log.md`, *Redesign
+evidence*). Each driver's signal already holds the team's rolling points, so the team's form
+counts inside each driver's value.
 
-The conclusions cover drivers only, and there is no constructor-level signal.
+Not chosen:
 
-- **A. Sum its two drivers' values,** as `StrategyBettingOdds` does. It is cheap and has a
-  precedent, but it inherits a driver signal that already contains constructor rolling
-  points.
-- **B. Score it on its own rolling place,** converted to expected points if question 1
-  goes to B.
-- **C. Build a real constructor indicator.** There is no constructor practice or odds rank
+- **Its own rolling place, converted to expected points** (agreed 2026-11-01, reversed
+  2026-11-07): the expected-points table is gone.
+- **A real constructor indicator** (2026-11-01): there is no constructor practice or odds rank
   to start from.
 
-Evidence: holding a top-four constructor on rolling fantasy points goes negative at most 6%
-of the time, against 23–26% at places 9–10 and 59% at place 11. Negative constructors cost
-P2PM's teams only 4–20 points a season, so a new objective could lose that protection.
+### 3. How are negative scores handled? (agreed 2026-11-07: a penalty by price third)
 
-A table built from other seasons has a gap in 2026, which has 11 constructors against 10
-before (reasoned, not run). Testing 2026 leaves no history for place 11, so that place needs
-a rule, such as carrying place 10's value. The same gap applies to driver positions 21 and 22
-under question 1.
+This is the first point in Alex's brief. Championship points stop at zero, so the objective
+sees no negative risk unless this term adds it.
 
-Recommendation put to Alex: B. Whichever is chosen needs the constructor name mapping
-described in the entry below, which exists nowhere in the repo.
+**A soft penalty on each asset's chance of going negative, by its price third within the
+race,** for drivers and constructors, with a coefficient tuned from zero. The chances come from
+the other 2023–25 seasons, races 2 onwards. In 2023–25 the cheapest third of drivers went
+negative 20.9% of the time and the dearest 10.2%; for constructors, 19.9% and 2.6%. Price was
+the only measure tried that beat a flat rate in every season, and it did so for both. Alex
+expects the driver part to count for less when tuned. See `log.md`, *Redesign evidence*.
 
-**Agreed 2026-11-01: B.**
+Not chosen:
 
-### 3. How are negative scores handled? (agreed 2026-11-01: A as the base, B as a variant)
+- **No separate term, relying on expected points** (agreed 2026-11-01, reversed 2026-11-07):
+  the expected-points table is gone.
+- **A rule that excludes assets** (2026-11-01): a rule cannot be tested at zero.
+- **A chance from recent history** (2026-11-07): any negative in the last three races, which
+  step 5 built; the asset's own non-classifications; and its team's, over three races or the
+  season so far. None beat a flat rate for drivers in 2023–25.
+- **Leaving risk to the budget reward** (2026-11-07): it rewards spend whatever the risk, so it
+  can buy an expensive asset that is likely to go negative.
 
-This is the first point in Alex's brief. See `log.md`, *Negative scores*, and its later
-check on the rolling indicators.
+### 4. How is unspent budget handled? (agreed 2026-11-07: a spend reward and a price-rise reward)
 
-- **A. No separate term.** Expected points already include average negative risk. This is
-  available only if question 1 goes to B.
-- **B. A soft penalty** on each asset's chance of going negative, with a coefficient that
-  can be tested at zero.
-- **C. A rule** that excludes assets, for example after recent negatives.
+This is the second point in Alex's brief.
 
-Evidence: negatives cost P2PM's teams 202, 313 and 275 points a season if every one had
-been zero, which is a hindsight ceiling. They are only partly predictable: 9% of the signal's
-top five against 24% at the back, and about two-thirds of them are retirements. A negative
-makes one more likely (drivers 15%, 20% and 23% after none, one and two in the last three
-races; constructors 9%, 19% and 34%), but this does not control for how good the car is.
-Swapping fantasy rolling points into the signal did not sort them better.
+- **A small reward per 1m spent,** tuned from zero (agreed 2026-11-01). It does not stand in
+  for the negative penalty.
+- **A reward for expected price rises, by the asset's third on its signal value per 1m within
+  the race,** for drivers and constructors, tuned from zero. The expected rise for each third
+  comes from the other 2023–25 seasons, races 2 onwards. Of the measures tried, value per 1m
+  ordered rises most evenly across 2023–25. See `log.md`, *Redesign evidence*.
 
-Question 1 went to B, so A is available. What A misses is anything about a particular asset
-beyond its place, because the table gives every asset at a place the same risk.
+Final budgets are reported for every variant. The old strategy ended 2–14m behind P2PM, and
+paying top prices for top-ranked assets, which do not rise, was part of why. P2PM leaves
+2.3–4.3m unspent on average, and spending alone has not helped: Max Budget spends the most and
+loses by 21–36%.
 
-Recommendation put to Alex: A as the base, with B as a tested variant. Avoid C unless the
-back-test supports it, since a rule cannot be tested at zero the same way.
+Not chosen:
 
-**Agreed 2026-11-01: as recommended.**
-
-### 4. How is unspent budget handled? (agreed 2026-11-01: A)
-
-This is the second point in Alex's brief. See `log.md`, *Unspent budget*.
-
-**Agreed 2026-11-01: there is no hard rule on maximum spend, and a soft term gets tested.**
-Its form is open.
-
-- **A. A small reward per 1m spent,** tested at zero and a few other values.
-- **B. A reward for expected price rises,** aimed at budget growth rather than spending.
-- **C. Both.**
-
-Evidence: P2PM leaves 2.3–4.3m unspent on average, worth at most about 70–225 points a
-season. Spending alone has not helped: Max Budget spends the most and loses by 21–36%, and
-Max Points spends more than P2PM and still loses. Budget growth may matter as much, as
-the price-blind odds strategy was about 10m behind P2PM's budget by 2026 race 17.
-
-Question 1 went to B, so a reward can be stated in points per 1m. Within a race, 1m of price
-goes with about 1.0–1.3 points for a driver and 2.1–2.8 for a constructor, which gives a
-range to test, starting at zero.
-
-Recommendation put to Alex: A, and report final budgets for every variant. Add B only if the
-signal falls behind on budget the way the odds strategy did.
-
-**Agreed 2026-11-01: A.** B is not built now.
+- **A hard rule on maximum spend** (2026-11-01).
+- **Recent fantasy points per 1m, P2PM's measure, for price rises** (2026-11-07): it was
+  strongest in 2025 but no better than chance for drivers in 2023, and it would blur what this
+  strategy tests.
 
 ### 5. How is the DRS driver chosen, and is it inside the objective? (agreed 2026-11-01: A, with B as the comparison)
 
@@ -170,8 +157,11 @@ ceiling. The helper rewards teams with one strong driver, but nominates by whate
 it is given, so it does not by itself improve the pick. The original entry asks for a
 coefficient that can be tested at zero.
 
-Question 1 went to B, so passing the helper expected points makes the term what DRS really
-adds, which gives a coefficient of 1 a meaning. A and B nominate by the same rule, the
+Passing the helper the signal values from question 1 makes the term the nominee's value
+again, as DRS doubles a driver's points, which gives a coefficient of 1 a meaning. The DRS
+driver's chance of going negative and expected price rise are not doubled: the penalty would
+barely move, as the nominee is almost always in the dearest third, and DRS does not double a
+price change. A and B nominate by the same rule, the
 selected driver with the best value, so they differ only in whether DRS affects the team
 picked. B is A with the coefficient at zero, as long as its nominee comes from a
 `get_drs_driver()` override, since the helper's nominee is arbitrary with zero values
@@ -192,8 +182,8 @@ format and for race 1, which one flat `METRIC_WEIGHTS` dict cannot say.
 - **B. The strategy builds its signal from the component columns,** as
   `indicator_analysis_v1` did, and `AggregateRank` is left as it is.
 
-Question 1 went to expected points by signal position, so the strategy needs only the
-signal's order, and does not sum or maximise `AggregateRank`. Only `fast_f1` uses the column:
+The strategy uses its own signal's values, as question 1 says, and does not sum or maximise
+`AggregateRank`. Only `fast_f1` uses the column:
 `output.py` derives `RankPosition` from it and `cli.py` prints both, and tests in
 `test_fastf1_metrics.py` and `test_fast_f1_output.py` pin today's flat weights (checked by
 grep). So until it is changed, the ranking `fast_f1.cli` prints each race stays on the older
@@ -213,8 +203,10 @@ unscored, and the season has not finished. The harness verdict is a positive poo
 delta in every season, at 500 teams a band.
 
 `indicator_analysis_v1` confirms 2026 played no part in choosing the signal (its *Findings*).
-But 2026 could still leak in through the expected-points tables: "other seasons" for a 2023
-run would include 2026, and tuning there would then have seen it.
+But 2026 could still leak in through anything built from other seasons, now the negative and
+price-rise measures: "other seasons" for a 2023 run would include 2026, and tuning there would
+then have seen it. 2026 also plays no part in design choices: Alex's view that an unreliable
+team makes a −20 more likely comes partly from 2026, and was tested on 2023–25 only.
 
 Recommendation put to Alex:
 
@@ -224,8 +216,8 @@ Recommendation put to Alex:
   2026 with a loss in a flattered season is not a win either.
 - Fix every coefficient from questions 3 and 4 on 2023–25, then run only the chosen variants on
   2026, once, and report how many variants were tried.
-- While tuning, a season's table comes from the other 2023–25 seasons only, leaving 2026 out.
-  The 2026 run's table comes from all of 2023–25.
+- While tuning, a season's measures come from the other 2023–25 seasons only, leaving 2026 out.
+  The 2026 run's measures come from all of 2023–25.
 - 2026 runs through race 18 with the harness's own `--output` and `--summary`, and is rerun
   when the season finishes. Race 19 is priced but has no signal, so the plan must say how that
   race is handled.
@@ -239,16 +231,17 @@ in a core module goes in the R12 ledger in `docs/backtest_v1/requirements.md`.
 Recommendation put to Alex, with no edit to any existing file in `linear/`, `races/`,
 `import_data/` or `scripts/`:
 
-- **`fast_f1/signal.py`, new.** Builds the signal from the component columns, and the
-  expected-points tables from the metrics file and the archive, both cached once per process.
-  `factory_strategy` builds a strategy per team per race, so reading the file on each build, as
-  the odds strategy does, would be too slow. A season's table uses 2023–25 minus that season,
-  which covers both the tuning and the 2026 run with one rule.
+- **`fast_f1/signal.py`, new.** Builds the signal values from the component columns, and the
+  negative and price-rise measures from the metrics file and the archive, cached once per
+  process. `factory_strategy` builds a strategy per team per race, so reading the file on each
+  build, as the odds strategy does, would be too slow. A season's measures use 2023–25 minus
+  that season, which covers both the tuning and the 2026 run with one rule.
 - **`linear/strategy_fastf1.py`, new.** `StrategyFastF1(StrategyBase)`, with keyword parameters
-  `fn_metrics`, `drs_coefficient=1.0`, `negative_penalty=0.0` and `budget_reward=0.0`.
-  `make_variant` passes these through, so `factory_strategy` needs no change (checked). The
-  objective is expected points, plus the helper's DRS term unless its coefficient is zero, plus
-  `budget_reward * TotalCost`, minus the penalty. `get_drs_driver()` always returns the selected
+  `fn_metrics`, `drs_coefficient=1.0`, `negative_penalty=0.0`, `budget_reward=0.0` and, from
+  the redesign, `price_rise_reward=0.0`. `make_variant` passes these through, so
+  `factory_strategy` needs no change (checked). The objective is the signal values, plus the
+  helper's DRS term unless its coefficient is zero, plus `budget_reward * TotalCost`, plus the
+  price-rise reward, minus the penalty. `get_drs_driver()` always returns the selected
   driver with the best value, so zero and non-zero coefficients share one path. **Agreed
   2026-11-01: it does not implement the race-4 chip.**
 - **A race with no signal scores every asset zero,** as the odds strategy does, and DRS falls to
@@ -269,24 +262,32 @@ step,** so that a refresh cannot bring it back, with the data edit's check plan 
 
 ## Decisions so far
 
-- **No hard rule on maximum spend; a soft term gets tested.** Agreed 2026-11-01.
-- **The objective scores in expected fantasy points, by signal position.** Agreed 2026-11-01,
-  and reopened 2026-11-06, see question 1. The 0–1 signal is not run as a comparison.
-- **A constructor scores on its own rolling place, converted to expected points.** Agreed
-  2026-11-01.
-- **Negatives get no separate term in the base strategy.** A soft penalty, with a coefficient
-  tested at zero, runs as a variant. No exclusion rule unless the back-test supports one.
-  Agreed 2026-11-01.
-- **The budget term is a small reward in points per 1m spent,** tested at zero and a few other
-  values, with final budgets reported for every variant. Agreed 2026-11-01.
+- **Equal weights across the signal's inputs is the preference.** They may change only if there
+  is a case for it, and then only with care about over-fitting limited data. Agreed 2026-11-07.
+- **The objective scores the signal value, stretched onto the race's recent championship
+  points per race.** Agreed 2026-11-07, see question 1.
+- **A constructor scores the sum of its two drivers' values.** Agreed 2026-11-07.
+- **Negatives get a soft penalty on each asset's chance by price third,** for drivers and
+  constructors, tuned from zero. No exclusion rule. Agreed 2026-11-07.
+- **No hard rule on maximum spend.** A reward per 1m spent and a reward for expected price
+  rises by value-per-1m third are each tuned from zero, with final budgets reported for every
+  variant. Agreed 2026-11-01 and 2026-11-07.
+- **Tuning uses one setting across weekend formats first.** Values are set from a measurement
+  of the signal's scale and logged before any run. The chosen setting is then checked race by
+  race for whether its gains or losses fall on sprint weekends, and a sprint-specific variant
+  is added only if they clearly do. Agreed 2026-11-07.
+- **Two checks must pass before tuning,** with pass marks fixed before any result: the signal
+  values' sizes match actual fantasy points at least as well as the old table's in every season
+  of 2023–25, and the rebuilt strategy holds VER in more than half of 2023's team-races from
+  race 10 onwards. If either fails, work stops and is raised with Alex. Agreed 2026-11-07.
 - **DRS sits inside the objective at a coefficient of 1,** with zero as the comparison, and the
   nominee is the selected driver with the best value. Agreed 2026-11-01.
 - **The strategy builds its signal from the component columns,** defined once in `fast_f1`, and
   `AggregateRank` stays as it is. Bringing it into line is its own item in `BACKLOG.md`. Agreed
   2026-11-01.
 - **The verdict is the harness's: a positive pooled mean delta in every one of four seasons,**
-  with 2026 reported as the fair read. Coefficients are fixed on 2023–25, with tables that leave
-  2026 out, before the chosen variants run once on 2026. 2026 is rerun when the season finishes.
+  with 2026 reported as the fair read. Coefficients are fixed on 2023–25, with measures that
+  leave 2026 out, before the chosen variants run once on 2026. 2026 is rerun when the season finishes.
   Agreed 2026-11-01.
 - **The strategy does not implement the race-4 chip.** `StrategyMaxP2PM` still plays it, so the
   comparison also measures the chip. `StrategyMaxP2PMNoReset` runs in all four seasons to isolate
@@ -307,13 +308,14 @@ on championship rolling points.
   they cover one season.
 - `StrategyMaxP2PM` is not edited until the 2026 season ends.
 - The signal's rolling indicators stay on championship points.
-- A place or position with no history in the other seasons carries the last known value:
-  constructor place 10 for place 11, and driver position 20 for 21 and 22. This understates
-  the risk at constructor place 11, which went negative 59% of the time in 2026.
 
 Withdrawn: copying P2PM's race-4 chip, so that the comparison would not also measure it. Alex
 withdrew it on 2026-11-01 and decided the strategy does not play the chip (*Decisions so far*;
 `log.md`, *Two decisions from 2026-11-01, logged late*).
+
+Withdrawn: carrying the last known value to a place or position with no history in the other
+seasons. It fell away on 2026-11-07, as the redesign has no tables by place or position
+(`log.md`, *Signal redesign agreed*).
 
 ## Original entry, moved from `BACKLOG.md` 2026-11-01
 

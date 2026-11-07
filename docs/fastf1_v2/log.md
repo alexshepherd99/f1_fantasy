@@ -1264,3 +1264,66 @@ size of a lead in real point totals, which was its purpose. It was not pursued f
 
 It is also close to `StrategyMaxPoints`, which optimised recent fantasy points and trailed P2PM
 in all of 2023–25.
+
+## 2026-11-07 — Signal redesign agreed
+
+Agreed with Alex in conversation, item by item, before any code. The evidence is in the entry
+above.
+
+### In plain language
+
+- **The objective now scores the signal's value, not its position.** Each driver's signal is
+  stretched onto that race's recent championship points per race, so a driver well clear of
+  the field stays well clear. In 2023 race 10 VER comes out 21 points ahead of LEC, where the
+  old table gave both 29.0.
+- **A constructor scores the sum of its two drivers,** as championship points do and as the
+  game mostly does.
+- **Negative risk comes from a penalty by price third,** for drivers and constructors, as price
+  was the only measure that predicted it.
+- **Budget gets two rewards:** one per 1m spent, as before, and a new one for expected price
+  rises, by the signal's value per 1m.
+- **Everything new is tuned from zero on 2023–25,** with values fixed before any run, one
+  setting across weekend formats, and two checks that must pass first.
+- **Alex prefers equal weights** across the signal's inputs, changed only with a case and care
+  about over-fitting.
+
+### How the design was reached
+
+- **A straight-line conversion changes no driver pick.** The LP takes exactly five drivers and
+  two constructors (`linear/strategy_base.py:232-233`), so scaling every driver's value by one
+  factor and adding one amount moves every team equally. That was reasoned, not run. So the
+  conversion matters only for the mix of drivers and constructors, and for the penalty and
+  rewards, which need a unit. Alex chose championship points as that unit, with a constructor
+  as the sum of its drivers, letting FP3 move drivers within the top-heavy rolling-points
+  inputs.
+- **Two readings of "into championship points" were put to Alex.** One gave positions on the
+  25-18-15 scale, which is top-heavy but still loses the size of a lead. The other stretches
+  the value onto the race's recent championship points. Alex chose the second.
+- **Per race, not the three-race total.** On the totals, the race's top figure was about 25 at
+  race 2, 44 at race 3 and 47–78 after, so a fixed penalty or reward would weigh about three
+  times more at race 2. Dividing by the races covered keeps the scale steady. Within a race it
+  picks the same team.
+- **The stretch spreads the bottom of the field rather than squashing it.** Drivers with no
+  recent championship points still differ by their FP3 and team scores, such as TSU at 17 and
+  SAR at 21 on the total scale in 2023 race 10. Nothing in the signal knows retirement risk,
+  which left that to the penalty.
+- **Alex set aside a fitted weight for each input,** as too little data, and option 3, recorded
+  in the entry above.
+- **Alex saw that the budget reward is not a risk term.** It rewards spend whatever the risk,
+  and could buy an expensive asset likely to go negative, so the penalty stays.
+- **Step 8's tuning no longer says anything about the penalty or the rewards,** as Alex pointed
+  out: it measured them on the broken design. They are all tuned again.
+- **Per-format settings are allowed for, not assumed.** The harness judges whole seasons, and
+  only about 6 of ~22 races are sprints, so a sprint-only setting would be judged mostly on
+  races it does not touch. The chosen setting is checked race by race instead.
+- **DRS is unchanged.** Doubling the nominee's value matches the game doubling their points.
+
+### What changed in the documents
+
+- `requirements.md`: questions 1 to 4 have new answers, each listing the options not chosen in
+  one line. Questions 5 to 8 and the decisions follow them. The working assumption about places
+  with no history is withdrawn, as there are no tables by place.
+- `plan.md`: steps 4 to 8 are one line each, pointing to the steps that revise them. New steps
+  11 to 16 build the values, the risk and price-rise measures, the objective, the two checks,
+  the tuning values and labels, and the tuning run. Step 9 now waits for step 16, and no longer
+  makes a price-rise reward conditional on falling behind on budget, as the reward is now built.
