@@ -32,6 +32,9 @@ alongside in `requirements.md`, and the steps in `plan.md`.
   expected-points table loses how far ahead an asset is, and in 2023 it never bought VER.
   Step 9 is on hold, and the signal design is to be redone in a fresh session. See the entry
   of that date, *Stepping back*.
+- Signal redesign agreed 2026-11-07, with steps 11 to 16 added to build and tune it. Steps 9
+  and 10 were renumbered 17 and 18 the same day, to run in number order; entries dated
+  before then name them by their old numbers.
 - Decisions so far: no hard rule on maximum spend, with a small reward per 1m spent to be
   tested; the objective scores in expected fantasy points by signal position; a constructor
   scores on its own rolling place, converted the same way; negatives get no separate term in

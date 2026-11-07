@@ -3,15 +3,15 @@
 **Status**: steps 1 to 8 are done. Step 8 found every FastF1 label trailing P2PM in 2023–25, and
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
-redesign agreed*), and steps 11 to 16 build and tune it. Step 11 is next. Steps 9 and 10 follow
-step 16. Requirements: `requirements.md`.
+redesign agreed*), and steps 11 to 16 build and tune it. Step 11 is next. Steps 17 and 18,
+numbered 9 and 10 before 2026-11-07, follow step 16. Requirements: `requirements.md`.
 
 One commit per concern, for review per commit. Each behavioural change is seen failing before it
 passes, and the full suite is green at the end of every step. No existing file in `linear/`,
 `races/`, `import_data/` or `scripts/` is edited. Anything the code has to work around in them goes
 in the R12 ledger in `docs/backtest_v1/requirements.md`.
 
-Steps run in the order 11, 14.1, 12, 13, 14.2, 15, 16, 9, 10.
+Steps run in the order 11, 14.1, 12, 13, 14.2, 15, 16, 17, 18.
 
 ## Step 1 — The 2024 race 24 fault, in the code
 
@@ -143,7 +143,7 @@ Step 7's labels give way to these. Label names follow from the values chosen.
 ## Step 16 — Tuning on 2023–25 (real run)
 
 Run the labels at 100 teams a band, seed 2, in new stores of their own, one per season, not
-`outputs/fastf1_v2_tuning_*`. Seed 1 at 100 teams a band draws the first 100 of step 9's 500,
+`outputs/fastf1_v2_tuning_*`. Seed 1 at 100 teams a band draws the first 100 of step 17's 500,
 which is why tuning uses seed 2. 2026 is not run or looked at. Time a small run first, and run
 in the background.
 
@@ -157,7 +157,7 @@ a band, seed 2), and report whether its gains or losses against the base fall ma
 weekends. A sprint-specific variant is added only if they clearly do, and it must clear the
 same bar.
 
-## Step 9 — The back-test (real run)
+## Step 17 — The back-test (real run)
 
 Waits for step 16.
 
@@ -171,7 +171,7 @@ with 2026 through race 18:
 
 Report final budgets for each one.
 
-## Step 10 — Findings and close-out
+## Step 18 — Findings and close-out
 
 - Findings in `log.md`, in plain language first: the verdict, 2026 as the fair read, 2023–25 as
   flattered, how much of any gap the chip explains, the number of variants tried, and what has not
