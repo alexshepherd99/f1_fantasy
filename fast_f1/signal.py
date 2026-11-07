@@ -7,6 +7,7 @@ valued. See ``docs/fastf1_v2/plan.md``, steps 4, 11 and 12.
 """
 from __future__ import annotations
 
+import dataclasses
 import functools
 import logging
 from pathlib import Path
@@ -45,6 +46,77 @@ SIGNAL_SLOTS = {
 # Rounding lets signals that differ only by floating point noise count as equal, so a
 # race whose signals are all equal is caught rather than stretched on that noise.
 _SIGNAL_DECIMALS = 9
+
+
+@dataclasses.dataclass(frozen=True)
+class PriceRules:
+    """One season's figures for the game's three-race price model, in 1m.
+
+    Attributes:
+        split: An asset priced at or above it takes the smaller, upper-tier steps.
+        floor: A fall stops here.
+        cap: A rise stops here, or None for no cap.
+    """
+    split: float
+    floor: float
+    cap: float | None
+
+
+# The game's price rules from 2025, as checked against the archive (docs/fastf1_v2/log.md,
+# *The 2025 model against the archive*). 2023-24 ran a different model, and a season after
+# the last here takes its figures.
+PRICE_RULES = {
+    2025: PriceRules(split=18.5, floor=4.5, cap=None),
+    2026: PriceRules(split=18.5, floor=3.0, cap=34.0),
+}
+
+# Each rating band's step, as (at or above the split, below it).
+_BAND_STEPS = {
+    "Great": (0.3, 0.6),
+    "Good": (0.1, 0.2),
+    "Poor": (-0.1, -0.2),
+    "Terrible": (-0.3, -0.6),
+}
+
+
+def rule_price_move(rating: float, price: float, season: int) -> float:
+    """An asset's next price move under the game's three-race model, in 1m.
+
+    Args:
+        rating: The asset's mean points per 1m over the three races that set the move.
+        price: The asset's price now.
+        season: The season, whose ``PRICE_RULES`` apply.
+
+    Returns:
+        The move, rounded to 0.1. A floor or cap stops a move, but never pushes an asset
+        already beyond it back inside.
+
+    Raises:
+        ValueError: The season is before the first in ``PRICE_RULES``.
+    """
+    if season < min(PRICE_RULES):
+        msg = f"No price rules for {season}, which priced under a different model"
+        logger.error(msg)
+        raise ValueError(msg)
+    rules = PRICE_RULES[max(s for s in PRICE_RULES if s <= season)]
+
+    upper, lower = _BAND_STEPS[_rating_band(rating)]
+    moved = price + (upper if price >= rules.split else lower)
+    if rules.cap is not None:
+        moved = min(moved, max(price, rules.cap))
+    moved = max(moved, min(price, rules.floor))
+    return round(moved - price, 1)
+
+
+def _rating_band(rating: float) -> str:
+    """The band of a rating: above 1.2, from 0.9, from 0.6, and below 0.6."""
+    if rating > 1.2:
+        return "Great"
+    if rating >= 0.9:
+        return "Good"
+    if rating >= 0.6:
+        return "Poor"
+    return "Terrible"
 
 
 def driver_values(

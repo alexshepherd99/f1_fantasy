@@ -7,6 +7,7 @@ from fast_f1.signal import (
     constructor_values,
     driver_values,
     load_signal_tables,
+    rule_price_move,
 )
 
 
@@ -479,3 +480,60 @@ def test_load_signal_tables_reads_the_files_once_per_process(tmp_path):
     metrics = tmp_path / "metrics.xlsx"
     pd.DataFrame([_row(2, "VER", 0.5, 0.5, season=2023)]).to_excel(metrics, index=False)
     assert load_signal_tables(metrics) is load_signal_tables(metrics)
+
+
+@pytest.mark.parametrize("rating, upper, lower", [
+    (1.21, 0.3, 0.6),
+    (1.2, 0.1, 0.2),
+    (0.9, 0.1, 0.2),
+    (0.89, -0.1, -0.2),
+    (0.6, -0.1, -0.2),
+    (0.59, -0.3, -0.6),
+])
+def test_rule_price_move_steps_by_rating_band_and_price_tier(rating, upper, lower):
+    assert rule_price_move(rating, 25.0, 2025) == upper
+    assert rule_price_move(rating, 10.0, 2025) == lower
+
+
+@pytest.mark.parametrize("season", [2025, 2026])
+@pytest.mark.parametrize("price, move", [(18.5, 0.3), (18.4, 0.6)])
+def test_rule_price_move_counts_a_price_at_the_split_as_the_upper_tier(season, price, move):
+    assert rule_price_move(1.5, price, season) == move
+
+
+@pytest.mark.parametrize("season, price, move", [
+    (2025, 4.7, -0.2),
+    (2025, 4.6, -0.1),
+    (2025, 4.5, 0.0),
+    (2026, 3.2, -0.2),
+    (2026, 3.1, -0.1),
+    (2026, 3.0, 0.0),
+])
+def test_rule_price_move_stops_a_fall_at_the_seasons_floor(season, price, move):
+    assert rule_price_move(0.7, price, season) == move
+
+
+@pytest.mark.parametrize("season, price, move", [
+    (2026, 33.9, 0.1),
+    (2026, 34.0, 0.0),
+    (2025, 34.0, 0.3),
+])
+def test_rule_price_move_stops_a_rise_at_the_seasons_cap(season, price, move):
+    assert rule_price_move(1.5, price, season) == move
+
+
+@pytest.mark.parametrize("rating, price", [(1.5, 35.0), (0.1, 2.8)])
+def test_rule_price_move_never_pushes_an_asset_back_inside_a_limit(rating, price):
+    assert rule_price_move(rating, price, 2026) == 0.0
+
+
+@pytest.mark.parametrize("rating, price, move", [(0.1, 3.2, -0.2), (1.5, 33.9, 0.1)])
+def test_rule_price_move_takes_2026s_figures_after_2026(rating, price, move):
+    # 2025's floor of 4.5m and lack of a cap would give 0.0 and +0.3.
+    assert rule_price_move(rating, price, 2027) == move
+
+
+@pytest.mark.parametrize("season", [2023, 2024])
+def test_rule_price_move_refuses_a_season_before_the_three_race_model(season):
+    with pytest.raises(ValueError, match=f"No price rules for {season}"):
+        rule_price_move(1.0, 10.0, season)
