@@ -2526,3 +2526,44 @@ each take half their rows from 2025, which is where their steep gap comes from.
 
 Nothing was re-simulated. One throwaway script, not kept, read the step 16 stores and
 `load_signal_tables()`'s rise history.
+
+## 2026-11-07 — A rules-based price rise: what it can and cannot show
+
+Alex asked whether recalculating 2025's expected price rise from the rules would give a better
+read on whether the price-rise lever improves results. This is reasoned, and nothing was run.
+
+### In plain language
+
+- **It would give the lever its first fair test, but in 2025 only.** Step 16's lever ran in
+  2025 on a table that showed about a fifth of the real gap between drivers. Under the rules,
+  two of the three races that set the next move are already scored when the team is picked.
+  Only the coming race is unknown, and the signal's value is an estimate of it. A rise worked
+  out from the rules should predict 2025's moves far better than an average by value third.
+- **The stake is worth testing.** P2PM's budget lead over the base built to 10.6m by the end
+  of 2025, about 5m on average across the season. At 0.93 value units a race per 1m and 1.73
+  fantasy points per value unit (step 15.1), 5m is worth about 8 points a race, so about 150 to
+  200 points a season. That is about the size of the 154-point gap. It is an upper bound, as it
+  assumes the extra budget is all spent, and P2PM leaves 2.3 to 4.3m unspent.
+- **It tests whether the lever can help, not whether it wins.** 2026, in step 17, stays the
+  only fair read.
+
+### What it cannot show
+
+- **One season.** 2023–24 cannot test a rules-based rise, as their prices followed a model that
+  has gone. Choosing the reward's value on 2025 and judging it on 2025 is in-sample, so a gain
+  is weaker evidence than it looks.
+- **The harness's bar needs a ruling.** It asks for a gain in every season. For this lever,
+  2023–24 can show at most that it does no harm.
+- **The coming race must come from the signal, never from its actual points.** Reading them
+  would be look-ahead and flatter the lever.
+- **The reward's scale may need a fresh look.** 5, 10 and 20 sit beside the old tables' rises
+  of 0 to 0.3m a race. A rules-based rise runs from −0.6 to +0.6m, so the same value counts for
+  more. A rise is also worth less as the season runs out, which one setting ignores.
+- **A small leak from 2026.** The floor and cap added in *The 2025 model against the archive*
+  were read from the archive's 2025–26 prices. It matters only for assets at the floor or the
+  cap.
+
+### Alex's decision
+
+**Alex accepted on 2026-11-07 that a rules-based price rise will have limited back-testing,**
+and asked for the change to be planned.
