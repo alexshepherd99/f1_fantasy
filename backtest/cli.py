@@ -34,6 +34,9 @@ FASTF1_VARIANTS = [
     make_variant(StrategyFastF1, "FastF1_RuleRise5", price_rise_reward=5.0),
     make_variant(StrategyFastF1, "FastF1_RuleRise10", price_rise_reward=10.0),
     make_variant(StrategyFastF1, "FastF1_RuleRise20", price_rise_reward=20.0),
+    # Lower rewards, continuing the halving from 5, tried on fresh teams in step 23
+    make_variant(StrategyFastF1, "FastF1_RuleRise2p5", price_rise_reward=2.5),
+    make_variant(StrategyFastF1, "FastF1_RuleRise1p25", price_rise_reward=1.25),
 ]
 
 # Strategies that can be named with --strategies, by label

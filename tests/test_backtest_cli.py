@@ -53,6 +53,9 @@ _FASTF1_SETTINGS = {
     "FastF1_RuleRise5": (1.0, 0.0, 0.0, 5.0),
     "FastF1_RuleRise10": (1.0, 0.0, 0.0, 10.0),
     "FastF1_RuleRise20": (1.0, 0.0, 0.0, 20.0),
+    # Lower rewards, added in step 23
+    "FastF1_RuleRise2p5": (1.0, 0.0, 0.0, 2.5),
+    "FastF1_RuleRise1p25": (1.0, 0.0, 0.0, 1.25),
 }
 
 
