@@ -85,7 +85,11 @@ As requirements questions 3 and 4. Replaces step 5's tables.
   0, which the archive gives some stand-in drivers, are left out.
 - Both come from `TABLE_SEASONS` less the season itself, races 2 onwards, so no season sees its
   own results and 2026 enters neither. How ties split a third is settled in the tests.
-- The expected-points tables and step 5's negatives by recent history are removed.
+- Step 5's negatives by recent history are removed, as `negative_chance` keeps its name and
+  changes its basis to the price third. The expected-points tables stay until step 13.1, as
+  `StrategyFastF1` reads them until then. Agreed with Alex 2026-11-07.
+- Moves are taken only where both prices are present. No loaded archive row in 2023–26 is
+  priced at 0, so the rule on moves priced at 0 needs no code of its own.
 - Cached once per process, as a strategy is built per team per race.
 - Tests: a season's own results cannot change its measures, and 2026 cannot change a 2023–25
   measure.
@@ -96,7 +100,8 @@ Revises step 6, one part per commit, each keyword parameter arriving with the pa
 
 1. The objective sums step 11's values in place of expected points. The base budget, team
    size and move constraints stay, and so does the test that race 4 keeps its normal move
-   limit, as there is **no race-4 chip**.
+   limit, as there is **no race-4 chip**. The expected-points tables are removed in the same
+   change.
 2. DRS as now: the helper's term on the values, scaled by `drs_coefficient` and left out at
    zero. The nominee is the selected driver with the best value, or the default when none has
    one.
