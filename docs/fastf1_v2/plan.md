@@ -174,6 +174,17 @@ Run the labels at 100 teams a band, seed 2, in new stores of their own, one per 
 which is why tuning uses seed 2. 2026 is not run or looked at. Time a small run first, and run
 in the background.
 
+**A check that no old row is reused, added at Alex's request on 2026-11-07.** This step draws
+the same teams as step 8, so step 8's `outputs/fastf1_v2_tuning_*` stores would supply every
+team under `StrategyFastF1`, `FastF1_Drs0`, `FastF1_Bud025` and `FastF1_Bud05` from the old
+design, silently (`log.md`, *Step 15.2*).
+
+- **Before the run:** each season's `--output` and `--summary` name new files, not
+  `fastf1_v2_tuning_*`, and none of those files exists yet. If one does, stop and raise it
+  with Alex. The timing run goes to the scratchpad, so it cannot seed a store either.
+- **After the run:** each season's "skipped" line in the log reads 0, and each store holds 300
+  rows per label for its season. If either fails, the results are not used.
+
 A penalty or reward is kept only if it clears the harness's bar against the base: a positive
 pooled mean delta in each of 2023–25. Otherwise it stays at zero. If more than one lever clears,
 the best clearing value of each runs combined, and must clear the same bar. Log every variant
