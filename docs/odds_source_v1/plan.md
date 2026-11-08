@@ -17,25 +17,17 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 1. ~~Thread the odds file path through `fast_f1.output`~~ — done 2026-11-08,
    see log *Step 1*.
 
-2. **Convert the real odds workbook to CSV, beside it.** A data-only commit:
-   `data/f1_betting_odds.csv` is written, the workbook stays and nothing reads
-   the CSV yet. Every column is kept as text except `Season` and `Race`, and
-   the unnamed tenth column is dropped (it holds one stray value). Checks,
-   which must all pass before committing:
-   - every kept cell in the CSV equals the workbook's cell, compared as text,
-     and no cell was read as a date;
-   - `load_odds` gives the same dict from both files for every season, race
-     and asset type, once step 3's loader can read the CSV (run then, from a
-     scratch script, and recorded in the log);
-   - every non-blank odds cell in every odds column parses with
-     `odds_to_pct`.
+2. ~~Convert the real odds workbook to CSV, beside it~~ — done 2026-11-08,
+   see log *Step 2*. Its `load_odds` comparison runs in step 3.
 
 3. **Switch the loader to CSV.** `load_odds` reads CSV with odds columns as
    text, treating a blank `Odds` as no price (0.0), which a CSV can now hold
    for a driver missing from a run. `_FILE_BETTING_ODDS` becomes the CSV path.
    `fast_f1/indicator_analysis.py` reads it with `read_csv`. Test fixtures
-   `data/test_betting_odds.xlsx` and any others become CSV. Then run step 2's
-   `load_odds` comparison, and remove both odds workbooks with `git rm`.
+   `data/test_betting_odds.xlsx` and any others become CSV. Then check that
+   `load_odds` gives the same dict from the CSV as from the workbook (read
+   with the old loader) for every season, race and asset type, from a scratch
+   script, and remove both odds workbooks with `git rm`.
 
 4. **Parse the saved page.** `odds_source/page.py` reads an `.mhtml` file and
    returns the race name, its start time and, for the *Winner* market, each

@@ -105,3 +105,28 @@ which shows nothing about behaviour, so behaviour was checked by mutation:
 Each restored from a copy, `__pycache__` cleared, and green before the next.
 Suite: 543 passed, unchanged in count since the tests were rewritten, not
 added. The output test module's warnings are unchanged at 7.
+
+## 2026-11-08 — Step 2: odds workbook converted to CSV, beside it
+
+`data/f1_betting_odds.csv` holds the workbook's 440 rows in the same order,
+with its nine named columns as text. Nothing reads it yet.
+
+A survey of stored cell types found the workbook cleaner than feared: no
+price had been turned into a date, and every price is stored as text. Two
+cells differed from the plan's assumptions:
+
+- **Race 1's `Odds_Pre_Quali` held the number 0 in all 22 rows**, a
+  placeholder rather than a price. Alex chose to blank them, so every odds
+  cell in the CSV is either blank or a price.
+- **The unnamed tenth column** held one midnight time value. Dropped, as
+  planned.
+
+The conversion and the check were separate throwaway scripts, so the check
+does not reuse the conversion's logic. The check passed: no mismatched cell,
+exactly 22 zeros blanked, no date or time cells, and 1,012 odds cells parsed
+with `odds_to_pct`, which matches the column counts. It was shown able to
+fail on two damaged copies: one price changed, and one zero left unblanked.
+Each gave one mismatch and a non-zero exit.
+
+The `load_odds` comparison moves to step 3, where the loader can read the
+CSV. Suite: 543 passed.
