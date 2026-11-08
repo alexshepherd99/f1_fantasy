@@ -3353,3 +3353,64 @@ through the budget.
 - **Proposed for step 18's "not run" list:** why the chip cost points in 2024, combinations of
   the levers, a sprint variant and a second 2026 seed. Not yet decided: whether 2025's worst
   tenth of teams, 420 points behind P2PM, is looked into before step 18 or listed as not run.
+
+## 2026-11-08 — Step 25.4: the chip on 2026, under the revised rule
+
+### In plain language
+
+**The chip is not kept, under the revised rule either.** Through 2026 race 18 it costs 13.6
+points a team against `FastF1_RuleRise2p5`, and it is behind on more teams than it is ahead,
+52% against 41%. That is about six standard errors below zero, and negative in every band. The
+revised rule needed a gain in both 2025 and 2026, so `FastF1_RuleRise2p5`, without the chip,
+stays the final strategy.
+
+Over the four seasons the chip is +10.1, −28.0, +56.6 and −13.6 points a team. It helps in two
+and costs in two, so it is not a reliable gain for FastF1, whichever seasons are counted.
+
+### What was run
+
+`backtest.cli --seasons 2026 --last-race 18 --sample-size 500 --seed 1 --strategies
+FastF1_RuleRise2p5_Chip --output outputs/fastf1_v2_step25_chip_2026.parquet --summary
+outputs/fastf1_v2_step25_chip_summary_2026.csv`, in the background alongside step 26's run:
+exit 0 in 24.7 minutes, no error or warning in the log. The comparison is from a throwaway
+script, not kept, joining each team's row to step 17's `FastF1_RuleRise2p5` row in
+`outputs/fastf1_v2_results.parquet`.
+
+### The checks
+
+- **Before:** neither file existed.
+- **After:** the log reads "skipped 0 simulations already in the store". The store holds 1,500
+  rows each for `StrategyMaxP2PM` and `FastF1_RuleRise2p5_Chip`, with no duplicate, and every
+  `race` is 18. Every team pairs with a step 17 row.
+- **The control:** the new store's P2PM total equals step 17's for all 1,500 teams, so the
+  teams and P2PM are step 17's. All pass, so the results are reported.
+
+### Against `FastF1_RuleRise2p5`, the chip's effect
+
+| Band | Mean | Standard error | Median | Ahead | Tied | Behind |
+| --- | --- | --- | --- | --- | --- | --- |
+| (90, 95] | −16.6 | 3.8 | −9.5 | 40% | 6% | 55% |
+| (95, 99.5] | −15.8 | 3.9 | −10.0 | 41% | 6% | 53% |
+| (99.5, 100] | −8.4 | 3.8 | 0.0 | 43% | 9% | 48% |
+| **Pooled** | **−13.6** | 2.2 | −6.0 | 41% | 7% | 52% |
+
+The tenth and ninetieth percentiles are −121 and +91, so the chip moves most teams by a lot,
+in both directions.
+
+Against P2PM the chipped strategy is +324.5 points a team, ahead on 99% of teams, against
+step 17's +338.1 without the chip. Mean totals at race 18: chip 4,089.6, without the chip
+4,103.2, P2PM 3,765.1. Mean final budgets: 128.61m, 129.53m and 126.79m.
+
+### What to bear in mind
+
+- **Not blind.** Step 17's 2026 result was seen before the chip was considered, and the rule
+  was revised after 2023–25 were seen (*Step 25's rule revised*). Neither matters to the
+  outcome, as the chip lost.
+- **Step 17 stays the verdict against P2PM,** and stays out of sample, as no choice was made
+  on 2026.
+- **One race only, as agreed.** This does not show that a reset at another race, or a
+  different chip, could not help.
+
+### Not run
+
+Why the chip helps in some seasons and not others.

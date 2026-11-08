@@ -6,10 +6,10 @@ stepping back found that the expected-points table loses how far ahead an asset 
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 23 are done.
 Step 24 is done, and step 17 is done: `FastF1_RuleRise2p5` beats P2PM in 2025 and 2026
 (`log.md`, *Step 17: the back-test on 2025–26*). It ran on 2025–26 only (`log.md`, *Step 17
-narrowed to 2025–26*). Step 25, the race-4 chip, is open again: its 2023–25 rule was revised on
-2026-11-08 to count 2025 and 2026 only, so step 25.4 now decides it (`log.md`, *Step 25's rule
-revised, and step 26 agreed*). **Steps 25.4 and 26 are next, run alongside each other, then
-step 18, the findings and close-out.** Steps 17 and 18 were numbered 9 and 10 before
+narrowed to 2025–26*). Step 25, the race-4 chip, is done: its rule was revised on 2026-11-08 to
+count 2025 and 2026 only, and the chip failed that too, at −13.6 points a team in 2026, so it is
+not kept (`log.md`, *Step 25.4: the chip on 2026, under the revised rule*). **Step 26 is next,
+then step 18, the findings and close-out.** Steps 17 and 18 were numbered 9 and 10 before
 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
@@ -394,6 +394,10 @@ skips any team already in its store, keyed on label, season and team only. Step 
 
 ## Step 25 — The race-4 chip
 
+**Done 2026-11-08: the chip is not kept, under the revised rule either.** It is −13.6 points
+a team in 2026 through race 18, so `FastF1_RuleRise2p5` stays the final strategy. See
+`log.md`, *Step 25.4: the chip on 2026, under the revised rule*.
+
 **Reopened 2026-11-08, with a revised rule.** Against `FastF1_RuleRise2p5` the chip is +10.1
 points a team in 2023, −28.0 in 2024 and +56.6 in 2025, so it failed the first rule's bar of
 positive in all three (`log.md`, *Step 25.3: the chip on 2023–25*). Alex then revised the rule:
@@ -479,6 +483,9 @@ P2PM on the same teams, so the chip's delta is the difference of their pooled de
 The bar is applied as fixed above, and the outcome logged in plain language first.
 
 ### Step 25.4 — 2026, under the revised rule (real run)
+
+Done 2026-11-08: −13.6 points a team, so the chip fails the revised rule. See `log.md`, *Step
+25.4: the chip on 2026, under the revised rule*.
 
 At first not run, as the chip failed step 25.3's bar. Run under the revised rule agreed on
 2026-11-08.
