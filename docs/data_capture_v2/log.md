@@ -331,3 +331,27 @@ The scratch scripts are not kept, and their outputs are in
 Suite: 600 passed (594, less the 4 removed tests, plus 10 new). The workbook
 is still in the tree, unread. Step 5 removes it and updates `README.md` and
 `CLAUDE.md`, which still describe it.
+
+## 2026-11-08 — Step 5: workbook removed; docs describe the CSVs
+
+`data/f1_fantasy_archive.xlsx` is removed and can be recovered at `e40dcfb`.
+Its last edit was `7a0856e`. Both Excel-authored workbooks the 2026-09-29
+security review flagged are now out of the tree. Their old versions stay in
+history, as accepted then.
+
+`README.md`'s input-data section and `CLAUDE.md`'s `import_data/` paragraph
+and data convention now describe the two CSVs:
+
+- no row when an asset does not take part;
+- empty points for a race not yet run;
+- the load-bearing row order, and where a new race's or new driver's rows go;
+- the shortest number form;
+- not saving the files from a spreadsheet application.
+
+That replaces the null/zero rule. The rule on agreeing a check plan before
+editing hand-maintained data (a session memory, not a repo file) was updated
+to name the CSVs and say how it applies to a text file.
+
+From here, each race goes into the CSVs until the fetcher exists. Brazil's
+points and the Las Vegas prices are the first. Whether that is done by hand
+or by a session working from the saved BoxBox copy is still Alex's call.

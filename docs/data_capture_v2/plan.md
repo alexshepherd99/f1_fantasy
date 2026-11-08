@@ -66,11 +66,8 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 4. ~~Rewrite the loader to read the CSVs~~ — done 2026-11-08, see log
    *Step 4*.
 
-5. **Remove the archive workbook, and update the docs.** `git rm`
-   `data/f1_fantasy_archive.xlsx`, with the recovery commit in the log.
-   `README.md` and `CLAUDE.md` describe the two CSVs and the "no row means did
-   not take part" rule, replacing the null/zero rule. From here on, Alex
-   enters each race into the CSVs by hand until the fetcher takes over.
+5. ~~Remove the archive workbook, and update the docs~~ — done 2026-11-08,
+   see log *Step 5*.
 
 6. **Analyse the saved BoxBox copies.** Run once weekly copies span the end
    of the 2026 season (Brazil to Abu Dhabi, about five copies). Look at what

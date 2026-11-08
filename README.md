@@ -33,11 +33,11 @@ After writing the initial version of the code mostly by hand, future iterations 
 
 ## Input data
 
-The file **data/f1_fantasy_archive.xlsx** contains input data from the F1 Fantasy game; points and price, broken down into separate tabs for drivers and constructors, for each season.  The format is sensitive and should be consistent with the existing seasons; unit tests will validate and fail if this is not the case.
+The files **data/f1_fantasy_drivers.csv** and **data/f1_fantasy_constructors.csv** contain input data from the F1 Fantasy game: points and price, one row per driver or constructor per race, for every season.  Drivers have the columns `Season,Race,Constructor,Driver,Points,Price`, with `Driver` as the bare code (`NOR`); constructors have `Season,Race,Constructor,Points,Price`.  They replaced a spreadsheet on 2026-11-08 so that each race's data shows as a git diff.  Unit tests validate the files and fail if they are malformed.
 
-Drivers who are not participating in a given race must have no value populated (i.e. null) for either points or price for that race.
+A driver or constructor not taking part in a race has no row for it.  A race not yet run has its prices and an empty `Points`; the loader treats those points as 0.
 
-If updating race data in the middle of a season, drivers and constructors will have a price for the next race but no points yet.  In this period, the driver and constructor points columns must be populated with a value of 0 for that race, for all drivers which are expected to participate.
+Rows are grouped by season, then by driver or constructor, then by race, and that order matters: the back-tests sample starting teams by position, so reordered rows would quietly sample different teams.  A new race's row for each driver goes after that driver's previous race, and a driver new to a season goes after the season's last driver.  Numbers are written in their shortest form (`27`, `27.2`, `-14`).  Edit the files as text, not in a spreadsheet application, which can reorder rows or reformat numbers when it saves.
 
 **data/test_expected_values_2023.csv** and **data/test_expected_values_2024.csv** hold some pre-computed values of the derivation calculations, to support unit testing.  They replaced a spreadsheet on 2026-11-08.
 

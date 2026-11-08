@@ -21,7 +21,8 @@ same day. The steps are in `plan.md`.
   2026-11-08: Alex chose a published source over manual capture; see the
   log).
 - **`data/f1_fantasy_archive.xlsx` is the golden source for every season and
-  race it already holds.** Alex's historical analysis depends on it, so none of
+  race it already holds.** Its values have been in the CSVs since step 3, which
+  were proven identical, and the workbook can be recovered at `e40dcfb`. Alex's historical analysis depends on it, so none of
   it may change. BoxBox never revises a value the workbook holds, even where
   the two disagree. The one gap it fills is 2026 race 20's points, which the
   workbook does not have yet (it holds zeros in their place).
