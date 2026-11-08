@@ -4,7 +4,7 @@
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 23 are done.
-Step 24 is next, then step 17, with `FastF1_RuleRise2p5` as the chosen strategy, on 2025–26
+Step 24 is done. Step 17 is next, with `FastF1_RuleRise2p5` as the chosen strategy, on 2025–26
 only (`log.md`, *Step 17 narrowed to 2025–26*). Steps 17 and 18 were numbered 9 and 10 before
 2026-11-07.
 
@@ -328,6 +328,8 @@ lowest value tried and did best, so lower values may do better. They are tested 
 - Log the choice before step 17 starts.
 
 ## Step 24 — `backtest/`: stop a season at a given race
+
+Done 2026-11-08. See `log.md`, *Step 24: stopping a season at a given race*.
 
 Agreed with Alex on 2026-11-08 (`log.md`, *Step 17 narrowed to 2025–26*). The archive prices
 2026 through race 20, but the signal ends at race 18, and the engine runs every priced race. So

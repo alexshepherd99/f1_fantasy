@@ -2956,3 +2956,46 @@ question was whether to run those seasons at all. The case put to him:
   the archive, it is `RUS@MER, LIN@VRB, COL@ALP, BOR@AUD, HAD@RED` with `HAA, MER`, 98.0m at
   race 1, in the (95, 99.5] band. A run of it would start it on each strategy's rules from race
   1, without his chips, so it would not reproduce his real total.
+
+## 2026-11-08 — Step 24: stopping a season at a given race
+
+### In plain language
+
+The back-test can now stop a season early, with `--last-race`. Step 17 uses it to end 2026 at
+race 18, where FastF1's signal ends.
+
+### What was built
+
+1. `simulate_sample` and `run_backtest` take an optional `last_race`. The season is cut to its
+   races up to and including it before any team is simulated, and a race the season does not
+   have raises `ValueError` first. Nothing in `races/` or `scripts/` changed: the runner builds
+   a shorter `Season` and hands it to the unchanged `run_for_team`.
+2. `backtest.cli` takes `--last-race`, default none. Its help says to give such a run a store of
+   its own, as stored rows are keyed on label, season and team only. A 2026 rerun to the end of
+   the season would otherwise reuse the race 18 rows. Each row's `race` column records where it
+   stopped, which step 17's check reads.
+
+### Tests
+
+- **Runner, four tests:** the stored row equals a full-season direct run's row at race 5, in
+  points, value and team; races 0 and 99 raise before any simulation and write no store; and
+  `run_backtest` passes the race on. All four were seen failing, but as errors on the missing
+  parameter, so each rule was also confirmed by mutation, restored from a copy:
+
+| Mutation | Tests turned red |
+| --- | --- |
+| The cut not applied | all four |
+| The cut one race early | the direct-run test and `run_backtest`'s |
+| No check that the race exists | both bad-race tests |
+| `run_backtest` not passing it on | `run_backtest`'s |
+
+- **Command line, two tests:** `main` passes `--last-race 18` on, and it defaults to none. Both
+  were seen failing before the option was added.
+
+A check that the start is the starting race was dropped as redundant: races are numbered from
+1, the starting race, so a race before it is never in the season. The full suite passes, 521
+tests.
+
+### Not run
+
+Not yet run on real data. Step 17's timing run is the first.
