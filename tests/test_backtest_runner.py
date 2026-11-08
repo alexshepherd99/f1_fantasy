@@ -189,6 +189,49 @@ def test_work_flushed_before_a_crash_survives(sample, tmp_path, monkeypatch):
     assert len(open_batch_results_file(path)) == 4
 
 
+_LAST_RACE = 5
+
+
+def test_last_race_stops_the_season_there(sample, season, tmp_path):
+    """The stored row is the direct full-season run's row at the last race."""
+    row = sample.iloc[0]
+    store = simulate_sample(
+        _SEASON, sample.head(1), [StrategyZeroStop], str(tmp_path / "results.parquet"), last_race=_LAST_RACE,
+    )
+
+    direct = run_for_team(StrategyZeroStop, _team(row, season), season, _SEASON, 1)
+    at_last = next(r for r in direct if r["race"] == _LAST_RACE)
+    stored = store.iloc[0]
+    assert len(store) == 1
+    assert stored["race"] == _LAST_RACE
+    assert stored["total_points"] == at_last["total_points"]
+    assert stored["total_value"] == at_last["total_value"]
+    assert stored["D1"] == at_last["D1"]
+
+
+@pytest.mark.parametrize("last_race", [0, 99])
+def test_last_race_outside_the_season_raises_before_any_work(sample, tmp_path, monkeypatch, last_race):
+    def fail(*args, **kwargs):
+        raise AssertionError("run_for_team called for an invalid last race")
+
+    monkeypatch.setattr(runner_module, "run_for_team", fail)
+    path = tmp_path / "results.parquet"
+    with pytest.raises(ValueError, match="last race"):
+        simulate_sample(_SEASON, sample.head(1), _STRATEGIES, str(path), last_race=last_race)
+
+    assert not path.exists()
+
+
+def test_backtest_passes_the_last_race_on(tmp_path):
+    store_path = str(tmp_path / "results.parquet")
+    run_backtest(
+        [_SEASON], 1, 1, [StrategyZeroStop], DEFAULT_BAND_EDGES, store_path, str(tmp_path / "summary.csv"),
+        last_race=_LAST_RACE,
+    )
+
+    assert (open_batch_results_file(store_path)["race"] == _LAST_RACE).all()
+
+
 _BACKTEST_SEASONS = [2023, 2024]
 
 

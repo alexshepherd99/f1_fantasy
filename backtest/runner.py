@@ -11,7 +11,7 @@ from backtest.sample import STARTING_RACE, sample_starting_teams
 from helpers import load_with_derivations
 from linear.strategy_base import StrategyBase
 from linear.strategy_p2pm import StrategyMaxP2PM
-from races.season import factory_season
+from races.season import Season, factory_season
 from races.team import factory_team_row
 from scripts.run_multiple_teams import get_starting_key, open_batch_results_file
 from scripts.run_single_team import run_for_team
@@ -50,12 +50,26 @@ def append_results(store: pd.DataFrame, rows: list[dict], path: str) -> pd.DataF
     return store
 
 
+def _stopped_at(season_data: Season, last_race: int) -> Season:
+    """Return the season with only its races up to and including `last_race`.
+
+    Raises:
+        ValueError: If `last_race` is not a race of the season.
+    """
+    if last_race not in season_data.races:
+        logging.error(f"No last race {last_race} in season {season_data.season}, races {sorted(season_data.races)}")
+        raise ValueError(f"Season {season_data.season} has no last race {last_race}")
+    races = {race: data for race, data in season_data.races.items() if race <= last_race}
+    return Season(season=season_data.season, races=races)
+
+
 def simulate_sample(
     season: int,
     sample: pd.DataFrame,
     strategies: list[type[StrategyBase]],
     store_path: str,
     flush_every: int = 100,
+    last_race: int | None = None,
 ) -> pd.DataFrame:
     """Simulate every strategy on every sampled team of one season, resumably.
 
@@ -74,13 +88,21 @@ def simulate_sample(
             its `__name__`.
         store_path: Parquet results store to resume from and write to.
         flush_every: Simulations between writes.
+        last_race: Race to stop the season at, or None for every priced race.
+            Stored keys do not include it, so a store must not be shared
+            between runs to different last races.
 
     Returns:
         This run's rows, one per (strategy, team), whether simulated now or
         found in the store. Rows the store holds for other teams or strategies
         stay on disk but are not returned, so they cannot leak into a summary.
+
+    Raises:
+        ValueError: If `last_race` is not a race of the season.
     """
     season_data = factory_season(*load_with_derivations(season=season), season)
+    if last_race is not None:
+        season_data = _stopped_at(season_data, last_race)
     starting_race = season_data.races[STARTING_RACE]
 
     store = open_batch_results_file(store_path)
@@ -151,6 +173,7 @@ def run_backtest(
     band_edges: Sequence[float],
     store_path: str,
     summary_path: str,
+    last_race: int | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Sample, simulate and summarise every strategy against the P2PM baseline.
 
@@ -167,12 +190,14 @@ def run_backtest(
         band_edges: Value band edges.
         store_path: Parquet results store, resumed from and appended to.
         summary_path: CSV to write the ranked summary to.
+        last_race: Race to stop every season at, or None for every priced race.
 
     Returns:
         The ranked summary and the verdict.
 
     Raises:
-        ValueError: If two strategies share a label.
+        ValueError: If two strategies share a label, or a season has no
+            `last_race`.
     """
     strategies = _with_baseline_first(strategies)
     baseline_label = BASELINE.__name__
@@ -180,7 +205,7 @@ def run_backtest(
     results = []
     for season in seasons:
         sample = sample_starting_teams(season, n, seed, band_edges)
-        results.append(simulate_sample(season, sample, strategies, store_path))
+        results.append(simulate_sample(season, sample, strategies, store_path, last_race=last_race))
         del sample
 
     paired = pair_with_baseline(pd.concat(results, ignore_index=True), baseline_label, band_edges)
