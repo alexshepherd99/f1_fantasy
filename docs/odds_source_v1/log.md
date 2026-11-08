@@ -74,3 +74,7 @@ Two choices made in the plan, for Alex's review:
   session counts as done an hour after its scheduled start.
 - **The workbook's unnamed tenth column is dropped** in the CSV conversion. It
   holds one stray value and nothing reads it.
+
+## 2026-11-08 — Plan approved
+
+Alex approved both choices above. Next is step 1.
