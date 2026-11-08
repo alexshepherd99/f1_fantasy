@@ -7,10 +7,13 @@ import pytest
 
 from fast_f1.metrics import get_rolling_window_races
 from fast_f1.output import (
+    DEFAULT_HISTORICAL_OUTPUT,
     HistoricalRunIncomplete,
     build_race_metrics,
     generate_historical_metrics,
+    generate_single_race_prediction,
     load_existing_metrics,
+    save_metrics,
 )
 
 
@@ -988,7 +991,7 @@ def test_historical_metrics_walks_the_rounds_each_season_actually_has(monkeypatc
 
     monkeypatch.setattr("fast_f1.output.build_race_metrics", fake_build_race_metrics)
 
-    generate_historical_metrics([2024, 2025], output_path=tmp_path / "historical.xlsx")
+    generate_historical_metrics([2024, 2025], output_path=tmp_path / "historical.csv")
 
     assert attempted == [(2024, 1), (2024, 2), (2024, 3), (2025, 1), (2025, 2)]
 
@@ -1013,7 +1016,7 @@ def test_historical_metrics_walks_over_a_gap_in_the_round_numbers(monkeypatch, t
 
     monkeypatch.setattr("fast_f1.output.build_race_metrics", fake_build_race_metrics)
 
-    generate_historical_metrics([2025], output_path=tmp_path / "historical.xlsx")
+    generate_historical_metrics([2025], output_path=tmp_path / "historical.csv")
 
     assert attempted == [(2025, 1), (2025, 2), (2025, 5)]
 
@@ -1044,7 +1047,7 @@ def test_historical_metrics_carries_on_past_a_race_that_fails(monkeypatch, tmp_p
     it; the races either side of it are computed and saved.
     """
     attempted = _patch_failing_middle_round(monkeypatch)
-    output_path = tmp_path / "historical.xlsx"
+    output_path = tmp_path / "historical.csv"
 
     caplog.set_level("ERROR", logger="fast_f1.output")
     with pytest.raises(Exception):
@@ -1061,6 +1064,75 @@ def test_historical_metrics_reports_failed_races_once_all_are_tried(monkeypatch,
     _patch_failing_middle_round(monkeypatch)
 
     with pytest.raises(HistoricalRunIncomplete, match="season 2025 race 2") as excinfo:
-        generate_historical_metrics([2025], output_path=tmp_path / "historical.xlsx")
+        generate_historical_metrics([2025], output_path=tmp_path / "historical.csv")
 
     assert excinfo.value.failed_races == [(2025, 2)]
+
+
+def _stored_metrics() -> pd.DataFrame:
+    """Two rows in the stored metrics' shape, already in the order the writer sorts them."""
+    return pd.DataFrame(
+        {
+            "Season": [2026, 2026],
+            "Race": [18, 18],
+            "Driver": ["VER", "NOR"],
+            "Status": ["Finished", "Retired"],
+            "ClassifiedPosition": ["1", "R"],
+            "RollingPoints": [42.0, None],
+            # Taken from the stored metrics, where pandas' default CSV parser
+            # reads each back one step out in the last digit.
+            "AggregateRank": [0.9469364851815941, 0.03415559772296017],
+        }
+    )
+
+
+def test_save_metrics_writes_csv(tmp_path):
+    """Stored as text, so each write shows as a git diff."""
+    path = tmp_path / "metrics.csv"
+    save_metrics(_stored_metrics(), path)
+
+    assert path.read_text(encoding="utf-8").splitlines()[0] == (
+        "Season,Race,Driver,Status,ClassifiedPosition,RollingPoints,AggregateRank"
+    )
+
+
+def test_saved_metrics_read_back_exactly(tmp_path):
+    """The strategy's inputs must not move by even the last digit on a round trip."""
+    path = tmp_path / "metrics.csv"
+    save_metrics(_stored_metrics(), path)
+
+    pd.testing.assert_frame_equal(load_existing_metrics(path), _stored_metrics(), check_exact=True)
+
+
+def test_save_metrics_stores_lap_times_in_days(tmp_path):
+    """FastF1 lap times are durations; the stored file keeps them in days, as Excel did."""
+    path = tmp_path / "metrics.csv"
+    frame = _stored_metrics()
+    frame["FP2_MinLapTime"] = pd.to_timedelta([90.905, None], unit="s")
+    save_metrics(frame, path)
+
+    stored = load_existing_metrics(path)["FP2_MinLapTime"]
+    assert stored.dtype == "float64"
+    assert stored[0] == pd.Timedelta(seconds=90.905) / pd.Timedelta(days=1)
+    assert pd.isna(stored[1])
+
+
+def test_save_metrics_stores_new_lap_times_in_days_beside_stored_ones(tmp_path):
+    """A historical run appends new races' durations to stored rows already in days."""
+    path = tmp_path / "metrics.csv"
+    frame = _stored_metrics()
+    frame["FP2_MinLapTime"] = pd.Series([0.001052164351851852, pd.Timedelta(seconds=90.905)], dtype=object)
+    save_metrics(frame, path)
+
+    stored = load_existing_metrics(path)["FP2_MinLapTime"]
+    assert stored.tolist() == [0.001052164351851852, pd.Timedelta(seconds=90.905) / pd.Timedelta(days=1)]
+
+
+def test_metrics_files_default_to_csv(monkeypatch, tmp_path):
+    monkeypatch.setattr("fast_f1.output.build_race_metrics", lambda season, race: _stored_metrics())
+    monkeypatch.setattr("fast_f1.output.DEFAULT_OUTPUT_DIRECTORY", tmp_path)
+
+    path, _ = generate_single_race_prediction(2026, 18)
+
+    assert path == tmp_path / "fastf1_race_2026_18.csv"
+    assert DEFAULT_HISTORICAL_OUTPUT.suffix == ".csv"

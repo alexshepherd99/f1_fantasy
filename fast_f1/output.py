@@ -32,9 +32,8 @@ logger = logging.getLogger(__name__)
 # Read when `build_race_metrics` runs rather than bound as its default, so tests
 # can point every call at a fixture file.
 ODDS_FILE: Path | str = _FILE_BETTING_ODDS
-DEFAULT_HISTORICAL_OUTPUT = Path("data/fastf1_practice_rolling_metrics.xlsx")
+DEFAULT_HISTORICAL_OUTPUT = Path("data/fastf1_practice_rolling_metrics.csv")
 DEFAULT_OUTPUT_DIRECTORY = Path("outputs")
-_DEFAULT_SHEET_NAME = "PracticeRollingMetrics"
 
 
 class HistoricalRunIncomplete(Exception):
@@ -261,16 +260,37 @@ def build_race_metrics(
     return merged
 
 
+def _durations_in_days(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """Turn FastF1's lap-time durations into days, the unit the stored rows hold.
+
+    The metrics file was an Excel workbook until 2026-11, and Excel stores a
+    duration in days. A historical run appends new races' durations to stored
+    rows already in days, so a column can hold both.
+    """
+    day = pd.Timedelta(days=1)
+
+    def in_days(value: object) -> object:
+        if isinstance(value, pd.Timedelta):
+            return value / day
+        return float("nan") if value is pd.NaT else value
+
+    converted = dataframe.copy()
+    for column in converted.columns:
+        values = converted[column]
+        if pd.api.types.is_timedelta64_dtype(values) or values.map(lambda value: isinstance(value, pd.Timedelta)).any():
+            converted[column] = values.map(in_days).astype(float)
+    return converted
+
+
 def save_metrics(dataframe: pd.DataFrame, output_path: Path | str) -> None:
     path = Path(output_path)
     _ensure_parent_directory(path)
-    dataframe = dataframe.sort_values(
+    dataframe = _durations_in_days(dataframe).sort_values(
         by=["Season", "Race", "AggregateRank"],
         ascending=[True, True, False],
     ).reset_index(drop=True)
 
-    with pd.ExcelWriter(path, engine="openpyxl") as writer:
-        dataframe.to_excel(writer, sheet_name=_DEFAULT_SHEET_NAME, index=False)
+    dataframe.to_csv(path, index=False)
 
 
 def load_existing_metrics(output_path: Path | str) -> pd.DataFrame:
@@ -278,10 +298,9 @@ def load_existing_metrics(output_path: Path | str) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
 
-    try:
-        return pd.read_excel(path, sheet_name=_DEFAULT_SHEET_NAME, engine="openpyxl")
-    except ValueError:
-        return pd.read_excel(path, engine="openpyxl")
+    # pandas' default parser can read a float back one step out in its last
+    # digit; round_trip reads back exactly what to_csv wrote.
+    return pd.read_csv(path, float_precision="round_trip")
 
 
 def generate_single_race_prediction(
@@ -293,7 +312,7 @@ def generate_single_race_prediction(
     path = (
         Path(output_path)
         if output_path is not None
-        else DEFAULT_OUTPUT_DIRECTORY / f"fastf1_race_{season_year}_{race_num}.xlsx"
+        else DEFAULT_OUTPUT_DIRECTORY / f"fastf1_race_{season_year}_{race_num}.csv"
     )
     _ensure_parent_directory(path)
     save_metrics(dataframe, path)

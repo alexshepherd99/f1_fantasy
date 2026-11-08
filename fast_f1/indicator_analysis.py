@@ -18,7 +18,7 @@ from fast_f1.metrics import (
     add_signal_inputs,
     slot_values,
 )
-from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, DEFAULT_OUTPUT_DIRECTORY
+from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, DEFAULT_OUTPUT_DIRECTORY, load_existing_metrics
 from import_data.import_history import load_all_archive_data
 from import_data.odds import _FILE_BETTING_ODDS
 from odds_source.schedule import PRE_FP1_COLUMN, SESSION_COLUMNS
@@ -696,7 +696,9 @@ def main() -> None:
     """Run the analysis on the real data and write its tables to ``outputs/``."""
     setup_logging()
     try:
-        metrics = pd.read_excel(DEFAULT_HISTORICAL_OUTPUT)
+        metrics = load_existing_metrics(DEFAULT_HISTORICAL_OUTPUT)
+        if metrics.empty:
+            raise FileNotFoundError(f"No metrics rows in {DEFAULT_HISTORICAL_OUTPUT}")
         odds = pd.read_csv(_FILE_BETTING_ODDS)
     except OSError:
         logger.exception("Could not read the analysis inputs")

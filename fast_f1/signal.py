@@ -128,7 +128,7 @@ def driver_values(
     ``docs/fastf1_v2/requirements.md``, question 1.
 
     Args:
-        metrics: Rows in the shape of ``data/fastf1_practice_rolling_metrics.xlsx``,
+        metrics: Rows in the shape of ``data/fastf1_practice_rolling_metrics.csv``,
             keyed on the bare driver code.
         pairs: The archive's per-race driver/constructor pairs, as the third frame
             from ``helpers.load_with_derivations``.
@@ -225,7 +225,7 @@ class SignalTables:
     instance, and each race's figures once.
 
     Args:
-        metrics: Rows in the shape of ``data/fastf1_practice_rolling_metrics.xlsx``.
+        metrics: Rows in the shape of ``data/fastf1_practice_rolling_metrics.csv``.
         driver_archive: ``load_all_archive_data(AssetType.DRIVER)``, which also gives
             the per-race driver/constructor pairs.
         constructor_archive: ``load_all_archive_data(AssetType.CONSTRUCTOR)``.

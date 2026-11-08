@@ -13,7 +13,7 @@ from fast_f1.output import HistoricalRunIncomplete
 
 
 def test_cli_single_race_mode(monkeypatch, tmp_path):
-    monkeypatch.setattr(sys, "argv", ["fast_f1", "--season", "2025", "--race", "2", "--output", str(tmp_path / "race.xlsx")])
+    monkeypatch.setattr(sys, "argv", ["fast_f1", "--season", "2025", "--race", "2", "--output", str(tmp_path / "race.csv")])
     called = {}
 
     def fake_setup_fastf1_cache(cache_dir=None, interactive=True):
@@ -39,11 +39,11 @@ def test_cli_single_race_mode(monkeypatch, tmp_path):
     cli.main()
 
     assert called["cache"][1] is True
-    assert called["single"] == (2025, 2, str(tmp_path / "race.xlsx"))
+    assert called["single"] == (2025, 2, str(tmp_path / "race.csv"))
 
 
 def test_cli_historical_mode(monkeypatch, tmp_path):
-    monkeypatch.setattr(sys, "argv", ["fast_f1", "--historical", "--output", str(tmp_path / "historical.xlsx")])
+    monkeypatch.setattr(sys, "argv", ["fast_f1", "--historical", "--output", str(tmp_path / "historical.csv")])
     called = {}
 
     def fake_setup_fastf1_cache(cache_dir=None, interactive=True):
@@ -60,7 +60,7 @@ def test_cli_historical_mode(monkeypatch, tmp_path):
     cli.main()
 
     assert called["cache"][1] is True
-    assert called["historical"][1] == str(tmp_path / "historical.xlsx")
+    assert called["historical"][1] == str(tmp_path / "historical.csv")
     assert called["historical"][0][0] == 2023
 
 
@@ -115,7 +115,7 @@ def test_cli_historical_mode_exits_nonzero_when_races_failed(monkeypatch, tmp_pa
 def test_cli_historical_mode_restricted_to_one_season(monkeypatch, tmp_path):
     monkeypatch.setattr(
         sys, "argv",
-        ["fast_f1", "--historical", "--season", "2026", "--output", str(tmp_path / "historical.xlsx")],
+        ["fast_f1", "--historical", "--season", "2026", "--output", str(tmp_path / "historical.csv")],
     )
     called = {}
 
@@ -133,7 +133,7 @@ def test_cli_historical_mode_restricted_to_one_season(monkeypatch, tmp_path):
 
     # Only the requested season is walked; its race range comes from the schedule
     assert called["historical"][0] == (2026,)
-    assert called["historical"][1] == str(tmp_path / "historical.xlsx")
+    assert called["historical"][1] == str(tmp_path / "historical.csv")
 
 
 def test_cli_historical_mode_does_not_prompt_for_a_season(monkeypatch, tmp_path):

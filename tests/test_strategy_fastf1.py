@@ -120,9 +120,9 @@ def test_strategy_fastf1_reads_the_tables_for_its_race(stub_tables):
     """The metrics file given is loaded, and the values asked for are this season and race's."""
     tables, files_loaded = stub_tables
 
-    _strategy(max_cost=25.0, max_moves=2, race_num=7, fn_metrics="some/metrics.xlsx")
+    _strategy(max_cost=25.0, max_moves=2, race_num=7, fn_metrics="some/metrics.csv")
 
-    assert files_loaded == ["some/metrics.xlsx"]
+    assert files_loaded == ["some/metrics.csv"]
     assert tables.requested == [(2025, 7)]
 
 

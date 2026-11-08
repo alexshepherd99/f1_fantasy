@@ -494,14 +494,14 @@ def test_changing_a_returned_dict_does_not_change_the_next_call():
 
 
 def test_load_signal_tables_refuses_a_missing_metrics_file(tmp_path):
-    missing = tmp_path / "no_such_metrics.xlsx"
-    with pytest.raises(FileNotFoundError, match="no_such_metrics.xlsx"):
+    missing = tmp_path / "no_such_metrics.csv"
+    with pytest.raises(FileNotFoundError, match="no_such_metrics.csv"):
         load_signal_tables(missing)
 
 
 def test_load_signal_tables_reads_the_files_once_per_process(tmp_path):
-    metrics = tmp_path / "metrics.xlsx"
-    pd.DataFrame([_row(2, "VER", 0.5, 0.5, season=2023)]).to_excel(metrics, index=False)
+    metrics = tmp_path / "metrics.csv"
+    pd.DataFrame([_row(2, "VER", 0.5, 0.5, season=2023)]).to_csv(metrics, index=False)
     assert load_signal_tables(metrics) is load_signal_tables(metrics)
 
 
