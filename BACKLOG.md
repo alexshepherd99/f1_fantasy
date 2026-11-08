@@ -345,3 +345,37 @@ race-4 chip, most need a view across the season of when to play them, which no
 strategy here takes (`README.md`, caveats).
 
 Agreed with Alex 2026-11-08, during `fastf1_v2` step 25.
+
+## Check a heavier FP3 weight on 2027
+
+**For Alex, once 2027's normal weekends are in.** The signal weights its inputs
+equally, and that stays the default. Fitting weights was already tried and did
+not help: +0.006 on normal weekends and −0.040 on sprints, scored on seasons the
+fit had not seen (`docs/indicator_analysis_v1/log.md`, *Findings*).
+
+The reason to look again is that practice predicted fantasy points much better in
+2026. On normal weekends, Spearman for FP2 was 0.41–0.45 a season in 2023–25 and
+0.62 in 2026. FP3 was 0.46–0.53, then 0.65. Rolling points did not rise. Alex's
+hypothesis is that under the new regulations, teams need more from practice and
+hide less of their true pace. The pattern fits: in 2026, practice held at about
+0.60–0.64 from race 2 to race 16 instead of fading as teams learned their cars.
+In 2023–25, how well practice predicted showed no link to race number. That came
+from a throwaway script on 2026-11-08, which scored each slot with
+`indicator_analysis.race_scores`. It was not kept and has not been cross-checked.
+
+The check is decided now so that 2027 tests it blind:
+
+- **One alternative only:** on normal weekends, driver rolling + constructor
+  rolling + **2 × FP3**. Sprint weekends are unchanged. Don't change this after
+  seeing 2027 data.
+- **Score on 2027 alone,** per race against fantasy points, against today's
+  equal-weight signal, using the bootstrap interval from `indicator_analysis`.
+  Set `HOLDOUT_SEASON` to 2027 first, or 2027 joins the seasons the winners are
+  chosen on (see that log, *Race 1 odds scored for every season*).
+- **Also report FP2 and FP3 on their own for 2027.** If they fall back to about
+  0.45–0.5, the hypothesis fails, whatever the weight comparison shows.
+- **A pass is a reason for a back-test, not a change of weights.** Using the
+  rule of thumb of 15–25 points a season per 0.01 of Spearman, the gain will
+  probably be smaller than one season's noise.
+
+Raised by Alex 2026-11-08.
