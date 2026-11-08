@@ -3606,3 +3606,23 @@ in 2026, the season nothing was tuned on.** The final strategy is `FastF1_RuleRi
   13, and why 2025's worst tenth of teams fell so far behind. Alex chose not to look into the
   last.
 - 2023–24 race by race, and the game's other chips (`BACKLOG.md`).
+
+## 2026-11-08 — Step 27 agreed: the chosen setting as a class in `linear/`
+
+Alex asked whether the strategy is ready to use. It is not: the chosen setting exists only as
+a variant in `backtest/cli.py`, there is no route from a race weekend to a pick, no script
+uses it, and 2027's inputs wait on 2026 finishing. Alex wants the first fixed before the
+effort closes, and the rest done in a fresh effort.
+
+### Alex's decisions
+
+- **Editing `linear/` is allowed for this,** as long as P2PM is not affected.
+- **A new named class, `StrategyFastF1RuleRise`,** not a new default for `StrategyFastF1`.
+  Changing the default would change what `StrategyFastF1` and the 13 variants built on it
+  mean, though every logged result under them ran at reward 0.
+- **The reward is fixed at 2.5,** not an overridable default, so the name always means the
+  tested setting.
+- **2.5 ships without further tuning.** It is the best of the values tried, not a proven
+  optimum. Values between 1.25 and 5 other than 2.5, and combinations of levers, were never
+  tried. Tuning now could only use 2025, as 2026 would stop being a fair test. The
+  re-assessment in `BACKLOG.md` after the season is the place for it.

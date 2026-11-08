@@ -10,8 +10,9 @@ narrowed to 2025–26*). Step 25, the race-4 chip, is done: its rule was revised
 count 2025 and 2026 only, and the chip failed that too, at −13.6 points a team in 2026, so it is
 not kept (`log.md`, *Step 25.4: the chip on 2026, under the revised rule*). Step 26 is done: the
 lead over P2PM comes in a few big races (`log.md`, *Step 26: when the lead builds, race by
-race*). Step 18, the findings and close-out, is done, so **every step is done and the
-effort is closed** (`log.md`, *Step 18: findings*). Steps 17 and 18 were numbered 9 and 10 before
+race*). Step 18, the findings and close-out, is done (`log.md`, *Step 18: findings*). **The
+effort was reopened on 2026-11-08 for step 27,** which makes the chosen setting a named class
+in `linear/`, ready to use, before the effort closes. Steps 17 and 18 were numbered 9 and 10 before
 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
@@ -567,3 +568,28 @@ Done 2026-11-08. See `log.md`, *Step 18: findings*. The 2026 rerun is in `BACKLO
 - `CLAUDE.md` and `README.md` updated for the new strategy and `fast_f1/signal.py`.
 - A `BACKLOG.md` item to rerun 2026 when the season finishes, as question 7 agreed. Update the
   efforts table.
+
+## Step 27 — The chosen setting as a class in `linear/`
+
+Agreed with Alex on 2026-11-08 (`log.md`, *Step 27 agreed*). The chosen setting exists only as
+`FastF1_RuleRise2p5`, a variant in `backtest/cli.py`, and `factory_strategy` takes a class with
+no settings. Alex wants the strategy ready to use with its chosen settings before the effort
+closes. The live-pick route, scripts and 2027 inputs are a fresh effort.
+
+Test-first, one concern per commit:
+
+1. `StrategyFastF1RuleRise` in `linear/strategy_fastf1.py`: a subclass of `StrategyFastF1`
+   with the price-rise reward fixed at 2.5 and every other default kept. Passing a
+   price-rise reward raises `TypeError`. Tests: the settings, the error, the name, and a real
+   2025 run matching the `make_variant` build of the same setting race for race.
+2. `backtest/cli.py`: `FastF1_RuleRise2p5` built as `make_variant(StrategyFastF1RuleRise,
+   "FastF1_RuleRise2p5")`, keeping its label and stored rows, and `StrategyFastF1RuleRise`
+   registered under its own name.
+3. **Real check:** a 2025 back-test of `FastF1_RuleRise2p5`, seed 1, 3 teams a band, into the
+   scratchpad, whose rows equal step 17's stored rows for the same teams in every column.
+
+**P2PM is not affected:** `linear/strategy_p2pm.py`, `linear/strategy_base.py` and
+`linear/strategy_factory.py` are not edited, checked on the diff, and the full suite is green.
+`StrategyFastF1`'s defaults are unchanged, so every logged label keeps its meaning.
+
+Then `CLAUDE.md`, `README.md` and `BACKTEST_LOG.md` name the class, and the effort closes.

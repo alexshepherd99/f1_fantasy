@@ -6,17 +6,17 @@ table its answer chose loses how far ahead an asset is, and answered again on 20
 signal redesign, which also changes questions 2 to 4. See `log.md`, *Signal redesign agreed*.
 Questions 4 and 7 changed again on 2026-11-07, for the price-rise reward only, once the game's
 price rules were known. See `log.md`, *A rules-based price rise: what it can and cannot show*.
-The final back-test was narrowed to 2025–26 on 2026-11-08. **The effort is done, as of
-2026-11-08:** `FastF1_RuleRise2p5` beats P2PM in 2025 and 2026 through race 18. See `log.md`,
-*Step 18: findings*.
+The final back-test was narrowed to 2025–26 on 2026-11-08. `FastF1_RuleRise2p5` beats P2PM in
+2025 and 2026 through race 18 (`log.md`, *Step 18: findings*). **Reopened 2026-11-08 for plan
+step 27,** which makes that setting a named class in `linear/`.
 
 ## Picking this up
 
 1. Read this file and `log.md`. Read the `log.md` correction before quoting any field-wide
    driver figure from its first entry.
-2. The effort is closed. Its follow-ups are in `BACKLOG.md`: re-assess the tuning values and
-   rerun the 2026 back-test once the season finishes, live picks with the strategy, and the
-   game's other chips.
+2. Carry on from `plan.md`, step 27. After it, the follow-ups are in `BACKLOG.md`: re-assess
+   the tuning values and rerun the 2026 back-test once the season finishes, live picks with
+   the strategy, and the game's other chips.
 
 Build a team-selection strategy on the FastF1 indicators and back-test it against
 `StrategyMaxP2PM`. Whether the indicators pick better teams than P2PM is the open

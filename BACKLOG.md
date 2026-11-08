@@ -7,7 +7,7 @@ Efforts under `docs/`:
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
-| [`fastf1_v2`](docs/fastf1_v2/) | done |
+| [`fastf1_v2`](docs/fastf1_v2/) | in progress |
 | [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | done |
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
