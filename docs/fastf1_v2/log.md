@@ -3491,7 +3491,8 @@ Points a team, single race and running total. S marks a sprint weekend.
 | 24 | +5.6 | +35.9 | | |
 
 The race 1 delta is 0 because both strategies play the sampled team unchanged there: in 2026
-every race 1 row records `used_moves` −1, the engine's marker for no solve, and both labels
+the engine skips the solve at the starting race, leaving `used_moves` at its initial −1
+(`scripts/run_single_team.py:108,121`). In 2026 every race 1 row records −1, and both labels
 have the same DRS driver and points on every team.
 
 ### How much the best races carry
