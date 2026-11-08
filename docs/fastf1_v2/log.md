@@ -3177,9 +3177,12 @@ tell which it is.
 
 ### What to bear in mind
 
-- **Why FastF1 stays spread out is reasoned, not measured.** Its practice-session and odds
-  inputs change every weekend, so the best line-up moves from race to race and teams two moves a
-  race apart keep chasing it. P2PM's rolling points move more slowly.
+- **Why FastF1 stays spread out is reasoned, not measured.** On normal weekends its signal
+  includes the late practice session's rank (FP3), which can reorder the field from one weekend
+  to the next, and on sprint weekends it drops that input entirely (`fast_f1/signal.py`,
+  `SIGNAL_SLOTS`). So the best line-up moves from race to race, and teams limited to two moves a
+  race keep chasing it. P2PM's rolling points move more slowly. FastF1's signal does not use odds
+  after race 1. [Corrected 2026-11-08: this first said odds were an input.]
 - **More distinct paths also mean FastF1's back-test results rest on more independent
   evidence than P2PM's.** This matters for how much weight step 17's standard errors can carry,
   though 2023 is still close to a single path.
