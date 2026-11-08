@@ -30,10 +30,7 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 
 7. ~~Write the race's rows~~ — done 2026-11-08, see log *Step 7*.
 
-8. **The CLI.** `odds_source/cli.py` loads the credentials first, as
-   `fast_f1.cli` does, takes the page path (default: newest `.mhtml` in
-   `outputs/`) and `--odds-file` (default: the real CSV), and prints the race,
-   the column, the drivers written and any warnings.
+8. ~~The CLI~~ — done (verified at Gate 1) 2026-11-08, see log *Step 8*.
 
 10. **Teach `indicator_analysis` the new columns**, test first, before step 9.
    It finds which snapshot each race's `Odds` came from by matching columns,
@@ -48,10 +45,8 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 
 ## Gates
 
-**Gate 1 — the Brazil sample, live FastF1.** Run the CLI against Alex's saved
-Brazil page with `--odds-file` pointing at a scratch copy of the CSV. Expect
-column `Odds_Q`, 22 drivers, Ocon dropped, Camara on `HAA`, and medians
-matching the survey in `requirements.md`. The real CSV is not touched.
+**Gate 1 — the Brazil sample, live FastF1.** Cleared 2026-11-08, see log
+*Step 8*.
 
 **Gate 2 — the first real run**, at the next race weekend. Alex reviews the
 git diff of the CSV before committing it.

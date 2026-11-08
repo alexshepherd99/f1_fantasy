@@ -321,3 +321,35 @@ matched existing rows; nothing changed outside race 20; in race 20 only `Odds`
 changed besides the new `Odds_Q`, which equals it; the hand-entered
 `Odds_Pre_Weekend` prices are kept; `load_odds` reads 22 drivers from the copy.
 The real CSV was not touched. Suite: 580 passed.
+
+## 2026-11-08 — Step 8: the command, and Gate 1 cleared
+
+`PYTHONPATH=. venv/bin/python -m odds_source.cli [page] [--odds-file F]
+[--cache-dir D]`. As `fast_f1.cli` does, it loads the F1 credentials first and
+exits 1 without them, then sets up the FastF1 cache, prompting only when no
+location is saved. That closes the step 6 note about an ad hoc load falling
+back to FastF1's default cache. With no page named, it takes the newest
+`.mhtml` in `outputs/` by modification time, and says which page it read. A
+page the chain rejects (no odds grid, no race nearby, saved after the race, an
+unknown session or team) exits 1 before the odds file is opened, as every
+check runs before the write. It prints the race, column, page, file, every
+driver written, and any unmatched names to fix by hand.
+
+The tests patch the cache setup and the two FastF1 fetches on the command
+module, as `fast_f1.cli`'s tests do, and run the hand-written fixture page end
+to end into a temporary odds file. Red was the import failure only. Five
+mutations, each restored and green before the next: skipping the credentials
+(2 red), always prompting for the cache (1), the newest page by name not time
+(1), any file counting as a page (2), and letting a rejected page raise (1).
+
+**Gate 1, cleared.** The command on Alex's saved Brazil page, live FastF1, the
+saved cache location (no `--cache-dir`, which would have overwritten that
+setting), writing into a scratch copy of the real CSV. As expected: race 20,
+`Odds_Q`, 22 drivers, Ocon dropped, Câmara on `HAA`, every price the survey's
+median. A separate comparison: 440 rows before and after, nothing changed
+outside race 20, only `Odds` changed in its existing rows besides `Odds_Q`,
+which equals it, and `load_odds` reads 22 drivers and 11 constructors from the
+copy. The real CSV was not touched. FastF1's `enable_cache` deprecation warning
+prints on every run, as it does for `fast_f1.cli`.
+
+Suite: 587 passed. Gate 2 waits for the next race weekend.
