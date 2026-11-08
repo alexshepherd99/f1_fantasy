@@ -8,7 +8,7 @@ from backtest.sample import DEFAULT_BAND_EDGES, validate_band_edges
 from backtest.variants import make_variant, with_race4_chip
 from common import F1_SEASON_CONSTRUCTORS, setup_logging
 from linear.strategy_budget import StrategyMaxBudget
-from linear.strategy_fastf1 import StrategyFastF1
+from linear.strategy_fastf1 import StrategyFastF1, StrategyFastF1RuleRise
 from linear.strategy_max_points import StrategyMaxPoints
 from linear.strategy_odds import StrategyBettingOdds
 from linear.strategy_p2pm import StrategyMaxP2PM
@@ -19,8 +19,9 @@ from linear.strategy_zero_stop import StrategyZeroStop
 # progress is left out unless named with --seasons (R6)
 COMPLETED_SEASONS = [2023, 2024, 2025]
 
-# fastf1_v2's chosen setting, from steps 22 and 23 (docs/fastf1_v2/log.md, *Step 23*)
-_FASTF1_RULE_RISE_2P5 = make_variant(StrategyFastF1, "FastF1_RuleRise2p5", price_rise_reward=2.5)
+# fastf1_v2's chosen setting, from steps 22 and 23 (docs/fastf1_v2/log.md, *Step 23*), built on
+# the class that holds it in linear/ since step 27. The label is kept, so stored rows still match
+_FASTF1_RULE_RISE_2P5 = make_variant(StrategyFastF1RuleRise, "FastF1_RuleRise2p5")
 
 # fastf1_v2's tuning variants, each one change from StrategyFastF1's defaults, at the values
 # fixed in step 15.1 (docs/fastf1_v2/plan.md, step 15; log.md, *Step 15.1*)
@@ -49,7 +50,7 @@ STRATEGIES = {
     s.__name__: s
     for s in [
         StrategyMaxP2PM, StrategyZeroStop, StrategyMaxBudget, StrategyMaxPoints, StrategyMaxP2PMNoReset,
-        StrategyBettingOdds, StrategyFastF1, *FASTF1_VARIANTS,
+        StrategyBettingOdds, StrategyFastF1, StrategyFastF1RuleRise, *FASTF1_VARIANTS,
     ]
 }
 

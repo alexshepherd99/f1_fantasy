@@ -4,7 +4,7 @@ import backtest.cli as cli
 from backtest.cli import COMPLETED_SEASONS, STRATEGIES, main, parse_arguments
 from backtest.sample import DEFAULT_BAND_EDGES
 from linear.strategy_budget import StrategyMaxBudget
-from linear.strategy_fastf1 import StrategyFastF1
+from linear.strategy_fastf1 import StrategyFastF1, StrategyFastF1RuleRise
 from linear.strategy_max_points import StrategyMaxPoints
 from linear.strategy_odds import StrategyBettingOdds
 from linear.strategy_p2pm import StrategyMaxP2PM
@@ -58,7 +58,16 @@ _FASTF1_SETTINGS = {
     "FastF1_RuleRise1p25": (1.0, 0.0, 0.0, 1.25),
     # The chosen setting with the race-4 chip, added in step 25
     "FastF1_RuleRise2p5_Chip": (1.0, 0.0, 0.0, 2.5),
+    # The chosen setting as a class in linear/, added in step 27
+    "StrategyFastF1RuleRise": (1.0, 0.0, 0.0, 2.5),
 }
+
+
+@pytest.mark.parametrize("label", ["FastF1_RuleRise2p5", "FastF1_RuleRise2p5_Chip"])
+def test_fastf1_chosen_labels_are_built_on_the_linear_class(label):
+    """The back-test's chosen setting and its chip variant come from the class live scripts use,
+    so there is one definition of the setting."""
+    assert issubclass(STRATEGIES[label], StrategyFastF1RuleRise)
 
 
 def test_fastf1_registry_holds_exactly_the_tuning_labels():
