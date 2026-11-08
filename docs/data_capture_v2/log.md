@@ -259,3 +259,75 @@ The back-test "before" is the P2PM rows already stored in
 `outputs/backtest_v1_results.parquet`. If step 4's re-simulation matches them,
 that is equality with the code before the change. Only a mismatch would need a
 fresh run on the old code to tell the two apart.
+
+## 2026-11-08 — Step 4: the loader reads the CSVs
+
+`import_data/import_history.py` now reads `data/f1_fantasy_drivers.csv` and
+`data/f1_fantasy_constructors.csv`, under the core-module exception Alex
+granted for this effort. What changed:
+
+- **New `read_archive_file`** reads one file and rejects it if its columns
+  are not exactly the expected ones, if a season/race/asset appears twice, or
+  if a row has no price.
+- **`load_archive_data_season` rebuilds the old shape.** It builds every
+  asset against every race of the season, in file order, with empty points
+  and price where there is no row. It fills 0 points for a race not yet run,
+  and gives the old types (constructor points as integers).
+- **Removed:** the Excel functions, `convert_data_sheet`, `load_archive_sheet`,
+  `get_archive_sheet_infos` and `merge_sheet_points_price`, along with
+  `DataSheetType` and `ArchiveSheetInfo`.
+- **Unchanged:** the three `check_*` integrity functions, `get_id_cols`, and
+  both loaders' names and signatures. Two of the check functions differ from
+  `HEAD` only in trailing spaces removed from one blank line each. The editing
+  tool will not write a whitespace-only line, so that difference stays.
+
+**`fn` now names a directory**, the one holding both CSVs, since one argument
+has to locate two files. `fast_f1/signal.py` passes one archive argument for
+both asset types, so this keeps its call working unchanged. The module constant
+is now `_DIR_ARCHIVE_INPUTS = "data"`, and `signal.py`'s import and default
+were renamed to match. `fn` was ignored by the old loader, and is now used,
+which the fixture tests rely on.
+
+**Red first.** Ten new tests went into `tests/test_import_history.py`, using
+fixture CSVs written to `tmp_path`. Nine failed against the old loader, which
+ignored the fixture path and read the real workbook: wrong shapes and values,
+and no `ValueError` on malformed files. The tenth, an unknown season raising
+`ValueError`, already passed, as the old loader raised on the missing sheet.
+It is kept as a guard rather than claimed as new behaviour.
+
+**Tests removed or rewritten.** The four tests of the removed functions were
+deleted from `tests/test_import_history.py`, and its `check_*` tests are
+untouched. `tests/test_archive_integrity.py` now loads each season through
+`load_archive_data_season` before running the same three checks on the real
+archive.
+
+**The agreed checks, all run:**
+
+- **Same data.** Both loaders for every season and asset type, and
+  `helpers.load_with_derivations` for every season, compared with step 3's
+  "before" pickles by `DataFrame.equals` and by an exact `assert_frame_equal`
+  that includes the index. All 16 snapshots were equal.
+- **Same results, 2026.** Both replays were equal: the live configuration from
+  race 20, and the full season from the race-1 line-up, which re-solves races
+  2–20.
+- **Same results, back-test.** `backtest_v1`'s P2PM sample was re-simulated
+  into a scratch store (seed 1, 500 per band, 2023–25). That is 4,500
+  simulations, about 30 minutes. Against the stored P2PM rows there were the
+  same 4,500 `sim_key`s with none on either side only, and all 40 columns were
+  exactly equal by `DataFrame.equals`. Matching keys means the same teams were
+  sampled, which is the row-order risk the layout guards against.
+- **Each comparison can fail.** The snapshot comparison caught four doctored
+  copies: two rows swapped, constructor points made floats, one replay total
+  plus 1, and one derived value moved by one float step. The back-test
+  comparison caught one `total_points` plus 1.
+- **Same failures.** The integrity checks' own tests are unchanged and pass.
+  Run through the new loader on a copy of the driver CSV with one row deleted
+  (Leclerc, 2024 race 11), `check_merged_integrity_drivers` rejected it. On
+  the real file it passed.
+
+The scratch scripts are not kept, and their outputs are in
+`outputs/data_capture_v2/` (not committed).
+
+Suite: 600 passed (594, less the 4 removed tests, plus 10 new). The workbook
+is still in the tree, unread. Step 5 removes it and updates `README.md` and
+`CLAUDE.md`, which still describe it.

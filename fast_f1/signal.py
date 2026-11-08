@@ -25,7 +25,7 @@ from fast_f1.metrics import (
 )
 from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, load_existing_metrics
 from import_data.derivations import get_race_driver_constructor_pairs
-from import_data.import_history import _FILE_ARCHIVE_INPUTS, load_all_archive_data
+from import_data.import_history import _DIR_ARCHIVE_INPUTS, load_all_archive_data
 
 logger = logging.getLogger(__name__)
 
@@ -192,7 +192,7 @@ def constructor_values(
 
 @functools.cache
 def load_signal_tables(
-    fn_metrics: Path | str = DEFAULT_HISTORICAL_OUTPUT, fn_archive: str = _FILE_ARCHIVE_INPUTS
+    fn_metrics: Path | str = DEFAULT_HISTORICAL_OUTPUT, fn_archive: str = _DIR_ARCHIVE_INPUTS
 ) -> SignalTables:
     """The ``SignalTables`` for a metrics file and the archive, read once per process.
 

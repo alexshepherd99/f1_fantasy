@@ -2,13 +2,10 @@ import logging
 
 from common import F1_SEASON_CONSTRUCTORS, AssetType, setup_logging
 from import_data.import_history import (
-    DataSheetType,
-    get_archive_sheet_infos,
-    load_archive_sheet,
-    merge_sheet_points_price,
     check_merged_integrity_drivers,
     check_merged_integrity_constructors,
     load_all_archive_data,
+    load_archive_data_season,
     check_drivers_against_constructors,
 )
 
@@ -20,13 +17,7 @@ def check_archive_integrity():
 
         for asset_type in AssetType:
             logging.info(f"  Asset type: {asset_type.value}")
-            archive_sheets = get_archive_sheet_infos(season, asset_type)
-            assert len(archive_sheets) == 2, "Expected 2 archive sheets (Points and Price)"
-            
-            df_points = load_archive_sheet(archive_sheets[DataSheetType.POINTS])
-            df_price = load_archive_sheet(archive_sheets[DataSheetType.PRICE])
-
-            df_merged = merge_sheet_points_price(df_points, df_price, asset_type)
+            df_merged = load_archive_data_season(asset_type, season)
             if asset_type == AssetType.DRIVER:
                 check_merged_integrity_drivers(df_merged, num_constructors)
             elif asset_type == AssetType.CONSTRUCTOR:

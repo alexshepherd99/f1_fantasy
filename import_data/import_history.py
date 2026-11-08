@@ -1,112 +1,32 @@
+import os
 import pandas as pd
-from enum import Enum
-from typing import NamedTuple
 import logging
 
 from common import AssetType, F1_SEASON_CONSTRUCTORS
 
-_FILE_ARCHIVE_INPUTS = "data/f1_fantasy_archive.xlsx"
+_DIR_ARCHIVE_INPUTS = "data"
+_ARCHIVE_FILES = {
+    AssetType.DRIVER: "f1_fantasy_drivers.csv",
+    AssetType.CONSTRUCTOR: "f1_fantasy_constructors.csv",
+}
 
 
 """Utilities for loading and validating historical archive data.
 
-This module reads the archived Excel workbook containing historical
-`Points` and `Price` sheets for drivers and constructors, converts the
-wide-format sheets to tidy dataframes, merges points and price sheets,
-and performs basic integrity checks.
+The archive is two long-format CSV files, one per asset type, holding one row
+per asset per race it took part in: `Season`, `Race`, the identifying columns,
+`Points` and `Price`. An asset that did not take part in a race has no row. A
+race not yet run has its prices and empty `Points`.
+
+Rows are grouped by season, then by asset, then by race, and the asset order
+is kept: the loaders return assets in the order the file holds them, because
+callers that enumerate teams (and the back-tests that sample from them) depend
+on it.
+
+The loaders return the same frames the archive's earlier wide-format workbook
+gave: every asset of a season against every race in it, with empty points and
+price where the asset has no row, and points of 0 for a race not yet run.
 """
-
-
-class DataSheetType(Enum):
-    """Enum of supported archive sheet types.
-
-    Attributes:
-        POINTS: Sheet containing points scored.
-        PRICE: Sheet containing price information.
-    """
-
-    POINTS = "Points"
-    PRICE = "Price"
-
-
-class ArchiveSheetInfo(NamedTuple):
-    """NamedTuple describing an archive sheet to load.
-
-    Fields:
-        season: The integer season year (e.g., 2023).
-        sheet_name: Excel sheet name inside the archive workbook.
-        id_cols: List of identifying columns (e.g., ['Constructor', 'Driver']).
-        sheet_type: Type of the sheet as a `DataSheetType`.
-    """
-
-    season: int
-    sheet_name: str
-    id_cols: list
-    sheet_type: DataSheetType
-
-
-def convert_data_sheet(df_input: pd.DataFrame, season: int, id_cols: list, sheet_type: DataSheetType) -> pd.DataFrame:
-    """Convert a wide-format archive sheet into tidy (long) format.
-
-    The input dataframe is expected to have race numbers as column names
-    (e.g. 1, 2, 3...). This function melts those race columns into a
-    `Race` column and places values under a column named after the
-    `sheet_type` value (e.g. 'Points' or 'Price'). It also adds a
-    `Season` column and ensures `Race` is an integer.
-
-    Args:
-        df_input: Source dataframe read from Excel.
-        season: Season year to attach to the data.
-        id_cols: Columns to treat as identifier variables when melting.
-        sheet_type: The type of data sheet being converted.
-
-    Returns:
-        A melted dataframe with columns: id_cols + ['Race', sheet_type.value, 'Season'].
-    """
-    df_melted = df_input.melt(
-        id_vars=id_cols,
-        var_name="Race",
-        value_name=sheet_type.value,
-    )
-
-    df_melted["Season"] = season
-    df_melted["Race"] = df_melted["Race"].astype(int)
-
-    return df_melted
-
-
-def load_archive_sheet(sheet_info: ArchiveSheetInfo, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
-    """Load and convert a single archive sheet from the Excel archive.
-
-    The sheet is read using pandas, a common misnamed column `Team` is
-    normalized to `Constructor`, then the sheet is converted to tidy
-    format via `convert_data_sheet`.
-
-    Args:
-        sheet_info: `ArchiveSheetInfo` describing which sheet to load.
-        fn: Path to the archive Excel file.
-
-    Returns:
-        Converted tidy dataframe for the requested sheet.
-    """
-    df_input = pd.read_excel(fn, sheet_name=sheet_info.sheet_name)
-
-    # Patch up column name, if incorrect in input file
-    df_input = df_input.rename(columns={"Team": "Constructor"})
-
-    # If there is a driver column, merge it with the constuctor column
-    if "Driver" in df_input.columns:
-        df_input["Driver"] = df_input["Driver"].astype(str) + "@" + df_input["Constructor"].astype(str)
-
-    df_converted = convert_data_sheet(
-        df_input=df_input,
-        season=sheet_info.season,
-        id_cols=sheet_info.id_cols,
-        sheet_type=sheet_info.sheet_type,
-    )
-
-    logging.info(f"Loaded {fn}({sheet_info.sheet_name}) for season {sheet_info.season}, shape: {df_converted.shape}")        
-    return df_converted
 
 
 def get_id_cols(asset_type: AssetType) -> list:
@@ -124,71 +44,41 @@ def get_id_cols(asset_type: AssetType) -> list:
     return ["Constructor", "Driver"] if asset_type == AssetType.DRIVER else ["Constructor"]
 
 
-def get_archive_sheet_infos(season: int, asset_type: AssetType) -> dict[DataSheetType, ArchiveSheetInfo]:
-    """Construct ArchiveSheetInfo objects for points and price sheets.
-
-    The function builds the expected sheet names for both Points and
-    Price sheets for the given season and asset type.
+def read_archive_file(asset_type: AssetType, fn: str = _DIR_ARCHIVE_INPUTS) -> pd.DataFrame:
+    """Read one asset type's archive CSV as stored, rejecting a malformed file.
 
     Args:
-        season: Season year.
-        asset_type: AssetType.DRIVER or AssetType.CONSTRUCTOR.
+        asset_type: Asset type whose file to read.
+        fn: Directory holding the archive CSVs.
 
     Returns:
-        A dictionary mapping `DataSheetType` -> `ArchiveSheetInfo`.
-    """
-    return {
-        DataSheetType.POINTS: ArchiveSheetInfo(
-            season=season,
-            sheet_name=f"{season} {asset_type.value}s Points",
-            id_cols=get_id_cols(asset_type),
-            sheet_type=DataSheetType.POINTS,
-        ),
-        DataSheetType.PRICE: ArchiveSheetInfo(
-            season=season,
-            sheet_name=f"{season} {asset_type.value}s Price",
-            id_cols=get_id_cols(asset_type),
-            sheet_type=DataSheetType.PRICE,
-        ),
-    }
-
-
-def merge_sheet_points_price(df_points: pd.DataFrame, df_price: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
-    """Merge points and price dataframes for the same season/asset.
-
-    Performs basic shape and identifier equality checks before merging
-    on the identifying columns plus `Race` and `Season`.
-
-    Args:
-        df_points: DataFrame containing points values.
-        df_price: DataFrame containing price values.
-        asset_type: Asset type to determine identifier columns.
-
-    Returns:
-        A merged dataframe containing both Points and Price columns.
+        The file's rows, in file order, with `Driver` as the bare driver code.
 
     Raises:
-        ValueError: If the input dataframes differ in shape or identifying values.
+        ValueError: If the file's columns are not exactly the expected ones, a
+            season/race/asset appears twice, or a row has no price.
     """
-    cols_merge = get_id_cols(asset_type) + ["Race", "Season"]
+    path = os.path.join(fn, _ARCHIVE_FILES[asset_type])
+    id_cols = get_id_cols(asset_type)
+    expected_cols = ["Season", "Race"] + id_cols + ["Points", "Price"]
 
-    if df_points.shape != df_price.shape:
-        logging.error(pd.concat([df_points, df_price]).drop_duplicates(keep=False))
-        raise ValueError("DataFrames to merge must have the same shape")
-    
-    df_points_check = df_points.dropna()[cols_merge].sort_values(by=cols_merge).reset_index(drop=True)
-    df_price_check = df_price.dropna()[cols_merge].sort_values(by=cols_merge).reset_index(drop=True)
-    if not df_points_check.reset_index().equals(df_price_check.reset_index()):
-        logging.error(pd.concat([df_points_check, df_price_check]).drop_duplicates(keep=False))
-        raise ValueError("DataFrames to merge must have the same identifying columns and values")
+    df = pd.read_csv(path, dtype={c: str for c in id_cols})
 
-    df_merged = pd.merge(
-        left=df_points,
-        right=df_price,
-        on=cols_merge,
-        how="left",
-    )
-    return df_merged
+    if list(df.columns) != expected_cols:
+        raise ValueError(f"{path}: expected columns {expected_cols}, found {list(df.columns)}")
+
+    key_cols = ["Season", "Race"] + id_cols
+    df_dupes = df[df.duplicated(subset=key_cols, keep=False)]
+    if not df_dupes.empty:
+        logging.error(df_dupes)
+        raise ValueError(f"{path}: duplicate season/race/asset rows")
+
+    df_no_price = df[df["Price"].isna()]
+    if not df_no_price.empty:
+        logging.error(df_no_price)
+        raise ValueError(f"{path}: rows without a price; an asset not taking part has no row")
+
+    return df
 
 
 def check_merged_integrity_drivers(df_merged_drivers: pd.DataFrame, num_constructors: int):
@@ -208,7 +98,7 @@ def check_merged_integrity_drivers(df_merged_drivers: pd.DataFrame, num_construc
     all_constructors = df_merged_drivers["Constructor"].unique()
     if len(all_constructors) != num_constructors:
         raise ValueError(f"Expected {num_constructors} constructors, found {len(all_constructors)}")
-    
+
     df_grouped = df_merged_drivers.groupby(["Season", "Race", "Constructor"]).count()
     flt_bad_points = df_grouped["Points"] != 2
     flt_bad_price = df_grouped["Price"] != 2
@@ -236,7 +126,7 @@ def check_merged_integrity_constructors(df_merged_constructors: pd.DataFrame, nu
     all_constructors = df_merged_constructors["Constructor"].unique()
     if len(all_constructors) != num_constructors:
         raise ValueError(f"Expected {num_constructors} constructors, found {len(all_constructors)}")
-    
+
     df_grouped = df_merged_constructors.groupby(["Season", "Race"]).count()
     flt_bad_points = df_grouped["Points"] != num_constructors
     flt_bad_price = df_grouped["Price"] != num_constructors
@@ -274,26 +164,61 @@ def check_drivers_against_constructors(df_merged_drivers: pd.DataFrame, df_merge
         raise ValueError(f"Mismatched constructors and drivers {diffs}")
 
 
-def load_archive_data_season(asset_type: AssetType, season: int, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
-    """Load and merge Points and Price sheets for a single season.
+def load_archive_data_season(asset_type: AssetType, season: int, fn: str=_DIR_ARCHIVE_INPUTS) -> pd.DataFrame:
+    """Load one season of one asset type, as a full asset-by-race grid.
+
+    Every asset of the season appears against every race of the season, races
+    in order and, within each race, assets in the order the file holds them.
+    Where an asset has no row for a race, its points and price are empty. Where
+    a race is priced but not yet run, its points are 0. Drivers are identified
+    as `DRIVER@CONSTRUCTOR`.
 
     Args:
         asset_type: Asset type to load (driver or constructor).
         season: Season year to load.
-        fn: Path to archive Excel file.
+        fn: Directory holding the archive CSVs.
 
     Returns:
-        Merged dataframe for the requested season and asset type.
+        Columns `Constructor`[, `Driver`], `Race`, `Points`, `Season`, `Price`.
+        Driver points and all prices are floats; constructor points are integers.
+
+    Raises:
+        ValueError: If the season is not in the archive, or the file is malformed.
     """
-    archive_sheets = get_archive_sheet_infos(season, asset_type)
+    id_cols = get_id_cols(asset_type)
     logging.info(f"Loading season {season} {asset_type.value}...")
 
-    df_points = load_archive_sheet(archive_sheets[DataSheetType.POINTS])
-    df_price = load_archive_sheet(archive_sheets[DataSheetType.PRICE])
-    return merge_sheet_points_price(df_points, df_price, asset_type)
+    df = read_archive_file(asset_type, fn)
+    df = df[df["Season"] == season]
+    if df.empty:
+        raise ValueError(f"Season {season} not found in the {asset_type.value} archive")
+
+    if asset_type == AssetType.DRIVER:
+        df = df.assign(Driver=df["Driver"] + "@" + df["Constructor"])
+
+    df_assets = df[id_cols].drop_duplicates()
+    races = sorted(df["Race"].unique())
+    df_grid = pd.concat([df_assets.assign(Race=race) for race in races], ignore_index=True)
+
+    df_merged = pd.merge(
+        left=df_grid,
+        right=df[id_cols + ["Race", "Points", "Price"]],
+        on=id_cols + ["Race"],
+        how="left",
+    )
+
+    not_yet_run = df_merged["Points"].isna() & df_merged["Price"].notna()
+    df_merged.loc[not_yet_run, "Points"] = 0
+
+    points_type = "float64" if asset_type == AssetType.DRIVER else "int64"
+    df_merged = df_merged.astype({"Race": "int64", "Points": points_type, "Price": "float64"})
+    df_merged.insert(len(id_cols) + 2, "Season", season)
+
+    logging.info(f"Loaded season {season} {asset_type.value}, shape: {df_merged.shape}")
+    return df_merged
 
 
-def load_all_archive_data(asset_type: AssetType, fn: str=_FILE_ARCHIVE_INPUTS) -> pd.DataFrame:
+def load_all_archive_data(asset_type: AssetType, fn: str=_DIR_ARCHIVE_INPUTS) -> pd.DataFrame:
     """Load and concatenate archive data for all known seasons.
 
     Iterates over seasons declared in `F1_SEASON_CONSTRUCTORS`, loads the
@@ -302,7 +227,7 @@ def load_all_archive_data(asset_type: AssetType, fn: str=_FILE_ARCHIVE_INPUTS) -
 
     Args:
         asset_type: Asset type to load (driver or constructor).
-        fn: Path to archive Excel file.
+        fn: Directory holding the archive CSVs.
 
     Returns:
         A dataframe containing merged archive data for all seasons.

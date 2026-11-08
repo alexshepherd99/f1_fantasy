@@ -63,23 +63,8 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
    see log *Step 3*. Converted from the workbook at `7a0856e`. If the workbook
    changes before step 4 lands, steps 3 and 4 are redone.
 
-4. **Rewrite the loader to read the CSVs.** `import_history.py` reads the
-   files as laid out above. `fn` is threaded through properly, fixing the bug
-   where `load_archive_data_season` ignores it. The three `check_*` integrity
-   functions stay unchanged.
-   - Red first: loader tests against a small fixture CSV (grid rebuilt, zeros
-     filled, dtypes, row order, `fn` honoured, each malformed-file rejection)
-     fail against the old loader.
-   - `tests/test_import_history.py` loses the tests of the functions that go
-     (`convert_data_sheet`, `get_archive_sheet_infos`,
-     `merge_sheet_points_price`). `tests/test_archive_integrity.py` is
-     rewritten to load through the new loader before calling the same checks.
-     Both edits are logged.
-   - Then every check in *Checks on the loader rewrite* runs against the
-     "before" state: loader output and derivations exactly equal; the
-     `backtest_v1` P2PM sample (seed 1, 500 per band, 2023–25, about 30
-     minutes) re-simulated into a scratch store and exactly equal; the 2026
-     replay exactly equal. Each comparison is shown able to fail.
+4. ~~Rewrite the loader to read the CSVs~~ — done 2026-11-08, see log
+   *Step 4*.
 
 5. **Remove the archive workbook, and update the docs.** `git rm`
    `data/f1_fantasy_archive.xlsx`, with the recovery commit in the log.
