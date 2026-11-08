@@ -39,6 +39,15 @@ A driver or constructor not taking part in a race has no row for it.  A race not
 
 Rows are grouped by season, then by driver or constructor, then by race, and that order matters: the back-tests sample starting teams by position, so reordered rows would quietly sample different teams.  A new race's row for each driver goes after that driver's previous race, and a driver new to a season goes after the season's last driver.  Numbers are written in their shortest form (`27`, `27.2`, `-14`).  Edit the files as text, not in a spreadsheet application, which can reorder rows or reformat numbers when it saves.
 
+Each race's points and prices are captured from [BoxBox F1 Fantasy](https://boxboxf1fantasy.com)'s published data, a few days after the race weekend:
+
+```bash
+PYTHONPATH=. venv/bin/python -m boxbox.cli             # capture, or correct the next race's line-up
+PYTHONPATH=. venv/bin/python -m boxbox.cli --dry-run   # show what it would write, write nothing
+```
+
+Once BoxBox shows the archive's latest race as held, a run fills that race's points and adds the next race at BoxBox's current prices, one row per priced driver and constructor.  Before then, a run corrects that race's line-up and prices from BoxBox, which is how a late driver change is put right.  It prints each driver's and constructor's previous and new values.  It refuses, writing nothing and exiting 1, when BoxBox has the results but not the new prices yet, when the line-up does not match BoxBox's results, or when anything else does not add up; run it again later or fix the rows by hand.  Every run, dry or not, saves the downloaded files under `outputs/boxbox/`, which keeps a history BoxBox does not.  Review the CSVs' git diff before committing.  Starting a new season is not handled yet.
+
 **data/test_expected_values_2023.csv** and **data/test_expected_values_2024.csv** hold some pre-computed values of the derivation calculations, to support unit testing.  They replaced a spreadsheet on 2026-11-08.
 
 **data/f1_betting_odds.csv** holds race-winner betting odds, one row per driver per race, and is used by the betting odds strategy and by the `fast_f1` odds indicator, see below; **data/test_betting_odds.csv** is its test fixture.  It replaced a spreadsheet on 2026-11-08 so that each race's odds show as a git diff.  Odds format is 100/1, 9/4, 5:2, 4-3.  Odds-on prices, where the stake exceeds the return (10/11, 4/6), are valid and are how a strong favourite is priced.  Fractional odds `a/b` are converted to an implied probability of `b/(a+b)`, and a blank price counts as no price.

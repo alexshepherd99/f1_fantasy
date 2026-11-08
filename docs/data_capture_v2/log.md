@@ -535,3 +535,46 @@ Alex's hand entry exactly: line-up, prices, row positions and number format.
 One process slip: a bulk edit of the test file's `write_change` calls was made
 with `sed` rather than Edit. It also missed three of them, which were then
 made with Edit. The full diff is in this commit.
+
+## 2026-11-08 — Step 11: the CLI, run live; docs
+
+`boxbox/cli.py` (`PYTHONPATH=. venv/bin/python -m boxbox.cli`) runs one
+capture:
+
+- It downloads both files and saves a copy, or reads a saved copy with
+  `--from-copy`.
+- It parses them, decides the change and prints each asset's previous and new
+  values, then writes, unless `--dry-run` is given.
+- Any refusal, data error or network failure prints the reason, writes
+  nothing and exits 1.
+- `WORKBOOK_LAST_RACE = {2026: 20}` is the workbook guard.
+- The expected constructor counts are a parameter of `main`, which the tests
+  set for the two-team fixture. A first draft patched `write_change` instead,
+  which the coding standards advise against.
+
+**Red first.** Six tests failed on a stub. **Mutation**, each caught and
+restored green:
+
+- a dry run that still writes;
+- errors not caught (three tests);
+- a copy saved before the download completed (two tests).
+
+**Run live.** A real dry run at 21:21 UTC downloaded both files, saved them to
+`outputs/boxbox/2026-11-08T212131Z/`, and refused with exit 1. BoxBox does not
+show Brazil (round 22, race 20) held yet, and race 20 came from the workbook,
+so it cannot be corrected. That is the right outcome. Its first message
+mentioned only the workbook, which would have misled on the expected case, so
+it now leads with "BoxBox does not show race 20 held yet … run again once it
+does".
+
+**Not yet executed:** a real capture or a real correction against the live
+archive. BoxBox has no post-race data to capture until Brazil's results are
+in. The write path has been run on fixtures, and on a scratch copy of the real
+archive (step 10). Gate 1 is the first real one.
+
+**Docs.**
+
+- `README.md` explains running the fetcher, what it does and when it refuses.
+- `CLAUDE.md` gains a `boxbox/` paragraph.
+- In `requirements.md`, the hand-saving `curl` command gives way to a dry run,
+  which saves the same copy.

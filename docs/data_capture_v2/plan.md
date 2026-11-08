@@ -84,9 +84,8 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 
 10. ~~Write the change~~ — done 2026-11-08, see log *Step 10*.
 
-11. **The CLI and its docs.** `PYTHONPATH=. venv/bin/python -m boxbox.cli`
-    prints each asset's previous and new values, then writes. Update
-    `README.md` and `CLAUDE.md`.
+11. ~~The CLI and its docs~~ — done (dev) 2026-11-08, see log *Step 11*.
+    Verified at Gate 1.
 
 ## How a run works
 

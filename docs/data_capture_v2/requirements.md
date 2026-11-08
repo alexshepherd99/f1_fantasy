@@ -36,11 +36,8 @@ same day. The steps are in `plan.md`.
   copies are the history the analysis in chunk 5 works from, since BoxBox
   serves only the current version. The first copy is from 2026-11-08. Every
   fetcher run will also save the files it read, the same way. Until the
-  fetcher exists, the weekly copy is saved by hand, from the repo root:
-
-  ```bash
-  d=outputs/boxbox/$(date -u +%F); mkdir -p "$d" && for f in driver_history season_summary; do curl -fsS -o "$d/$f.json" "https://boxboxf1fantasy.com/data/$f.json"; done
-  ```
+  fetcher existed, the weekly copy was saved by hand. Now a dry run saves it
+  and writes nothing else: `PYTHONPATH=. venv/bin/python -m boxbox.cli --dry-run`.
 - **The archive moves to long-format CSV, carried over from `data_capture_v1`.**
   A CSV diffs in git, so every race the fetcher writes can be reviewed as a
   diff before it is committed. That matters more for numbers a script fetched

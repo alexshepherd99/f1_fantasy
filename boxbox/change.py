@@ -179,7 +179,9 @@ def decide_change(
 
     if not data.rounds[target - 1].has_actual:
         if target <= golden_last_race.get(season, 0):
-            _refuse(f"Race {target} of {season} came from the workbook; correct it by hand if it must change")
+            _refuse(f"BoxBox does not show race {target} (round {target_round}) held yet, so there are no "
+                    f"results to capture: run again once it does. A correction is not possible either, as race "
+                    f"{target} of {season} came from the workbook; change it by hand if it must change")
         new_drivers, new_constructors = _current_prices(data, season, target)
         return Change(
             mode=CORRECT, season=season, target_race=target,
