@@ -3056,6 +3056,10 @@ Mean delta in points a team, with the share of teams ahead of P2PM:
 | 2026 | `FastF1_RuleRise2p5` | +335.7 (98%) | +338.4 (98%) | +340.1 (98%) | **+338.1 (98%)** | +336.5 | +155.9 |
 | 2026 | `StrategyMaxP2PMNoReset` | −128.1 (14%) | −136.7 (11%) | −129.0 (16%) | **−131.3 (14%)** | −114.5 | −309.1 |
 
+[Corrected 2026-11-08, in step 18: 2026's pooled mean for `FastF1_RuleRise2p5` is +338.0
+(338.05 in `outputs/fastf1_v2_summary_2026.csv`), not +338.1, which averaged the rounded band
+means. Later entries use +338.0.]
+
 As a percentage, `FastF1_RuleRise2p5` is +0.8% in 2025 and +9.2% in 2026. The harness's
 verdict over the two seasons: it beats P2PM, positive in both. `StrategyMaxP2PMNoReset` is
 negative in both.
@@ -3399,7 +3403,7 @@ The tenth and ninetieth percentiles are −121 and +91, so the chip moves most t
 in both directions.
 
 Against P2PM the chipped strategy is +324.5 points a team, ahead on 99% of teams, against
-step 17's +338.1 without the chip. Mean totals at race 18: chip 4,089.6, without the chip
+step 17's +338.0 without the chip. Mean totals at race 18: chip 4,089.6, without the chip
 4,103.2, P2PM 3,765.1. Mean final budgets: 128.61m, 129.53m and 126.79m.
 
 ### What to bear in mind
@@ -3536,7 +3540,7 @@ drove race 13.
 in 2026, the season nothing was tuned on.** The final strategy is `FastF1_RuleRise2p5`:
 `StrategyFastF1` with a price-rise reward of 2.5 and nothing else changed from its defaults.
 
-- **2026, the fair read:** +338.1 points a team through race 18, 9.2%, ahead on 98% of teams.
+- **2026, the fair read:** +338.0 points a team through race 18, 9.2%, ahead on 98% of teams.
   But 205 of those points come from one race, race 13, where every FastF1 team made Antonelli
   its DRS driver. Without it the lead is 133 a team, still ahead in 12 of the other 17 races.
   So the lead is real, and much less certain than 338 suggests.

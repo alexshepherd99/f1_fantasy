@@ -354,7 +354,7 @@ Test-first, one concern per commit:
 
 ## Step 17 — The back-test (real run)
 
-Done 2026-11-08: `FastF1_RuleRise2p5` is +35.9 points a team against P2PM in 2025 and +338.1 in
+Done 2026-11-08: `FastF1_RuleRise2p5` is +35.9 points a team against P2PM in 2025 and +338.0 in
 2026 through race 18. See `log.md`, *Step 17: the back-test on 2025–26*.
 
 The choice from steps 22 and 23 is logged before this starts: `FastF1_RuleRise2p5`.
