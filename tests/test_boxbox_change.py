@@ -1,0 +1,186 @@
+import pytest
+
+from boxbox.change import CAPTURE, CORRECT, ArchiveRow, CaptureRefused, decide_change
+from boxbox.source import parse_files
+from common import AssetType
+from import_data.import_history import read_archive_file
+from tests.boxbox_fixtures import (
+    CONSTRUCTORS_CSV,
+    DRIVERS_CSV,
+    driver_history,
+    modified,
+    raw_files,
+    season_summary,
+    write_archive,
+)
+
+# Race 3's prices in the fixture archive, as BoxBox would show them before its update.
+_RACE_3_DRIVER_PRICES = {"VER": 28.5, "HAD": 9.8, "RUS": 27.1, "ANT": 20.2}
+_RACE_3_CONSTRUCTOR_PRICES = {"red_bull": 30, "mercedes": 31}
+
+
+def _decide(tmp_path, summary=None, history=None, drivers_csv=DRIVERS_CSV, constructors_csv=CONSTRUCTORS_CSV,
+            golden=None):
+    fn = str(write_archive(tmp_path, drivers_csv, constructors_csv))
+    return decide_change(
+        read_archive_file(AssetType.DRIVER, fn),
+        read_archive_file(AssetType.CONSTRUCTOR, fn),
+        parse_files(raw_files(summary, history)),
+        golden if golden is not None else {},
+    )
+
+
+def _with_prices(summary: dict, drivers: dict, constructors: dict) -> None:
+    for key, price in drivers.items():
+        summary["driver_prices"][key]["current_price"] = price
+    for slug, price in constructors.items():
+        summary["constructor_prices"][slug]["current_price"] = price
+
+
+def _before_update(summary: dict) -> None:
+    """BoxBox before round 4 is held: no results for it, prices still race 3's."""
+    summary["rounds"][2]["has_actual"] = False
+    _with_prices(summary, _RACE_3_DRIVER_PRICES, _RACE_3_CONSTRUCTOR_PRICES)
+
+
+def test_capture_fills_the_race_just_held_and_prices_the_next(tmp_path):
+    change = _decide(tmp_path)
+
+    assert (change.mode, change.season, change.target_race, change.warnings) == (CAPTURE, 2026, 3, [])
+    assert change.driver_rows == {
+        3: [
+            ArchiveRow(2026, 3, "RED", "VER", 31.0, 28.5),
+            ArchiveRow(2026, 3, "RED", "HAD", 7.5, 9.8),
+            ArchiveRow(2026, 3, "MER", "RUS", 25.0, 27.1),
+            ArchiveRow(2026, 3, "MER", "ANT", -2.0, 20.2),
+        ],
+        4: [
+            ArchiveRow(2026, 4, "RED", "VER", None, 28.8),
+            ArchiveRow(2026, 4, "RED", "HAD", None, 10.0),
+            ArchiveRow(2026, 4, "MER", "RUS", None, 27.3),
+            ArchiveRow(2026, 4, "MER", "ANT", None, 20.0),
+        ],
+    }
+    assert change.constructor_rows == {
+        3: [ArchiveRow(2026, 3, "RED", None, 44.0, 30.0), ArchiveRow(2026, 3, "MER", None, 28.0, 31.0)],
+        4: [ArchiveRow(2026, 4, "RED", None, None, 30.4), ArchiveRow(2026, 4, "MER", None, None, 31.2)],
+    }
+
+
+def test_capture_takes_the_next_line_up_from_the_prices(tmp_path):
+    def swap(s):  # HAD replaced by LAW at Red Bull for the next race
+        s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
+
+    change = _decide(tmp_path, summary=modified(season_summary(), swap))
+
+    assert [(r.driver, r.price) for r in change.driver_rows[4]] == [
+        ("VER", 28.8), ("RUS", 27.3), ("ANT", 20.0), ("LAW", 7.0)
+    ]
+
+
+def test_capture_on_the_last_race_fills_points_only(tmp_path):
+    change = _decide(tmp_path, summary=modified(season_summary(), lambda s: s["rounds"].pop()))
+
+    assert sorted(change.driver_rows) == [3]
+    assert sorted(change.constructor_rows) == [3]
+
+
+def test_capture_refuses_when_prices_have_not_moved(tmp_path):
+    summary = modified(season_summary(), lambda s: _with_prices(s, _RACE_3_DRIVER_PRICES, _RACE_3_CONSTRUCTOR_PRICES))
+
+    with pytest.raises(CaptureRefused, match="price"):
+        _decide(tmp_path, summary=summary)
+
+
+def test_capture_refuses_unmoved_prices_even_with_a_new_driver(tmp_path):
+    def stale_with_swap(s):
+        _with_prices(s, _RACE_3_DRIVER_PRICES, _RACE_3_CONSTRUCTOR_PRICES)
+        s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
+
+    with pytest.raises(CaptureRefused, match="price"):
+        _decide(tmp_path, summary=modified(season_summary(), stale_with_swap))
+
+
+def test_capture_refuses_when_the_race_already_has_points(tmp_path):
+    drivers = DRIVERS_CSV.replace("2026,3,RED,VER,,28.5", "2026,3,RED,VER,31,28.5")
+
+    with pytest.raises(CaptureRefused, match="already has points"):
+        _decide(tmp_path, drivers_csv=drivers)
+
+
+def test_capture_refuses_when_a_driver_in_the_race_has_no_result(tmp_path):
+    history = modified(driver_history(), lambda h: h["drivers"]["ANT"]["rounds"].pop())
+
+    with pytest.raises(CaptureRefused, match="ANT"):
+        _decide(tmp_path, history=history)
+
+
+def test_capture_refuses_a_result_for_a_driver_not_in_the_race(tmp_path):
+    history = modified(driver_history(), lambda h: h["drivers"].update(
+        LAW={"rounds": [{"round": 4, "points": 3}]}))
+
+    with pytest.raises(CaptureRefused, match="LAW"):
+        _decide(tmp_path, history=history)
+
+
+def test_capture_refuses_when_a_constructor_has_no_result(tmp_path):
+    history = modified(driver_history(), lambda h: h["constructors"]["mercedes"]["rounds"].pop())
+
+    with pytest.raises(CaptureRefused, match="MER"):
+        _decide(tmp_path, history=history)
+
+
+def test_capture_warns_on_an_earlier_race_that_differs(tmp_path):
+    history = modified(driver_history(), lambda h: h["drivers"]["VER"]["rounds"][0].update(points=51))
+
+    change = _decide(tmp_path, history=history)
+
+    assert len(change.warnings) == 1
+    assert "VER" in change.warnings[0] and "race 1" in change.warnings[0]
+    assert change.driver_rows[3][0].points == 31.0
+
+
+def test_correct_rewrites_the_race_not_yet_held(tmp_path):
+    def before_update_with_swap(s):
+        _before_update(s)
+        s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
+
+    change = _decide(tmp_path, summary=modified(season_summary(), before_update_with_swap))
+
+    assert (change.mode, change.target_race) == (CORRECT, 3)
+    assert change.driver_rows == {3: [
+        ArchiveRow(2026, 3, "RED", "VER", None, 28.5),
+        ArchiveRow(2026, 3, "MER", "RUS", None, 27.1),
+        ArchiveRow(2026, 3, "MER", "ANT", None, 20.2),
+        ArchiveRow(2026, 3, "RED", "LAW", None, 7.0),
+    ]}
+    assert change.constructor_rows == {3: [
+        ArchiveRow(2026, 3, "RED", None, None, 30.0), ArchiveRow(2026, 3, "MER", None, None, 31.0),
+    ]}
+
+
+def test_correct_refuses_a_race_from_the_workbook(tmp_path):
+    with pytest.raises(CaptureRefused, match="workbook"):
+        _decide(tmp_path, summary=modified(season_summary(), _before_update), golden={2026: 3})
+
+
+def test_refuses_when_an_earlier_round_is_not_held(tmp_path):
+    summary = modified(season_summary(), lambda s: s["rounds"][1].update(has_actual=False))
+
+    with pytest.raises(CaptureRefused, match="round 2"):
+        _decide(tmp_path, summary=summary)
+
+
+def test_refuses_a_season_not_in_the_archive(tmp_path):
+    summary = modified(season_summary(), lambda s: s.update(season=2027))
+    history = modified(driver_history(), lambda h: h.update(season=2027))
+
+    with pytest.raises(CaptureRefused, match="2027"):
+        _decide(tmp_path, summary=summary, history=history)
+
+
+def test_refuses_when_drivers_and_constructors_end_at_different_races(tmp_path):
+    constructors = CONSTRUCTORS_CSV.replace("2026,3,RED,,30\n", "").replace("2026,3,MER,,31\n", "")
+
+    with pytest.raises(CaptureRefused, match="different races"):
+        _decide(tmp_path, constructors_csv=constructors)

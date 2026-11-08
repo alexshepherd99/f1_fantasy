@@ -141,8 +141,9 @@ throwaway script that was not kept.
   `season_summary.json`'s `rounds` list has a `has_actual` flag per round,
   which marks the races that have been held.
 - **Identifiers differ.** Drivers are bare codes (`VER`), with a suffix where
-  one is ambiguous (`HIR_HAAS`). Each driver's price entry names a
-  constructor slug (`red_bull`), and constructors are keyed by slug as well.
+  one is ambiguous (`HIR_HAAS`). Each driver's price entry names a team by
+  BoxBox's own lowercase team name (`red_bull`), and constructors are keyed
+  by that name as well.
   All of these need mapping onto the archive's `DRIVER@CONSTRUCTOR` ids and
   constructor codes (`RED`).
 - **`season_summary.json` carries a `generated_at` timestamp**, which can show

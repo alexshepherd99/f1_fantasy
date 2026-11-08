@@ -80,9 +80,7 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 
 8. ~~Map BoxBox to the archive~~ — done 2026-11-08, see log *Step 8*.
 
-9. **Decide the change, or refuse.** Pure logic over the archive and the
-   parsed files, following *How a run works* below. It returns the rows to
-   write, or raises with a message naming what it found.
+9. ~~Decide the change, or refuse~~ — done 2026-11-08, see log *Step 9*.
 
 10. **Write the change.** Rows of the target race are replaced in place, and
     new rows go after each asset's last row in the season, so untouched rows
@@ -119,7 +117,7 @@ calendar round is the `T`th entry of BoxBox's `rounds` list.
   values are the golden source. It is changed by hand if ever needed.
 - **A BoxBox round before `T`'s has no `has_actual`, or there is no round
   after `T`.**
-- **Any slug, key or structure it does not know.**
+- **Any team name, driver key or structure it does not know.**
 - **The integrity checks fail on the result**, for example a constructor
   without exactly two drivers.
 

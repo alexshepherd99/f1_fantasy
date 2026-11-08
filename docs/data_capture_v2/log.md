@@ -453,3 +453,42 @@ table. Mutation, each caught by the intended test and restored green:
 On the real copy, races 3, 4, 19 and 20 map to rounds 3, 6, 21 and 22
 (Brazil), every slug in it is in the table, and its 24 driver keys give 24
 distinct codes.
+
+## 2026-11-08 — Step 9: deciding the change
+
+**A note on wording.** Alex asked why the docs said "slug". The step 8 entry
+uses it to mean BoxBox's own lowercase team names (`red_bull`), which is web
+jargon. `plan.md` and `requirements.md` now say "team name". The code keeps
+`slug` as a variable name.
+
+`boxbox/change.py`'s `decide_change` implements `plan.md`'s *How a run works*.
+It reads the archive as stored (`read_archive_file`) and BoxBox's parsed data,
+and returns a `Change`: complete replacement rows for each race it writes,
+plus warnings. Otherwise it raises `CaptureRefused`. Rows of an existing
+asset keep its place in the season's order, and new assets go after. It
+writes no files; that is step 10.
+
+**Red first.** The 14 tests failed against a stub. Writing the code exposed a
+hole in the stale-price rule. A newly listed driver counted as a moved price,
+so a swap before BoxBox's price update would have written the old prices as
+the next race's. A new test for that case failed (it did not refuse), and the
+fix compares only assets priced in both races.
+
+**Mutation.** Nine guards were broken in turn, each caught by its intended
+tests and restored green:
+
+- the stale check;
+- the workbook guard;
+- the line-up comparison (three tests);
+- the already-has-points check;
+- the earlier-round check;
+- the end-race check;
+- the earlier-race warnings;
+- the last-race rule;
+- the order of new assets (two tests).
+
+**On the real 2026-11-08 copy**, before Brazil's results, the run refuses to
+correct race 20, since it came from the workbook. With that guard off, it
+would rewrite race 20 from BoxBox's prices with no warnings. So all 646
+earlier 2026 results agree with the archive, and the fetcher's reading of
+BoxBox reproduces race 20's line-up.
