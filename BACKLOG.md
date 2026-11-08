@@ -7,7 +7,7 @@ Efforts under `docs/`:
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
-| [`fastf1_v2`](docs/fastf1_v2/) | in progress |
+| [`fastf1_v2`](docs/fastf1_v2/) | done |
 | [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | done |
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
@@ -246,7 +246,10 @@ does not use it. See `docs/odds_drs_v1/log.md`.] What it can and cannot buy:
   *Build a strategy on the FastF1 indicators* and its regression prerequisite
   above. [2026-11-01: that prerequisite is answered, in
   `docs/indicator_analysis_v1/log.md`, and is off this list. The strategy item has moved
-  to `docs/fastf1_v2/`.] A DRS signal is a narrower first use of `AggregateRank`.
+  to `docs/fastf1_v2/`. 2026-11-08: `fastf1_v2` is done. Its strategy chooses DRS inside
+  the LP from its own signal, not `AggregateRank`, and dropping that DRS term lost
+  points in every season of its step 16. It did not test DRS for P2PM.] A DRS signal is a
+  narrower first use of `AggregateRank`.
 - Perfect hindsight is not achievable, so the realistic gain is some unknown
   fraction of the ceiling.
 
@@ -256,7 +259,10 @@ Raised 2026-09-28, from `max_points_v1`.
 
 **Only if** `fastf1_v2`'s back-test finds `StrategyFastF1` more effective than
 `StrategyMaxP2PM`, and Alex wants to use it for mid-season picks. Otherwise drop
-this item.
+this item. [2026-11-08: the first condition is met. `FastF1_RuleRise2p5` beat P2PM
+in 2025 and 2026 through race 18 (`BACKTEST_LOG.md`). The live 2026 team stays on
+P2PM, so this is for 2027 at the earliest, and the chosen setting would first need
+a home in `linear/`, as it is only registered in `backtest/cli.py` today.]
 
 The strategy reads only the stored metrics file,
 `data/fastf1_practice_rolling_metrics.xlsx`, and never calls FastF1. So a live pick
@@ -292,9 +298,14 @@ three values tried for each lever from measures on 2023–25 only:
 - budget reward 0.1, 0.25 and 0.5;
 - price-rise reward 5, 10 and 20.
 
+[2026-11-08: the price-rise reward was later rebuilt from the game's rules and
+tried at 5, 10 and 20, then 2.5 and 1.25, on 2025 alone. 2.5 was chosen
+(`docs/fastf1_v2/log.md`, *Step 23*). Its values were not set from these
+measures.]
+
 2026 was left out deliberately, as it is the season the verdict is judged on.
 Once it finishes, re-run the measures with 2026 included and decide whether the
-values, and the setting step 16 chose from them, still hold. The measures are:
+values, and the setting steps 16 and 23 chose from them, still hold. The measures are:
 
 - fantasy points per value unit;
 - what a negative costs, in value units;
@@ -307,15 +318,41 @@ driver results and 18.2% of constructor results. In 2023–25 the figures were 1
 to 16% (`docs/fastf1_v2/log.md`, *Sizing the two levers in the brief*). So the
 penalty's values are the likeliest to move.
 
-This sits beside `fastf1_v2` step 18's item to rerun the 2026 back-test when the
-season finishes. Do this one first, as it may change what that rerun tests.
+This sits beside *Rerun `fastf1_v2`'s 2026 back-test when the season finishes*,
+below. Do this one first, as it may change what that rerun tests.
 
 Raised by Alex 2026-11-07, during `fastf1_v2` step 15.1.
+
+## Rerun `fastf1_v2`'s 2026 back-test when the season finishes
+
+**For Alex, once the 2026 season is over, after the re-assessment above.**
+`fastf1_v2` step 17 ran 2026 only through race 18, the last race with a signal
+in `data/fastf1_practice_rolling_metrics.xlsx`. `FastF1_RuleRise2p5` was +338.0
+points a team ahead of P2PM there, with 205 of that from race 13
+(`docs/fastf1_v2/log.md`, *Step 17* and *Step 26*). `requirements.md` question 7
+agreed the rerun.
+
+- **Build the missing races first:** `fast_f1.cli --historical --season 2026`,
+  then check the metrics file holds every 2026 race with results, as step 3b.3
+  checked for rows built before a race had results.
+- **Add 2026 to `COMPLETED_SEASONS`** in `backtest/cli.py`.
+- **Run once,** seed 1, 500 teams a band, `FastF1_RuleRise2p5` and
+  `StrategyMaxP2PMNoReset`, into a new store, not `outputs/fastf1_v2_results.parquet`:
+  stored rows are keyed without the last race, so that store would return the
+  race-18 rows as if they were final.
+- **Read it as partly seen.** Races 1–18 are the ones already reported, so only
+  the races after 18 are new evidence, and a strategy that leads by 338 at race
+  18 is very likely to stay ahead. Report the lead gained or lost after race 18
+  on its own.
+
+Raised as `fastf1_v2` question 7, agreed 2026-11-01, and moved here at its close
+on 2026-11-08.
 
 ## Model the game's other chips
 
 The only chip any strategy plays is the race-4 unlimited-moves chip: P2PM has it
-built in, and `fastf1_v2` step 25 tests it for FastF1. The live game has others,
+built in, and `fastf1_v2` step 25 tested it for FastF1 and did not keep it, as it
+helped in two seasons and cost points in two. The live game has others,
 including Limitless, the 3x boost, No Negative, Autopilot and the free transfer.
 Alex played several in 2026 (`README.md`, *2026 team*). None is modelled, so
 the back-tests cannot say when to play them or what they are worth. Unlike the
