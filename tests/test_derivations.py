@@ -10,7 +10,8 @@ from import_data.derivations import (
 )
 from scripts.check_run_ppm import load_all_archives_add_derived
 
-_FILE_EXPECTED_RESULTS = "data/test_expected_values.xlsx"
+_FILE_EXPECTED_2023 = "data/test_expected_values_2023.csv"
+_FILE_EXPECTED_2024 = "data/test_expected_values_2024.csv"
 
 
 def test_derivation_cum_tot_driver():
@@ -225,8 +226,8 @@ def test_actual_derivations():
     df_red_points_23 = df_derived_data_constructor[flt_23_con & flt_red][["Race", "PPM Cumulative (3)"]].reset_index(drop=True)
     df_bea_points_24 = df_derived_data_driver[flt_24_drv & flt_bea][["Race", "PPM Cumulative (3)"]].reset_index(drop=True)
 
-    df_expected_23 = pd.read_excel(_FILE_EXPECTED_RESULTS, sheet_name="2003 Expected", engine="openpyxl")  # typo!
-    df_expected_24 = pd.read_excel(_FILE_EXPECTED_RESULTS, sheet_name="2004 Expected", engine="openpyxl")  # typo!
+    df_expected_23 = pd.read_csv(_FILE_EXPECTED_2023)
+    df_expected_24 = pd.read_csv(_FILE_EXPECTED_2024)
 
     df_exp_ver_points_23 = df_expected_23[["Race", "VER-RED-2003-ppm"]].rename(columns={"VER-RED-2003-ppm": "PPM Cumulative (3)"})
     df_exp_ric_points_23 = df_expected_23[["Race", "RIC-ALT-2003-ppm"]].rename(columns={"RIC-ALT-2003-ppm": "PPM Cumulative (3)"})

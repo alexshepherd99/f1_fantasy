@@ -39,7 +39,7 @@ Drivers who are not participating in a given race must have no value populated (
 
 If updating race data in the middle of a season, drivers and constructors will have a price for the next race but no points yet.  In this period, the driver and constructor points columns must be populated with a value of 0 for that race, for all drivers which are expected to participate.
 
-**data/test_expected_values.xlsx** has some pre-computed values of the derivation calculations, to support unit testing.
+**data/test_expected_values_2023.csv** and **data/test_expected_values_2024.csv** hold some pre-computed values of the derivation calculations, to support unit testing.  They replaced a spreadsheet on 2026-11-08.
 
 **data/f1_betting_odds.csv** holds race-winner betting odds, one row per driver per race, and is used by the betting odds strategy and by the `fast_f1` odds indicator, see below; **data/test_betting_odds.csv** is its test fixture.  It replaced a spreadsheet on 2026-11-08 so that each race's odds show as a git diff.  Odds format is 100/1, 9/4, 5:2, 4-3.  Odds-on prices, where the stake exceeds the return (10/11, 4/6), are valid and are how a strong favourite is priced.  Fractional odds `a/b` are converted to an implied probability of `b/(a+b)`, and a blank price counts as no price.
 

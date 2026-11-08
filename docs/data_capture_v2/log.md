@@ -165,3 +165,34 @@ The layout is unchanged: keeping the Points sheets' order is still what lets
 the loader return exactly today's frames. The reason in `plan.md` is
 corrected. This was established by reading the code, not by running it.
 Alex caught it by asking what the claim meant.
+
+## 2026-11-08 — Step 1: derivation fixture converted to CSV; workbook removed
+
+`tests/test_derivations.py` now reads its expected values from
+`data/test_expected_values_2023.csv` and `data/test_expected_values_2024.csv`.
+These are the workbook's `2003 Expected` (22 rows × 16 columns) and
+`2004 Expected` (24 × 6) sheets, with their column names unchanged, typos
+included, so the test's only change is where it reads from.
+`data/test_expected_values.xlsx` is removed, and can be recovered at
+`2f0cda9`. The two unused `Actual` sheets were not converted and exist only
+there.
+
+Red first: with the test pointed at the CSV paths, it failed with
+`FileNotFoundError` on the 2023 file and the other three derivation tests
+passed. It went green once the files existed.
+
+**Data check.** The converter and the check were separate throwaway scripts.
+The check reads the workbook through openpyxl rather than pandas, and reads
+each CSV both as text and through `pd.read_csv` as the test does. It found
+every cell equal, blanks as blanks, and the `read_csv` frames exactly equal
+to the old `read_excel` frames, dtypes included. It was shown able to fail on
+two damaged copies, each giving a non-zero exit:
+
+- one ppm value changed in its fifteenth significant digit;
+- one blank filled with a number.
+
+pandas' default CSV reader reproduced every float exactly, so the test needs
+no special read options.
+
+`README.md` names the new files. Suite: 594 passed. Only the derivation tests
+were run before the change, not the full suite.

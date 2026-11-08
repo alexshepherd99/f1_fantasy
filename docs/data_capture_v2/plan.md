@@ -52,17 +52,8 @@ Proposed, from a read-only survey of the workbook on 2026-11-08 (see the log):
 
 ## Steps
 
-1. **Convert the derivation test's expected values to CSV.** Smallest and
-   independent of the rest, so it goes first and tries out the conversion
-   method. `tests/test_derivations.py` reads only the two `Expected` sheets
-   of `data/test_expected_values.xlsx`, so those become
-   `data/test_expected_values_2023.csv` and `data/test_expected_values_2024.csv`.
-   The test keeps its sheet-name typos out of the new file names. The two
-   unused `Actual` sheets are not converted, and they stay in git history.
-   - Check: the CSV frames equal the `read_excel` frames, dtypes included,
-     shown able to fail on a copy with one value changed.
-   - Red first: the test pointed at the CSV paths fails before the files exist.
-   - Remove the workbook, and record the recovery commit in the log.
+1. ~~Convert the derivation test's expected values to CSV~~ — done
+   2026-11-08, see log *Step 1*.
 
 2. **Agree the layout and the check plan with Alex.** No code. Alex reviews
    *The CSV layout* above and *Checks on the loader rewrite* in
