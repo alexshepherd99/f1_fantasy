@@ -312,3 +312,19 @@ the archive to CSV and chose hand-typed input over scraping (2026-07-30), so
 settle with that effort which route wins first.
 
 Raised by Alex 2026-11-08.
+
+## Convert `fastf1_practice_rolling_metrics.xlsx` to CSV
+
+Move `data/fastf1_practice_rolling_metrics.xlsx` to CSV, as `odds_source_v1`
+did for the betting odds, so each write shows as a git diff.
+
+The path is `DEFAULT_HISTORICAL_OUTPUT` (`fast_f1/output.py`), written by
+`save_metrics` and read by `load_existing_metrics`, both through Excel today.
+`fast_f1/signal.py` (and through it `StrategyFastF1`, a `linear/` module, via
+`fn_metrics`) reads it with `load_existing_metrics`, and
+`fast_f1/indicator_analysis.py` with `pd.read_excel`. Single-race output in
+`outputs/` uses the same writer. The odds conversion's method is in
+`docs/odds_source_v1/log.md`, *Step 2* and *Step 3*: a cell-by-cell check,
+then the old reader against the new on every race.
+
+Raised by Alex 2026-11-08.
