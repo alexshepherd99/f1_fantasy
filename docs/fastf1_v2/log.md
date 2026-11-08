@@ -3527,3 +3527,78 @@ P2PM's 180.7. One race before, the two scored 264.7 and 250.3.
 
 2023–24 race by race against the final strategy, which there is the base. Which signal input
 drove race 13.
+
+## 2026-11-08 — Step 18: findings
+
+### In plain language
+
+**The redesigned FastF1 strategy beats P2PM in every season it was run on, and by the most
+in 2026, the season nothing was tuned on.** The final strategy is `FastF1_RuleRise2p5`:
+`StrategyFastF1` with a price-rise reward of 2.5 and nothing else changed from its defaults.
+
+- **2026, the fair read:** +338.1 points a team through race 18, 9.2%, ahead on 98% of teams.
+  But 205 of those points come from one race, race 13, where every FastF1 team made Antonelli
+  its DRS driver. Without it the lead is 133 a team, still ahead in 12 of the other 17 races.
+  So the lead is real, and much less certain than 338 suggests.
+- **2025, flattered:** +35.9 a team, ahead on 73%. The reward was chosen on 2025, and the lead
+  rests on three races. Without them FastF1 would be 143 behind. Its worst tenth of teams is
+  420 behind P2PM.
+- **2023–24, the base strategy:** the reward has no effect before 2025, so the strategy there is
+  `StrategyFastF1` itself. Step 16 put it +482.7 (98%) and +190.4 (89%) ahead of P2PM, on seed
+  2 at 300 teams a season. Not rerun.
+- **The race-4 chip does not explain the gap, and FastF1 does not need it.** P2PM plays the chip
+  and FastF1 does not. The chip is worth 168 points a team to P2PM in 2025 and 131 in 2026, so
+  without it P2PM trails FastF1 by 204 and 469. Given to FastF1, the chip helped in 2023 and 2025
+  and cost points in 2024 and 2026, so it is not kept.
+- **The live team stays on P2PM for 2026,** as Alex decided before step 25. These findings are
+  for 2027.
+
+### What was decided along the way
+
+- **The first design failed.** The expected-points table by finishing place trailed P2PM by
+  315 to 385 points a team in 2023–25, and step 8 found no setting that helped (*Step 8*,
+  *Stepping back*). The redesign scores the signal's value on a championship points scale,
+  with a constructor as the sum of its drivers (*Signal redesign agreed*).
+- **The price-rise reward follows the game's rules,** which changed to a three-race model in
+  2025 and are unchanged in 2026. The reward was tuned on 2025 alone, the only finished season
+  under those rules, which Alex accepted on 2026-11-07 (*The game's price-change rules*, *Step
+  22*, *Step 23*).
+- **Step 17, the verdict, ran on 2025–26 only,** the two seasons with the reward on (*Step 17
+  narrowed to 2025–26*). No verdict spans the four seasons, as two different strategies would
+  sit under it.
+- **The chip's rule was revised after its 2023–25 result was seen,** to count 2025 and 2026
+  only, and 2026's step 17 result was seen before the chip was considered. The chip failed both
+  rules, so neither changed the outcome (*Step 25's rule revised*, *Step 25.4*).
+
+### Variants tried
+
+- **First design, step 8:** the base and 6 variants on 2023–25, all dropped with the design.
+- **Redesign, 16 variants, with one setting chosen from them:** 10 in step 16 on 2023–25 (DRS
+  coefficient 0, three negative penalties, three budget rewards and three table-based price-rise
+  rewards), 3 rules-based price-rise rewards in step 22 on 2025, 2 lower ones in step 23 on
+  2025, and the chip in step 25.
+- **2026 saw two FastF1 labels:** the final strategy in steps 17 and 26, and the chip in step
+  25.4. No choice was made on 2026, so step 17 stays out of sample.
+
+### What to bear in mind
+
+- **One season out of sample, and only 18 races of it.** 2026 is the only season nothing was
+  tuned on, and one race carries most of its lead. 2027 is the next fair test.
+- **Back-test P2PM is not Alex's live team.** His live 2026 total through race 18 is 4,227,
+  with chips and a betting-odds start, against back-test P2PM's mean of 3,765 and FastF1's of
+  4,103, from sampled starts.
+- **The price rules are a working hypothesis,** reverse-engineered by the game's community and
+  checked against the archive, not published by the game.
+- **The final strategy lives in `backtest/cli.py`,** as a variant of `StrategyFastF1`, whose
+  own price-rise reward defaults to 0. Moving it into `linear/` for live play is Alex's call,
+  as is the live-pick route in `BACKLOG.md`.
+
+### Not run
+
+- 2026's last races. Its back-test stops at race 18, the last with a signal, and is rerun when
+  the season finishes (`BACKLOG.md`).
+- Combinations of the levers, a sprint variant, and a second 2026 seed.
+- Why the chip helps in some seasons and not others, why FastF1 picked Antonelli at 2026 race
+  13, and why 2025's worst tenth of teams fell so far behind. Alex chose not to look into the
+  last.
+- 2023–24 race by race, and the game's other chips (`BACKLOG.md`).
