@@ -10,7 +10,8 @@ narrowed to 2025–26*). Step 25, the race-4 chip, is done: its rule was revised
 count 2025 and 2026 only, and the chip failed that too, at −13.6 points a team in 2026, so it is
 not kept (`log.md`, *Step 25.4: the chip on 2026, under the revised rule*). Step 26 is done: the
 lead over P2PM comes in a few big races (`log.md`, *Step 26: when the lead builds, race by
-race*). **Step 18, the findings and close-out, is next.** Steps 17 and 18 were numbered 9 and 10 before
+race*). Step 18, the findings and close-out, is done, so **every step is done and the
+effort is closed** (`log.md`, *Step 18: findings*). Steps 17 and 18 were numbered 9 and 10 before
 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
@@ -554,6 +555,8 @@ from it,** so 2026 stays unseen for any tuning.
 Runs alongside step 25.4, as a second background process.
 
 ## Step 18 — Findings and close-out
+
+Done 2026-11-08. See `log.md`, *Step 18: findings*. The 2026 rerun is in `BACKLOG.md`.
 
 - Findings in `log.md`, in plain language first: the verdict, 2026 as the fair read, 2025 as
   flattered, 2023–24 from step 16 labelled as the base, how much of any gap the chip explains,
