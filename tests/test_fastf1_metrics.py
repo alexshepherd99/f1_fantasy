@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 
 from fast_f1.metrics import (
-    METRIC_WEIGHTS,
     aggregate_metrics,
     calculate_constructor_rolling_points,
     calculate_odds_rank,
@@ -131,64 +130,133 @@ def test_calculate_practice_performance_raises_when_multiple_session_types():
         calculate_practice_performance(df_session_laps)
 
 
-def test_aggregate_metrics_sums_rank_columns():
-    df = pd.DataFrame({
+def _race_ranks(race: int, **columns: list[float]) -> pd.DataFrame:
+    """Drivers A and B's rank columns in one 2026 race, each given as [A, B].
+
+    Driver rolling, constructor rolling and odds default to zero; a session column is
+    present only when given, as in a race that held that session.
+    """
+    frame = {
+        "Season": [2026, 2026],
+        "Race": [race, race],
         "Driver": ["A", "B"],
-        "RollingPointsRank": [1.0, 0.0],
-        "FP2_MinLapTime_rank": [0.5, 1.0],
-        "FP3_MinLapTime_rank": [0.5, 0.0],
-    })
-
-    result = aggregate_metrics(df)
-    assert list(result["Driver"]) == ["A", "B"]
-    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(2.0, 1e-4)
-    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(1.0, 1e-4)
+        "RollingPointsRank": [0.0, 0.0],
+        "ConstructorRollingPointsRank": [0.0, 0.0],
+        "OddsRank": [0.0, 0.0],
+    }
+    frame.update(columns)
+    return pd.DataFrame(frame)
 
 
-def test_aggregate_metrics_excludes_zero_weighted_constructor_rank():
-    df = pd.DataFrame({
-        "Driver": ["A", "B"],
-        "RollingPointsRank": [1.0, 0.0],
-        "ConstructorRollingPointsRank": [0.0, 1.0],
-    })
-
-    result = aggregate_metrics(df)
-
-    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(1.0, 1e-4)
-    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(0.0, 1e-4)
-
-    # B leads on constructor rank alone, so ordering proves it carries no weight
-    assert list(result["Driver"]) == ["A", "B"]
-    assert METRIC_WEIGHTS["ConstructorRollingPointsRank"] == 0.0
+def _aggregates(result: pd.DataFrame) -> dict[str, float]:
+    return dict(zip(result["Driver"], result["AggregateRank"]))
 
 
-def test_aggregate_metrics_weights_odds_like_any_other_indicator():
-    df = pd.DataFrame({
-        "Driver": ["A", "B"],
-        "RollingPointsRank": [1.0, 0.0],
-        "OddsRank": [0.25, 1.0],
-    })
+def test_aggregate_metrics_adds_driver_constructor_and_fp3_on_a_normal_weekend():
+    # B leads only on the inputs a normal weekend leaves out: FP2 and odds.
+    df = _race_ranks(
+        5,
+        RollingPointsRank=[0.5, 0.0],
+        ConstructorRollingPointsRank=[0.25, 0.0],
+        FP2_MinLapTime_rank=[0.0, 1.0],
+        FP3_MinLapTime_rank=[0.125, 0.0],
+        OddsRank=[0.0, 1.0],
+    )
 
     result = aggregate_metrics(df)
 
-    assert result.loc[result["Driver"] == "A", "AggregateRank"].iloc[0] == pytest.approx(1.25, 1e-4)
-    assert result.loc[result["Driver"] == "B", "AggregateRank"].iloc[0] == pytest.approx(1.0, 1e-4)
-
-    # At parity weight A's points lead outweighs B's odds lead
+    assert _aggregates(result) == pytest.approx({"A": 0.875, "B": 0.0})
     assert list(result["Driver"]) == ["A", "B"]
-    assert "OddsRank" not in METRIC_WEIGHTS
 
 
-def test_aggregate_metrics_defaults_unlisted_columns_to_weight_one():
-    df = pd.DataFrame({
-        "Driver": ["A"],
-        "RollingPointsRank": [0.5],
-        "FP2_MinLapTime_rank": [0.25],
-    })
+def test_aggregate_metrics_adds_driver_and_constructor_on_a_sprint_weekend():
+    # B leads only on practice and odds, which a sprint weekend leaves out.
+    df = _race_ranks(
+        5,
+        RollingPointsRank=[0.5, 0.0],
+        ConstructorRollingPointsRank=[0.25, 0.0],
+        FP1_MinLapTime_rank=[0.0, 1.0],
+        SQ_MinLapTime_rank=[0.0, 1.0],
+        OddsRank=[0.0, 1.0],
+    )
 
-    assert "RollingPointsRank" not in METRIC_WEIGHTS
-    assert "FP2_MinLapTime_rank" not in METRIC_WEIGHTS
-    assert aggregate_metrics(df)["AggregateRank"].iloc[0] == pytest.approx(0.75, 1e-4)
+    assert _aggregates(aggregate_metrics(df)) == pytest.approx({"A": 0.75, "B": 0.0})
+
+
+def test_aggregate_metrics_adds_driver_and_constructor_on_a_2023_fp1_only_sprint():
+    df = _race_ranks(
+        5,
+        RollingPointsRank=[0.5, 0.0],
+        ConstructorRollingPointsRank=[0.25, 0.0],
+        FP1_MinLapTime_rank=[0.0, 1.0],
+        OddsRank=[0.0, 1.0],
+    )
+
+    assert _aggregates(aggregate_metrics(df)) == pytest.approx({"A": 0.75, "B": 0.0})
+
+
+def test_aggregate_metrics_ranks_race_one_on_odds_alone():
+    # B leads on every input but odds.
+    df = _race_ranks(
+        1,
+        RollingPointsRank=[0.0, 1.0],
+        ConstructorRollingPointsRank=[0.0, 1.0],
+        FP2_MinLapTime_rank=[0.0, 1.0],
+        FP3_MinLapTime_rank=[0.0, 1.0],
+        OddsRank=[0.25, 0.0],
+    )
+
+    assert _aggregates(aggregate_metrics(df)) == pytest.approx({"A": 0.25, "B": 0.0})
+
+
+def test_aggregate_metrics_counts_a_missing_input_as_zero():
+    df = _race_ranks(
+        5,
+        RollingPointsRank=[0.5, 0.25],
+        ConstructorRollingPointsRank=[0.25, 0.25],
+        FP2_MinLapTime_rank=[1.0, 0.0],
+        FP3_MinLapTime_rank=[float("nan"), 1.0],
+    )
+
+    assert _aggregates(aggregate_metrics(df)) == pytest.approx({"A": 0.75, "B": 1.5})
+
+
+def test_aggregate_metrics_runs_on_a_normal_weekend_before_fp3():
+    df = _race_ranks(
+        5,
+        RollingPointsRank=[0.5, 0.0],
+        ConstructorRollingPointsRank=[0.25, 0.0],
+        FP2_MinLapTime_rank=[0.0, 1.0],
+    )
+
+    assert _aggregates(aggregate_metrics(df)) == pytest.approx({"A": 0.75, "B": 0.0})
+
+
+def test_aggregate_metrics_handles_several_races_at_once():
+    # Together the two races hold every session column, so the sprint race's rows
+    # have FP2 and FP3 missing, as in the stored metrics file. Reading the sprint as a
+    # normal weekend would not change its sum today, as its FP3 counts zero, so this
+    # does not pin the format to each race.
+    normal = _race_ranks(
+        5,
+        RollingPointsRank=[0.5, 0.0],
+        FP2_MinLapTime_rank=[0.0, 1.0],
+        FP3_MinLapTime_rank=[0.25, 0.0],
+    )
+    sprint = _race_ranks(
+        6,
+        RollingPointsRank=[0.5, 0.0],
+        FP1_MinLapTime_rank=[0.0, 1.0],
+        SQ_MinLapTime_rank=[1.0, 0.0],
+    )
+
+    result = aggregate_metrics(pd.concat([normal, sprint], ignore_index=True))
+
+    by_race = {race: _aggregates(rows) for race, rows in result.groupby("Race")}
+    assert by_race == {
+        5: pytest.approx({"A": 0.75, "B": 0.0}),
+        6: pytest.approx({"A": 0.5, "B": 0.0}),
+    }
 
 
 def test_calculate_odds_rank_normalises_on_a_log_scale():

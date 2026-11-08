@@ -1,10 +1,10 @@
 """FastF1 signal package.
 
 Pulls forward-looking race signal from the FastF1 API: practice-session
-lap-time ranks combined with rolling driver points and driver betting odds,
-normalised to 0-1 and summed into an ``AggregateRank``. Rolling constructor
-points are computed and reported alongside them but carry zero weight in the
-aggregate — see ``metrics.METRIC_WEIGHTS``.
+lap-time ranks, rolling driver and constructor points and driver betting odds,
+each normalised to 0-1. ``AggregateRank`` sums the ones `indicator_analysis_v1`
+chose for each weekend format, and odds alone at race 1 — see
+``metrics.aggregate_metrics``.
 """
 
 from fast_f1.api import (

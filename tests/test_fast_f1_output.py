@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from fast_f1.metrics import METRIC_WEIGHTS, get_rolling_window_races
+from fast_f1.metrics import get_rolling_window_races
 from fast_f1.output import (
     HistoricalRunIncomplete,
     build_race_metrics,
@@ -285,7 +285,8 @@ def test_build_race_metrics_works_when_race_results_missing(monkeypatch):
     fp2_laps = pd.DataFrame(
         {
             "Driver": ["ALO", "PER"],
-            "LapTime": [85.0, 86.0],
+            # PER tops FP2 alone, so leaving FP2 out moves the aggregate
+            "LapTime": [86.0, 85.0],
             "LapNumber": [1, 1],
             "Stint": [1, 1],
             "PitOutTime": [0, 0],
@@ -381,16 +382,13 @@ def test_build_race_metrics_works_when_race_results_missing(monkeypatch):
     assert "ConstructorRollingPointsRank" in metrics.columns
     assert "AggregateRank" in metrics.columns
 
-    rank_columns = [
-        col for col in metrics.columns
-        if col != "AggregateRank" and (col.endswith("Rank") or col.endswith("_rank"))
-    ]
-    assert "ConstructorRollingPointsRank" in rank_columns
-
+    # A normal weekend after race 1 adds driver rolling, constructor rolling and FP3.
     for driver in ["ALO", "PER"]:
         driver_row = metrics[metrics["Driver"] == driver].iloc[0]
-        expected_aggregate = sum(
-            METRIC_WEIGHTS.get(col, 1.0) * driver_row[col] for col in rank_columns
+        expected_aggregate = (
+            driver_row["RollingPointsRank"]
+            + driver_row["ConstructorRollingPointsRank"]
+            + driver_row["FP3_MinLapTime_rank"]
         )
         assert driver_row["AggregateRank"] == pytest.approx(expected_aggregate)
 
@@ -554,7 +552,10 @@ def test_build_race_metrics_fetches_exactly_the_rolling_window_races(monkeypatch
         lambda season, race: DummyEvent({"FP2": DummySession(pd.DataFrame()), "FP3": DummySession(pd.DataFrame())}),
     )
     monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", lambda event: ("FP2", "FP3"))
-    monkeypatch.setattr("fast_f1.output.get_session_laps", lambda season, race, session_type: laps)
+    monkeypatch.setattr(
+        "fast_f1.output.get_session_laps",
+        lambda season, race, session_type: laps.assign(SessionType=session_type),
+    )
     monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
 
     build_race_metrics(season_year, race_num, rolling_window=3)
@@ -601,7 +602,7 @@ def _patch_minimal_race(monkeypatch, season_year, race_num, drivers):
     monkeypatch.setattr("fast_f1.output.get_race_results", lambda season, race: current_results)
 
 
-def test_build_race_metrics_includes_odds_rank_at_parity_weight(monkeypatch):
+def test_build_race_metrics_ranks_race_one_on_odds_alone(monkeypatch):
     season_year, race_num = 2025, 1
     _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
     monkeypatch.setattr(
@@ -615,14 +616,11 @@ def test_build_race_metrics_includes_odds_rank_at_parity_weight(monkeypatch):
     # The raw probability is carried through for auditability
     assert metrics.loc["HAM", "OddsImpliedProbability"] == pytest.approx(0.4)
 
-    # HAM's odds advantage must reach AggregateRank at the same weight as every
-    # other indicator
-    other_ranks = sum(
-        METRIC_WEIGHTS.get(col, 1.0) * metrics.loc["HAM", col]
-        for col in metrics.columns
-        if col not in ("AggregateRank", "OddsRank") and (col.endswith("Rank") or col.endswith("_rank"))
-    )
-    assert metrics.loc["HAM", "AggregateRank"] == pytest.approx(other_ranks + 1.0)
+    # HAM also tops both practice sessions, which race 1 leaves out
+    assert metrics.loc["HAM", "FP2_MinLapTime_rank"] == pytest.approx(1.0)
+    assert metrics.loc["HAM", "FP3_MinLapTime_rank"] == pytest.approx(1.0)
+    assert metrics.loc["HAM", "AggregateRank"] == pytest.approx(1.0)
+    assert metrics.loc["VER", "AggregateRank"] == pytest.approx(0.0)
 
 
 def test_build_race_metrics_zeroes_odds_when_lookup_fails(monkeypatch, caplog):
@@ -701,7 +699,10 @@ def _patch_race_with_history(monkeypatch, season_year, results_by_race):
         lambda season, race: DummyEvent({"FP2": DummySession(pd.DataFrame()), "FP3": DummySession(pd.DataFrame())}),
     )
     monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", lambda event: ("FP2", "FP3"))
-    monkeypatch.setattr("fast_f1.output.get_session_laps", lambda season, race, session_type: laps)
+    monkeypatch.setattr(
+        "fast_f1.output.get_session_laps",
+        lambda season, race, session_type: laps.assign(SessionType=session_type),
+    )
     monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
     return race_num
 
@@ -827,7 +828,10 @@ def _patch_race_before_results(monkeypatch, season_year, race_num, prior_by_race
         lambda season, race: DummyEvent({"FP2": DummySession(pd.DataFrame()), "FP3": DummySession(pd.DataFrame())}),
     )
     monkeypatch.setattr("fast_f1.output.select_practice_sessions_from_event", lambda event: ("FP2", "FP3"))
-    monkeypatch.setattr("fast_f1.output.get_session_laps", lambda season, race, session_type: laps)
+    monkeypatch.setattr(
+        "fast_f1.output.get_session_laps",
+        lambda season, race, session_type: laps.assign(SessionType=session_type),
+    )
     monkeypatch.setattr("fast_f1.output.get_race_results", fake_get_race_results)
     monkeypatch.setattr(
         "fast_f1.output.get_session_drivers",

@@ -9,18 +9,6 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Relative contribution of each indicator to AggregateRank. Indicators not
-# listed here carry a weight of 1.0.
-#
-# Constructor rolling points are still computed and reported, but contribute
-# nothing to the aggregate: the indicator carries real signal on its own yet is
-# almost entirely redundant with the driver indicators it sits alongside
-# (correlating 0.80-0.98 per race with driver rolling points and 0.80-0.96 with
-# odds over 2026). See docs/fastf1_v1/log.md for the measurements.
-METRIC_WEIGHTS: dict[str, float] = {
-    "ConstructorRollingPointsRank": 0.0,
-}
-
 FIRST_RACE = 1
 
 FORMAT_NORMAL = "normal"
@@ -386,15 +374,31 @@ def add_signal_inputs(metrics: pd.DataFrame) -> pd.DataFrame:
 
 
 def aggregate_metrics(df: pd.DataFrame) -> pd.DataFrame:
-    """Combine independent indicators into an aggregate ranking.
+    """Add ``AggregateRank``, the indicators `indicator_analysis_v1` chose, summed equally.
 
-    Each indicator contributes its normalised 0-1 value scaled by its weight in
-    ``METRIC_WEIGHTS``, defaulting to 1.0.
+    After race 1 each row adds the ``SIGNAL_SLOTS`` of its race's weekend format, the
+    combination the ``fast_f1`` strategy also uses. Race 1 takes betting odds alone, so
+    every driver scores zero there when the race has no odds. A missing input counts as
+    zero, as does a session column the frame lacks, such as FP3 before it has run.
+
+    Args:
+        df: One or more races' metrics rows, holding ``Season``, ``Race``,
+            ``RollingPointsRank``, ``ConstructorRollingPointsRank``, ``OddsRank`` and
+            each session's ``MinLapTime_rank`` the race held.
+
+    Returns:
+        A copy with ``AggregateRank`` added and every rank column's missing values set
+        to zero, sorted by ``AggregateRank``, highest first.
+
+    Raises:
+        ValueError: A race has no practice sessions.
     """
     if df.empty:
         return df.copy()
 
     df = df.copy()
+    df["AggregateRank"] = _aggregate_ranks(df)
+
     # Include both PascalCase `...Rank` and snake_case `..._rank` suffixes
     rank_columns = [
         col for col in df.columns
@@ -402,10 +406,32 @@ def aggregate_metrics(df: pd.DataFrame) -> pd.DataFrame:
             col.endswith("Rank") or col.endswith("_rank")
         )
     ]
-    df["AggregateRank"] = 0.0
     for col in rank_columns:
         df[col] = df[col].fillna(0.0)
-        df["AggregateRank"] += METRIC_WEIGHTS.get(col, 1.0) * df[col]
 
     df = df.sort_values(by="AggregateRank", ascending=False).reset_index(drop=True)
     return df
+
+
+def _aggregate_ranks(df: pd.DataFrame) -> pd.Series:
+    """Each row's ``AggregateRank``, from rank columns not yet zero-filled.
+
+    The weekend format is read from which session columns hold values, so it has to
+    come before any zero-filling.
+    """
+    session_ranks = {
+        f"{session}_MinLapTime_rank"
+        for sessions in _FORMAT_SESSIONS.values()
+        for session in sessions
+        if session is not None
+    }
+    absent = {column: float("nan") for column in sorted(session_ranks - set(df.columns))}
+    inputs = add_signal_inputs(df.assign(**absent))
+
+    aggregate = pd.Series(0.0, index=df.index)
+    later_race = inputs["Race"] != FIRST_RACE
+    for race_format, slots in SIGNAL_SLOTS.items():
+        rows = later_race & (inputs["format"] == race_format)
+        aggregate[rows] = inputs.loc[rows, list(slots)].fillna(0.0).sum(axis=1)
+    aggregate[~later_race] = inputs.loc[~later_race, "odds"].fillna(0.0)
+    return aggregate
