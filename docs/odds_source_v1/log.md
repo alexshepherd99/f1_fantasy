@@ -24,3 +24,15 @@ editing the quoted text:
 
 `plan.md` is deferred until the open questions are answered, chiefly which
 page and where the fetcher writes.
+
+## 2026-11-08 — First answers
+
+Alex answered the first round. Recorded as D1–D6 in `requirements.md`:
+going forward only, race-winner odds, Oddschecker's F1 page as the base, a
+script run by hand that reads the weekend's progress from FastF1, the odds
+spreadsheet converted to CSV, and names matched through FastF1.
+
+Those answers raised a second, smaller round of questions, which replace the
+first in `requirements.md`. The main ones are whether `import_data/odds.py`
+may change (the CSV needs it) and how runs before FP1 and on sprint weekends
+pick a column and find the entry list.

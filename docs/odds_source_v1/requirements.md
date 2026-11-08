@@ -1,7 +1,8 @@
 # odds_source_v1 — Requirements
 
-**Status**: opened 2026-11-08, not yet agreed. The open questions below need
-answers before `plan.md` is written. Execution log in `log.md`.
+**Status**: opened 2026-11-08, partly agreed (see *Decisions*). The open
+questions below need answers before `plan.md` is written. Execution log in
+`log.md`.
 
 ## The problem (original backlog entry, unchanged)
 
@@ -50,17 +51,27 @@ From the code and the workbook, not from any web page.
 the next race only, and once that race is run they are gone. So a scraper
 removes the manual entry from now on and builds history from the day it
 starts, but it does nothing for the coverage the entry calls the binding
-constraint. Back-filling earlier seasons would need a source of archived odds,
-which is a different search and possibly a paid one. Question 1 asks which of
-the two this effort is for.
+constraint. Back-filling is out of scope (decision D1).
+
+## Decisions, agreed with Alex 2026-11-08
+
+- **D1 — Going forward only.** No back-fill of earlier seasons.
+- **D2 — Race-winner odds**, the market the `Odds` column already holds.
+- **D3 — Source page:** <https://www.oddschecker.com/motorsport/formula-1>,
+  which links to the next race's market. Used as a base: the fetcher follows
+  that link.
+- **D4 — Run by hand.** Alex runs a script. It asks the FastF1 API how far
+  through the race weekend we are, and fills the matching snapshot column.
+- **D5 — The odds spreadsheet becomes a CSV file** as part of this effort.
+- **D6 — Driver names are matched to codes through the FastF1 API.**
 
 ## Constraints already in force
 
 - **`import_data/` is a core module.** `load_odds` and `odds_to_pct` are not
-  edited without Alex's case-by-case OK. A new fetcher therefore sits in its
-  own module and writes the format the loader already reads. If the page shows
-  decimal odds (`15.0`) rather than fractional, converting them is the
-  fetcher's job unless Alex agrees a change to `odds_to_pct`.
+  edited without Alex's case-by-case OK (open question 1). The fetcher sits in
+  its own module. If the page shows decimal odds (`15.0`) rather than
+  fractional, converting them is the fetcher's job unless Alex agrees a change
+  to `odds_to_pct`.
 - **The workbook is a data file.** Any automated write agrees its check plan
   first, and proves that nothing else in the file moved.
 - **No live calls in the suite.** Tests run against a saved page fixture. A
@@ -74,36 +85,29 @@ the two this effort is for.
 - **The live team stays on P2PM for 2026.** This effort changes how odds
   arrive, not which strategy picks the team.
 
+## Still to check before code
+
+- **Oddschecker's terms of use and `robots.txt`** on automated access.
+- **Whether the page can be fetched by a script at all**: odds in the HTML or
+  built by JavaScript (a browser driver is a much larger dependency), and
+  whether scripted requests are blocked.
+
 ## Open questions
 
-1. **What is the goal: no more manual entry going forward, or history for
-   2023–25?** As above, a live page only gives the first. If history is what
-   matters, the effort starts with a search for an archived source rather than
-   a scraper.
-2. **Which page?** Ideally the one Alex reads odds from by hand today, so the
-   numbers stay comparable with the 2026 rows. Before any code is written,
-   check its terms of use and `robots.txt` on automated access, whether it
-   serves the odds in its HTML or builds them with JavaScript (a browser
-   driver is a much larger dependency than an HTTP fetch), and whether it
-   blocks scripted requests.
-3. **Which market?** The `Odds` column has been race-winner odds. Confirm the
-   fetcher takes the same market and not, say, podium or top-6.
-4. **How is a run triggered, and what does it write?** The likely shape is a
-   CLI Alex runs by hand at the moment he chooses (after FP2, after FP3),
-   writing one snapshot column for that race. Then: does it also fill `Odds`,
-   or does Alex still choose which snapshot goes there? And does a second run
-   at the same point overwrite, or refuse?
-5. **Where does it write?** Into `data/f1_betting_odds.xlsx` in place, keeping
-   every consumer unchanged, or to a CSV beside it? `data_capture_v1` moved
-   the fantasy archive to CSV so that each race's write shows as a git diff,
-   but left this workbook out of its scope. A CSV would need the four
-   consumers changed, and `load_odds` is in `import_data/`.
-6. **How are names matched?** The page will show full names, so each one
-   needs mapping to a driver code and constructor code for that race, mid-season
-   switches included (Haas's driver change before Brazil, for example). The
-   candidate source is the fantasy archive's priced drivers for that race. A
-   name that does not match should stop the run, not be dropped. A priced
-   driver with no odds on the page needs a rule.
-7. **Should *Thread the odds file path through `fast_f1.output`* (`BACKLOG.md`)
-   come first?** It is not required, but it makes the odds file injectable
-   everywhere, which tests of a new writer would want.
+1. **May `import_data/odds.py` change?** D5 means `load_odds` reads a CSV, and
+   `import_data/` is a core module.
+2. **Does a run also fill `Odds`,** or does Alex still choose which snapshot
+   goes there?
+3. **A second run at the same point:** overwrite, or refuse?
+4. **Which column at which point?** Normal weekends map cleanly. Sprint
+   weekends have no FP2 or FP3, and some points fall between columns (after
+   FP1, say).
+5. **Before FP1 there is no session to read names from.** FastF1 only has the
+   weekend's entry list once a session has run, so a pre-weekend run would
+   rely on the previous race's drivers and miss a driver change. Reasoned,
+   not yet run.
+6. **Constructor codes.** FastF1 gives team names (`Haas F1 Team`), and the
+   file holds codes (`HAA`). Map them from the fantasy archive for that race,
+   or from a fixed table?
+7. **Fold in *Thread the odds file path through `fast_f1.output`*?** The CSV
+   change touches the same code.
