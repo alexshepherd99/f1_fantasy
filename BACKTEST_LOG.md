@@ -197,7 +197,7 @@ using the game's price rules. It does not play the race-4 chip, which P2PM
 does.
 
 **Set-up.** `FastF1_RuleRise2p5` is `StrategyFastF1` with a price-rise reward
-of 2.5. Its settings were tuned on 2023–25, and the reward on 2025 alone, the
+of 2.5, now the class `StrategyFastF1RuleRise` in `linear/strategy_fastf1.py`. Its settings were tuned on 2023–25, and the reward on 2025 alone, the
 only finished season under the game's current price rules. So 2026 is the only
 fair test. The verdict ran on 2025 and 2026 through race 18, the last race with
 a signal, as the reward is off before 2025.

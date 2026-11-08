@@ -7,7 +7,7 @@ Efforts under `docs/`:
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
-| [`fastf1_v2`](docs/fastf1_v2/) | in progress |
+| [`fastf1_v2`](docs/fastf1_v2/) | done |
 | [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | done |
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
@@ -261,8 +261,9 @@ Raised 2026-09-28, from `max_points_v1`.
 `StrategyMaxP2PM`, and Alex wants to use it for mid-season picks. Otherwise drop
 this item. [2026-11-08: the first condition is met. `FastF1_RuleRise2p5` beat P2PM
 in 2025 and 2026 through race 18 (`BACKTEST_LOG.md`). The live 2026 team stays on
-P2PM, so this is for 2027 at the earliest, and the chosen setting would first need
-a home in `linear/`, as it is only registered in `backtest/cli.py` today.]
+P2PM, so this is for 2027 at the earliest. The chosen setting is now the class
+`StrategyFastF1RuleRise` in `linear/strategy_fastf1.py` (`fastf1_v2` step 27), so a
+script can pass it to `factory_strategy`. No script does yet.]
 
 The strategy reads only the stored metrics file,
 `data/fastf1_practice_rolling_metrics.xlsx`, and never calls FastF1. So a live pick
