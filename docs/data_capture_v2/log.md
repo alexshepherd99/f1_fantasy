@@ -213,3 +213,49 @@ through the file, and saving it from a spreadsheet app could reorder rows or
 reformat numbers, which is what the layout exists to prevent. Suggested
 instead: until the fetcher exists, a session enters each race from the saved
 BoxBox copy and Alex reviews the diff. That has not been decided yet.
+
+## 2026-11-08 — Step 3: archive converted to CSV; "before" state captured
+
+`data/f1_fantasy_drivers.csv` (1,840 rows) and `data/f1_fantasy_constructors.csv`
+(920 rows) hold the archive in the agreed layout. Nothing reads them yet. They
+were converted from the workbook at `7a0856e`, its last commit (2026-11-06,
+the CAM-for-HIR switch at Haas before Brazil). The working tree was clean.
+
+The driver file is 316 rows shorter than the loader's 2,156-row grid. Those
+are the empty pairs, which are now absent rows. The constructor file matches
+the grid, since no constructor misses a race. All 33 of 2026 race 20's
+placeholder zeros are empty points. The converter asserted that each was 0
+before blanking it.
+
+**Data check.** A separate throwaway check read the workbook through openpyxl
+and the CSVs through the `csv` module, so it shared no code with the pandas
+converter. For every workbook cell pair it checked:
+
+- that an empty pair has no CSV row;
+- that every other pair has exactly one row with equal points and price, each
+  in its shortest form;
+- that the placeholders are blank;
+- that the CSV has no extra or duplicate rows;
+- that the row order is season, then asset in Points-sheet order, then race.
+
+No problems. One bug in the check itself was found and fixed first:
+openpyxl's read-only mode drops trailing empty cells, so short rows had to be
+padded to the header's width. It was then shown able to fail on five damaged
+copies of the driver file, each giving a non-zero exit and naming the fault:
+one price changed, one row deleted, two rows swapped, one placeholder filled
+with 0, and one price written `27.0`.
+
+**"Before" state**, saved to `outputs/data_capture_v2/before/` (not committed),
+from a throwaway script that runs the committed code:
+
+- both loaders' output for every season and both asset types;
+- `helpers.load_with_derivations` for every season;
+- two 2026 replays through `run_single_team.run_for_team` with
+  `StrategyMaxP2PM` (not its `__main__`). One is the live configuration from
+  race 20, which re-solves nothing. The other is the full season from the
+  race-1 line-up, which re-solves races 2–20.
+
+The back-test "before" is the P2PM rows already stored in
+`outputs/backtest_v1_results.parquet`. If step 4's re-simulation matches them,
+that is equality with the code before the change. Only a mismatch would need a
+fresh run on the old code to tell the two apart.

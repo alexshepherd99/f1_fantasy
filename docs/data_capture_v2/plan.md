@@ -59,21 +59,9 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 2. ~~Agree the layout and the check plan with Alex~~ — done 2026-11-08, see
    log *Step 2*.
 
-3. **Convert the archive and capture the "before" state.** Done in the gap
-   between two race-data updates, from the workbook as committed. Its commit
-   is recorded, because Alex keeps editing it by hand until step 5. If the
-   workbook changes before step 4 lands, steps 3 and 4 are redone from the new
-   commit.
-   - A throwaway converter writes the two CSVs. Nothing reads them yet.
-   - A separate throwaway check, sharing no logic with the converter,
-     compares every workbook cell to the CSVs by key: every value, every empty
-     pair as an absent row, and the 2026 placeholder zeros as empty points. It
-     is shown able to fail on a damaged copy.
-   - The "before" state is saved to `outputs/data_capture_v2/` (not
-     committed): both loaders' output for every season and asset type,
-     `helpers.load_with_derivations` for every season, and the 2026
-     `run_single_team` replay. The P2PM rows already stored in
-     `outputs/backtest_v1_results.parquet` are the back-test "before".
+3. ~~Convert the archive and capture the "before" state~~ — done 2026-11-08,
+   see log *Step 3*. Converted from the workbook at `7a0856e`. If the workbook
+   changes before step 4 lands, steps 3 and 4 are redone.
 
 4. **Rewrite the loader to read the CSVs.** `import_history.py` reads the
    files as laid out above. `fn` is threaded through properly, fixing the bug
