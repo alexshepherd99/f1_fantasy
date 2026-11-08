@@ -309,6 +309,8 @@ def test_api_returns_each_drivers_team_in_a_session_and_caches_it(monkeypatch, t
         {
             "Abbreviation": ["CAM", "VER"],
             "TeamName": ["Haas F1 Team", "Red Bull Racing"],
+            "FirstName": ["Rafael", "Max"],
+            "LastName": ["Câmara", "Verstappen"],
             "Position": [float("nan")] * 2,
         }
     )
@@ -317,9 +319,9 @@ def test_api_returns_each_drivers_team_in_a_session_and_caches_it(monkeypatch, t
 
     first = get_session_drivers(2026, 19, "FP2")
 
-    assert first[["Abbreviation", "TeamName"]].to_dict("records") == [
-        {"Abbreviation": "CAM", "TeamName": "Haas F1 Team"},
-        {"Abbreviation": "VER", "TeamName": "Red Bull Racing"},
+    assert first[["Abbreviation", "TeamName", "FirstName", "LastName"]].to_dict("records") == [
+        {"Abbreviation": "CAM", "TeamName": "Haas F1 Team", "FirstName": "Rafael", "LastName": "Câmara"},
+        {"Abbreviation": "VER", "TeamName": "Red Bull Racing", "FirstName": "Max", "LastName": "Verstappen"},
     ]
     assert first["SessionType"].tolist() == ["FP2", "FP2"]
     # The driver list comes with the session's results, so laps need not load
@@ -333,6 +335,24 @@ def test_api_returns_each_drivers_team_in_a_session_and_caches_it(monkeypatch, t
     assert get_session_drivers(2026, 19, "FP2").equals(first)
 
 
+def test_api_fetches_again_a_driver_list_cached_without_names(monkeypatch, tmp_path):
+    """Lists cached before names were added must not hide the names for good."""
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+    pd.DataFrame(
+        {"Abbreviation": ["VER"], "TeamName": ["Red Bull Racing"], "Season": [2026], "Race": [19], "SessionType": ["FP2"]}
+    ).to_pickle(tmp_path / "local_cache" / "session_drivers_2026_19_FP2.pkl")
+    driver_list = pd.DataFrame(
+        {"Abbreviation": ["VER"], "TeamName": ["Red Bull Racing"], "FirstName": ["Max"], "LastName": ["Verstappen"]}
+    )
+    monkeypatch.setattr(
+        "fast_f1.api.get_event_for_race", lambda season, race: FakeEvent({"FP2": FakeRaceSession(driver_list)})
+    )
+
+    drivers = get_session_drivers(2026, 19, "FP2")
+
+    assert drivers["LastName"].tolist() == ["Verstappen"]
+
+
 def test_api_returns_empty_session_drivers_when_session_data_is_missing(monkeypatch, tmp_path, caplog):
     setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
     monkeypatch.setattr(
@@ -343,7 +363,7 @@ def test_api_returns_empty_session_drivers_when_session_data_is_missing(monkeypa
     result = get_session_drivers(2026, 99, "FP2")
 
     assert result.empty
-    assert {"Abbreviation", "TeamName"} <= set(result.columns)
+    assert {"Abbreviation", "TeamName", "FirstName", "LastName"} <= set(result.columns)
     assert "Could not load the driver list for season 2026 race 99 session FP2" in caplog.text
 
 

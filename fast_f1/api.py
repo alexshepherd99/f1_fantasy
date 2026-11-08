@@ -336,8 +336,11 @@ def get_session_laps(season_year: int, race_num: int, session_type: str) -> pd.D
     return session_laps
 
 
+_SESSION_DRIVER_COLUMNS = ["Abbreviation", "TeamName", "FirstName", "LastName"]
+
+
 def _empty_session_drivers_dataframe(season_year: int, race_num: int, session_type: str) -> pd.DataFrame:
-    df = pd.DataFrame(columns=["Abbreviation", "TeamName", "Season", "Race", "SessionType"])
+    df = pd.DataFrame(columns=[*_SESSION_DRIVER_COLUMNS, "Season", "Race", "SessionType"])
     df["Season"] = season_year
     df["Race"] = race_num
     df["SessionType"] = session_type
@@ -348,13 +351,15 @@ def get_session_drivers(season_year: int, race_num: int, session_type: str) -> p
     """Return each driver in a session with the team FastF1 names for them.
 
     This gives a driver's team for the weekend before the race has results.
-    Returns ``Abbreviation``, ``TeamName``, ``Season``, ``Race`` and ``SessionType``,
-    or an empty frame with those columns when the session has no data.
+    Returns ``Abbreviation``, ``TeamName``, ``FirstName``, ``LastName``, ``Season``,
+    ``Race`` and ``SessionType``, or an empty frame with those columns when the
+    session has no data.
     """
     cache_path = _get_cache_file_path("session_drivers", season_year, race_num, session_type)
     if cache_path is not None:
         cache_df = _load_cached_dataframe(cache_path)
-        if cache_df is not None:
+        # A list cached before names were added is fetched again
+        if cache_df is not None and set(_SESSION_DRIVER_COLUMNS) <= set(cache_df.columns):
             return cache_df
 
     try:
@@ -378,7 +383,8 @@ def get_session_drivers(season_year: int, race_num: int, session_type: str) -> p
         )
         return _empty_session_drivers_dataframe(season_year, race_num, session_type)
 
-    drivers = drivers[["Abbreviation", "TeamName"]].reset_index(drop=True)
+    # Names are wanted only for matching odds, so a list without them is still a list
+    drivers = drivers.reindex(columns=_SESSION_DRIVER_COLUMNS).reset_index(drop=True)
     drivers["Season"] = season_year
     drivers["Race"] = race_num
     drivers["SessionType"] = session_type
