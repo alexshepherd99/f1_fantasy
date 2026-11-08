@@ -14,12 +14,8 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 
 ## Steps
 
-1. **Thread the odds file path through `fast_f1.output`** (D12). Add an
-   odds-file parameter to `_load_driver_odds` and `build_race_metrics`,
-   defaulting to the real file. Point the `tests/conftest.py` autouse fixture
-   and the per-test patches in `tests/test_fast_f1_output.py` at fixture files
-   instead of replacing `load_odds`, and fix the conftest docstring. Covers
-   every test that reaches `build_race_metrics`.
+1. ~~Thread the odds file path through `fast_f1.output`~~ — done 2026-11-08,
+   see log *Step 1*.
 
 2. **Convert the real odds workbook to CSV, beside it.** A data-only commit:
    `data/f1_betting_odds.csv` is written, the workbook stays and nothing reads

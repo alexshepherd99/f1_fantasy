@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 
@@ -26,18 +27,22 @@ def isolate_f1_credentials(monkeypatch, tmp_path_factory):
     yield
 
 
+@pytest.fixture(scope="session")
+def empty_odds_file(tmp_path_factory):
+    """A betting odds workbook with the real columns and no rows."""
+    path = tmp_path_factory.mktemp("betting_odds") / "empty_betting_odds.xlsx"
+    pd.DataFrame(columns=["Driver", "Constructor", "Season", "Race", "Odds"]).to_excel(path, index=False)
+    return path
+
+
 @pytest.fixture(autouse=True)
-def isolate_betting_odds(monkeypatch):
+def isolate_betting_odds(monkeypatch, empty_odds_file):
     """Keep `fast_f1` metric tests off the real betting odds spreadsheet.
 
-    `build_race_metrics` reads `data/f1_betting_odds.xlsx` for whatever season
-    and race it is given, so a test using real codes for a covered race would
-    silently score them from live data. Tests that want odds re-patch
-    `fast_f1.output.load_odds` themselves, which overrides this.
-
-    Patching the loader rather than `import_data.odds._FILE_BETTING_ODDS` is
-    deliberate: that constant is bound as `load_odds`'s default argument at
-    definition time, so rebinding it later has no effect.
+    `build_race_metrics` reads the odds file for whatever season and race it is
+    given, so a test using real codes for a covered race would silently score
+    them from live data. Pointing its default at an empty file gives every race
+    no odds; tests that want odds pass `odds_file` themselves.
     """
-    monkeypatch.setattr("fast_f1.output.load_odds", lambda *args, **kwargs: {})
+    monkeypatch.setattr("fast_f1.output.ODDS_FILE", empty_odds_file)
     yield

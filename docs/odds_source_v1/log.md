@@ -78,3 +78,30 @@ Two choices made in the plan, for Alex's review:
 ## 2026-11-08 — Plan approved
 
 Alex approved both choices above. Next is step 1.
+
+## 2026-11-08 — Step 1: odds file path threaded through `fast_f1.output`
+
+`build_race_metrics` takes an `odds_file` and passes it down to `load_odds`.
+No test replaces `load_odds` any more: the four that wanted odds or a failure
+now write a real one-race workbook in `tmp_path`, or pass the truncated one,
+so the real reader runs.
+
+**One choice beyond the plan.** The plan said the parameter defaults to the
+real file. Bound as a default, it could not be redirected suite-wide, which is
+the reason the old fixture patched the function. So it defaults to `None`,
+read at call time as a new module setting, `fast_f1.output.ODDS_FILE`. The
+autouse fixture points that at an empty workbook, as `conftest.py` already does
+for the cache config and credentials files. The workbook is written once per
+session, since the repo's own fixture workbook raises an openpyxl style
+warning on every read.
+
+Red first: the new tests failed only on the missing setting and argument,
+which shows nothing about behaviour, so behaviour was checked by mutation:
+
+- `_load_driver_odds` ignoring the file it is given: 4 tests red, including
+  the guard that tests never read the real workbook.
+- `build_race_metrics` ignoring a passed `odds_file`: 3 tests red.
+
+Each restored from a copy, `__pycache__` cleared, and green before the next.
+Suite: 543 passed, unchanged in count since the tests were rewritten, not
+added. The output test module's warnings are unchanged at 7.

@@ -14,6 +14,20 @@ from fast_f1.output import (
 )
 
 
+def _write_odds_file(path: Path, season_year: int, race_num: int, odds_by_driver: dict[str, str]) -> Path:
+    """Write a betting odds workbook holding one race, in the layout `load_odds` reads."""
+    pd.DataFrame(
+        {
+            "Driver": list(odds_by_driver),
+            "Constructor": ["CON"] * len(odds_by_driver),
+            "Season": [season_year] * len(odds_by_driver),
+            "Race": [race_num] * len(odds_by_driver),
+            "Odds": list(odds_by_driver.values()),
+        }
+    ).to_excel(path, index=False)
+    return path
+
+
 class DummySession:
     def __init__(self, laps: pd.DataFrame):
         self.laps = laps
@@ -602,14 +616,15 @@ def _patch_minimal_race(monkeypatch, season_year, race_num, drivers):
     monkeypatch.setattr("fast_f1.output.get_race_results", lambda season, race: current_results)
 
 
-def test_build_race_metrics_ranks_race_one_on_odds_alone(monkeypatch):
+def test_build_race_metrics_ranks_race_one_on_odds_alone(monkeypatch, tmp_path):
     season_year, race_num = 2025, 1
     _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
-    monkeypatch.setattr(
-        "fast_f1.output.load_odds", lambda *args, **kwargs: {"HAM": 0.4, "VER": 0.04}
+    # 3/2 and 24/1 imply probabilities of 0.4 and 0.04
+    odds_file = _write_odds_file(
+        tmp_path / "odds.xlsx", season_year, race_num, {"HAM": "3/2", "VER": "24/1"}
     )
 
-    metrics = build_race_metrics(season_year, race_num).set_index("Driver")
+    metrics = build_race_metrics(season_year, race_num, odds_file=odds_file).set_index("Driver")
 
     assert metrics.loc["HAM", "OddsRank"] == pytest.approx(1.0)
     assert metrics.loc["VER", "OddsRank"] == pytest.approx(0.0)
@@ -623,23 +638,22 @@ def test_build_race_metrics_ranks_race_one_on_odds_alone(monkeypatch):
     assert metrics.loc["VER", "AggregateRank"] == pytest.approx(0.0)
 
 
-def test_build_race_metrics_zeroes_odds_when_lookup_fails(monkeypatch, caplog):
+def test_build_race_metrics_zeroes_odds_when_lookup_fails(monkeypatch, tmp_path, caplog):
     season_year, race_num = 2025, 1
     _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
-
-    def explode(*args, **kwargs):
-        raise ValueError("odds_to_pct invalid input nonsense")
-
-    monkeypatch.setattr("fast_f1.output.load_odds", explode)
+    # `odds_to_pct` raises ValueError on a price it cannot parse
+    odds_file = _write_odds_file(
+        tmp_path / "odds.xlsx", season_year, race_num, {"HAM": "nonsense", "VER": "24/1"}
+    )
 
     caplog.set_level("WARNING", logger="fast_f1.output")
-    metrics = build_race_metrics(season_year, race_num)
+    metrics = build_race_metrics(season_year, race_num, odds_file=odds_file)
 
     assert list(metrics["OddsRank"]) == [0.0, 0.0]
     assert "odds" in caplog.text.lower()
 
 
-def test_build_race_metrics_does_not_multiply_rows_for_repeated_drivers(monkeypatch):
+def test_build_race_metrics_does_not_multiply_rows_for_repeated_drivers(monkeypatch, tmp_path):
     """A driver appearing twice in results must not fan out through the odds merge."""
     season_year, race_num = 2025, 1
     _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
@@ -654,11 +668,11 @@ def test_build_race_metrics_does_not_multiply_rows_for_repeated_drivers(monkeypa
         }
     )
     monkeypatch.setattr("fast_f1.output.get_race_results", lambda season, race: repeated)
-    monkeypatch.setattr(
-        "fast_f1.output.load_odds", lambda *args, **kwargs: {"HAM": 0.4, "VER": 0.04}
+    odds_file = _write_odds_file(
+        tmp_path / "odds.xlsx", season_year, race_num, {"HAM": "3/2", "VER": "24/1"}
     )
 
-    metrics = build_race_metrics(season_year, race_num)
+    metrics = build_race_metrics(season_year, race_num, odds_file=odds_file)
 
     assert len(metrics) == len(repeated)
 
@@ -930,13 +944,9 @@ def test_build_race_metrics_survives_a_corrupt_odds_workbook(monkeypatch, tmp_pa
     corrupt = tmp_path / "f1_betting_odds.xlsx"
     source = Path("data/f1_betting_odds.xlsx").read_bytes()
     corrupt.write_bytes(source[: len(source) // 4])
-    monkeypatch.setattr(
-        "fast_f1.output.load_odds",
-        lambda *args, **kwargs: pd.read_excel(corrupt),
-    )
 
     caplog.set_level("WARNING", logger="fast_f1.output")
-    metrics = build_race_metrics(season_year, race_num)
+    metrics = build_race_metrics(season_year, race_num, odds_file=corrupt)
 
     assert list(metrics["OddsRank"]) == [0.0, 0.0]
     assert "odds" in caplog.text.lower()

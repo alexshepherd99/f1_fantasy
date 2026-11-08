@@ -25,10 +25,13 @@ from fast_f1.metrics import (
 )
 
 from common import AssetType
-from import_data.odds import load_odds
+from import_data.odds import _FILE_BETTING_ODDS, load_odds
 
 logger = logging.getLogger(__name__)
 
+# Read when `build_race_metrics` runs rather than bound as its default, so tests
+# can point every call at a fixture file.
+ODDS_FILE: Path | str = _FILE_BETTING_ODDS
 DEFAULT_HISTORICAL_OUTPUT = Path("data/fastf1_practice_rolling_metrics.xlsx")
 DEFAULT_OUTPUT_DIRECTORY = Path("outputs")
 _DEFAULT_SHEET_NAME = "PracticeRollingMetrics"
@@ -51,7 +54,7 @@ def _ensure_parent_directory(output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
 
-def _load_driver_odds(season_year: int, race_num: int) -> dict[str, float]:
+def _load_driver_odds(season_year: int, race_num: int, odds_file: Path | str) -> dict[str, float]:
     """Implied probabilities keyed by driver code, empty when unavailable.
 
     Odds are a hand-maintained spreadsheet covering only part of the archive, so
@@ -64,6 +67,7 @@ def _load_driver_odds(season_year: int, race_num: int) -> dict[str, float]:
             AssetType.DRIVER,
             season_year,
             race_num,
+            fn=odds_file,
             qualify_driver_with_constructor=False,
         )
     except Exception as exc:
@@ -98,8 +102,14 @@ def build_race_metrics(
     season_year: int,
     race_num: int,
     rolling_window: int = 3,
+    odds_file: Path | str | None = None,
 ) -> pd.DataFrame:
-    """Build the full metric set for a single race using FastF1 inputs."""
+    """Build the full metric set for a single race using FastF1 inputs.
+
+    ``odds_file`` is the betting odds file to read, ``ODDS_FILE`` when omitted.
+    """
+    if odds_file is None:
+        odds_file = ODDS_FILE
     event = get_event_for_race(season_year, race_num)
     practice_session_codes = select_practice_sessions_from_event(event)
 
@@ -237,7 +247,7 @@ def build_race_metrics(
         )
 
     odds_rank = calculate_odds_rank(
-        _load_driver_odds(season_year, race_num),
+        _load_driver_odds(season_year, race_num, odds_file),
         drivers=merged["Driver"],
         season_year=season_year,
         race_num=race_num,
