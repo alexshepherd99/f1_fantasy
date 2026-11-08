@@ -8,8 +8,9 @@ Step 24 is done, and step 17 is done: `FastF1_RuleRise2p5` beats P2PM in 2025 an
 (`log.md`, *Step 17: the back-test on 2025–26*). It ran on 2025–26 only (`log.md`, *Step 17
 narrowed to 2025–26*). Step 25, the race-4 chip, is done: its rule was revised on 2026-11-08 to
 count 2025 and 2026 only, and the chip failed that too, at −13.6 points a team in 2026, so it is
-not kept (`log.md`, *Step 25.4: the chip on 2026, under the revised rule*). **Step 26 is next,
-then step 18, the findings and close-out.** Steps 17 and 18 were numbered 9 and 10 before
+not kept (`log.md`, *Step 25.4: the chip on 2026, under the revised rule*). Step 26 is done: the
+lead over P2PM comes in a few big races (`log.md`, *Step 26: when the lead builds, race by
+race*). **Step 18, the findings and close-out, is next.** Steps 17 and 18 were numbered 9 and 10 before
 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
@@ -522,6 +523,10 @@ is taken team by team against `FastF1_RuleRise2p5`'s row in `outputs/fastf1_v2_r
   363 MB per process.
 
 ## Step 26 — When the lead builds, race by race (real run)
+
+Done 2026-11-08: the lead comes in lumps. Race 13 carries 205 of 2026's 338 points, leaving
+133 without it, and 2025 is behind without its best 3 races. See `log.md`, *Step 26: when the
+lead builds, race by race*.
 
 Agreed with Alex on 2026-11-08 (`log.md`, *Step 25's rule revised, and step 26 agreed*). Step
 17's store keeps each team's final race only, so it cannot show whether FastF1's lead over P2PM

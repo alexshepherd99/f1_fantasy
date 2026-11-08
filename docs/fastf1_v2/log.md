@@ -3414,3 +3414,114 @@ step 17's +338.1 without the chip. Mean totals at race 18: chip 4,089.6, without
 ### Not run
 
 Why the chip helps in some seasons and not others.
+
+## 2026-11-08 — Step 26: when the lead builds, race by race
+
+### In plain language
+
+**FastF1's lead over P2PM comes in lumps, not as a steady gain.**
+
+- **2026:** 205 of its 338-point lead comes from one race, race 13. FastF1 moved every team
+  onto Antonelli as DRS driver, and he scored 93 points, doubled, while P2PM held Alonso and
+  Leclerc, who scored −10 and −12. Without race 13 the lead is still 133 points a team, and
+  FastF1 is ahead in 12 of the other 17 races. So 2026 is a real lead, but much smaller and
+  less certain than 338 suggests.
+- **2025:** the 36-point lead is ahead in only 14 of 24 races. FastF1 was behind P2PM from
+  race 9 to race 20, and 3 races carry more than the whole lead. Without them it would be 143
+  points behind.
+- **Sprint weekends show no pattern.** On a sprint weekend the signal drops FP3. FastF1 did
+  better there in 2025, +12.3 a race against −2.2 on normal weekends, and worse in 2026, −3.3
+  against +32.5, or +15.3 on normal weekends without race 13.
+
+This describes the result and changes nothing about the strategy, as agreed.
+
+### What was run
+
+- **2025, no new run:** `FastF1_RuleRise2p5` from `outputs/fastf1_v2_step25_convergence_2025.parquet`
+  and `StrategyMaxP2PM` from `outputs/max_points_v1_per_race.parquet`, both seed 1, 500 teams a
+  band.
+- **2026:** `run_per_race` from a throwaway scratchpad script, not kept, `StrategyMaxP2PM` and
+  `FastF1_RuleRise2p5`, seed 1, 500 teams a band, into
+  `outputs/fastf1_v2_step26_per_race_2026.parquet`. Exit 0 in 27.0 minutes, alongside step
+  25.4's run, with no error or warning in the log. Every team ran races 1–20, and races 19–20
+  were dropped before any figure.
+- The figures come from `race_summary` in `backtest/per_race.py`, from another throwaway
+  script, not kept. Weekend formats come from `add_signal_inputs` on the metrics file, the
+  same source the signal uses.
+
+### The checks
+
+- **Before:** the 2026 store did not exist.
+- **After:** the 2026 log reads "skipped 0 simulations already in the store". Each season
+  holds 1,500 teams per label, each with every race from 1 to the last counted, and no
+  duplicates.
+- **Each team's last counted race equals its step 17 row,** race 24 in 2025 and race 18 in
+  2026, for both labels, on all 3,000 teams in each season. That would catch different teams,
+  a different strategy, or a different race. All pass, so the results are reported.
+
+### Mean delta against P2PM, race by race
+
+Points a team, single race and running total. S marks a sprint weekend.
+
+| Race | 2025 race | 2025 total | 2026 race | 2026 total |
+| --- | --- | --- | --- | --- |
+| 1 | 0.0 | 0.0 | 0.0 | 0.0 |
+| 2 | +14.9 S | +14.9 | +23.4 S | +23.4 |
+| 3 | +5.4 | +20.3 | +7.4 | +30.9 |
+| 4 | +15.6 | +35.9 | −34.7 S | −3.9 |
+| 5 | −9.8 | +26.0 | +11.9 S | +8.0 |
+| 6 | +20.5 S | +46.5 | +37.2 | +45.2 |
+| 7 | +7.7 | +54.2 | +19.4 | +64.7 |
+| 8 | −46.9 | +7.3 | +21.2 | +85.9 |
+| 9 | −30.1 | −22.8 | +0.4 S | +86.3 |
+| 10 | −7.9 | −30.7 | +8.4 | +94.7 |
+| 11 | +8.6 | −22.1 | +29.9 | +124.6 |
+| 12 | −4.8 | −26.9 | +14.4 S | +139.0 |
+| 13 | +21.8 S | −5.1 | +204.9 | +343.9 |
+| 14 | +57.2 | +52.2 | +11.8 | +355.7 |
+| 15 | −93.6 | −41.4 | −4.3 | +351.3 |
+| 16 | +26.3 | −15.1 | +25.6 | +377.0 |
+| 17 | +4.4 | −10.6 | −35.2 S | +341.8 |
+| 18 | +30.2 | +19.6 | −3.7 | +338.0 |
+| 19 | −18.9 S | +0.7 | | |
+| 20 | −12.8 | −12.2 | | |
+| 21 | +90.9 S | +78.7 | | |
+| 22 | +7.0 | +85.7 | | |
+| 23 | −55.4 S | +30.3 | | |
+| 24 | +5.6 | +35.9 | | |
+
+The race 1 delta is 0 because both strategies play the sampled team unchanged there: in 2026
+every race 1 row records `used_moves` −1, the engine's marker for no solve, and both labels
+have the same DRS driver and points on every team.
+
+### How much the best races carry
+
+| | 2025 | 2026 |
+| --- | --- | --- |
+| Final lead | +35.9 | +338.0 |
+| Races ahead | 14 of 24 | 13 of 18 |
+| Best race | +90.9 (21) | +204.9 (13) |
+| Best 3 races | +178.4 | +272.1 |
+| Lead without the best 3 | −142.5 | +66.0 |
+| Worst 3 races | −195.9 | −74.3 |
+
+### Race 13 of 2026
+
+Every FastF1 team held Antonelli at Mercedes as DRS driver, at 93 points, and 79% held the
+Mercedes constructor, at 128. P2PM's teams mostly took Norris as DRS driver, at 32, and 98%
+held Alonso, at −10, and 59% Leclerc, at −12. FastF1 averaged 385.6 points that race against
+P2PM's 180.7. One race before, the two scored 264.7 and 250.3.
+
+### What to bear in mind
+
+- **Means over 1,500 teams, but one season's races.** Each race is a single event, so 18 or 24
+  of them cannot separate a steady edge from a few good calls. 2023's near-single path (step
+  25.1) makes that worse, not better, for the seasons not shown here.
+- **Why FastF1 picked Antonelli at race 13 was not looked into.** It is a normal weekend, so
+  FP3 was in the signal, but its share in the choice was not measured.
+- **The sprint split rests on 6 sprint races a season,** and its sign flips between seasons.
+
+### Not run
+
+2023–24 race by race against the final strategy, which there is the base. Which signal input
+drove race 13.
