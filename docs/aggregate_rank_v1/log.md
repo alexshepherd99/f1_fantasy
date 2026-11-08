@@ -49,3 +49,46 @@ One commit per step.
 ## 2026-11-08 — Effort opened
 
 Suite green at the start: 540 passed.
+
+## 2026-11-08 — Done
+
+All four steps landed, one commit each. Suite green at the end: 543 passed.
+
+**Step 1, the move.** The strategy signal for all 1,794 stored rows over 88 races,
+snapshotted before and after, came out identical, as did `add_signal_inputs` over the
+whole stored file.
+
+**Step 2, the rule.** Seven new unit tests and two reworked output tests all failed on
+their assertions before the change. Two things came up:
+
+- `test_build_race_metrics_works_when_race_results_missing` passed before the change. In
+  its fixture, constructor points and FP2 put the drivers in the same order, so trading one
+  for the other left the sum alone. PER now tops FP2, and the test fails on the old rule.
+- Three output-test fixtures returned FP2-labelled laps for both practice sessions. Those
+  merged into suffixed columns no weekend format can be read from, so the new rule raised.
+  They now label laps with the session asked for, as `get_session_laps` does.
+
+Mutations, each restored from a copy with the suite green between: dropping the race 1
+rule, adding FP2 to the normal slots, leaving out the absent session columns, and not
+zero-filling a missing input each turned tests red. **Computing the aggregate after the
+zero-fill survived, as an equivalent mutant.** Zero-filling first makes a sprint race read
+as a normal weekend, but the normal rule then adds a zero FP3 rank to the same sum. The
+code keeps the safer order, which matters if `SIGNAL_SLOTS` ever gives a sprint weekend a
+practice slot or weights FP3 differently.
+
+**Step 3, the stored file.** Recomputed one race at a time, as `build_race_metrics` does,
+taking back only the two columns. Checked, and each check shown able to fail:
+
+1. Sorted by season, race and driver, every other cell of the 1,794 rows and 35 columns is
+   unchanged. A copy with the absent sprint qualifying ranks zero-filled failed this.
+2. After race 1, `AggregateRank` matches the strategy signal, built through separate
+   code, to within 5e-10 over 1,712 rows. The old file failed this by up to 2.6.
+3. Race 1 equals `OddsRank`. 2023, 2024 and 2025 have no race 1 odds, so are all zero.
+4. `RankPosition` runs 1 to n in every race and follows `AggregateRank`.
+
+1,748 rows changed one or both columns. The strategy signal read from the rewritten file is
+identical to before, as the row order within a race has changed.
+
+**Not run:** `fast_f1.cli` against the live API. The single-race path through
+`build_race_metrics` is covered by the output tests, with FastF1 faked. The first real run
+will be the next race weekend's.

@@ -107,11 +107,11 @@ Results of each strategy back-tested this way are summarised in **[BACKTEST_LOG.
 
 ## FastF1 signal
 
-The **fast_f1** module is a separate experiment from the strategies above: rather than optimising a team from fantasy points and prices, it tries to predict how a race will go using data available before it starts.  It combines practice lap time ranks (FP2 + FP3 on a normal weekend, FP1 + Sprint Qualifying on a sprint weekend, FP1 alone on a 2023 sprint weekend since its Sprint Shootout ran after teams locked, ignoring laps slower than 107% of the session best), a rolling total of driver points over the previous three races, and the betting odds described above.  Each is normalised to 0-1 and summed into an AggregateRank.
+The **fast_f1** module is a separate experiment from the strategies above: rather than optimising a team from fantasy points and prices, it tries to predict how a race will go using data available before it starts.  It works out practice lap time ranks (FP2 + FP3 on a normal weekend, FP1 + Sprint Qualifying on a sprint weekend, FP1 alone on a 2023 sprint weekend since its Sprint Shootout ran after teams locked, ignoring laps slower than 107% of the session best), rolling totals of driver and constructor points over the previous three races, and the betting odds described above, each normalised to 0-1 and all written out.
 
-Constructor rolling points are calculated and written out too, but carry zero weight in the aggregate — they turned out to be almost entirely redundant with the driver indicators, correlating 0.80-0.98 with driver rolling points within a race.  The weights live in one dict in `fast_f1/metrics.py` if you want to put it back.
+The AggregateRank it prints adds up the ones the indicator analysis found best predict fantasy points, at equal weight: driver points + constructor points + FP3 on a normal weekend, and driver points + constructor points on a sprint weekend.  Race 1 has no points history, so it ranks on betting odds alone, and every driver scores zero there when a race has no odds, as in every season before 2026.
 
-AggregateRank itself is not wired into any strategy.  The **FastF1** strategy above reads the same stored metrics through `fast_f1/signal.py`, with a different combination: no odds, and no FP3 rank on a sprint weekend.
+AggregateRank itself is not wired into any strategy.  The **FastF1** strategy above reads the same stored metrics through `fast_f1/signal.py`, using the same combination after race 1.
 
 Two modes:
 

@@ -4,7 +4,7 @@ Efforts under `docs/`:
 
 | Effort | State |
 | --- | --- |
-| [`aggregate_rank_v1`](docs/aggregate_rank_v1/) | in progress |
+| [`aggregate_rank_v1`](docs/aggregate_rank_v1/) | done |
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
