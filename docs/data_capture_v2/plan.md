@@ -31,10 +31,12 @@ Proposed, from a read-only survey of the workbook on 2026-11-08 (see the log):
   is what callers get today.
 - **Rows grouped by asset, not by race:** season, then each asset in the
   order of the workbook's Points sheet, then race. Today's loader returns rows
-  in the Points sheet's order, and that order can reach the LP solver (the
-  2026-09-18 hash-order fix showed that order can change results). Storing it
-  lets the new loader return exactly the same frames rather than "the same
-  after sorting". Adding a race still changes only that race's lines. They
+  in the Points sheet's order, and that order decides which teams a seeded
+  back-test samples. `races/first_picks.py` lists starting teams in data
+  order, and `backtest/sample.py` draws from that list by position. Storing
+  the order lets the new loader return exactly the same frames rather than
+  "the same after sorting". (It does not reach the LP solver, which sorts
+  assets by name since the 2026-09-18 hash-order fix.) Adding a race still changes only that race's lines. They
   sit one per asset through the file rather than in one block. A driver new
   to a season is added after that season's last asset.
 - **Numbers in their shortest form that reads back to the same value**:

@@ -146,3 +146,22 @@ Other planning choices:
 - **The first real run is likely 2027 race 1.** Only three races remain
   after Brazil. If so, the first real run is also the fetcher's first new
   season, which Gate 1 notes.
+
+## 2026-11-08 — Correction: why row order matters
+
+The entry above says row order "can reach the LP solver". It cannot. Since the
+2026-09-18 hash-order fix, `StrategyBase.get_team_selection_dict` sorts assets
+by name before the LP variables are built, so the order of rows in the data
+does not reach the solver.
+
+Row order does still matter, in a different place. `races/first_picks.py`
+lists starting teams with drivers and constructors in data order, and
+`backtest/sample.py` draws its seeded sample by position in that list
+(`band.sample(n, random_state=seed)`). Reordered rows would make the same seed
+sample different teams, so results would no longer match the stored ones,
+and nothing would raise an error.
+
+The layout is unchanged: keeping the Points sheets' order is still what lets
+the loader return exactly today's frames. The reason in `plan.md` is
+corrected. This was established by reading the code, not by running it.
+Alex caught it by asking what the claim meant.
