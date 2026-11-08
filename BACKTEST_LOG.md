@@ -19,6 +19,7 @@ is positive in every season tested.
 | Max budget (`StrategyMaxBudget`) | [backtest_v1](docs/backtest_v1/) | 2026-09-18 | 2023, 2024, 2025 | −1,302, −979, −1,748 | No, 0 of 3 seasons | Control, loses as expected |
 | Max points (`StrategyMaxPoints`) | [max_points_v1](docs/max_points_v1/) | 2026-09-20 | 2023, 2024, 2025 | −14.5, −156.2, −4.4 | No, 0 of 3 seasons | Hypothesis refuted |
 | P2PM without race-4 reset (`StrategyMaxP2PMNoReset`) | [max_points_v1](docs/max_points_v1/) | 2026-09-29 | 2023, 2024, 2025 | +1.8, −32.3, −168.0 | No, 1 of 3 seasons | Keep the race-4 chip |
+| FastF1 signal (`FastF1_RuleRise2p5`) | [fastf1_v2](docs/fastf1_v2/) | 2026-11-08 | 2025, 2026 to race 18 | +35.9, +338.0 | Yes, 2 of 2 seasons | Beats P2PM; 2026 is the fair read |
 
 ## Zero-stop and Max budget controls — `backtest_v1` (2026-09-18)
 
@@ -184,3 +185,52 @@ does not test playing it at a different race, since chips are not modelled.
 *P2PM without the race-4 reset*. The numbers come from
 `outputs/max_points_v1_no_reset_summary.csv` and
 `outputs/max_points_v1_no_reset_lineups.csv`.
+
+## FastF1 signal — `fastf1_v2` (2026-11-08)
+
+**Question.** Can a strategy built on forward-looking data beat P2PM? The
+signal combines each driver's recent points, their constructor's recent points
+and, on a normal weekend, their rank in final practice (FP3). It is scored on a
+championship points scale, with a constructor as the sum of its two drivers.
+From 2025 the strategy also rewards assets whose price is expected to rise,
+using the game's price rules. It does not play the race-4 chip, which P2PM
+does.
+
+**Set-up.** `FastF1_RuleRise2p5` is `StrategyFastF1` with a price-rise reward
+of 2.5. Its settings were tuned on 2023–25, and the reward on 2025 alone, the
+only finished season under the game's current price rules. So 2026 is the only
+fair test. The verdict ran on 2025 and 2026 through race 18, the last race with
+a signal, as the reward is off before 2025.
+
+**Result: it beats P2PM in both seasons, by much more in 2026.**
+
+| Season | Mean delta | Mean delta % | Median delta | p10 delta | Teams beating P2PM |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 2025 | +35.9 | +0.8% | +99 | −420 | 73% |
+| 2026, to race 18 | +338.0 | +9.2% | +336.5 | +156 | 98% |
+
+**Key findings.**
+
+- **2026's lead is real but rests heavily on one race.** Race 13 gives 205 of
+  the 338 points: every FastF1 team made Antonelli its DRS driver, and he
+  scored 93. Without that race the lead is 133, and FastF1 is ahead in 12 of
+  the other 17 races.
+- **2025's lead is thin.** The reward was tuned on it, it rests on three races,
+  and the worst tenth of teams finish 420 behind.
+- **In 2023–24 the strategy is the base,** as the reward is off. A tuning run
+  put it 483 and 190 ahead of P2PM there, on 300 teams a season, not the 1,500
+  of the verdict.
+- **It wins without the race-4 chip.** The chip is worth 168 and 131 points to
+  P2PM in 2025 and 2026. Given to FastF1, it helped in two seasons and cost
+  points in two, so it is not kept.
+- **The first design lost.** Scoring by finishing place trailed P2PM by 315 to
+  385 points a team in 2023–25. Scoring the signal's value, so that a driver
+  well clear of the field stays clear, is what turned it round.
+- **Sixteen variants of the redesign were tried** to choose one setting, all
+  on 2023–25. 2026 saw only the final strategy and the chip.
+
+The live team stays on P2PM for the rest of 2026. 2027 is the next fair test.
+
+**Full detail:** [`docs/fastf1_v2/log.md`](docs/fastf1_v2/log.md),
+*Step 18: findings*, which links to each step. The numbers come from
+`outputs/fastf1_v2_summary_2025.csv` and `outputs/fastf1_v2_summary_2026.csv`.
