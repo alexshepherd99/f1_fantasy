@@ -311,3 +311,15 @@ This sits beside `fastf1_v2` step 18's item to rerun the 2026 back-test when the
 season finishes. Do this one first, as it may change what that rerun tests.
 
 Raised by Alex 2026-11-07, during `fastf1_v2` step 15.1.
+
+## Model the game's other chips
+
+The only chip any strategy plays is the race-4 unlimited-moves chip: P2PM has it
+built in, and `fastf1_v2` step 25 tests it for FastF1. The live game has others,
+including Limitless, the 3x boost, No Negative, Autopilot and the free transfer.
+Alex played several in 2026 (`README.md`, *2026 team*). None is modelled, so
+the back-tests cannot say when to play them or what they are worth. Unlike the
+race-4 chip, most need a view across the season of when to play them, which no
+strategy here takes (`README.md`, caveats).
+
+Agreed with Alex 2026-11-08, during `fastf1_v2` step 25.

@@ -3187,4 +3187,27 @@ tell which it is.
   evidence than P2PM's.** This matters for how much weight step 17's standard errors can carry,
   though 2023 is still close to a single path.
 - **Nothing here measures the chip's value.** That is the chip back-test in step 25's
-  proposal, still to be agreed.
+  proposal, still to be agreed. [Agreed 2026-11-08: see *Step 25 agreed*.]
+
+## 2026-11-08 — Step 25 agreed
+
+Alex agreed all six answers to step 25's open questions as proposed:
+
+1. **2026 gets a second look only if the chip passes on 2023–25.** It runs once, seed 1, 500
+   teams a band, through race 18. It is logged as not blind, since step 17's 2026 result was
+   seen first. Step 17 stays the verdict against P2PM.
+2. **The bar is the harness's own rule:** a positive pooled mean delta against
+   `FastF1_RuleRise2p5` in each of 2023, 2024 and 2025, with no added margin.
+3. **Race 4 only.** It is the first race with a full three-race window, as for P2PM. No other
+   race is tried.
+4. **Only the unlimited-moves chip.** The game's other chips go in `BACKLOG.md` as a separate
+   item.
+5. **The chip lives in `backtest/` for now.** Whether it moves into `linear/` for live play in
+   2027 is Alex's call later, file by file.
+6. **The price-rise reward stays at 2.5 and is not re-tuned with the chip.** Step 18 says it was
+   chosen without the chip.
+
+Alex confirmed that 2025 runs with the reward at 2.5 (`backtest/cli.py:38`). In 2023–24 the
+reward has no effect, since the game's price rules start in 2025 (`fast_f1/signal.py:68-71`).
+There, the chip label is the base strategy plus the chip. Alex sees no need to refine the
+reward further for now.
