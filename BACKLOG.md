@@ -6,7 +6,7 @@ Efforts under `docs/`:
 | --- | --- |
 | [`aggregate_rank_v1`](docs/aggregate_rank_v1/) | done |
 | [`backtest_v1`](docs/backtest_v1/) | done |
-| [`data_capture_v1`](docs/data_capture_v1/) | in progress |
+| [`data_capture_v1`](docs/data_capture_v1/) | cancelled; replaced by `data_capture_v2` |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
 | [`fastf1_v2`](docs/fastf1_v2/) | done |
 | [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | done |

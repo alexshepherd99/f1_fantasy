@@ -57,3 +57,15 @@ low-sensitivity, with no history rewrite, and asked that this effort retire
 both workbooks once in-season capture moves to CSV. Recorded as a scope item
 in `requirements.md`: the archive goes as already planned, and
 `test_expected_values.xlsx` becomes a text fixture so it can go too.
+
+## 2026-11-08 — Cancelled, replaced by data_capture_v2
+
+Alex cancelled this effort before any code was written. The hand-typed input
+chosen on 2026-07-30 gives way to fetching points and prices from BoxBox F1
+Fantasy's published JSON (the backlog item *Get fantasy points and prices
+from BoxBox F1 Fantasy*), which `docs/data_capture_v2/` takes up.
+
+What carries over to v2: the move of the archive to long-format CSV (chunks
+1–4 here) and the removal of both Excel workbooks. What does not: chunk 5's
+writer for typed input, and the open questions about the paste format. This
+effort's documents are left as they stood and are not updated further.
