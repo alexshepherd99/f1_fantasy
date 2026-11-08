@@ -7,6 +7,7 @@ Efforts under `docs/`:
 | [`aggregate_rank_v1`](docs/aggregate_rank_v1/) | done |
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | cancelled; replaced by `data_capture_v2` |
+| [`data_capture_v2`](docs/data_capture_v2/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
 | [`fastf1_v2`](docs/fastf1_v2/) | done |
 | [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | done |
@@ -300,19 +301,5 @@ The check is decided now so that 2027 tests it blind:
 - **A pass is a reason for a back-test, not a change of weights.** Using the
   rule of thumb of 15–25 points a season per 0.01 of Spearman, the gain will
   probably be smaller than one season's noise.
-
-Raised by Alex 2026-11-08.
-
-## Get fantasy points and prices from BoxBox F1 Fantasy
-
-Points and prices are typed into `data/f1_fantasy_archive.xlsx` by hand today.
-Get them from these two JSON files instead:
-
-- <https://boxboxf1fantasy.com/data/driver_history.json>
-- <https://boxboxf1fantasy.com/data/season_summary.json>
-
-Neither has been looked at yet. Overlaps `data_capture_v1`, which is moving
-the archive to CSV and chose hand-typed input over scraping (2026-07-30), so
-settle with that effort which route wins first.
 
 Raised by Alex 2026-11-08.
