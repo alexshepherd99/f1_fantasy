@@ -3353,6 +3353,7 @@ through the budget.
 - **Proposed for step 18's "not run" list:** why the chip cost points in 2024, combinations of
   the levers, a sprint variant and a second 2026 seed. Not yet decided: whether 2025's worst
   tenth of teams, 420 points behind P2PM, is looked into before step 18 or listed as not run.
+  [Decided by Alex 2026-11-08: not looked into. Step 18 lists it as not run.]
 
 ## 2026-11-08 — Step 25.4: the chip on 2026, under the revised rule
 
