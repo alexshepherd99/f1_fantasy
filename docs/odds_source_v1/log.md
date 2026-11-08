@@ -233,3 +233,50 @@ unknown-session check (1), and the first done session instead of the last
 **Run on the real Brazil page and the live 2026 schedule:** season 2026,
 race 20, `Odds_Q`, which is right for a page saved on race morning, and race
 20 is Brazil in the odds file. Suite: 560 passed.
+
+## 2026-11-08 — Step 6: names and teams matched
+
+Two commits. `1c03d3d` has `fast_f1.api.get_session_drivers` return
+`FirstName` and `LastName` as well. Its cache was keyed only by season, race
+and session, so a list cached before the change would have come back without
+names for good, leaving every driver unmatched. A cached list missing them is
+now fetched again. The second commit adds `odds_source/drivers.py`.
+
+**FastF1's real names, checked against the sample page first** (Brazil
+qualifying): FastF1 has "Kimi Antonelli", as the page does, but "Alexander
+Albon" against the page's "Alex Albon", and "Rafael Câmara" against "Rafael
+Camara". Surname matching without accents covers both.
+
+`match_drivers` matches a page name on its last word against each driver's
+surname, ignoring accents and case. Where two drivers share a surname, the full
+name decides. A name matching no driver is kept as spelt, with a blank
+constructor and a warning (D6, D15). A team missing from `TEAM_CODES` stops the
+run (D11), and so do two names matching one driver, which would otherwise
+write a driver twice. `TEAM_CODES` holds the eleven 2026 FastF1 team names,
+which map onto the eleven codes in the odds file.
+
+**Which driver list, simplified from the plan.** `load_entry_list` reads the
+list for the session the odds follow. Before FP1, or while that session's list
+is not yet published, it reads the previous race's race list instead. That
+misses a driver change, and the new driver stays unmatched by D6. Race 1
+before practice has no list, so every name is unmatched, with a warning. The
+fetch is a parameter, so tests pass a recorder and patch nothing.
+
+Red: the wrapper's three tests failed on the missing names and on the stale
+cached list. The new module's red was its import failure only, so it was
+checked by mutation, each restored from a copy and green before the next:
+keeping accents (1 red), matching the first word not the surname (6), no
+full-name fallback (1), a blank code for an unknown team (1), no duplicate
+check (1), no fallback when a list is unpublished (1) and the previous race's
+list read from this race (2). Trusting any cached list turned the wrapper's
+stale-cache test red.
+
+**Run on the real Brazil page, end to end with live FastF1:** 22 entries, all
+matched, with exactly the driver and constructor pairs hand-entered for race
+20, Câmara on Haas included. Suite: 572 passed. Warnings rose by one, a
+FastF1 `enable_cache` deprecation notice raised once per test that sets up the
+cache, which the new stale-cache test does.
+
+Noted for step 8: an ad hoc session load outside `fast_f1.cli` let FastF1 fall
+back to its default cache in the home directory. The CLI must set the cache up
+as `fast_f1.cli` does.

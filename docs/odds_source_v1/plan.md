@@ -26,14 +26,7 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 
 5. ~~Find the race and the column~~ — done 2026-11-08, see log *Step 5*.
 
-6. **Map names and teams.** `get_session_drivers` also returns each driver's
-   first and last names. A page name matches on its accent-free, case-free
-   surname if that is unique in the list, else on the full name. A pre-FP1 run
-   uses the previous race's last session. An unmatched name is written as it
-   appears, with a blank `Constructor` and a warning (D6, D15). The step first
-   checks FastF1's real name forms against the sample page's names. FastF1 team
-   names map to codes through a fixed table, from the 2026 names in the
-   metrics file; a missing team raises (D11).
+6. ~~Map names and teams~~ — done 2026-11-08, see log *Step 6*.
 
 7. **Write the race's rows.** For the race, set the column and `Odds` for
    every driver priced, overwriting (D8, D9). A driver already in the file for
