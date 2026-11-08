@@ -74,12 +74,16 @@ def _held(drivers: pd.DataFrame, constructors: pd.DataFrame, season: int, race: 
 
 
 def _price_lines(rows: list[ArchiveRow], before: dict[str, float]) -> list[str]:
-    lines = []
+    """One line per asset: old price, new price and the change, in columns to check against the app."""
+    lines = [f"    {'':<10} {'old':>6}    {'new':>6}  {'change':>6}"]
     for row in rows:
         old = before.get(_label(row))
-        lines.append(f"    {_label(row):<10} {'new' if old is None else f'{old:g}'} -> {row.price:g}")
+        if old is None:
+            lines.append(f"    {_label(row):<10} {'new':>6} -> {row.price:>6.1f}")
+        else:
+            lines.append(f"    {_label(row):<10} {old:>6.1f} -> {row.price:>6.1f}  {row.price - old:>+6.1f}")
     labels = {_label(row) for row in rows}
-    lines += [f"    {label:<10} {before[label]:g} -> dropped" for label in before if label not in labels]
+    lines += [f"    {label:<10} {before[label]:>6.1f} -> dropped" for label in before if label not in labels]
     return lines
 
 

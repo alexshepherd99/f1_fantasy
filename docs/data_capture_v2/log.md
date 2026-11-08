@@ -578,3 +578,15 @@ archive (step 10). Gate 1 is the first real one.
 - `CLAUDE.md` gains a `boxbox/` paragraph.
 - In `requirements.md`, the hand-saving `curl` command gives way to a dry run,
   which saves the same copy.
+
+## 2026-11-08 — Price report shows old, new and change
+
+At Alex's request, so he can check prices against the app quickly, each price
+line now shows the old price, the new price and the change, in aligned columns
+under a header. Prices are shown to one decimal place as the app shows them
+(`10.0`, not `10`), and the change is signed (`+0.3`, `-0.2`). A driver new
+to the line-up shows `new`, and one leaving shows `dropped`.
+
+The new test failed against the old format before the change, and again
+against the first version, which printed `10` rather than `10.0`, before the
+one-decimal format.
