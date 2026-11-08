@@ -22,13 +22,7 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 
 3. ~~Switch the loader to CSV~~ — done 2026-11-08, see log *Step 3*.
 
-4. **Parse the saved page.** `odds_source/page.py` reads an `.mhtml` file and
-   returns the race name, its start time and, for the *Winner* market, each
-   driver's median price across bookmakers (D16), dropping entries priced by
-   fewer than half of them with a warning (D17). The median decimal price is
-   written as a fractional string `odds_to_pct` reads (2.25 becomes `5/4`). A
-   page with no *Winner* market raises. Tests use a small `.mhtml` fixture
-   written by hand in the page's JSON shape, never cut from a real save.
+4. ~~Parse the saved page~~ — done 2026-11-08, see log *Step 4*.
 
 5. **Find the race and the column.** Both come from the page and FastF1's
    event schedule, not from the clock, so a rerun of the same page gives the

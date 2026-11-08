@@ -1,0 +1,27 @@
+From: <Saved by Blink>
+Snapshot-Content-Location: https://www.oddschecker.com/motorsport/formula-1/test-grand-prix/winner
+Subject: Test Grand Prix Winner Betting Odds | Motor Sport | Oddschecker
+Date: Sun, 08 Nov 2026 16:01:41 GMT
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--testboundary----"
+
+
+------MultipartBoundary--testboundary----
+Content-Type: text/html
+Content-ID: <frame-test@mhtml.blink>
+Content-Transfer-Encoding: quoted-printable
+Content-Location: https://www.oddschecker.com/motorsport/formula-1/test-grand-prix/winner
+
+<!DOCTYPE html><html lang=3D"en-GB"><head><meta http-equiv=3D"Content-Type" =
+content=3D"text/html; charset=3DUTF-8"></head><body>
+<astro-island uid=3D"h1" component-export=3D"SubeventHeaderIsland" props=3D"{&quot;subeventId&quot;:[0,1]}"></astro-island>
+<astro-island uid=3D"g1" component-export=3D"GridGroupIsland" props=3D"{&quot;componentArgs&quot;:[0,{&quot;marketGroups&quot;:[0,{&quot;Win Markets&quot;:[1,[[0,{&quot;ocMarketId&quot;:[0,222],&quot;marketName&quot;:[0,&quot;Test Grand Prix#Podium Finish&quot;],&quot;betTypeName&quot;:[0,&quot;Podium Finish&quot;],&quot;subeventName&quot;:[0,&quot;Test Grand Prix&quot;],&quot;subeventStartTime&quot;:[0,&quot;2026-11-08T20:00:00Z&quot;]}],[0,{&quot;ocMarketId&quot;:[0,111],&quot;marketName&quot;:[0,&quot;Test Grand Prix#Win Market&quot;],&quot;betTypeName&quot;:[0,&quot;Win Market&quot;],&quot;subeventName&quot;:[0,&quot;Test Grand Prix&quot;],&quot;subeventStartTime&quot;:[0,&quot;2026-11-08T20:00:00Z&quot;]}]]]}],&quot;oddsGrids&quot;:[0,{&quot;222&quot;:[0,{&quot;queries&quot;:[1,[[0,{&quot;state&quot;:[0,{&quot;data&quot;:[0,{&quot;bets&quot;:[1,[[0,{&quot;id&quot;:[0,21],&quot;name&quot;:[0,&quot;Max Verstappen&quot;],&quot;odds&quot;:[1,[[0,{&quot;bookmakerCode&quot;:[0,&quot;B1&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;1/5&quot;],&quot;decimal&quot;:[0,1.2]}]]]}]]]}]}]}]]]}],&quot;111&quot;:[0,{&quot;queries&quot;:[1,[[0,{&quot;state&quot;:[0,{&quot;data&quot;:[0,{&quot;bets&quot;:[1,[=
+[0,{&quot;id&quot;:[0,1],&quot;name&quot;:[0,&quot;Max Verstappen&quot;],&quot;odds&quot;:[1,[[0,{&quot;bookmakerCode&quot;:[0,&quot;B1&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;9/2&quot;],&quot;decimal&quot;:[0,5.5]}],[0,{&quot;bookmakerCode&quot;:[0,&quot;B2&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;5/1&quot;],&quot;decimal&quot;:[0,6]}],[0,{&quot;bookmakerCode&quot;:[0,&quot;B3&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;4/1&quot;],&quot;decimal&quot;:[0,5]}],[0,{&quot;bookmakerCode&quot;:[0,&quot;B4&quot;],&quot;status&quot;:[0,&quot;SUSPENDED&quot;],&quot;fractional&quot;:[0,&quot;100/1&quot;],&quot;decimal&quot;:[0,101]}]]]}],=
+[0,{&quot;id&quot;:[0,2],&quot;name&quot;:[0,&quot;Kimi Antonelli&quot;],&quot;odds&quot;:[1,[[0,{&quot;bookmakerCode&quot;:[0,&quot;B1&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;6/4&quot;],&quot;decimal&quot;:[0,2.5]}],[0,{&quot;bookmakerCode&quot;:[0,&quot;B2&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;5/4&quot;],&quot;decimal&quot;:[0,2.25]}],[0,{&quot;bookmakerCode&quot;:[0,&quot;B3&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;11/8&quot;],&quot;decimal&quot;:[0,2.375]}],[0,{&quot;bookmakerCode&quot;:[0,&quot;B4&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;13/8&quot;],&quot;decimal&quot;:[0,2.625]}]]]}],=
+[0,{&quot;id&quot;:[0,3],&quot;name&quot;:[0,&quot;Nico H=C3=BClkenberg&quot;],&quot;odds&quot;:[1,[[0,{&quot;bookmakerCode&quot;:[0,&quot;B1&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;200/1&quot;],&quot;decimal&quot;:[0,201]}],[0,{&quot;bookmakerCode&quot;:[0,&quot;B2&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;100/1&quot;],&quot;decimal&quot;:[0,101]}]]]}],=
+[0,{&quot;id&quot;:[0,4],&quot;name&quot;:[0,&quot;Esteban Ocon&quot;],&quot;odds&quot;:[1,[[0,{&quot;bookmakerCode&quot;:[0,&quot;B1&quot;],&quot;status&quot;:[0,&quot;ACTIVE&quot;],&quot;fractional&quot;:[0,&quot;500/1&quot;],&quot;decimal&quot;:[0,501]}]]]}]=
+]]}]}]}]]]}]}]}]}"></astro-island>
+</body></html>
+------MultipartBoundary--testboundary------

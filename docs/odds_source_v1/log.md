@@ -165,3 +165,40 @@ blind. Added as step 10, to run before the docs step.
 `indicator_analysis.main()` was not run; its snapshot functions were. Suite:
 544 passed, with 10 fewer warnings now the test workbook's openpyxl style
 warning has gone.
+
+## 2026-11-08 — Step 4: the saved page is parsed
+
+`odds_source/page.py`'s `read_saved_page` returns a `SavedOddsPage`: race
+name, race start, the time the page was saved (its `Date` header, which step 5
+needs) and each driver's price as the page spells the name.
+
+How it reads the page, with the standard library only: `email` splits the
+`.mhtml`, the HTML is decoded as UTF-8 because the page declares that in a
+meta tag rather than the MIME header, `html.parser` finds the
+`GridGroupIsland` component's props, and Astro's `[type, value]` wrapping is
+stripped. The Winner market is the one whose `betTypeName` is `Win Market`.
+
+The median is taken over the bookmakers' **fractional** prices as exact
+fractions, rather than decimals. The two give the same median, as decimal is
+fractional plus 1, but the fractional strings are exact where the decimals
+are rounded (4/7 is `1.571`). An even count takes the midpoint, which can give
+an uneven fraction: Sainz at Brazil is `1779/2`, which `odds_to_pct` reads
+as written. "Fewer than half" counts against the bookmakers with any active
+price in the market, and a suspended price is not counted.
+
+The fixture, `data/test_oddschecker_winner.mhtml`, is written by hand in the
+real page's shape, quoted-printable encoding included. Each rule changes a
+visible result in it: a suspended price that would move a median, an even
+count, a driver at exactly half, one below half, an accented name, and a
+podium market listed before the winner market.
+
+The only red possible before the module existed was the import failure, so
+behaviour was checked by five mutations, each restored from a copy, with
+`__pycache__` cleared and green before the next. Counting suspended prices,
+dropping a driver at exactly half, taking the first market, decoding as
+Latin-1, and taking the lower middle on an even count turned 1, 2, 5, 2 and
+2 tests red.
+
+**Run on Alex's saved Brazil page:** 22 drivers, Ocon dropped (1 of 25
+bookmakers), and every price equal to the survey's median decimal less 1.
+Suite: 552 passed.
