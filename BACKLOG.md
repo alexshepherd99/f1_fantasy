@@ -180,7 +180,11 @@ run the strategy. Today that route has three gaps, reasoned from the code on
 - **Historical mode freezes the row.** `--historical --season S` does add the race to
   the strategy's file, but it skips stored races, so the row built before the race
   had results is never rebuilt. Step 3b.3 of `fastf1_v2` had to check for such rows.
-  It also exits 1 for the rounds not yet run.
+  It also exits 1 for the rounds not yet run. Since the file became CSV, such a row
+  also reformats every stored line: its missing `Points` turn the column to floats,
+  so `15` is rewritten `15.0` (simulated on a copy 2026-11-08, values unchanged). A
+  run after the race only adds lines, so `git diff --numstat` on the file showing
+  any deletions marks a reformat or a cut-off write.
 - **A missing race fails quietly.** With no metrics rows for the race, the strategy
   scores every asset zero and still returns a team. That is right for the back-test
   (2026 race 19, plan step 6.5) and wrong for a live pick, which should raise.
