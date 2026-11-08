@@ -298,3 +298,17 @@ The check is decided now so that 2027 tests it blind:
   probably be smaller than one season's noise.
 
 Raised by Alex 2026-11-08.
+
+## Get fantasy points and prices from BoxBox F1 Fantasy
+
+Points and prices are typed into `data/f1_fantasy_archive.xlsx` by hand today.
+Get them from these two JSON files instead:
+
+- <https://boxboxf1fantasy.com/data/driver_history.json>
+- <https://boxboxf1fantasy.com/data/season_summary.json>
+
+Neither has been looked at yet. Overlaps `data_capture_v1`, which is moving
+the archive to CSV and chose hand-typed input over scraping (2026-07-30), so
+settle with that effort which route wins first.
+
+Raised by Alex 2026-11-08.
