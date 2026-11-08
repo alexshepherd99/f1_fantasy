@@ -5,7 +5,7 @@ from collections.abc import Sequence
 
 from backtest.runner import run_backtest
 from backtest.sample import DEFAULT_BAND_EDGES, validate_band_edges
-from backtest.variants import make_variant
+from backtest.variants import make_variant, with_race4_chip
 from common import F1_SEASON_CONSTRUCTORS, setup_logging
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_fastf1 import StrategyFastF1
@@ -18,6 +18,9 @@ from linear.strategy_zero_stop import StrategyZeroStop
 # Seasons run by default. Add a season here once it has finished; one in
 # progress is left out unless named with --seasons (R6)
 COMPLETED_SEASONS = [2023, 2024, 2025]
+
+# fastf1_v2's chosen setting, from steps 22 and 23 (docs/fastf1_v2/log.md, *Step 23*)
+_FASTF1_RULE_RISE_2P5 = make_variant(StrategyFastF1, "FastF1_RuleRise2p5", price_rise_reward=2.5)
 
 # fastf1_v2's tuning variants, each one change from StrategyFastF1's defaults, at the values
 # fixed in step 15.1 (docs/fastf1_v2/plan.md, step 15; log.md, *Step 15.1*)
@@ -35,8 +38,10 @@ FASTF1_VARIANTS = [
     make_variant(StrategyFastF1, "FastF1_RuleRise10", price_rise_reward=10.0),
     make_variant(StrategyFastF1, "FastF1_RuleRise20", price_rise_reward=20.0),
     # Lower rewards, continuing the halving from 5, tried on fresh teams in step 23
-    make_variant(StrategyFastF1, "FastF1_RuleRise2p5", price_rise_reward=2.5),
+    _FASTF1_RULE_RISE_2P5,
     make_variant(StrategyFastF1, "FastF1_RuleRise1p25", price_rise_reward=1.25),
+    # The chosen setting plus P2PM's race-4 unlimited-moves chip, for step 25
+    with_race4_chip(_FASTF1_RULE_RISE_2P5, "FastF1_RuleRise2p5_Chip"),
 ]
 
 # Strategies that can be named with --strategies, by label

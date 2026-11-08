@@ -56,6 +56,8 @@ _FASTF1_SETTINGS = {
     # Lower rewards, added in step 23
     "FastF1_RuleRise2p5": (1.0, 0.0, 0.0, 2.5),
     "FastF1_RuleRise1p25": (1.0, 0.0, 0.0, 1.25),
+    # The chosen setting with the race-4 chip, added in step 25
+    "FastF1_RuleRise2p5_Chip": (1.0, 0.0, 0.0, 2.5),
 }
 
 
@@ -104,6 +106,31 @@ def test_fastf1_variants_are_registered_with_their_settings(monkeypatch, label, 
     assert (
         strat._drs_coefficient, strat._negative_penalty, strat._budget_reward, strat._price_rise_reward
     ) == settings
+
+
+@pytest.mark.parametrize("race_num, moves", [(3, 0), (4, 2), (5, 0)])
+def test_fastf1_chip_label_moves_the_whole_team_at_race_four_only(monkeypatch, race_num, moves):
+    """FastF1_RuleRise2p5_Chip is FastF1_RuleRise2p5 plus the race-4 chip, of a two-asset team here."""
+    monkeypatch.setattr("linear.strategy_fastf1.load_signal_tables", lambda fn_metrics: _EmptyTables())
+
+    strategy = STRATEGIES[parse_arguments(["--strategies", "FastF1_RuleRise2p5_Chip"]).strategies[0]]
+    strat = strategy(
+        team_drivers=["VER@RED"],
+        team_constructors=["RED"],
+        all_available_drivers=["VER@RED"],
+        all_available_constructors=["RED"],
+        all_available_driver_pairs={"VER@RED": "RED"},
+        prev_available_driver_pairs={"VER@RED": "RED"},
+        max_cost=100.0,
+        max_moves=0,
+        prices_assets={"VER@RED": 30.0, "RED": 20.0},
+        derivs_assets={},
+        race_num=race_num,
+        season_year=2025,
+    )
+
+    assert issubclass(strategy, STRATEGIES["FastF1_RuleRise2p5"])
+    assert strat._max_moves == moves
 
 
 def test_max_points_is_selectable_as_a_challenger():
