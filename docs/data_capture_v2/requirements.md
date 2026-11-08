@@ -16,14 +16,16 @@ first.
 ## Scope, as settled 2026-11-08
 
 - **Points and prices come from BoxBox, not from typing.** A fetcher reads the
-  two JSON files and writes one race's points and prices into the archive.
+  two JSON files and writes the race just held's points and the next race's
+  prices into the archive.
   This replaces `data_capture_v1`'s writer for hand-typed input (rejected
   2026-11-08: Alex chose a published source over manual capture; see the
   log).
 - **`data/f1_fantasy_archive.xlsx` is the golden source for every season and
   race it already holds.** Alex's historical analysis depends on it, so none of
-  it may change. BoxBox only adds races the archive does not have yet. It never
-  revises one the archive already holds, even where the two disagree.
+  it may change. BoxBox never revises a value the workbook holds, even where
+  the two disagree. The one gap it fills is 2026 race 20's points, which the
+  workbook holds as zero placeholders until the race results are in.
 - **The archive moves to long-format CSV, carried over from `data_capture_v1`.**
   A CSV diffs in git, so every race the fetcher writes can be reviewed as a
   diff before it is committed. That matters more for numbers a script fetched
@@ -42,7 +44,48 @@ first.
     `tests/test_derivations.py`. It is converted to a text fixture holding the
     same values, the test is pointed at that, and then it is removed.
 
-  Removal only stops future versions. The old blobs stay in git history.
+  Removal only stops future versions. Both files stay recoverable byte for byte
+  from git history (`git show <commit>:<path>`). The log records the commit to
+  recover each one from when it is removed.
+- **`import_data/import_history.py` is rewritten in place to read the CSV.**
+  Alex granted this exception to the core-module rule on 2026-11-08, on
+  condition that very careful checks prove the old data and behaviour are
+  preserved (see *Checks on the loader rewrite*).
+- **One run per race weekend.** Alex runs the fetcher once, a few days after a
+  race weekend. That run writes the race just held's points and the next
+  race's prices (BoxBox's `current_price` by then). When BoxBox updates its
+  files after a race is not known yet, so the run may come before the update.
+- **If BoxBox is wrong or late, the fetcher fails loudly.** It writes nothing
+  and exits non-zero, with a message saying what it found. This includes data
+  that has not been updated for the race yet. The fetcher has to detect that
+  case rather than write stale numbers as if they were new.
+- **Re-runs correct what an earlier run wrote.** Drivers are sometimes changed
+  unexpectedly, very close to a race weekend, after that race has already been
+  captured. Re-running the fetcher has to rewrite the rows it wrote earlier
+  (who has a row, and their prices and points) to match BoxBox. It still
+  never touches the history the workbook holds.
+
+## Checks on the loader rewrite
+
+The bar is the one set for the last core-module change that could move results
+(`max_points_v1`'s `StrategyBase` DRS helper). The check plan is agreed with
+Alex before any CSV is written or any loader code is changed, as
+`verify-before-data-edits` requires. Proposed checks:
+
+- **Same data.** Before the rewrite, `load_archive_data_season` and
+  `load_all_archive_data` are run against the workbook for every season and
+  both asset types and their output is saved. After the rewrite they are run
+  against the CSV, and each frame must be exactly equal (`DataFrame.equals`,
+  so dtypes and row order count too).
+- **Same derived values.** `helpers.load_with_derivations` gives the same
+  three frames for every season, before and after.
+- **Same results.** `backtest_v1`'s stored P2PM rows are re-simulated and must
+  equal the stored ones exactly, and the live 2026 `run_single_team.py`
+  configuration is replayed before and after, without running its
+  `__main__`, which overwrites its output file.
+- **Same failures.** The integrity checks still reject the malformed inputs
+  they reject today, each shown failing first.
+- The full suite is green before and after.
 
 ## What BoxBox provides (looked at 2026-11-08)
 
@@ -96,10 +139,9 @@ Reading the archive goes through two functions,
 move to CSV should be invisible above `import_data/`.** That is the property the
 migration is checked against.
 
-`import_data/` is a core module, which is not edited without Alex's
-case-by-case agreement. Reading the CSV either means rewriting
-`import_history.py` in place or building a new loader alongside it. That choice
-is open (see below).
+`import_data/` is a core module. Rewriting `import_history.py` in place
+(rather than adding a loader beside it) was agreed by Alex on 2026-11-08,
+under the checks above.
 
 ## Why long format is worth it
 
@@ -111,7 +153,7 @@ property of the layout.
 
 ## Rough shape of the work
 
-Chunks 1–4 carry over from `data_capture_v1`. Chunk 5 is new.
+Chunks 1–4 carry over from `data_capture_v1`. Chunks 5 and 6 are new.
 
 1. **Make the archive path injectable end to end.** `load_archive_data_season`
    accepts `fn` but never passes it to `load_archive_sheet` (:291-292), so
@@ -125,36 +167,43 @@ Chunks 1–4 carry over from `data_capture_v1`. Chunk 5 is new.
    `verify-before-data-edits`, the check plan is agreed before any CSV is
    written. `odds_source_v1`'s log (*Step 2* and *Step 3*) has a conversion
    method worth reusing.
-4. **Read the CSV**, keeping both loaders' signatures and return shapes as they
-   are, and keeping the integrity checks. Then remove
+4. **Rewrite `import_history.py` to read the CSV**, keeping both loaders'
+   signatures and return shapes as they are, and keeping the integrity checks,
+   under *Checks on the loader rewrite*. Then remove
    `f1_fantasy_archive.xlsx`, and convert and remove
    `test_expected_values.xlsx`.
-5. **Build the BoxBox fetcher.** Fetch both files, map rounds and identifiers,
-   validate against the archive, write one race's rows, re-run the integrity
+5. **Analyse past BoxBox files** for mid-season driver changes and for how
+   to tell that the files have not been updated yet (see *Open questions*).
+6. **Build the BoxBox fetcher.** Fetch both files, map rounds and identifiers,
+   validate against the archive, write the two races' rows, re-run the integrity
    checks and only then save. The previous values for each asset are shown
    alongside, so a wrong value or a driver in the wrong seat stands out before
    commit. That idea is carried over from `data_capture_v1`'s writer.
 
 ## Open questions
 
-- **Rewrite `import_history.py`, or add a new loader beside it?** Rewriting is
-  smaller but edits a core module. A new loader leaves the core alone but means
-  two loaders until the old one goes. Alex's call.
-- **When does the fetcher run, and what does it write?** Prices are known
-  before a race and points after it. The likely shape is two writes per race:
-  before the lock, the next race's prices with `Points = 0`; after the race,
-  that race's points. That means updating existing rows, not only appending,
-  and still never touching a race the workbook already holds.
-- **Who is expected in a race?** BoxBox lists drivers with no 2026 price
-  (`TSU`, `HIR_HAAS`) and drivers with prices but no results (`CAM`). The
-  fetcher needs a rule for who gets a row, especially around mid-season seat
-  changes.
+- **Who gets a row in a race?** This needs a historical analysis of the
+  BoxBox files before the rule is designed, above all of what they showed
+  when a driver was changed mid-season. Today's snapshot already shows three
+  cases: drivers with results but no 2026 price (`TSU` with 3 races,
+  `HIR_HAAS` with 1), and a driver with a price but no results (`CAM`). The
+  archive records the same seat changes from its side (for example `HAD@RED`
+  has no rows for races 12–14). Where older versions of the files come from
+  is itself open. BoxBox serves only the current one, so the candidates are a
+  web archive, or snapshots saved from now on.
+- **How does the fetcher tell that BoxBox has not updated yet?** The
+  candidates are `has_actual` for the race just held, `generated_at` against
+  the race date, and whether any price moved. The analysis above should show
+  which of these are reliable.
+- **Which rows may a re-run rewrite?** The race just held and the next race
+  are the obvious ones. The rule has to keep every value the workbook held
+  fixed, apart from 2026 race 20's placeholder points.
 - **How are the identifier maps kept?** Fixed tables in code, as
   `odds_source`'s `TEAM_CODES` does, raising on anything they lack, or derived
   from the archive's previous race.
-- **What if BoxBox is wrong or late?** It is an unofficial third-party source.
-  The fetcher needs a way to refuse a write it cannot validate, and Alex needs
-  a way to correct a value by hand.
+- **How does Alex correct a value BoxBox has wrong?** Failing loudly stops a
+  bad write. Whether a value then gets corrected by hand in the CSV, or by
+  waiting for BoxBox to fix it, is not settled.
 - **Row order and number format in the CSV.** A git-diffable store only pays
   off if writing one race produces a diff for that race alone. Settle this
   with the schema in chunk 2.
@@ -167,8 +216,11 @@ Chunks 1–4 carry over from `data_capture_v1`. Chunk 5 is new.
   seen failing first.
 - The CSV is shown to load identically to `f1_fantasy_archive.xlsx` for all
   four seasons and both asset types, before the workbook is removed.
-- Adding a race's prices, and later its points, is a single command that
-  fetches from BoxBox, with the layout rules applied by the tool.
+- One command, run once per race weekend, fetches the race just held's points
+  and the next race's prices from BoxBox, with the layout rules applied by the
+  tool. It fails loudly and writes nothing when BoxBox has not updated or
+  does not validate. A re-run corrects rows an earlier run wrote.
+- Every check in *Checks on the loader rewrite* has passed.
 - Writing one race produces a git diff covering that race and nothing else.
 - The fetcher has been run against the live BoxBox files for a real race
   weekend, not just against test fixtures.

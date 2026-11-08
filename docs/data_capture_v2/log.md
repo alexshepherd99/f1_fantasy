@@ -41,3 +41,40 @@ adding a new loader beside it. That is listed as an open question.
 
 `plan.md` is deferred until the open questions in `requirements.md` are
 answered.
+
+## 2026-11-08 — Loader rewrite, run cadence and failure handling settled
+
+Alex answered four of the open questions:
+
+- **`import_history.py` is rewritten in place.** This is a granted exception
+  to the core-module rule, on condition that very careful checks prove the old
+  data and behaviour are preserved. `requirements.md` now proposes those
+  checks under *Checks on the loader rewrite*: identical loader output for
+  every season, identical derivations, an exact re-simulation of
+  `backtest_v1`'s P2PM rows plus a 2026 replay, and the integrity checks still
+  failing where they fail today. That is the bar set for the `StrategyBase`
+  DRS helper. The checks are agreed with Alex before any data or loader code
+  changes.
+- **The fetcher runs once per race weekend**, a few days after the race,
+  writing that race's points and the next race's prices. When BoxBox updates
+  after a race is not known, so the fetcher must detect files that have not
+  been updated yet rather than write stale numbers.
+- **Wrong or late BoxBox data fails loudly**: nothing is written, and the
+  exit is non-zero.
+- **Re-runs must correct earlier captures**, because a driver can be changed
+  unexpectedly, close to a race weekend, after that race has been captured.
+
+Who gets a row in a race is not settled. Alex asked for a historical analysis
+of the BoxBox files first, focused on mid-season driver changes. That is now
+chunk 5, ahead of the fetcher (chunk 6). BoxBox serves only the current files,
+so where older versions come from is a new open question. How to detect
+not-yet-updated files is another, and the same analysis should inform it.
+
+Alex also asked whether the workbook could be recovered after deletion. It
+can, byte for byte, from any earlier commit. `requirements.md` now says so and
+commits to recording the recovery commit in this log at deletion.
+
+The scope wording on the golden source was tightened. BoxBox never changes a
+value the workbook holds. The one gap it fills is 2026 race 20's points,
+which the workbook holds as zero placeholders. The earlier wording ("only adds
+races") would have stopped that.
