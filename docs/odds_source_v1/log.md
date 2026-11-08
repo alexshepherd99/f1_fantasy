@@ -374,3 +374,28 @@ scored a season captured into `Odds_Q`. With the leak rule fixed, the
 pre-weekend split then counted 2 races instead of 3; fixing it turned all
 green. The existing tests, which use the legacy names, cover the unchanged
 branch. `indicator_analysis.main()` was not run. Suite: 589 passed.
+
+## 2026-11-08 — Step 9: docs; every step done (dev)
+
+- `README.md`: the odds input section describes the CSV, the capture command
+  and its columns, and marks the four hand-entered snapshot columns as legacy.
+  The Excel date warning went, as a CSV has no cell formats. It also corrects
+  an old claim: `Odds` is the only column the strategies and the `fast_f1`
+  indicator read, but `indicator_analysis` has always read the snapshot
+  columns, to find which one `Odds` came from.
+- `CLAUDE.md`: a paragraph on `odds_source/`, the CSV path in the `fast_f1`
+  paragraph, the odds data rule rewritten for the new columns, and the conftest
+  rule now names the odds fixture.
+- `docs/data_capture_v1/requirements.md`, an effort still in progress: its
+  scope said the odds workbook stays as it is, now stale. Corrected in place,
+  pointing at this effort's conversion method.
+- `BACKLOG.md`: done (dev), Gate 2 pending. Finished efforts' docs that name
+  the workbook are left as they are.
+
+Every step is done; steps 1–7 and 9–10 are done (dev), and step 8 is verified
+at Gate 1. **What has not been run:** a real write into
+`data/f1_betting_odds.csv` itself, which is Gate 2, and
+`indicator_analysis.main()`. Gate 2, at the next race weekend: Alex saves the
+page, runs the command, and reviews the CSV's git diff before committing. The
+first real run adds the seven snapshot columns, so every line of that diff
+changes once; after that a run changes only its race's lines.

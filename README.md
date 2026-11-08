@@ -41,22 +41,30 @@ If updating race data in the middle of a season, drivers and constructors will h
 
 **data/test_expected_values.xlsx** has some pre-computed values of the derivation calculations, to support unit testing.
 
-**f1_betting_odds.xlsx** and **test_betting_odds.xlsx** are used by the betting odds strategy and by the `fast_f1` odds indicator, see below.  Odds input format is 100/1, 9/4, 5:2, 4-3.  Odds-on prices, where the stake exceeds the return (10/11, 4/6), are valid and are how a strong favourite is priced.  Fractional odds `a/b` are converted to an implied probability of `b/(a+b)`.
+**data/f1_betting_odds.csv** holds race-winner betting odds, one row per driver per race, and is used by the betting odds strategy and by the `fast_f1` odds indicator, see below; **data/test_betting_odds.csv** is its test fixture.  It replaced a spreadsheet on 2026-11-08 so that each race's odds show as a git diff.  Odds format is 100/1, 9/4, 5:2, 4-3.  Odds-on prices, where the stake exceeds the return (10/11, 4/6), are valid and are how a strong favourite is priced.  Fractional odds `a/b` are converted to an implied probability of `b/(a+b)`, and a blank price counts as no price.
 
-**Odds** is the only column any code reads.  It should hold the odds you actually want the strategies to optimise on, so populate it with whichever snapshot you consider best for that race — see the betting odds strategy below for the recommended timing.
+**Odds** is the only column the strategies and the `fast_f1` indicator read.  It holds the odds the strategies optimise on — see the betting odds strategy below for the recommended timing.  The other columns record *when* prices were taken, so odds evolution through the weekend can be reviewed later; `fast_f1.indicator_analysis` compares them with **Odds** to tell which snapshot a race's odds came from.
 
-The remaining columns are **for your reference only and are never read by any code**:
+### Capturing odds from Oddschecker
 
-| Column | Purpose |
+Odds are no longer typed in by hand.  Open the race's winner page on Oddschecker (from https://www.oddschecker.com/motorsport/formula-1), save it from the browser into `outputs/` as a single file (`.mhtml`), then run:
+
+```bash
+PYTHONPATH=. venv/bin/python -m odds_source.cli
+```
+
+It reads the newest saved page (or one named on the command line), asks FastF1 which race it is for and how far through the weekend the page was saved, matches the page's driver names to driver and constructor codes, and writes each driver's median price across the bookmakers into **Odds** and into the column for the last session finished.  A rerun overwrites.  A driver priced by fewer than half the bookmakers, usually one not in the race, is left out; a name it cannot match is written as the page spells it with a blank constructor, to fix by hand.  Review the file's git diff before committing it.  It needs the F1 account file, as the `fast_f1` module does.
+
+| Column | Filled by a page saved |
 | --- | --- |
-| Odds_Pre_Weekend | odds before the weekend starts, i.e. the bookies' model with no track running |
-| Odds_Post_FP2 | odds after FP2, once long-run pace is visible |
-| Odds_Pre_Quali | odds after FP3 but before qualifying |
-| Odds_Post_Quali | odds once the grid is known |
+| Odds_PreFP1 | before first practice |
+| Odds_FP1, Odds_FP2, Odds_FP3 | after that practice session |
+| Odds_SQ, Odds_Sprint | after sprint qualifying, after the sprint |
+| Odds_Q | after qualifying, once the grid is known |
 
-They exist so you can record *when* each price was captured, and so odds evolution through the weekend build-up can be reviewed later — how much a driver shortens or drifts between the pre-weekend line and the post-quali one is itself a signal worth studying.  Populate as many or as few as you like; gaps are fine.
+A session counts as finished an hour after its scheduled start.  The page is only fetched by the browser: Oddschecker refuses scripted requests, and getting round that is not something to build.
 
-Two cautions when filling them in.  Excel will silently reformat short fractional odds as dates unless the cell is set to Text first — it reads 14/1 as 14 January.  Seven values in Odds_Post_FP2 were stored that way and were repaired on 2026-07-26; those cells are now Text, but the rest of these four columns are not, so it will recur wherever you enter a price into an unformatted cell.  Setting the columns to Text prevents it.  And whichever snapshot you choose for a race, copy it into **Odds**; leaving that column stale means the strategies optimise on the wrong prices.
+The legacy columns **Odds_Pre_Weekend**, **Odds_Post_FP2**, **Odds_Pre_Quali** and **Odds_Post_Quali** hold the hand-entered snapshots for 2026 races 1–20 and are no longer written.
 
 ## Strategies
 

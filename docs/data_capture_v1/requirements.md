@@ -34,9 +34,11 @@ answers first.
 - **The long-format store is CSV, not `.xlsx`.** A CSV diffs in git, so every
   per-race write is reviewable in the same way a code change is — which is a
   large part of what "safer in-season capture" means here. This replaces
-  `data/f1_fantasy_archive.xlsx` for the archive only; `data/f1_betting_odds.xlsx`
-  and `data/fastf1_practice_rolling_metrics.xlsx` are out of scope and stay as
-  they are. Whether the archive is one CSV or two (drivers, constructors) is
+  `data/f1_fantasy_archive.xlsx` for the archive only; the betting odds and
+  `data/fastf1_practice_rolling_metrics.xlsx` are out of scope. (The odds moved
+  to `data/f1_betting_odds.csv` separately, in `odds_source_v1`, 2026-11-08; its
+  log's *Step 2* and *Step 3* hold a conversion method worth reusing.) Whether
+  the archive is one CSV or two (drivers, constructors) is
   part of the schema decision in chunk 2 below.
 - **The legacy Excel-authored workbooks are retired and removed from the repo**
   (added 2026-09-29). `data/f1_fantasy_archive.xlsx` and
@@ -96,7 +98,7 @@ Five chunks, in dependency order. Each is a commit or a small run of them.
    `load_archive_data_season` (:277) but never passed down to
    `load_archive_sheet` (:291-292), so every call reads the real archive
    regardless. There is also no fixture archive in `data/` (only
-   `test_betting_odds.xlsx`, `test_expected_values.xlsx`). Under CSV a fixture
+   `test_betting_odds.csv`, `test_expected_values.xlsx`). Under CSV a fixture
    is cheap — a handful of text rows rather than a generated workbook — so the
    main point of this chunk is not to carry the path-threading defect forward
    into the rewritten loader. Whether it is worth fixing on the *current*

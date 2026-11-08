@@ -35,9 +35,7 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 10. ~~Teach `indicator_analysis` the new columns~~ — done 2026-11-08, see log
    *Step 10*.
 
-9. **Docs.** `README.md` (odds input: CSV, new columns, the capture command),
-   `CLAUDE.md` (the workbook references and the new package), `BACKLOG.md`
-   (mark done), log close.
+9. ~~Docs~~ — done 2026-11-08, see log *Step 9*.
 
 ## Gates
 

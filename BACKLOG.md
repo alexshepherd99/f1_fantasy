@@ -12,7 +12,7 @@ Efforts under `docs/`:
 | [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | done |
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
-| [`odds_source_v1`](docs/odds_source_v1/) | in progress |
+| [`odds_source_v1`](docs/odds_source_v1/) | done (dev); Gate 2 at the next race weekend |
 
 Global list of not-yet-started work. Freeform. When an item is picked up, create `docs/<effort-name>/` (see `docs/` and `agentic`'s `shared/persistent-docs.md`) and move the item there.
 
