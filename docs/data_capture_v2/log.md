@@ -355,3 +355,40 @@ to name the CSVs and say how it applies to a text file.
 From here, each race goes into the CSVs until the fetcher exists. Brazil's
 points and the Las Vegas prices are the first. Whether that is done by hand
 or by a session working from the saved BoxBox copy is still Alex's call.
+
+## 2026-11-08 — Fetcher designed now; the analysis moves after it
+
+Alex wants capture automated as soon as possible. He will check the next
+couple of captures against the F1 Fantasy app himself, so that check replaces
+the analysis of saved copies as the safety net for the first runs. Step 6 now
+follows the build and reviews its rules once copies have accumulated. Steps
+7–11 and Gate 1 are rewritten in `plan.md`, with the rules in *How a run
+works*. Step numbers are unchanged.
+
+Two checks against the 2026-11-08 copy ground those rules:
+
+- **Every constructor result matches.** All 209 matched the archive, which
+  completes the comparison started when the effort opened (driver results:
+  437 of 437). That is why a disagreement on an earlier race is a warning, not
+  a refusal. There are none today, so a refusal would only block on a future
+  correction by BoxBox, and the archive stays the record either way.
+- **BoxBox's priced drivers are the next race's line-up.** The 22 drivers in
+  `season_summary.json`'s prices are exactly the archive's race-20 line-up,
+  with the same prices. That includes `CAM`, entered by hand on 2026-11-06 in
+  place of `HIR` at Haas. So "one row per priced asset" reproduces what Alex
+  entered. Drivers BoxBox lists with results but no price (`TSU`, `HIR_HAAS`)
+  are past seat-holders, and get no row in a new race.
+
+The settled answers to the open questions:
+
+- **Re-runs** correct the target race while it has not been held.
+- **The identifier maps** are a fixed constructor table plus the driver code
+  from BoxBox's key.
+- **A value BoxBox has wrong** is fixed by hand in the CSV, with the fetcher
+  refusing anything inconsistent.
+- **Golden values:** workbook-era values are never rewritten. The fetcher only
+  fills empty points, rewrites races it wrote itself, and adds new races.
+- **Stale files** are detected by no price having moved since the target
+  race, plus `has_actual` for the target race.
+
+`requirements.md`'s open questions are updated to match.

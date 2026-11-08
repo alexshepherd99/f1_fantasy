@@ -2,9 +2,9 @@
 
 Requirements and decisions are in `requirements.md`. One commit per step, test
 first for every behaviour change, suite green at the end of each. Steps 1–5
-move the archive to CSV and can be done now. Steps 6–11 build the BoxBox
-fetcher and are only outlined, because they wait on the analysis in step 6;
-they are rewritten once it is done.
+moved the archive to CSV. Steps 7–11 build the BoxBox fetcher, and Gate 1
+checks its first captures against the app. Step 6 reviews its rules once
+enough weekly copies are saved.
 
 ## Shape
 
@@ -69,44 +69,79 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 5. ~~Remove the archive workbook, and update the docs~~ — done 2026-11-08,
    see log *Step 5*.
 
-6. **Analyse the saved BoxBox copies.** Run once weekly copies span the end
-   of the 2026 season (Brazil to Abu Dhabi, about five copies). Look at what
-   changes between copies: when points appear after a race, when prices move,
-   and how a driver change shows up. Also check a web archive for older
-   versions. The findings decide the open questions on who gets a row and on
-   spotting files that have not been updated. Steps 7–11 are then rewritten
-   in detail. Five copies may not include a driver change, and if so the log
-   says so.
+6. **Review the rules against the saved copies.** Moved after the build on
+   2026-11-08: Alex checks the first captures against the app instead (Gate
+   1), so the fetcher is built now with the rules below. Once weekly copies
+   span the end of the 2026 season, look at what changes between them: when
+   points appear, when prices move, and how a driver change shows up. Also
+   check a web archive for older versions. Tighten the rules if they need it.
 
 7. **Fetch and save.** Download both files, save the copy to
-   `outputs/boxbox/<date>/` (never overwriting an earlier copy), and check
-   the file's `season` is the one being captured.
+   `outputs/boxbox/<UTC timestamp>/`, so no copy is ever overwritten. Parse
+   them, and fail loudly on a structure the fetcher does not expect.
 
-8. **Map BoxBox to the archive.** Calendar round to archive race. Driver code
-   and constructor slug to `DRIVER@CON` and constructor code. Decide here
-   between fixed tables in code and deriving them from the previous race. An
-   unknown code fails loudly.
+8. **Map BoxBox to the archive.** Calendar round to archive race, by
+   position in `season_summary.json`'s `rounds` list. Driver keys to their
+   code (the part before any `_`), and constructor slugs to codes through a
+   fixed `TEAM_CODES` table, which raises on a slug it lacks.
 
-9. **Refuse stale or inconsistent data.** Detect files not yet updated for
-   the race just held, using the rule chosen in step 6. Also detect values
-   that cannot be right, such as a driver with points but no row expected.
-   Either way, write nothing, exit non-zero and say what was found.
+9. **Decide the change, or refuse.** Pure logic over the archive and the
+   parsed files, following *How a run works* below. It returns the rows to
+   write, or raises with a message naming what it found.
 
-10. **Write the two races' rows, and support re-runs.** The race just held's
-    points and the next race's prices are written as one change. A re-run
-    rewrites exactly the rows earlier runs wrote, and never a value the
-    workbook held. 2026 race 20's points are the one exception. How Alex
-    corrects a value BoxBox has wrong is settled here. Write only after the
-    integrity checks pass on the result. Untouched rows keep their bytes, as
-    in `odds_source.odds_file`.
+10. **Write the change.** Rows of the target race are replaced in place, and
+    new rows go after each asset's last row in the season, so untouched rows
+    keep their bytes. The result is written to a scratch copy first, loaded
+    through `load_archive_data_season`, and checked with the integrity
+    checks. Only then does it replace the real files.
 
-11. **The CLI and its docs.** Show each asset's previous values alongside the
-    new ones, then write. Update `README.md` and `CLAUDE.md`.
+11. **The CLI and its docs.** `PYTHONPATH=. venv/bin/python -m boxbox.cli`
+    prints each asset's previous and new values, then writes. Update
+    `README.md` and `CLAUDE.md`.
+
+## How a run works
+
+The target race `T` is the latest race of the season in the archive. Its
+calendar round is the `T`th entry of BoxBox's `rounds` list.
+
+- **`T` has been held (`has_actual`): capture.** Fill `T`'s empty points from
+  `driver_history.json`, and add race `T+1` with one row per priced asset in
+  `season_summary.json`, at its `current_price`.
+- **`T` has not been held: correct.** Rewrite `T`'s rows (who has a row,
+  and their prices) from the current prices. This is how a driver change
+  after capture is fixed: re-run before the race. Points stay empty.
+
+**It refuses, writing nothing, when:**
+
+- **Capture, but no price has moved.** Every current price equals `T`'s
+  price, which means BoxBox has the results but not the new prices yet.
+- **Capture, and `T` has points already.** Nothing is waiting to be filled.
+- **Capture, and a driver with a row in `T` has no BoxBox result for it.**
+  The same goes the other way: a BoxBox result for a driver with no row in
+  `T`. Either means the line-up captured for `T` was wrong when the race ran.
+  It is fixed by hand.
+- **Correct, on a race that came from the workbook (2026 race 20).** Its
+  values are the golden source. It is changed by hand if ever needed.
+- **A BoxBox round before `T`'s has no `has_actual`, or there is no round
+  after `T`.**
+- **Any slug, key or structure it does not know.**
+- **The integrity checks fail on the result**, for example a constructor
+  without exactly two drivers.
+
+**It warns, and still writes,** when BoxBox's points for an earlier race of
+the season differ from the archive's. The archive stays as it is, and the
+warning names each difference for Alex to look at. On 2026-11-08 every one of
+the 437 driver and 209 constructor results matched.
+
+**Not handled yet:** a new season. The first 2027 run needs the season in
+`common.F1_SEASON_CONSTRUCTORS` and a race 1 written from prices alone. The
+fetcher refuses a `season` it does not find in the archive until that is
+built, before 2027 race 1.
 
 ## Gates
 
-**Gate 1: the first real run**, at the first race weekend after step 11
-lands: late 2026 if the build is quick, otherwise 2027 race 1. Run against
-live BoxBox, before and after its update, to see the stale-data refusal and
-then a real write. Alex reviews the CSV diff before committing. If this is
-2027 race 1, it is also the first time the fetcher meets a new season.
+**Gate 1: the first real captures, checked against the app.** Brazil (2026
+race 20's points, Las Vegas prices), then at least one more race. Alex checks
+the written values against the F1 Fantasy app and reviews the CSV diff before
+committing. Running before BoxBox updates should show the "no price has
+moved" refusal.

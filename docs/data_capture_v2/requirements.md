@@ -181,30 +181,23 @@ commit. That idea is carried over from `data_capture_v1`.
 
 ## Open questions
 
-Each is settled at the plan step named.
+Settled 2026-11-08 by the rules in `plan.md`'s *How a run works*, to be
+checked by Alex against the app at Gate 1 and reviewed against saved copies at
+step 6:
 
-- **Who gets a row in a race?** This needs a historical analysis of the
-  BoxBox files before the rule is designed, above all of what they showed
-  when a driver was changed mid-season. Today's snapshot already shows three
-  cases: drivers with results but no 2026 price (`TSU` with 3 races,
-  `HIR_HAAS` with 1), and a driver with a price but no results (`CAM`). The
-  archive records the same seat changes from its side (for example `HAD@RED`
-  has no rows for races 12–14). The analysis works from the weekly copies
-  saved from 2026-11-08, so it gets richer as the copies build up. Whether a
-  web archive holds versions from before then has not been checked. (Step 6.)
-- **How does the fetcher tell that BoxBox has not updated yet?** The
-  candidates are `has_actual` for the race just held, `generated_at` against
-  the race date, and whether any price moved. The analysis above should show
-  which of these are reliable. (Steps 6 and 9.)
-- **Which rows may a re-run rewrite?** The race just held and the next race
-  are the obvious ones. The rule has to keep every value the workbook held
-  fixed, apart from filling in 2026 race 20's points. (Step 10.)
-- **How are the identifier maps kept?** Fixed tables in code, as
-  `odds_source`'s `TEAM_CODES` does, raising on anything they lack, or derived
-  from the archive's previous race. (Step 8.)
-- **How does Alex correct a value BoxBox has wrong?** Failing loudly stops a
-  bad write. Whether a value then gets corrected by hand in the CSV, or by
-  waiting for BoxBox to fix it, is not settled. (Step 10.)
+- **Who gets a row:** every asset priced in `season_summary.json`. That
+  reproduced the race-20 line-up exactly.
+- **Not updated yet:** `has_actual` for the target race, and at least one
+  price moved since it.
+- **What a re-run may rewrite:** the target race while it has not been held,
+  and never a workbook-era race.
+- **Identifier maps:** a fixed constructor table, and the driver code from
+  BoxBox's key.
+- **A value BoxBox has wrong:** the fetcher refuses anything inconsistent, and
+  the value is corrected by hand in the CSV.
+
+Still open:
+
 - **Do callers need the zero points?** For now the loader fills them in, so
   what it returns stays exactly the same. Dropping them for good would change
   what the loader returns and would need checks of its own, so it is outside
