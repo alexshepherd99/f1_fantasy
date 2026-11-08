@@ -428,3 +428,28 @@ to green after restoring from a copy:
 
 The real 2026-11-08 copy parses: 23 rounds, 19 held, 24 drivers with results,
 22 priced, and 11 constructors.
+
+## 2026-11-08 — Step 8: BoxBox mapped to the archive
+
+`boxbox/mapping.py` translates BoxBox's terms into the archive's:
+
+- **`TEAM_CODES`**, a fixed table of the 11 constructor slugs, read through
+  `constructor_code`. An unknown slug raises, naming the table to extend.
+- **`driver_code`**, the three capital letters before any `_` suffix
+  (`HIR_HAAS` is `HIR`). Anything else raises.
+- **`round_for_race`**: archive race N is the Nth round BoxBox lists.
+- **`results_by_driver_code`**: results keyed by driver code. It raises if two
+  BoxBox keys share a code, since their results could then be confused.
+
+Red first: 13 tests failed on stubs, and the table test failed on the empty
+table. Mutation, each caught by the intended test and restored green:
+
+- an unknown slug passed through;
+- a loose driver code (five keys);
+- the lower race bound dropped;
+- an off-by-one on the round index;
+- a duplicate code overwriting instead of raising.
+
+On the real copy, races 3, 4, 19 and 20 map to rounds 3, 6, 21 and 22
+(Brazil), every slug in it is in the table, and its 24 driver keys give 24
+distinct codes.

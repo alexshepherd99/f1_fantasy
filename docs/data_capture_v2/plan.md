@@ -78,10 +78,7 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 
 7. ~~Fetch and save~~ — done 2026-11-08, see log *Step 7*.
 
-8. **Map BoxBox to the archive.** Calendar round to archive race, by
-   position in `season_summary.json`'s `rounds` list. Driver keys to their
-   code (the part before any `_`), and constructor slugs to codes through a
-   fixed `TEAM_CODES` table, which raises on a slug it lacks.
+8. ~~Map BoxBox to the archive~~ — done 2026-11-08, see log *Step 8*.
 
 9. **Decide the change, or refuse.** Pure logic over the archive and the
    parsed files, following *How a run works* below. It returns the rows to
