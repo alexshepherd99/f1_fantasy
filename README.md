@@ -132,7 +132,7 @@ PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical
 PYTHONPATH=. venv/bin/python -m fast_f1.cli --historical --season 2026
 ```
 
-Historical mode skips season/race pairs already in the output file, so it can be interrupted and resumed; delete the file to regenerate from scratch.  Results land in **data/fastf1_practice_rolling_metrics.xlsx**.
+Historical mode skips season/race pairs already in the output file, so it can be interrupted and resumed; delete the file to regenerate from scratch.  Results land in **data/fastf1_practice_rolling_metrics.csv**, which keeps practice lap times in days (the unit the file held when it was a workbook).
 
 On first run it will ask where to keep the FastF1 API cache and remember the answer.  The cache is large and lives outside the repo, and the file recording your choice is not committed.
 

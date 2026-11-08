@@ -169,13 +169,13 @@ P2PM, so this is for 2027 at the earliest. The chosen setting is now the class
 script can pass it to `factory_strategy`. No script does yet.]
 
 The strategy reads only the stored metrics file,
-`data/fastf1_practice_rolling_metrics.xlsx`, and never calls FastF1. So a live pick
+`data/fastf1_practice_rolling_metrics.csv`, and never calls FastF1. So a live pick
 is two stages: build the race's metrics rows (after FP3 on a normal weekend), then
 run the strategy. Today that route has three gaps, reasoned from the code on
 2026-11-06 and not run:
 
 - **Single-race mode writes elsewhere.** `fast_f1.cli --season S --race N` saves to
-  `outputs/fastf1_race_S_N.xlsx`, which the strategy does not read. Pointing the
+  `outputs/fastf1_race_S_N.csv`, which the strategy does not read. Pointing the
   strategy at that file fails, as the expected-points tables need the 2023–25 rows.
 - **Historical mode freezes the row.** `--historical --season S` does add the race to
   the strategy's file, but it skips stored races, so the row built before the race
@@ -231,7 +231,7 @@ Raised by Alex 2026-11-07, during `fastf1_v2` step 15.1.
 
 **For Alex, once the 2026 season is over, after the re-assessment above.**
 `fastf1_v2` step 17 ran 2026 only through race 18, the last race with a signal
-in `data/fastf1_practice_rolling_metrics.xlsx`. `FastF1_RuleRise2p5` was +338.0
+in `data/fastf1_practice_rolling_metrics.csv`. `FastF1_RuleRise2p5` was +338.0
 points a team ahead of P2PM there, with 205 of that from race 13
 (`docs/fastf1_v2/log.md`, *Step 17* and *Step 26*). `requirements.md` question 7
 agreed the rerun.
@@ -310,21 +310,5 @@ Get them from these two JSON files instead:
 Neither has been looked at yet. Overlaps `data_capture_v1`, which is moving
 the archive to CSV and chose hand-typed input over scraping (2026-07-30), so
 settle with that effort which route wins first.
-
-Raised by Alex 2026-11-08.
-
-## Convert `fastf1_practice_rolling_metrics.xlsx` to CSV
-
-Move `data/fastf1_practice_rolling_metrics.xlsx` to CSV, as `odds_source_v1`
-did for the betting odds, so each write shows as a git diff.
-
-The path is `DEFAULT_HISTORICAL_OUTPUT` (`fast_f1/output.py`), written by
-`save_metrics` and read by `load_existing_metrics`, both through Excel today.
-`fast_f1/signal.py` (and through it `StrategyFastF1`, a `linear/` module, via
-`fn_metrics`) reads it with `load_existing_metrics`, and
-`fast_f1/indicator_analysis.py` with `pd.read_excel`. Single-race output in
-`outputs/` uses the same writer. The odds conversion's method is in
-`docs/odds_source_v1/log.md`, *Step 2* and *Step 3*: a cell-by-cell check,
-then the old reader against the new on every race.
 
 Raised by Alex 2026-11-08.
