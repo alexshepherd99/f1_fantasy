@@ -3239,3 +3239,80 @@ on `FastF1_RuleRise2p5`. The copy is an R12 ledger row in `docs/backtest_v1/requ
   sets its own moves.
 
 The full suite passed, 534 tests.
+
+## 2026-11-08 — Step 25.3: the chip on 2023–25
+
+### In plain language
+
+**The chip is not kept.** It helps in 2023 and 2025 but costs points in 2024, and the rule
+fixed before the run needed a gain in all three. Without the chip, `FastF1_RuleRise2p5` is
+the final strategy, and step 25.4, the 2026 look, does not run.
+
+- **2025:** the chip gains 56.6 points a team and helps 72% of teams. This is the season it
+  was expected to help most, as FastF1's teams stay spread out there (step 25.1).
+- **2024:** it costs 28.0 points a team and hurts more teams than it helps, 39% against 20%.
+  About four standard errors below zero, so this is not noise.
+- **2023:** it changes the result for only 17% of teams, and the mean gain is 10.1 points.
+
+So the chip is not a reliable win for FastF1, as it is for P2PM. A full reset at race 4
+moves teams onto whatever the signal favours that weekend. Why that went wrong in 2024 has
+not been looked into. Step 25.1's reading fits: in 2024 the most common line-up scored worse
+than the rest in six of races 4–10.
+
+### What was run
+
+One background process per season, in parallel:
+
+`backtest.cli --seasons <season> --sample-size 100 --seed 2 --strategies FastF1_RuleRise2p5
+FastF1_RuleRise2p5_Chip --output outputs/fastf1_v2_step25_chip_<season>.parquet --summary
+outputs/fastf1_v2_step25_chip_summary_<season>.csv`
+
+All three exited 0 with no error or warning in their logs, in 15.8 minutes together. The
+comparisons use `pair_with_baseline` and `season_summary` from `backtest/metrics.py`, from a
+throwaway script, not kept.
+
+### The checks
+
+- **Before:** none of the six output files existed.
+- **After:** each log reads "skipped 0 simulations already in the store". Each store holds 300
+  rows for each of `StrategyMaxP2PM`, `FastF1_RuleRise2p5` and `FastF1_RuleRise2p5_Chip`, with
+  no duplicate label, season and team. Every row's `race` is the season's last: 22 in 2023, and
+  24 in 2024 and 2025. All pass, so the results are used.
+- **The control repeats.** `FastF1_RuleRise2p5` against P2PM is +482.7 in 2023 and +190.4 in
+  2024, exactly step 16's figures for the base on the same seed. That is expected, as the reward
+  is off before 2025 (*Step 25 agreed*).
+
+### Against `FastF1_RuleRise2p5`, the chip's effect
+
+Mean delta in points a team, with the share of teams ahead:
+
+| Season | (90, 95] | (95, 99.5] | (99.5, 100] | Pooled | Standard error | Tied | Behind |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2023 | +14.8 (14%) | +6.1 (8%) | +9.3 (12%) | **+10.1 (11%)** | 5.5 | 83% | 6% |
+| 2024 | −33.7 (16%) | −24.1 (19%) | −26.2 (24%) | **−28.0 (20%)** | 6.9 | 42% | 39% |
+| 2025 | +43.5 (70%) | +64.4 (76%) | +61.9 (71%) | **+56.6 (72%)** | 12.4 | 7% | 21% |
+
+2024 is negative in every band. The rule needed a positive pooled mean in all three seasons, so
+the chip fails.
+
+### Against P2PM, for reference
+
+| Season | `FastF1_RuleRise2p5` | `FastF1_RuleRise2p5_Chip` |
+| --- | --- | --- |
+| 2023 | +482.7 (98%) | +492.8 (98%) |
+| 2024 | +190.4 (89%) | +162.4 (85%) |
+| 2025 | +56.3 (78%) | +112.9 (84%) |
+
+Both beat P2PM in every season. 2025 here is seed 2, on step 22's teams, where the reward was
+first tried. Mean final budgets are within 0.4m of each other with and without the chip in
+every season.
+
+### What to bear in mind
+
+- **2025 is where the reward was tuned,** on these teams. The chip's gain there is measured on
+  them too.
+- **One race only.** No other chip race was tried, as agreed, so this does not show that a
+  reset can never help FastF1.
+- **2026 was not run.** Its step 17 result stands as the verdict against P2PM, without the
+  chip, as before.
+- **Step 18 reports this** among the variants tried: one label, three seasons.

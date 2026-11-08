@@ -6,8 +6,9 @@ stepping back found that the expected-points table loses how far ahead an asset 
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 23 are done.
 Step 24 is done, and step 17 is done: `FastF1_RuleRise2p5` beats P2PM in 2025 and 2026
 (`log.md`, *Step 17: the back-test on 2025–26*). It ran on 2025–26 only (`log.md`, *Step 17
-narrowed to 2025–26*). Step 25, the race-4 chip, was agreed with Alex on 2026-11-08 and is in
-progress (`log.md`, *Step 25 agreed*). Step 18 waits for it. Steps 17 and 18 were numbered
+narrowed to 2025–26*). Step 25, the race-4 chip, is done: it costs points in 2024, so it is
+not kept, and `FastF1_RuleRise2p5` stays the final strategy (`log.md`, *Step 25.3: the chip on
+2023–25*). **Step 18, the findings and close-out, is next.** Steps 17 and 18 were numbered
 9 and 10 before 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
@@ -392,6 +393,10 @@ skips any team already in its store, keyed on label, season and team only. Step 
 
 ## Step 25 — The race-4 chip
 
+**Done 2026-11-08: the chip is not kept.** Against `FastF1_RuleRise2p5` it is +10.1 points a
+team in 2023, −28.0 in 2024 and +56.6 in 2025, so it fails the rule's bar of positive in all
+three. Step 25.4 does not run. See `log.md`, *Step 25.3: the chip on 2023–25*.
+
 **Agreed with Alex on 2026-11-08** (`log.md`, *Step 25 agreed*): the proposal below as put, with
 all six open questions answered as recommended. Steps 25.2 to 25.4 carry it out. See also
 `log.md`, *Step 25 raised: the race-4 chip*.
@@ -469,6 +474,8 @@ P2PM on the same teams, so the chip's delta is the difference of their pooled de
 The bar is applied as fixed above, and the outcome logged in plain language first.
 
 ### Step 25.4 — 2026, only if the chip passes (real run)
+
+**Not run: the chip failed step 25.3's bar.**
 
 Seed 1, 500 teams a band, `--seasons 2026 --last-race 18`, `FastF1_RuleRise2p5_Chip` only, into
 a new store `outputs/fastf1_v2_step25_chip_2026.parquet`. It pairs against P2PM on step 17's
