@@ -130,3 +130,38 @@ Each gave one mismatch and a non-zero exit.
 
 The `load_odds` comparison moves to step 3, where the loader can read the
 CSV. Suite: 543 passed.
+
+## 2026-11-08 — Step 3: the loader reads the CSV; workbooks removed
+
+`load_odds` reads `data/f1_betting_odds.csv`, with `Driver`, `Constructor` and
+`Odds` as text, and scores a blank `Odds` as 0.0. `indicator_analysis` reads
+the CSV too. The 4-row test workbook became `data/test_betting_odds.csv`, and
+the step 1 test helpers and empty fixture write CSV. Both workbooks are gone,
+recoverable at `59c79ee`.
+
+Red first, in two stages so each failure meant something: with the fixture
+path changed, three reader tests failed because the reader still expected
+Excel. Switching only the format left the new blank-price test failing on the
+missing value reaching `odds_to_pct`; the blank handling then turned it green.
+
+The truncated-workbook test no longer had a realistic counterpart, since a
+truncated CSV just reads as fewer rows. It became a file missing its `Odds`
+column, which raises `KeyError`. That still needs the broad catch in
+`_load_driver_odds`, and a mutation narrowing the catch to `OSError` and
+`ValueError` turned it red. The catch's comment now names the CSV failures.
+
+**Data check**, from a scratch script: the committed loader on the workbook
+against the new loader on the CSV, for all 20 races, both asset types and
+both driver key formats. 80 calls, no differences. `indicator_analysis`'s
+snapshot detection gave the same answer on both files. Run against step 2's
+copy with one price changed, the comparison found 4 differences (race 1's
+two driver and two constructor lookups), so it can fail.
+
+**Found: `indicator_analysis` will not recognise the new columns.** It
+excludes races whose odds were taken after qualifying by the legacy column
+name, so a race captured into `Odds_Q` would be scored as if its odds were
+blind. Added as step 10, to run before the docs step.
+
+`indicator_analysis.main()` was not run; its snapshot functions were. Suite:
+544 passed, with 10 fewer warnings now the test workbook's openpyxl style
+warning has gone.

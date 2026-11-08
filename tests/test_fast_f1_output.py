@@ -15,7 +15,7 @@ from fast_f1.output import (
 
 
 def _write_odds_file(path: Path, season_year: int, race_num: int, odds_by_driver: dict[str, str]) -> Path:
-    """Write a betting odds workbook holding one race, in the layout `load_odds` reads."""
+    """Write a betting odds file holding one race, in the layout `load_odds` reads."""
     pd.DataFrame(
         {
             "Driver": list(odds_by_driver),
@@ -24,7 +24,7 @@ def _write_odds_file(path: Path, season_year: int, race_num: int, odds_by_driver
             "Race": [race_num] * len(odds_by_driver),
             "Odds": list(odds_by_driver.values()),
         }
-    ).to_excel(path, index=False)
+    ).to_csv(path, index=False)
     return path
 
 
@@ -621,7 +621,7 @@ def test_build_race_metrics_ranks_race_one_on_odds_alone(monkeypatch, tmp_path):
     _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
     # 3/2 and 24/1 imply probabilities of 0.4 and 0.04
     odds_file = _write_odds_file(
-        tmp_path / "odds.xlsx", season_year, race_num, {"HAM": "3/2", "VER": "24/1"}
+        tmp_path / "odds.csv", season_year, race_num, {"HAM": "3/2", "VER": "24/1"}
     )
 
     metrics = build_race_metrics(season_year, race_num, odds_file=odds_file).set_index("Driver")
@@ -643,7 +643,7 @@ def test_build_race_metrics_zeroes_odds_when_lookup_fails(monkeypatch, tmp_path,
     _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
     # `odds_to_pct` raises ValueError on a price it cannot parse
     odds_file = _write_odds_file(
-        tmp_path / "odds.xlsx", season_year, race_num, {"HAM": "nonsense", "VER": "24/1"}
+        tmp_path / "odds.csv", season_year, race_num, {"HAM": "nonsense", "VER": "24/1"}
     )
 
     caplog.set_level("WARNING", logger="fast_f1.output")
@@ -669,7 +669,7 @@ def test_build_race_metrics_does_not_multiply_rows_for_repeated_drivers(monkeypa
     )
     monkeypatch.setattr("fast_f1.output.get_race_results", lambda season, race: repeated)
     odds_file = _write_odds_file(
-        tmp_path / "odds.xlsx", season_year, race_num, {"HAM": "3/2", "VER": "24/1"}
+        tmp_path / "odds.csv", season_year, race_num, {"HAM": "3/2", "VER": "24/1"}
     )
 
     metrics = build_race_metrics(season_year, race_num, odds_file=odds_file)
@@ -933,30 +933,28 @@ def test_build_race_metrics_before_results_raises_when_no_session_names_a_driver
     assert "LEC" in caplog.text
 
 
-def test_build_race_metrics_survives_a_corrupt_odds_workbook(monkeypatch, tmp_path, caplog):
-    """A damaged spreadsheet must degrade the odds indicator, not abort the run."""
+def test_build_race_metrics_survives_a_damaged_odds_file(monkeypatch, tmp_path, caplog):
+    """A damaged odds file must degrade the odds indicator, not abort the run."""
     season_year, race_num = 2025, 1
     _patch_minimal_race(monkeypatch, season_year, race_num, ["HAM", "VER"])
 
-    # A truncated workbook is the realistic corruption: still recognisably an
-    # xlsx, so pandas gets as far as unzipping it and raises BadZipFile, which
-    # derives from Exception rather than OSError/ValueError
-    corrupt = tmp_path / "f1_betting_odds.xlsx"
-    source = Path("data/f1_betting_odds.xlsx").read_bytes()
-    corrupt.write_bytes(source[: len(source) // 4])
+    # A file that has lost its Odds column reads without error and then raises
+    # KeyError, which derives from neither OSError nor ValueError
+    damaged = tmp_path / "f1_betting_odds.csv"
+    damaged.write_text("Driver,Constructor,Season,Race\nHAM,CON,2025,1\n")
 
     caplog.set_level("WARNING", logger="fast_f1.output")
-    metrics = build_race_metrics(season_year, race_num, odds_file=corrupt)
+    metrics = build_race_metrics(season_year, race_num, odds_file=damaged)
 
     assert list(metrics["OddsRank"]) == [0.0, 0.0]
     assert "odds" in caplog.text.lower()
 
 
-def test_build_race_metrics_does_not_read_the_real_odds_spreadsheet(monkeypatch):
+def test_build_race_metrics_does_not_read_the_real_odds_file(monkeypatch):
     """Tests must not silently pick up live odds data.
 
     2026 race 9 with ANT and RUS is a real, populated row set in
-    data/f1_betting_odds.xlsx, so without isolation this would score them from
+    data/f1_betting_odds.csv, so without isolation this would score them from
     the live file rather than from the test's own inputs.
     """
     season_year, race_num = 2026, 9

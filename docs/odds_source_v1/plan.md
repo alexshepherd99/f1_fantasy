@@ -20,14 +20,7 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 2. ~~Convert the real odds workbook to CSV, beside it~~ — done 2026-11-08,
    see log *Step 2*. Its `load_odds` comparison runs in step 3.
 
-3. **Switch the loader to CSV.** `load_odds` reads CSV with odds columns as
-   text, treating a blank `Odds` as no price (0.0), which a CSV can now hold
-   for a driver missing from a run. `_FILE_BETTING_ODDS` becomes the CSV path.
-   `fast_f1/indicator_analysis.py` reads it with `read_csv`. Test fixtures
-   `data/test_betting_odds.xlsx` and any others become CSV. Then check that
-   `load_odds` gives the same dict from the CSV as from the workbook (read
-   with the old loader) for every season, race and asset type, from a scratch
-   script, and remove both odds workbooks with `git rm`.
+3. ~~Switch the loader to CSV~~ — done 2026-11-08, see log *Step 3*.
 
 4. **Parse the saved page.** `odds_source/page.py` reads an `.mhtml` file and
    returns the race name, its start time and, for the *Winner* market, each
@@ -64,6 +57,13 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
    `fast_f1.cli` does, takes the page path (default: newest `.mhtml` in
    `outputs/`) and `--odds-file` (default: the real CSV), and prints the race,
    the column, the drivers written and any warnings.
+
+10. **Teach `indicator_analysis` the new columns**, test first, before step 9.
+   It finds which snapshot each race's `Odds` came from by matching columns,
+   then excludes races whose odds knew qualifying (`ODDS_LEAK_SNAPSHOT`,
+   `Odds_Post_Quali`) and splits out pre-weekend ones
+   (`ODDS_PRE_WEEKEND_SNAPSHOT`, `Odds_Pre_Weekend`). A captured race would
+   match `Odds_Q` or `Odds_PreFP1` instead, so neither rule would apply.
 
 9. **Docs.** `README.md` (odds input: CSV, new columns, the capture command),
    `CLAUDE.md` (the workbook references and the new package), `BACKLOG.md`

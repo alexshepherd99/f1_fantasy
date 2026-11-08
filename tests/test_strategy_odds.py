@@ -4,7 +4,7 @@ from common import AssetType
 from linear.strategy_odds import StrategyBettingOdds
 from linear.strategy_base import VarType
 
-_TEST_ODDS_FILE = "data/test_betting_odds.xlsx"
+_TEST_ODDS_FILE = "data/test_betting_odds.csv"
 
 
 def test_strategy_odds_load_data():

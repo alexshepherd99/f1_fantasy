@@ -57,10 +57,10 @@ def _ensure_parent_directory(output_path: Path) -> None:
 def _load_driver_odds(season_year: int, race_num: int, odds_file: Path | str) -> dict[str, float]:
     """Implied probabilities keyed by driver code, empty when unavailable.
 
-    Odds are a hand-maintained spreadsheet covering only part of the archive, so
-    a race without them is normal rather than exceptional. Any failure to read
-    them degrades the odds indicator to zero for the whole race instead of
-    aborting a historical run that is otherwise computable.
+    Odds cover only part of the archive, so a race without them is normal
+    rather than exceptional. Any failure to read them degrades the odds
+    indicator to zero for the whole race instead of aborting a historical run
+    that is otherwise computable.
     """
     try:
         return load_odds(
@@ -71,11 +71,11 @@ def _load_driver_odds(season_year: int, race_num: int, odds_file: Path | str) ->
             qualify_driver_with_constructor=False,
         )
     except Exception as exc:
-        # Deliberately broad: the readers underneath raise types that share no
-        # useful base class - a truncated workbook gives zipfile.BadZipFile and
-        # a structurally invalid one openpyxl's InvalidFileException, neither of
-        # which derives from OSError or ValueError. Odds are an optional signal,
-        # so no failure to read them justifies losing an otherwise computable race.
+        # Deliberately broad: a damaged file fails in types that share no useful
+        # base class - a missing file gives OSError, a bad price ValueError and a
+        # lost column KeyError, which derives from neither. Odds are an optional
+        # signal, so no failure to read them justifies losing an otherwise
+        # computable race.
         logger.warning(
             "Could not load betting odds for season %s race %s (%s: %s); "
             "scoring the odds indicator as zero for every driver",

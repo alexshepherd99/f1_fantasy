@@ -3,7 +3,7 @@ import pytest
 from common import AssetType
 from import_data.odds import load_odds, odds_to_pct
 
-_TEST_ODDS_FILE = "data/test_betting_odds.xlsx"
+_TEST_ODDS_FILE = "data/test_betting_odds.csv"
 
 
 def test_odds_to_pct():
@@ -68,6 +68,23 @@ def test_load_odds():
     }
     for k in dict_con_exp.keys():
         assert pytest.approx(dict_con[k], 0.001) == dict_con_exp[k]
+
+
+def test_load_odds_treats_a_blank_price_as_no_price(tmp_path):
+    # A capture run leaves Odds blank for a driver it found no price for
+    odds_file = tmp_path / "odds.csv"
+    odds_file.write_text(
+        "Driver,Constructor,Season,Race,Odds\n"
+        "DRV_A,CON_1,1900,1,9/2\n"
+        "DRV_B,CON_1,1900,1,\n"
+    )
+
+    dict_drv = load_odds(ass_typ=AssetType.DRIVER, season_year=1900, race_num=1, fn=str(odds_file))
+    assert dict_drv["DRV_A@CON_1"] == pytest.approx(2 / 11, abs=0.0001)
+    assert dict_drv["DRV_B@CON_1"] == 0.0
+
+    dict_con = load_odds(ass_typ=AssetType.CONSTRUCTOR, season_year=1900, race_num=1, fn=str(odds_file))
+    assert dict_con["CON_1"] == pytest.approx(2 / 11, abs=0.0001)
 
 
 def test_load_odds_driver_code_only():

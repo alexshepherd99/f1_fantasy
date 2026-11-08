@@ -1,4 +1,3 @@
-import pandas as pd
 import pytest
 
 
@@ -29,15 +28,15 @@ def isolate_f1_credentials(monkeypatch, tmp_path_factory):
 
 @pytest.fixture(scope="session")
 def empty_odds_file(tmp_path_factory):
-    """A betting odds workbook with the real columns and no rows."""
-    path = tmp_path_factory.mktemp("betting_odds") / "empty_betting_odds.xlsx"
-    pd.DataFrame(columns=["Driver", "Constructor", "Season", "Race", "Odds"]).to_excel(path, index=False)
+    """A betting odds file with the real columns and no rows."""
+    path = tmp_path_factory.mktemp("betting_odds") / "empty_betting_odds.csv"
+    path.write_text("Driver,Constructor,Season,Race,Odds\n")
     return path
 
 
 @pytest.fixture(autouse=True)
 def isolate_betting_odds(monkeypatch, empty_odds_file):
-    """Keep `fast_f1` metric tests off the real betting odds spreadsheet.
+    """Keep `fast_f1` metric tests off the real betting odds file.
 
     `build_race_metrics` reads the odds file for whatever season and race it is
     given, so a test using real codes for a covered race would silently score

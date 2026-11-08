@@ -694,7 +694,7 @@ def main() -> None:
     setup_logging()
     try:
         metrics = pd.read_excel(DEFAULT_HISTORICAL_OUTPUT)
-        odds = pd.read_excel(_FILE_BETTING_ODDS)
+        odds = pd.read_csv(_FILE_BETTING_ODDS)
     except OSError:
         logger.exception("Could not read the analysis inputs")
         raise

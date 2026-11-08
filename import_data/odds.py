@@ -3,7 +3,7 @@ import functools
 from common import AssetType
 
 
-_FILE_BETTING_ODDS = "data/f1_betting_odds.xlsx"
+_FILE_BETTING_ODDS = "data/f1_betting_odds.csv"
 
 
 def odds_to_pct(odds: str) -> float:
@@ -56,14 +56,16 @@ def load_odds(
     the bare driver code for callers such as `fast_f1` that key on the FastF1
     abbreviation. It has no effect for constructors.
     """
-    # Load and filter
-    df_all = pd.read_excel(fn)
+    # Load and filter. Prices are read as text: "1/1" or "4-3" must not be
+    # parsed as anything else.
+    df_all = pd.read_csv(fn, dtype={"Driver": str, "Constructor": str, "Odds": str})
     df_all = df_all[df_all["Season"] == season_year]
     df_all = df_all[df_all["Race"] == race_num]
 
     # Process Odds column
     df_all = df_all[["Driver", "Constructor", "Season", "Race", "Odds"]]
-    df_all["Odds"] = df_all["Odds"].apply(odds_to_pct)
+    # A blank price, a driver the capture run found no price for, scores 0.0
+    df_all["Odds"] = df_all["Odds"].fillna("").apply(odds_to_pct)
 
     # Select asset type
     if ass_typ == AssetType.CONSTRUCTOR:
