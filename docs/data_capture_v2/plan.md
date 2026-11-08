@@ -17,9 +17,10 @@ they are rewritten once it is done.
   `PYTHONPATH=. venv/bin/python -m boxbox.cli`, in the same style as
   `odds_source/`. Nothing in `races/`, `linear/` or `scripts/` changes.
 
-## The CSV layout (settled in step 2)
+## The CSV layout
 
-Proposed, from a read-only survey of the workbook on 2026-11-08 (see the log):
+Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
+(see the log):
 
 - **Two files, one per asset type**, matching the two loaders. Drivers:
   `Season,Race,Constructor,Driver,Points,Price`. Constructors:
@@ -55,10 +56,8 @@ Proposed, from a read-only survey of the workbook on 2026-11-08 (see the log):
 1. ~~Convert the derivation test's expected values to CSV~~ — done
    2026-11-08, see log *Step 1*.
 
-2. **Agree the layout and the check plan with Alex.** No code. Alex reviews
-   *The CSV layout* above and *Checks on the loader rewrite* in
-   `requirements.md`, as `verify-before-data-edits` requires. The outcome goes
-   into `requirements.md`, and this step collapses to a line.
+2. ~~Agree the layout and the check plan with Alex~~ — done 2026-11-08, see
+   log *Step 2*.
 
 3. **Convert the archive and capture the "before" state.** Done in the gap
    between two race-data updates, from the workbook as committed. Its commit

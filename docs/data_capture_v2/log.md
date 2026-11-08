@@ -196,3 +196,20 @@ no special read options.
 
 `README.md` names the new files. Suite: 594 passed. Only the derivation tests
 were run before the change, not the full suite.
+
+## 2026-11-08 — Step 2: layout and checks agreed
+
+Alex agreed the CSV layout in `plan.md` and the checks in `requirements.md`
+(*Checks on the loader rewrite*) as written. Both now read as agreed rather
+than proposed, and the layout is no longer an open question.
+
+Alex wants steps 3–5 done tonight. The workbook is committed and unchanged,
+and Brazil's results are not in it yet, so tonight is a valid window for the
+conversion, as long as the workbook is not edited until step 5 lands. After
+that, Brazil's points and the Las Vegas prices go into the CSV instead.
+
+Hand-entry into the CSV is the cost of that order. A race's lines are spread
+through the file, and saving it from a spreadsheet app could reorder rows or
+reformat numbers, which is what the layout exists to prevent. Suggested
+instead: until the fetcher exists, a session enters each race from the saved
+BoxBox copy and Alex reviews the diff. That has not been decided yet.

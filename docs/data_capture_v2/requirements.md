@@ -65,6 +65,9 @@ same day. The steps are in `plan.md`.
   Alex granted this exception to the core-module rule on 2026-11-08, on
   condition that very careful checks prove the old data and behaviour are
   preserved (see *Checks on the loader rewrite*).
+- **The CSV layout is in `plan.md`** (*The CSV layout*), agreed by Alex
+  2026-11-08: two files, a row only where an asset took part, rows in the
+  workbook's Points-sheet order, and numbers in their shortest exact form.
 - **One run per race weekend.** Alex runs the fetcher once, a few days after a
   race weekend. That run writes the race just held's points and the next
   race's prices (BoxBox's `current_price` by then). When BoxBox updates its
@@ -82,9 +85,9 @@ same day. The steps are in `plan.md`.
 ## Checks on the loader rewrite
 
 The bar is the one set for the last core-module change that could move results
-(`max_points_v1`'s `StrategyBase` DRS helper). The check plan is agreed with
-Alex before any CSV is written or any loader code is changed, as
-`verify-before-data-edits` requires. Proposed checks:
+(`max_points_v1`'s `StrategyBase` DRS helper). Agreed by Alex 2026-11-08,
+before any CSV was written or any loader code changed, as
+`verify-before-data-edits` requires:
 
 - **Same data.** Before the rewrite, `load_archive_data_season` and
   `load_all_archive_data` are run against the workbook for every season and
@@ -201,9 +204,6 @@ Each is settled at the plan step named.
 - **How does Alex correct a value BoxBox has wrong?** Failing loudly stops a
   bad write. Whether a value then gets corrected by hand in the CSV, or by
   waiting for BoxBox to fix it, is not settled. (Step 10.)
-- **The CSV layout**: columns, one file or two, row order and number format.
-  A git-diffable store only pays off if writing one race produces a diff for
-  that race alone. `plan.md` proposes a layout; Alex agrees it at step 2.
 - **Do callers need the zero points?** For now the loader fills them in, so
   what it returns stays exactly the same. Dropping them for good would change
   what the loader returns and would need checks of its own, so it is outside
