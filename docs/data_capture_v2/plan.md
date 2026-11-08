@@ -82,11 +82,7 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 
 9. ~~Decide the change, or refuse~~ — done 2026-11-08, see log *Step 9*.
 
-10. **Write the change.** Rows of the target race are replaced in place, and
-    new rows go after each asset's last row in the season, so untouched rows
-    keep their bytes. The result is written to a scratch copy first, loaded
-    through `load_archive_data_season`, and checked with the integrity
-    checks. Only then does it replace the real files.
+10. ~~Write the change~~ — done 2026-11-08, see log *Step 10*.
 
 11. **The CLI and its docs.** `PYTHONPATH=. venv/bin/python -m boxbox.cli`
     prints each asset's previous and new values, then writes. Update

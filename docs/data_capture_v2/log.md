@@ -492,3 +492,46 @@ correct race 20, since it came from the workbook. With that guard off, it
 would rewrite race 20 from BoxBox's prices with no warnings. So all 646
 earlier 2026 results agree with the archive, and the fetcher's reading of
 BoxBox reproduces race 20's line-up.
+
+## 2026-11-08 — Step 10: writing the change
+
+`boxbox/archive_file.py`'s `write_change` places a `Change` in the CSVs:
+
+- It takes out the rows of the races the change covers, and puts each new row
+  straight after the same asset's last earlier row in the season. A new asset
+  goes after the season's last row.
+- Every other line is written back as read, so its bytes do not change.
+- Both files go to a scratch folder inside the archive directory first, are
+  loaded through `load_archive_data_season`, and pass the three integrity
+  checks before `os.replace` puts them in place. On a failure nothing is
+  written, and `CaptureRefused` names the check.
+
+The expected constructor count is a parameter that defaults to
+`F1_SEASON_CONSTRUCTORS`, so the two-team fixture can be checked. The two
+`os.replace` calls are separate, so a failure between them, such as the disk
+filling, could leave one file written. Git shows that, and it is not handled
+further.
+
+**Red first.** Five tests failed on a stub. The first implementation then
+failed four of them for a fixture reason: the integrity check expected 2026's
+11 constructors. The integrity test had passed for that same wrong reason, so
+its match was tightened to the three-drivers failure it exists for.
+
+**Mutation.** Each of these was caught and restored green:
+
+- new rows always at the season's end (two tests);
+- old race rows not removed (all five);
+- the integrity check skipped.
+
+A fourth, a new asset at the end of the file rather than of its season,
+survived, because every fixture's season was last in the file. A sixth test
+with a later season's row after it now catches it.
+
+**On real data.** A scratch copy of the real archive was corrected from the
+2026-11-08 copy, with the workbook guard off, rebuilding race 20 from BoxBox.
+Both files came out byte-identical to the real ones. The fetcher reproduces
+Alex's hand entry exactly: line-up, prices, row positions and number format.
+
+One process slip: a bulk edit of the test file's `write_change` calls was made
+with `sed` rather than Edit. It also missed three of them, which were then
+made with Edit. The full diff is in this commit.
