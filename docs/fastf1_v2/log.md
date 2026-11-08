@@ -2999,3 +2999,96 @@ tests.
 ### Not run
 
 Not yet run on real data. Step 17's timing run is the first.
+
+That timing run, below, ran it on real data: every 2026 row stopped at race 18.
+
+## 2026-11-08 — Step 17: the back-test on 2025–26
+
+### In plain language
+
+**`FastF1_RuleRise2p5` beats P2PM in both seasons, and by a wide margin in 2026, the season
+nothing was tuned on.** Through 2026 race 18 it is 338 points a team ahead, 9.2%, and ahead on
+98% of teams. Even its worst tenth of teams is 156 points ahead. In 2025 it is 36 points a team
+ahead on the mean and 99 on the median, ahead on 73% of teams, but its worst tenth is 420
+behind, so 2025's lead is narrower and less even. It passes the harness's bar, a positive
+pooled mean delta in every season run.
+
+P2PM's race-4 chip is worth 168 points a team to it in 2025 and 131 in 2026. Without it, P2PM
+trails FastF1 by 204 and 469.
+
+### What was run
+
+A timing run first: 2026 with `--last-race 18`, both labels, 3 teams a band, seed 1, into the
+scratchpad. 27 simulations in 19s at a peak RSS of 363 MB, every row stopping at race 18.
+
+Then, from a throwaway script that ran the two commands in order and checked the store between
+them, at 500 teams a band, seed 1, with `--strategies FastF1_RuleRise2p5 StrategyMaxP2PMNoReset
+--output outputs/fastf1_v2_results.parquet`:
+
+- `--seasons 2025 --summary outputs/fastf1_v2_summary_2025.csv`: exit 0, 33.9 minutes, peak
+  RSS 265 MB;
+- `--seasons 2026 --last-race 18 --summary outputs/fastf1_v2_summary_2026.csv`: exit 0, 27.6
+  minutes, peak RSS 363 MB.
+
+Neither log has an error or warning. The comparisons use `pair_with_baseline`,
+`season_summary` and `verdict` from `backtest/metrics.py`, from a throwaway script, not kept.
+
+### The checks
+
+- **Before the run:** none of the store and summary files existed, and the script confirmed
+  the store held only 2025's rows before the 2026 command.
+- **After the run:** both logs read "skipped 0 simulations already in the store". The store
+  holds 1,500 rows per label per season, with no duplicate label, season and team. Every 2025
+  row's `race` is 24 and every 2026 row's is 18. All pass, so the results are reported.
+- **No look-ahead through the odds.** The odds file covers 2026 only, and its race 4 `Odds`
+  are the post-qualifying snapshot, taken after teams lock. Neither reaches this result: the
+  signal's inputs are rolling driver and constructor points and the late practice session
+  (`fast_f1/signal.py:41-43`), with no odds, as the working assumptions agreed on 2026-11-01.
+
+### Against P2PM
+
+Mean delta in points a team, with the share of teams ahead of P2PM:
+
+| Season | Label | (90, 95] | (95, 99.5] | (99.5, 100] | Pooled | Median | 10th percentile |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2025 | `FastF1_RuleRise2p5` | +26.6 (70%) | +35.5 (74%) | +45.7 (74%) | **+35.9 (73%)** | +99.0 | −420.2 |
+| 2025 | `StrategyMaxP2PMNoReset` | −153.5 (12%) | −185.5 (11%) | −164.9 (10%) | **−168.0 (11%)** | −33.0 | −583.0 |
+| 2026 | `FastF1_RuleRise2p5` | +335.7 (98%) | +338.4 (98%) | +340.1 (98%) | **+338.1 (98%)** | +336.5 | +155.9 |
+| 2026 | `StrategyMaxP2PMNoReset` | −128.1 (14%) | −136.7 (11%) | −129.0 (16%) | **−131.3 (14%)** | −114.5 | −309.1 |
+
+As a percentage, `FastF1_RuleRise2p5` is +0.8% in 2025 and +9.2% in 2026. The harness's
+verdict over the two seasons: it beats P2PM, positive in both. `StrategyMaxP2PMNoReset` is
+negative in both.
+
+Against `StrategyMaxP2PMNoReset`, so without the chip, `FastF1_RuleRise2p5` is +203.9 points a
+team in 2025 (83% ahead) and +469.3 in 2026 (99%).
+
+### Final totals and budgets
+
+| Season | Label | Mean points | Median points | Mean final budget (1m) | Budget against P2PM |
+| --- | --- | --- | --- | --- | --- |
+| 2025 | `StrategyMaxP2PM` | 4,947.9 | 5,006.5 | 138.43 | — |
+| 2025 | `FastF1_RuleRise2p5` | 4,983.8 | 5,107.0 | 135.28 | −3.15 |
+| 2025 | `StrategyMaxP2PMNoReset` | 4,779.9 | 4,904.0 | 135.89 | −2.54 |
+| 2026 | `StrategyMaxP2PM` | 3,765.1 | 3,824.5 | 126.79 | — |
+| 2026 | `FastF1_RuleRise2p5` | 4,103.2 | 4,133.0 | 129.53 | +2.74 |
+| 2026 | `StrategyMaxP2PMNoReset` | 3,633.8 | 3,658.5 | 126.51 | −0.28 |
+
+2026 totals and budgets are at race 18.
+
+### What to bear in mind
+
+- **2025 is flattered.** The reward was chosen on 2025, from five values over steps 22 and 23,
+  on seeds 2 and 3. This is seed 1, so the teams differ, but the season does not.
+- **2026 is the fair read, but it is 18 races, one season, and a 2026-only model.** Nothing was
+  tuned on 2026. Its signal measures come from 2023–25, as `requirements.md` agreed.
+- **2023–24 were not run.** The reward is off there, so the strategy is the base, which step 16
+  put ahead of P2PM by 482.7 and 190.4 points a team, on seed 2 at 300 teams a season.
+- **Back-test P2PM is not Alex's live team.** His live 2026 total through race 18 is 4,227,
+  with chips and a betting-odds start, against back-test P2PM's mean of 3,765 from sampled
+  starts.
+- **Stored rows are final-race only,** so this says nothing about when in 2026 the lead built.
+
+### Not run
+
+No race-by-race re-simulation of 2026. Step 18, the findings and close-out, has not started.

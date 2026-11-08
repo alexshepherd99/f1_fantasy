@@ -4,7 +4,8 @@
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 23 are done.
-Step 24 is done. Step 17 is next, with `FastF1_RuleRise2p5` as the chosen strategy, on 2025–26
+Step 24 is done, and step 17 is done: `FastF1_RuleRise2p5` beats P2PM in 2025 and 2026 (`log.md`,
+*Step 17: the back-test on 2025–26*). Step 18 is next. Step 17 ran with `FastF1_RuleRise2p5` as the chosen strategy, on 2025–26
 only (`log.md`, *Step 17 narrowed to 2025–26*). Steps 17 and 18 were numbered 9 and 10 before
 2026-11-07.
 
@@ -348,6 +349,9 @@ Test-first, one concern per commit:
 `races/`, `linear/`, `import_data/` and `scripts/` are unchanged.
 
 ## Step 17 — The back-test (real run)
+
+Done 2026-11-08: `FastF1_RuleRise2p5` is +35.9 points a team against P2PM in 2025 and +338.1 in
+2026 through race 18. See `log.md`, *Step 17: the back-test on 2025–26*.
 
 The choice from steps 22 and 23 is logged before this starts: `FastF1_RuleRise2p5`.
 
