@@ -3211,3 +3211,31 @@ Alex confirmed that 2025 runs with the reward at 2.5 (`backtest/cli.py:38`). In 
 reward has no effect, since the game's price rules start in 2025 (`fast_f1/signal.py:68-71`).
 There, the chip label is the base strategy plus the chip. Alex sees no need to refine the
 reward further for now.
+
+## 2026-11-08 — Step 25.2: the chip label
+
+`with_race4_chip(base, label)` in `backtest/variants.py` returns a subclass of `base` that, at
+race 4 and after the base's `__init__`, allows moves equal to the team's size, as
+`StrategyMaxP2PM.__init__` does. `FastF1_RuleRise2p5_Chip` is registered in `backtest/cli.py`
+on `FastF1_RuleRise2p5`. The copy is an R12 ledger row in `docs/backtest_v1/requirements.md`.
+
+### How it was tested
+
+- **Red first, for the right reason.** A stub that returned the base with no chip failed the
+  race-4 tests (moves 2, not 7) and the run test (points differ from P2PM from race 4). The
+  command-line tests failed because the label was not registered.
+- **The strongest check:** `StrategyMaxP2PMNoReset` with the chip added plays P2PM's 2025
+  season race for race. A guard in the same test confirms that P2PM without the chip differs
+  on that team, so the check can fail.
+- **Mutations**, each restored from a copy and green again before the next:
+  - chip at every race: the race 3 and 5 tests and the run test fail;
+  - no label check: both label tests fail;
+  - the command-line label as a chipless subclass of `FastF1_RuleRise2p5`: only race 4 fails,
+    0 moves against 2.
+- **A fixture change.** The variant tests now build at races 3 to 5, which `TSU@VRB` cannot,
+  as he moved to Red Bull at race 3 of 2025. Those builds use `ALB@WIL` in his place. The
+  run tests keep the old team, because on the new one P2PM scores the same with and without
+  the chip. `_StrategyWithExtra` now derives from `StrategyMaxBudget`, as `StrategyZeroStop`
+  sets its own moves.
+
+The full suite passed, 534 tests.
