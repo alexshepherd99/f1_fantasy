@@ -95,3 +95,54 @@ CSV to leave them out. The checks on the loader rewrite are unaffected, as
 they compare what the loaders return rather than the files. Whether callers
 still need the zeros, and so whether the loader has to fill them in, is a new
 open question.
+
+## 2026-11-08 — Plan written
+
+`plan.md` has eleven steps and one gate. Steps 1–5 move the archive to CSV and
+are planned in detail. Steps 6–11 are the BoxBox analysis and fetcher, only
+outlined until the analysis is done. `requirements.md`'s chunk list now points
+to the plan, and each open question names the step that settles it.
+
+**Workbook survey.** A read-only scratch script surveyed every sheet of
+`f1_fantasy_archive.xlsx` to decide the CSV layout:
+
+- No duplicate assets, no all-empty rows or race columns, and every cell is
+  numeric.
+- Each season's Points and Price sheets list the same assets and agree on
+  which cells are empty when paired by name. But they list the assets **in
+  different orders** in every sheet pair except 2026 drivers. Today's loader
+  returns rows in the Points sheet's order, because it merges price onto
+  points.
+- The loaded types differ by asset: constructor points are integers and
+  driver points floats, since only driver sheets have gaps. Prices are floats
+  throughout.
+- 2026 race 20 holds the placeholder zeros: 22 driver rows and 11
+  constructor rows.
+
+The plan's proposed layout follows from this. The CSV rows are grouped by
+asset in the Points sheets' order, so the new loader can return exactly
+today's frames, row order included, rather than "the same after sorting".
+Order can reach the LP solver, as the 2026-09-18 hash-order fix showed, so
+matching it is cheaper than proving it does not matter. The cost is that a
+race's lines are spread through the file rather than in one block, though
+they are still the only lines that change.
+
+Other planning choices:
+
+- **No separate step for the ignored `fn`.** `data_capture_v1` put fixing
+  `load_archive_data_season`'s unused `fn` first. No test or caller passes it
+  except `fast_f1/signal.py`, which passes the default, so it blocks nothing
+  today. The rewrite in step 4 fixes it, with a test.
+- **The expected-values fixture goes first.** It is the smallest conversion
+  and independent of everything else. Only its two `Expected` sheets are read,
+  so only those are converted. The `Actual` sheets stay in git history.
+- **Conversion waits for a quiet window.** Alex keeps editing the workbook by
+  hand after each race until step 5, so steps 3 and 4 are done between two
+  race-data updates from a recorded workbook commit, and are redone if it
+  moves.
+- **The analysis waits for the end of the season.** Copies from Brazil to Abu
+  Dhabi give about five. They may contain no driver change, so step 6 also
+  checks a web archive for older versions.
+- **The first real run is likely 2027 race 1.** Only three races remain
+  after Brazil. If so, the first real run is also the fetcher's first new
+  season, which Gate 1 notes.

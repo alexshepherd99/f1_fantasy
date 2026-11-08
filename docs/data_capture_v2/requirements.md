@@ -2,8 +2,7 @@
 
 Opened 2026-11-08 from the `BACKLOG.md` item *Get fantasy points and prices
 from BoxBox F1 Fantasy*, replacing `data_capture_v1`, which Alex cancelled the
-same day. `plan.md` is not written yet; the open questions below need answers
-first.
+same day. The steps are in `plan.md`.
 
 ## The problem (original backlog entry, unchanged)
 
@@ -168,36 +167,17 @@ not yet run", which is one row with a price and no points. That turns the
 null-vs-zero rule in `CLAUDE.md`, which a person has to remember, into a
 property of the layout.
 
-## Rough shape of the work
+## Shape of the work
 
-Chunks 1–4 carry over from `data_capture_v1`. Chunks 5 and 6 are new.
-
-1. **Make the archive path injectable end to end.** `load_archive_data_season`
-   accepts `fn` but never passes it to `load_archive_sheet` (:291-292), so
-   every caller reads the real archive whatever it passes. There is also no
-   fixture archive. Both block test-first work on the rest.
-2. **Settle the long-format schema**: the columns, one CSV or two (drivers,
-   constructors), and a fixed row order and number format.
-3. **Migrate the data and prove equivalence.** A one-off converter from the 16
-   existing sheets to CSV, plus a check that loads both and asserts the frames
-   are identical for every season and asset type. Under
-   `verify-before-data-edits`, the check plan is agreed before any CSV is
-   written. `odds_source_v1`'s log (*Step 2* and *Step 3*) has a conversion
-   method worth reusing.
-4. **Rewrite `import_history.py` to read the CSV**, keeping both loaders'
-   signatures and return shapes as they are, and keeping the integrity checks,
-   under *Checks on the loader rewrite*. Then remove
-   `f1_fantasy_archive.xlsx`, and convert and remove
-   `test_expected_values.xlsx`.
-5. **Analyse past BoxBox files** for mid-season driver changes and for how
-   to tell that the files have not been updated yet (see *Open questions*).
-6. **Build the BoxBox fetcher.** Fetch both files, map rounds and identifiers,
-   validate against the archive, write the two races' rows, re-run the integrity
-   checks and only then save. The previous values for each asset are shown
-   alongside, so a wrong value or a driver in the wrong seat stands out before
-   commit. That idea is carried over from `data_capture_v1`'s writer.
+The steps are in `plan.md`. Moving the archive to CSV comes first (plan steps
+1–5), then the analysis of saved BoxBox copies (step 6), then the fetcher
+(steps 7–11). The fetcher shows each asset's previous values alongside the
+new ones, so a wrong value or a driver in the wrong seat stands out before
+commit. That idea is carried over from `data_capture_v1`.
 
 ## Open questions
+
+Each is settled at the plan step named.
 
 - **Who gets a row in a race?** This needs a historical analysis of the
   BoxBox files before the rule is designed, above all of what they showed
@@ -207,28 +187,27 @@ Chunks 1–4 carry over from `data_capture_v1`. Chunks 5 and 6 are new.
   archive records the same seat changes from its side (for example `HAD@RED`
   has no rows for races 12–14). The analysis works from the weekly copies
   saved from 2026-11-08, so it gets richer as the copies build up. Whether a
-  web archive holds versions from before then has not been checked.
+  web archive holds versions from before then has not been checked. (Step 6.)
 - **How does the fetcher tell that BoxBox has not updated yet?** The
   candidates are `has_actual` for the race just held, `generated_at` against
   the race date, and whether any price moved. The analysis above should show
-  which of these are reliable.
+  which of these are reliable. (Steps 6 and 9.)
 - **Which rows may a re-run rewrite?** The race just held and the next race
   are the obvious ones. The rule has to keep every value the workbook held
-  fixed, apart from filling in 2026 race 20's points.
+  fixed, apart from filling in 2026 race 20's points. (Step 10.)
 - **How are the identifier maps kept?** Fixed tables in code, as
   `odds_source`'s `TEAM_CODES` does, raising on anything they lack, or derived
-  from the archive's previous race.
+  from the archive's previous race. (Step 8.)
 - **How does Alex correct a value BoxBox has wrong?** Failing loudly stops a
   bad write. Whether a value then gets corrected by hand in the CSV, or by
-  waiting for BoxBox to fix it, is not settled.
-- **Row order and number format in the CSV.** A git-diffable store only pays
-  off if writing one race produces a diff for that race alone. Settle this
-  with the schema in chunk 2.
-- **Migrating mid-season.** 2026 is live, with race 20 holding prices but no
-  points yet. The migration has to carry that state over.
-- **Do callers need the zero points?** If nothing above the loader needs them,
-  the loader returns empty points for a race not yet run. That would change
-  what it returns, so it needs a check of its own.
+  waiting for BoxBox to fix it, is not settled. (Step 10.)
+- **The CSV layout**: columns, one file or two, row order and number format.
+  A git-diffable store only pays off if writing one race produces a diff for
+  that race alone. `plan.md` proposes a layout; Alex agrees it at step 2.
+- **Do callers need the zero points?** For now the loader fills them in, so
+  what it returns stays exactly the same. Dropping them for good would change
+  what the loader returns and would need checks of its own, so it is outside
+  this plan.
 
 ## Definition of done
 
