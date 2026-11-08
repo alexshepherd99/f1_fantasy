@@ -24,13 +24,7 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 
 4. ~~Parse the saved page~~ — done 2026-11-08, see log *Step 4*.
 
-5. **Find the race and the column.** Both come from the page and FastF1's
-   event schedule, not from the clock, so a rerun of the same page gives the
-   same answer. The race is the event whose race start matches the page's; no
-   match stops the run. The page's save time (its `Date` header) must be
-   before that start. The column (D14) is the last session whose scheduled
-   start was at least an hour before the save time; none means
-   `Odds_PreFP1`. Tests stub the FastF1 boundary.
+5. ~~Find the race and the column~~ — done 2026-11-08, see log *Step 5*.
 
 6. **Map names and teams.** `get_session_drivers` also returns each driver's
    first and last names. A page name matches on its accent-free, case-free

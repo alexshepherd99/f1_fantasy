@@ -202,3 +202,34 @@ Latin-1, and taking the lower middle on an even count turned 1, 2, 5, 2 and
 **Run on Alex's saved Brazil page:** 22 drivers, Ocon dropped (1 of 25
 bookmakers), and every price equal to the survey's median decimal less 1.
 Suite: 552 passed.
+
+## 2026-11-08 — Step 5: the race and the column are found
+
+`odds_source/schedule.py`'s `find_capture_point(page, schedule)` returns a
+`CapturePoint` of season, race and snapshot column. It takes the schedule as
+an argument, so tests build schedules in FastF1's shape and patch nothing; the
+CLI in step 8 fetches it with `fast_f1.api.get_event_schedule`.
+`SNAPSHOT_COLUMNS` lists the D14 columns in weekend order, for step 7.
+
+**The page's race start is not FastF1's.** The real schedule has Brazil's race
+at 17:00 UTC (14:00 local). The page says 20:00 UTC, three hours later, for no
+reason found. An exact match, as the plan had it, would never have matched.
+The race is instead the one starting within 12 hours of the page's; weekends
+are at least a week apart, so this cannot pick the wrong race. The
+saved-before-the-race check uses FastF1's start.
+
+The other rules, as planned: a session counts as done an hour after its
+scheduled start, the column is the last done session's, and none means
+`Odds_PreFP1`. Added: a weekend holding a session with no column, such as a
+renamed format, stops the run rather than being skipped, checked across every
+session and not only the one chosen.
+
+Red was the import failure only, so behaviour was checked by five mutations,
+restored and green between each: matching within 1 hour instead of 12 (7 red),
+no saved-after-race check (1), a session done at its start (1), no
+unknown-session check (1), and the first done session instead of the last
+(4).
+
+**Run on the real Brazil page and the live 2026 schedule:** season 2026,
+race 20, `Odds_Q`, which is right for a page saved on race morning, and race
+20 is Brazil in the odds file. Suite: 560 passed.
