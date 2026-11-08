@@ -3115,3 +3115,73 @@ No race-by-race re-simulation of 2026. Step 18, the findings and close-out, has 
   with the rule fixed first, and any 2026 run of it logged as a second look.
 
 The proposal, the open questions and what is already known are in `plan.md`, step 25.
+
+## 2026-11-08 — Step 25.1: convergence without the chip
+
+### In plain language
+
+Alex asked whether, without the chip, FastF1 settles on a small set of line-ups soon after race
+4 anyway. If it did, the chip could only bring forward a race or two of scoring. **It does in
+2023, but not in 2024 or 2025.** In those seasons FastF1's teams stay spread out much longer
+than P2PM's, even P2PM without the chip. At race 6 FastF1 still holds 57 and 98 distinct
+line-ups where P2PM without the chip holds 16 and 52. 2025 draws level with it around race 8 to
+10, then spreads out again. From race 5 the median is 22 a race in both seasons, against 11 and
+8. So the chip has more to do for FastF1 than for
+P2PM. Whether that turns into points is what the chip back-test measures. This step does not
+answer it.
+
+### What was run
+
+`FastF1_RuleRise2p5`, no chip, re-simulated race by race through `backtest/per_race.simulate_per_race`
+on the same 1,500 teams a season as max_points_v1's per-race run: seed 1, 500 a band, default
+edges, 2023–25. That makes the line-up counts directly comparable with P2PM's. 2026 was left out
+on purpose, as step 25 is to be decided on 2023–25. A throwaway scratchpad script, not kept, ran
+the three seasons in parallel into new stores, `outputs/fastf1_v2_step25_convergence_{2023,2024,2025}.parquet`.
+That took about 15 minutes, and every team ran every race with none skipped.
+
+A line-up is the sorted `D1`–`D5` plus sorted `C1`–`C2`, with DRS ignored, as in max_points_v1. Per
+season and race the counts are written to `outputs/fastf1_v2_step25_convergence_lineups.csv`.
+**Check:** the same counting script, run on `outputs/max_points_v1_per_race.parquet`, reproduced
+every P2PM and P2PM-without-chip figure in `docs/max_points_v1/log.md`'s line-up table and its
+modal shares exactly.
+
+### Distinct line-ups per race, of 1,500 teams
+
+| Season | Strategy | R3 | R4 | R5 | R6 | R8 | R10 | R12 | Median from R5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2023 | FastF1 | 284 | 29 | 8 | 4 | 5 | 5 | 5 | 5 |
+| 2023 | P2PM, no chip | 268 | 17 | 4 | 3 | 3 | 2 | 3 | 1.5 |
+| 2023 | P2PM | 268 | 1 | 1 | 3 | 3 | 2 | 3 | 1 |
+| 2024 | FastF1 | 633 | 268 | 141 | 57 | 51 | 46 | 33 | 22 |
+| 2024 | P2PM, no chip | 432 | 111 | 28 | 16 | 13 | 13 | 10 | 11 |
+| 2024 | P2PM | 432 | 7 | 7 | 7 | 13 | 11 | 9 | 8.5 |
+| 2025 | FastF1 | 754 | 415 | 174 | 98 | 58 | 26 | 16 | 22 |
+| 2025 | P2PM, no chip | 348 | 109 | 70 | 52 | 53 | 22 | 6 | 8 |
+| 2025 | P2PM | 348 | 10 | 13 | 14 | 23 | 11 | 4 | 6.5 |
+
+Mean share of teams on the most common line-up, from race 5: FastF1 53%, 27% and 31% in
+2023–25, against 78%, 52% and 42% for P2PM without the chip.
+
+### Points on and off the most common line-up, races 4–10
+
+This is the cost of converging slowly that Alex asked for alongside the counts: mean race points of
+teams on that race's most common line-up, minus everyone else's. Averaged over races 4–10 it is
++10.9 in 2023, −21.5 in 2024 and +8.7 in 2025. Race by race it runs from −53 to +33, with
+the sign changing within every season.
+
+**This is weak evidence and does not settle whether the chip helps.** In 2024 and 2025 the most
+common line-up holds only 10–28% of teams in races 5–10, so "everyone else" is dozens of different
+line-ups. In 2024 the most common line-up also scored worse than the rest in six of those seven
+races. Converging fast only pays if the line-up converged on is the better one, and this cannot
+tell which it is.
+
+### What to bear in mind
+
+- **Why FastF1 stays spread out is reasoned, not measured.** Its practice-session and odds
+  inputs change every weekend, so the best line-up moves from race to race and teams two moves a
+  race apart keep chasing it. P2PM's rolling points move more slowly.
+- **More distinct paths also mean FastF1's back-test results rest on more independent
+  evidence than P2PM's.** This matters for how much weight step 17's standard errors can carry,
+  though 2023 is still close to a single path.
+- **Nothing here measures the chip's value.** That is the chip back-test in step 25's
+  proposal, still to be agreed.

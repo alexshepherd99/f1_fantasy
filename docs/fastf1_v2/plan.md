@@ -392,9 +392,13 @@ skips any team already in its store, keyed on label, season and team only. Step 
 
 ## Step 25 — The race-4 chip (to be discussed first)
 
-**Not started. Alex asked on 2026-11-08 to discuss it in a fresh session before anything is
+**In discussion. Alex asked on 2026-11-08 to discuss it in a fresh session before anything is
 built or run.** Everything below is a proposal for that discussion, not an agreed plan. See
 `log.md`, *Step 25 raised: the race-4 chip*.
+
+**Step 25.1, done 2026-11-08:** does FastF1 converge on a few line-ups shortly after race 4
+without the chip? It does in 2023, but not in 2024 or 2025. See `log.md`, *Step 25.1:
+convergence without the chip*. The chip back-test itself has not started.
 
 ### The question
 
