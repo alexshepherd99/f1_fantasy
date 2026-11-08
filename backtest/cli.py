@@ -78,6 +78,11 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--output", default=DEFAULT_OUTPUT, help="per-team results parquet, resumed from if present")
     parser.add_argument("--summary", default=DEFAULT_SUMMARY, help="summary CSV; the verdict is written beside it")
+    parser.add_argument(
+        "--last-race", type=int, default=None,
+        help="race to stop every season at (default: every priced race); give it a store of its own, "
+             "as stored rows are keyed without it and a run to a different race would reuse them",
+    )
 
     args = parser.parse_args(argv)
     try:
@@ -98,6 +103,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         args.bands,
         args.output,
         args.summary,
+        last_race=args.last_race,
     )
 
 

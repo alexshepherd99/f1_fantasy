@@ -172,7 +172,7 @@ def test_invalid_arguments_are_rejected(argv):
 
 def test_main_calls_run_backtest_with_the_parsed_values(monkeypatch):
     calls = []
-    monkeypatch.setattr(cli, "run_backtest", lambda *args: calls.append(args))
+    monkeypatch.setattr(cli, "run_backtest", lambda *args, **kwargs: calls.append((args, kwargs)))
 
     main([
         "--seasons", "2024",
@@ -182,8 +182,14 @@ def test_main_calls_run_backtest_with_the_parsed_values(monkeypatch):
         "--bands", "95", "99.5", "100",
         "--output", "out.parquet",
         "--summary", "out.csv",
+        "--last-race", "18",
     ])
 
     assert calls == [(
-        [2024], 20, 7, [StrategyZeroStop, StrategyMaxBudget], [95.0, 99.5, 100.0], "out.parquet", "out.csv",
+        ([2024], 20, 7, [StrategyZeroStop, StrategyMaxBudget], [95.0, 99.5, 100.0], "out.parquet", "out.csv"),
+        {"last_race": 18},
     )]
+
+
+def test_last_race_defaults_to_every_priced_race():
+    assert parse_arguments(["--strategies", "StrategyZeroStop"]).last_race is None
