@@ -12,7 +12,8 @@ The final back-test was narrowed to 2025–26 on 2026-11-08.
 
 1. Read this file and `log.md`. Read the `log.md` correction before quoting any field-wide
    driver figure from its first entry.
-2. Carry on from `plan.md`, at step 11.
+2. Carry on from `plan.md`. As of 2026-11-08 that is step 25, the race-4 chip, which starts
+   with a discussion with Alex, not with code: its open questions are listed in the step.
 
 Build a team-selection strategy on the FastF1 indicators and back-test it against
 `StrategyMaxP2PM`. Whether the indicators pick better teams than P2PM is the open
@@ -339,7 +340,8 @@ on championship rolling points.
 
 Withdrawn: copying P2PM's race-4 chip, so that the comparison would not also measure it. Alex
 withdrew it on 2026-11-01 and decided the strategy does not play the chip (*Decisions so far*;
-`log.md`, *Two decisions from 2026-11-01, logged late*).
+`log.md`, *Two decisions from 2026-11-01, logged late*). [Reopened for discussion on
+2026-11-08, after step 17 made the clean comparison: `plan.md`, step 25.]
 
 Withdrawn: carrying the last known value to a place or position with no history in the other
 seasons. It fell away on 2026-11-07, as the redesign has no tables by place or position

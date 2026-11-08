@@ -3092,3 +3092,26 @@ team in 2025 (83% ahead) and +469.3 in 2026 (99%).
 ### Not run
 
 No race-by-race re-simulation of 2026. Step 18, the findings and close-out, has not started.
+
+## 2026-11-08 — Step 25 raised: the race-4 chip
+
+### Alex's decisions
+
+- **The live 2026 team stays on P2PM for the rest of the season.** Alex has made commitments
+  to it. Step 17's result does not change that, and no switch is to be proposed before 2026
+  ends.
+- **The race-4 chip is to be explored for the new strategy before it is finalised,** as step
+  25. Alex wants to discuss it further in a fresh session before anything starts. Step 18
+  waits for it.
+
+### The case put to Alex
+
+- **The chip was withdrawn so that the comparison would be clean.** Step 17 has now made that
+  comparison, so whether FastF1 should play the chip is a separate question. Any version played
+  live from 2027 would want it.
+- **Race 4 needs no tuning.** FastF1's rolling window is three races, as P2PM's is, so race 4 is
+  where both first have full history.
+- **The risk is 2026.** Its step 17 result has been seen, so the chip must be decided on 2023–25
+  with the rule fixed first, and any 2026 run of it logged as a second look.
+
+The proposal, the open questions and what is already known are in `plan.md`, step 25.

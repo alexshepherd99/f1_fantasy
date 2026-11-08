@@ -4,10 +4,11 @@
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 23 are done.
-Step 24 is done, and step 17 is done: `FastF1_RuleRise2p5` beats P2PM in 2025 and 2026 (`log.md`,
-*Step 17: the back-test on 2025–26*). Step 18 is next. Step 17 ran with `FastF1_RuleRise2p5` as the chosen strategy, on 2025–26
-only (`log.md`, *Step 17 narrowed to 2025–26*). Steps 17 and 18 were numbered 9 and 10 before
-2026-11-07.
+Step 24 is done, and step 17 is done: `FastF1_RuleRise2p5` beats P2PM in 2025 and 2026
+(`log.md`, *Step 17: the back-test on 2025–26*). It ran on 2025–26 only (`log.md`, *Step 17
+narrowed to 2025–26*). **Step 25, the race-4 chip, is next, and is to be discussed with Alex in
+a fresh session before any of it starts.** Step 18 waits for it. Steps 17 and 18 were numbered
+9 and 10 before 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
 settled.** The game moved to a three-race price model in 2025. It is unchanged in 2026, and
@@ -22,7 +23,7 @@ passes, and the full suite is green at the end of every step. No existing file i
 `races/`, `import_data/` or `scripts/` is edited. Anything the code has to work around in them goes
 in the R12 ledger in `docs/backtest_v1/requirements.md`.
 
-Steps run in the order 11, 14.1, 12, 13, 14.2, 15, 16, 19, 20, 21, 22, 23, 24, 17, 18.
+Steps run in the order 11, 14.1, 12, 13, 14.2, 15, 16, 19, 20, 21, 22, 23, 24, 17, 25, 18.
 
 ## Step 1 — The 2024 race 24 fault, in the code
 
@@ -389,11 +390,80 @@ skips any team already in its store, keyed on label, season and team only. Step 
   1,500 rows per label per season. Every 2025 row's `race` is 24 and every 2026 row's is 18. If
   any of these fails, the results are not reported.
 
+## Step 25 — The race-4 chip (to be discussed first)
+
+**Not started. Alex asked on 2026-11-08 to discuss it in a fresh session before anything is
+built or run.** Everything below is a proposal for that discussion, not an agreed plan. See
+`log.md`, *Step 25 raised: the race-4 chip*.
+
+### The question
+
+Is FastF1 better with P2PM's race-4 unlimited-moves chip, and if so, should the final strategy
+carry it? Step 17 compared them on unequal terms: P2PM played the chip and FastF1 did not, and
+FastF1 still won. The chip is worth 168 points a team to P2PM in 2025 and 131 in 2026 (step 17,
+against `StrategyMaxP2PMNoReset`).
+
+Alex withdrew the chip from FastF1 on 2026-11-01 so that the comparison with P2PM would not
+also measure it (`requirements.md`, *Working assumptions*). Step 17 has now made that clean
+comparison, so the chip is a separate question.
+
+### The proposal put to Alex
+
+1. **One new label, `FastF1_RuleRise2p5_Chip`:** `FastF1_RuleRise2p5` with moves set to the
+   whole team at race 4, as `StrategyMaxP2PM.__init__` does (`linear/strategy_p2pm.py:13-20`).
+   Built test-first as a subclass in `backtest/`, with no edit to `linear/`. It works because
+   `StrategyBase` reads `_max_moves` only when `execute()` calls `initialise()`
+   (`linear/strategy_base.py:241,250`). Copying P2PM's few lines is an R12 ledger entry in
+   `docs/backtest_v1/requirements.md`. In 2023–24 the reward is off, so there the label is the
+   base plus the chip.
+2. **Race 4 is not tuned.** P2PM plays it at race 4 because its three-race history is full by
+   then. FastF1's rolling window is also three races (`fast_f1/metrics.py:25`), so the same
+   reason holds, and the variant has no free value.
+3. **Decided on 2023–25, not 2026.** The chip does not depend on the price model, so all three
+   seasons can test it. Seed 2, 100 teams a band, new stores of their own, the three seasons in
+   parallel, against `FastF1_RuleRise2p5`. About 15–20 minutes.
+4. **The rule, to be fixed before any run:** the chip is kept only if its pooled mean delta
+   against `FastF1_RuleRise2p5` is positive in each of 2023, 2024 and 2025.
+5. **If kept, 2026 once:** seed 1, 500 teams a band, `--last-race 18`, in a new store, logged
+   as a second look at 2026. Step 17's 2026 result was seen before the chip was considered, so
+   that read is no longer blind, and step 18 must say so.
+
+### Open questions for the discussion
+
+- **Is a second look at 2026 acceptable,** or does step 17's result stand as the verdict, with
+  the chip only reported on 2023–25?
+- **Is the bar right?** "Positive in every season of 2023–25" against the no-chip label, or
+  something else, such as a margin.
+- **Race 4 only, or other races too?** Any other race is a tuned choice, and step 23 already
+  tried five reward values on 2025.
+- **Only the unlimited-moves chip?** The live game has others: Limitless, the 3x boost, No
+  Negative, Autopilot and the free transfer. Alex played several in 2026 (`README.md`, *2026
+  team*). None is modelled by any strategy here.
+- **Where the chip lives if kept.** A subclass in `backtest/` serves the back-test. A strategy
+  played live from 2027 would belong in `linear/`, which needs Alex's agreement per file.
+- **Is the reward still right with the chip?** A reset at race 4 changes what the team holds
+  for the rest of the season, so 2.5 was chosen without it. Re-tuning would add to the values
+  already tried on 2025.
+
+### What is already known, to save rework
+
+- **Seeds used:** 1 for step 17, the final run; 2 for steps 8, 16 and 22; 3 for step 23. A
+  tuning run reuses seed 2, as step 16 did, which keeps it apart from step 17's teams.
+- **Stores never to resume into:** `outputs/fastf1_v2_tuning_*` (step 8, old design),
+  `outputs/fastf1_v2_step16_*`, `outputs/fastf1_v2_step22_2025.parquet`,
+  `outputs/fastf1_v2_step23_2025.parquet` and `outputs/fastf1_v2_results.parquet`. Stored rows
+  are keyed on label, season and team only, so a new label in a new store is the safe pattern,
+  checked before and after as in steps 16, 22 and 23.
+- **The engine:** `scripts/run_single_team.py:120,149` gives 2 moves a race, or 3 after a race
+  that used fewer than 2. A chip race using all 7 earns no bonus at race 5, as for P2PM.
+- **Timing:** about 37 to 50 seconds per 100 simulations at these store sizes, peak RSS 265 to
+  363 MB per process.
+
 ## Step 18 — Findings and close-out
 
 - Findings in `log.md`, in plain language first: the verdict, 2026 as the fair read, 2025 as
   flattered, 2023–24 from step 16 labelled as the base, how much of any gap the chip explains,
-  the number of variants tried, and what has not been run.
+  step 25's outcome on the chip, the number of variants tried, and what has not been run.
 - A row and key findings in `BACKTEST_LOG.md`.
 - `CLAUDE.md` and `README.md` updated for the new strategy and `fast_f1/signal.py`.
 - A `BACKLOG.md` item to rerun 2026 when the season finishes, as question 7 agreed. Update the
