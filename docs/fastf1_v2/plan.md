@@ -10,9 +10,10 @@ narrowed to 2025–26*). Step 25, the race-4 chip, is done: its rule was revised
 count 2025 and 2026 only, and the chip failed that too, at −13.6 points a team in 2026, so it is
 not kept (`log.md`, *Step 25.4: the chip on 2026, under the revised rule*). Step 26 is done: the
 lead over P2PM comes in a few big races (`log.md`, *Step 26: when the lead builds, race by
-race*). Step 18, the findings and close-out, is done (`log.md`, *Step 18: findings*). **The
-effort was reopened on 2026-11-08 for step 27,** which makes the chosen setting a named class
-in `linear/`, ready to use, before the effort closes. Steps 17 and 18 were numbered 9 and 10 before
+race*). Step 18, the findings and close-out, is done (`log.md`, *Step 18: findings*). The
+effort was reopened on 2026-11-08 for step 27, which made the chosen setting a named class in
+`linear/`, `StrategyFastF1RuleRise`. **Step 27 is done, so every step is done and the effort is
+closed** (`log.md`, *Step 27: `StrategyFastF1RuleRise`*). Steps 17 and 18 were numbered 9 and 10 before
 2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
@@ -570,6 +571,8 @@ Done 2026-11-08. See `log.md`, *Step 18: findings*. The 2026 rerun is in `BACKLO
   efforts table.
 
 ## Step 27 — The chosen setting as a class in `linear/`
+
+Done 2026-11-08. See `log.md`, *Step 27: `StrategyFastF1RuleRise`*.
 
 Agreed with Alex on 2026-11-08 (`log.md`, *Step 27 agreed*). The chosen setting exists only as
 `FastF1_RuleRise2p5`, a variant in `backtest/cli.py`, and `factory_strategy` takes a class with

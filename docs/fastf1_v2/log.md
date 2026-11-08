@@ -3626,3 +3626,56 @@ effort closes, and the rest done in a fresh effort.
   optimum. Values between 1.25 and 5 other than 2.5, and combinations of levers, were never
   tried. Tuning now could only use 2025, as 2026 would stop being a fair test. The
   re-assessment in `BACKLOG.md` after the season is the place for it.
+
+## 2026-11-08 — Step 27: `StrategyFastF1RuleRise`
+
+### In plain language
+
+**The chosen strategy is now a class in `linear/`, `StrategyFastF1RuleRise`, and plays exactly
+as the back-tested `FastF1_RuleRise2p5`.** A script can pass it to `factory_strategy` like any
+other strategy. P2PM is untouched. What it still lacks for live use is a route from a race
+weekend to a pick, which is a fresh effort (`BACKLOG.md`, *Live mid-season picks*).
+
+### What was built
+
+- `StrategyFastF1RuleRise` in `linear/strategy_fastf1.py`: `StrategyFastF1` with the
+  price-rise reward fixed at 2.5, held in `PRICE_RISE_REWARD`. Passing `price_rise_reward`
+  raises `TypeError`, as Python does for a keyword given twice.
+- `backtest/cli.py`: `FastF1_RuleRise2p5` is now `make_variant(StrategyFastF1RuleRise,
+  "FastF1_RuleRise2p5")`, with the same label, so stored rows still match, and its chip variant
+  follows. `StrategyFastF1RuleRise` is registered under its own name too.
+- `linear/strategy_p2pm.py`, `linear/strategy_base.py` and `linear/strategy_factory.py` are not
+  edited, as the diffs show. `StrategyFastF1`'s defaults are unchanged.
+
+### How it was tested
+
+- **Red first, for the right reason.** A stub subclass with no settings of its own failed all
+  three new strategy tests: the reward read 0, not 2.5; passing a reward did not raise; and a
+  2025 season diverged from the back-tested variant at race 3. The command-line tests failed
+  as the labels were not built on the class and the class was not registered.
+- **The strongest check:** a 2025 season, race for race, every column, equals the one built by
+  `make_variant(StrategyFastF1, "FastF1_RuleRise2p5", price_rise_reward=2.5)`, as step 17 ran
+  it. A guard in the same test confirms `StrategyFastF1` itself differs on that team, so the
+  check can fail.
+- **Mutations**, each restored from a copy and green again before the next:
+  - the class under another name, aliased: the settings test fails on the name;
+  - reward 5.0: the settings and run tests fail;
+  - the reward as an overridable default: the `TypeError` test fails.
+- The full suite passed, 540 tests.
+
+### The check on real data
+
+`backtest.cli --seasons 2025 --sample-size 3 --seed 1 --strategies FastF1_RuleRise2p5
+StrategyFastF1RuleRise`, into the scratchpad: exit 0, no error or warning, "skipped 0". Seed 1
+at 3 teams a band draws a subset of step 17's teams. A throwaway script, not kept, compared
+the rows with step 17's in `outputs/fastf1_v2_results.parquet`:
+
+- `FastF1_RuleRise2p5` equals step 17's row on all 9 teams, in every column;
+- `StrategyMaxP2PM` equals step 17's on all 9, so P2PM plays as it did;
+- `StrategyFastF1RuleRise` equals step 17's `FastF1_RuleRise2p5` on all 9, in every column but
+  its label, strategy name and key.
+
+### Not run
+
+The class through any script in `scripts/`, as none names it yet. A live pick, which needs the
+route in `BACKLOG.md`.
