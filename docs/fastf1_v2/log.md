@@ -2927,3 +2927,32 @@ points it gives up are worth.
 ### Not run
 
 Step 17 has not started.
+
+## 2026-11-08 — Step 17 narrowed to 2025–26
+
+### Alex's question, and the challenge
+
+Alex asked whether a full back-test of 2023–24 adds anything, run without the price-rise reward,
+since the reward is off there. Step 17 already did that, as the reward is off in 2023–24, so the
+question was whether to run those seasons at all. The case put to him:
+
+- **2023–24 test the base, not the reward.** Step 16 measured the base against P2PM on seed 2,
+  300 teams a season: +482.7 in 2023 (98% of teams ahead), +190.4 in 2024 (89%) and −153.9 in
+  2025 (24%). 500 teams a band would tighten a result already clear.
+- **A verdict across all four seasons would mislead.** The harness's "positive in every season"
+  would sit over two strategies: the base in 2023–24 and the base with the reward in 2025–26.
+- **The old price model may suit the base,** so 2023–24 say little about the current game.
+- **They are about half of step 17's run time.**
+- **For keeping them:** the other rows in `BACKTEST_LOG.md` are scored on 2023–25.
+
+### Alex's decisions
+
+- **Step 17 runs 2025 and 2026 only.** 2023–24 are cited from step 16, labelled as the base on
+  seed 2. `requirements.md` records the change to the verdict.
+- **2026 stops at race 18, as planned.** The archive now prices races 19 and 20, but the signal
+  ends at 18, and the harness has no way to stop a season early. Step 24 adds one. Race 19's
+  signal is to be caught up in a later session.
+- **Alex's live 2026 team is not added to step 17.** He will run it himself later. As read from
+  the archive, it is `RUS@MER, LIN@VRB, COL@ALP, BOR@AUD, HAD@RED` with `HAA, MER`, 98.0m at
+  race 1, in the (95, 99.5] band. A run of it would start it on each strategy's rules from race
+  1, without his chips, so it would not reproduce his real total.

@@ -4,8 +4,9 @@
 stepping back found that the expected-points table loses how far ahead an asset is (`log.md`,
 *Stepping back*). The signal redesign was agreed with Alex on 2026-11-07 (`log.md`, *Signal
 redesign agreed*), and steps 11 to 16 build and tune it. Steps 11 to 16 and 19 to 23 are done.
-Step 17 is next, with `FastF1_RuleRise2p5` as the chosen strategy. Steps 17 and 18 were
-numbered 9 and 10 before 2026-11-07.
+Step 24 is next, then step 17, with `FastF1_RuleRise2p5` as the chosen strategy, on 2025–26
+only (`log.md`, *Step 17 narrowed to 2025–26*). Steps 17 and 18 were numbered 9 and 10 before
+2026-11-07.
 
 **Step 17 was held on 2026-11-07 until the game's price rules were assessed. That is now
 settled.** The game moved to a three-race price model in 2025. It is unchanged in 2026, and
@@ -20,7 +21,7 @@ passes, and the full suite is green at the end of every step. No existing file i
 `races/`, `import_data/` or `scripts/` is edited. Anything the code has to work around in them goes
 in the R12 ledger in `docs/backtest_v1/requirements.md`.
 
-Steps run in the order 11, 14.1, 12, 13, 14.2, 15, 16, 19, 20, 21, 22, 23, 17, 18.
+Steps run in the order 11, 14.1, 12, 13, 14.2, 15, 16, 19, 20, 21, 22, 23, 24, 17, 18.
 
 ## Step 1 — The 2024 race 24 fault, in the code
 
@@ -326,21 +327,47 @@ lowest value tried and did best, so lower values may do better. They are tested 
   P2PM, the share of teams beating each, and final budgets.
 - Log the choice before step 17 starts.
 
+## Step 24 — `backtest/`: stop a season at a given race
+
+Agreed with Alex on 2026-11-08 (`log.md`, *Step 17 narrowed to 2025–26*). The archive prices
+2026 through race 20, but the signal ends at race 18, and the engine runs every priced race. So
+FastF1 would pick races 19 and 20 on an all-zero signal while P2PM picks on real data.
+
+Test-first, one concern per commit:
+
+1. `simulate_sample` and `run_backtest` take an optional `last_race`, and simulate each season
+   only up to it. A race the season does not price, or one before the starting race, raises
+   `ValueError` before any work. Tests: the stored row is the direct run's row at that race;
+   the bad values raise; `run_backtest` passes it on.
+2. `backtest.cli` takes `--last-race`, default none, and passes it to `run_backtest`. Its help
+   says to use a store of its own, as stored rows are keyed without the last race, so a run to
+   a different race would reuse them.
+
+`races/`, `linear/`, `import_data/` and `scripts/` are unchanged.
+
 ## Step 17 — The back-test (real run)
 
-The choice from steps 22 and 23 is logged before this starts. Step 16 chose `StrategyFastF1` at
-its defaults. If a price-rise reward is kept, the chosen strategy carries it, and it is off in
-2023–24.
+The choice from steps 22 and 23 is logged before this starts: `FastF1_RuleRise2p5`.
 
-**Run once, with the choice from step 16 logged before it starts.** All at 500 teams a band,
-seed 1, in `outputs/fastf1_v2_results.parquet` and `outputs/fastf1_v2_summary.csv`, for 2023–26
-with 2026 through race 18:
+**Narrowed to 2025–26 by Alex on 2026-11-08** (`log.md`, *Step 17 narrowed to 2025–26*). In
+2023–24 the reward is off, so the strategy there is the base, which step 16 measured against
+P2PM. Those results are cited in step 18, labelled as the base at 300 teams a season on seed 2,
+not rerun.
 
-- the chosen strategy, whose result against `StrategyMaxP2PM` is the verdict;
+**Run once.** At 500 teams a band, seed 1, into one store,
+`outputs/fastf1_v2_results.parquet`, as two commands so that only 2026 stops early:
+
+- 2025, all 24 races, summary `outputs/fastf1_v2_summary_2025.csv`;
+- 2026 with `--last-race 18`, summary `outputs/fastf1_v2_summary_2026.csv`.
+
+Each runs:
+
+- `FastF1_RuleRise2p5`, whose result against `StrategyMaxP2PM` is the verdict, season by season;
 - `StrategyMaxP2PMNoReset`, to isolate the chip's effect.
 
 The DRS coefficient 0 comparison was dropped by Alex on 2026-11-07: step 16 already showed it
-losing to the base in all three seasons (`log.md`, *Step 23 agreed*).
+losing to the base in all three seasons (`log.md`, *Step 23 agreed*). Alex's live 2026 team is
+not added: he will run it himself later.
 
 Report final budgets for each one.
 
@@ -349,16 +376,18 @@ skips any team already in its store, keyed on label, season and team only. Step 
 `outputs/fastf1_v2_tuning_*` stores hold old-design rows under `StrategyFastF1`, `FastF1_Drs0`,
 `FastF1_Bud025` and `FastF1_Bud05`, and would be reused silently (`log.md`, *Step 15.2*).
 
-- **Before the run:** `--output` and `--summary` name the two files above, and
-  `outputs/fastf1_v2_results.parquet` does not exist. If it does, stop and raise it with Alex.
-- **After the run:** every season's "skipped" line in the log reads 0, and the store holds
-  1,500 rows per label per season. If either fails, the results are not reported.
+- **Before the run:** `--output` and `--summary` name the files above, none of them exists
+  before the 2025 command, and the store holds only 2025's rows before the 2026 command. If
+  not, stop and raise it with Alex.
+- **After the run:** each command's "skipped" line in the log reads 0, and the store holds
+  1,500 rows per label per season. Every 2025 row's `race` is 24 and every 2026 row's is 18. If
+  any of these fails, the results are not reported.
 
 ## Step 18 — Findings and close-out
 
-- Findings in `log.md`, in plain language first: the verdict, 2026 as the fair read, 2023–25 as
-  flattered, how much of any gap the chip explains, the number of variants tried, and what has not
-  been run.
+- Findings in `log.md`, in plain language first: the verdict, 2026 as the fair read, 2025 as
+  flattered, 2023–24 from step 16 labelled as the base, how much of any gap the chip explains,
+  the number of variants tried, and what has not been run.
 - A row and key findings in `BACKTEST_LOG.md`.
 - `CLAUDE.md` and `README.md` updated for the new strategy and `fast_f1/signal.py`.
 - A `BACKLOG.md` item to rerun 2026 when the season finishes, as question 7 agreed. Update the

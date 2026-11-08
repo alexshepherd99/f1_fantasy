@@ -6,6 +6,7 @@ table its answer chose loses how far ahead an asset is, and answered again on 20
 signal redesign, which also changes questions 2 to 4. See `log.md`, *Signal redesign agreed*.
 Questions 4 and 7 changed again on 2026-11-07, for the price-rise reward only, once the game's
 price rules were known. See `log.md`, *A rules-based price rise: what it can and cannot show*.
+The final back-test was narrowed to 2025–26 on 2026-11-08.
 
 ## Picking this up
 
@@ -237,6 +238,14 @@ completed season under the current price model. Its bar is a positive pooled mea
 the base in 2025, and 2023–24 are not run for it. That is in-sample, so a gain there is weak
 evidence, and Alex accepted the limited back-testing. The verdict against P2PM, in every
 season with 2026 as the fair read, is unchanged.
+
+**Changed 2026-11-08, for the final back-test:** it runs on 2025 and 2026 only, the two seasons
+under the current price model, with the price-rise reward on in both. In 2023–24 the reward is
+off and the strategy is the base, which step 16 already measured against P2PM at 300 teams a
+season. Those results are cited, labelled as the base on seed 2, not rerun. The verdict is a
+positive pooled mean delta against P2PM in 2025 and 2026, reported season by season, with 2026
+the fair read and 2025 flattered. No verdict spans the four seasons, as two different
+strategies would sit under it. See `log.md`, *Step 17 narrowed to 2025–26*.
 
 ### 8. Where does the code go? (agreed 2026-11-01)
 
