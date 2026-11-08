@@ -36,3 +36,15 @@ Those answers raised a second, smaller round of questions, which replace the
 first in `requirements.md`. The main ones are whether `import_data/odds.py`
 may change (the CSV needs it) and how runs before FP1 and on sprint weekends
 pick a column and find the entry list.
+
+## 2026-11-08 — Second answers, and the page is blocked
+
+Alex answered the second round, recorded as D7–D12 in `requirements.md`.
+D12 folds in the backlog item on threading the odds file path, so that item
+leaves `BACKLOG.md`.
+
+One plain request to the Oddschecker F1 page got a 403 and a bot-check page.
+`robots.txt` allows the path. So D3's page cannot be fetched by a plain
+script, and getting round the check is not something to build. The proposal
+now in `requirements.md` is that Alex saves the page from his browser and the
+script parses the file.
