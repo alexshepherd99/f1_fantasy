@@ -70,6 +70,7 @@ These strategies are contained in the **linear** module:
 - - Betting odds are a forward-looking indicator as opposed to P2PM which is driven by historical performance;
 - - The points-based strategies are less exposed to concentration risk in team selection (exposure to more than one constructor) because the game price is also based on performance from the last few races.  As such, the odds strategy has a concentration metric built in.  Building this in a way that could be modelled in PuLP was a bit hairy, so it has not yet been ported back into the base strategy;
 - - No historical odds could be found during development, so it's not been back-tested. [2026-10-05: back-tested on 2026 races 1–16 only, with DRS chosen inside the LP. It lost to P2PM by about 12%. See `docs/odds_drs_v1/log.md`.]
+- **FastF1** : Maximises a forward-looking signal from the `fast_f1` module (below), built in `fast_f1/signal.py`: each driver's recent points, their constructor's recent points and, on a normal weekend, their final practice (FP3) rank.  The signal is put on a championship points scale, so a driver well clear of the field stays well clear, and a constructor scores the sum of its two drivers.  DRS is chosen inside the LP.  It can also reward spending, penalise assets likely to score negative, and reward assets whose price is expected to rise under the game's price rules from 2025.  The chosen setting, `FastF1_RuleRise2p5` in `backtest/cli.py`, uses only the price-rise reward, at 2.5.  It does not play the race-4 chip.  In back-testing it beat Max P2PM in 2025 and in 2026 through race 18, the season it was not tuned on, though one race carries most of the 2026 lead.  The live 2026 team stays on Max P2PM.  See the [back-test log](BACKTEST_LOG.md) and `docs/fastf1_v2/`.
 
 Note on odds conversion (2026-07-26): fractional odds `a/b` are converted to an implied probability of `b/(a+b)`.  This previously used `b/a`, which over-weighted the front of the grid and rejected odds-on prices outright.  Correcting it changed the selected team in 3 of the 9 races of 2026 that previously solved, so team results logged below from before that date are not reproducible under the current code.  The `fast_f1` module also consumes these odds as a weighted indicator — see `docs/fastf1_v1/`.
 
@@ -110,7 +111,7 @@ The **fast_f1** module is a separate experiment from the strategies above: rathe
 
 Constructor rolling points are calculated and written out too, but carry zero weight in the aggregate — they turned out to be almost entirely redundant with the driver indicators, correlating 0.80-0.98 with driver rolling points within a race.  The weights live in one dict in `fast_f1/metrics.py` if you want to put it back.
 
-It is not wired into any strategy.  It is a standalone signal, and whether it is worth feeding into team selection is still an open question.
+AggregateRank itself is not wired into any strategy.  The **FastF1** strategy above reads the same stored metrics through `fast_f1/signal.py`, with a different combination: no odds, and no FP3 rank on a sprint weekend.
 
 Two modes:
 
@@ -153,7 +154,7 @@ Full spec, plan and development log are in `docs/fastf1_v1/`.
 
 - https://fantasy.formula1.com/en/
 - https://f1fantasytools.com/statistics
-- https://docs.fastf1.dev/index.html (Free API with more data than you can shake a chequered flag at!  Used by the fast_f1 module for the forward-looking indicators described above, though not yet by any of the team selection strategies.)
+- https://docs.fastf1.dev/index.html (Free API with more data than you can shake a chequered flag at!  Used by the fast_f1 module for the forward-looking indicators described above, which the FastF1 strategy reads.)
 
 ## 2026 team
 
