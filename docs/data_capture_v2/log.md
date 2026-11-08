@@ -392,3 +392,39 @@ The settled answers to the open questions:
   race, plus `has_actual` for the target race.
 
 `requirements.md`'s open questions are updated to match.
+
+## 2026-11-08 — Step 7: fetch, save and parse
+
+New package `boxbox/`, starting with `boxbox/source.py`:
+
+- **`download_files`** fetches both files with `requests`, using a generic
+  user agent and a 30-second timeout. Any failure propagates. The fetch
+  function is a parameter, so tests pass a fake rather than patching.
+- **`save_copy`** writes them as received into
+  `outputs/boxbox/<YYYY-MM-DDTHHMMSSZ>/`. It refuses a folder that already
+  exists, so a copy is never overwritten. This differs from the hand-saved
+  `<YYYY-MM-DD>` folders, but both sort by time.
+- **`parse_files`** turns them into a `BoxBoxData`: season, `generated_at`,
+  rounds with `has_actual`, results per round, and current prices. It raises
+  `BoxBoxDataError` on anything the later steps would otherwise misread: an
+  unreadable file, a missing field, a non-number, a round listed twice,
+  rounds out of order, or the two files naming different seasons.
+
+Shared fixtures are in `tests/boxbox_fixtures.py`. They describe a two-team
+2026 season with a cancelled round 3, on the day of a capture, plus a
+matching archive.
+
+**Red first, then mutation.** The 14 new tests failed against stubs raising
+`NotImplementedError`. For new functions that is the only red available, so
+each guard was also checked by breaking it in the finished code. Each
+mutation failed exactly the test meant to catch it, and the suite went back
+to green after restoring from a copy:
+
+- allowing overwrite;
+- ignoring a season mismatch;
+- ignoring a repeated round;
+- skipping the order check;
+- accepting strings as numbers (two tests).
+
+The real 2026-11-08 copy parses: 23 rounds, 19 held, 24 drivers with results,
+22 priced, and 11 constructors.

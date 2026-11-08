@@ -76,9 +76,7 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
    points appear, when prices move, and how a driver change shows up. Also
    check a web archive for older versions. Tighten the rules if they need it.
 
-7. **Fetch and save.** Download both files, save the copy to
-   `outputs/boxbox/<UTC timestamp>/`, so no copy is ever overwritten. Parse
-   them, and fail loudly on a structure the fetcher does not expect.
+7. ~~Fetch and save~~ — done 2026-11-08, see log *Step 7*.
 
 8. **Map BoxBox to the archive.** Calendar round to archive race, by
    position in `season_summary.json`'s `rounds` list. Driver keys to their
