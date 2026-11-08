@@ -3314,5 +3314,42 @@ every season.
 - **One race only.** No other chip race was tried, as agreed, so this does not show that a
   reset can never help FastF1.
 - **2026 was not run.** Its step 17 result stands as the verdict against P2PM, without the
-  chip, as before.
+  chip, as before. [2026-11-08: now run under a revised rule. See *Step 25's rule revised, and
+  step 26 agreed*.]
 - **Step 18 reports this** among the variants tried: one label, three seasons.
+
+## 2026-11-08 — Step 25's rule revised, and step 26 agreed
+
+### Alex's challenge
+
+Alex questioned dropping the chip on 2024. The price-rise reward made a material difference to
+the strategy's results, and it is off in 2023–24. So the 2024 run tested the base plus the
+chip, not the final strategy plus the chip. Step 25's proposal had reasoned that the chip does
+not depend on the price model. That was never tested, and 2025's +56.6 against 2024's −28.0
+does not support it.
+
+Against that: final budgets with and without the chip were within 0.4m in every season,
+2025 included (*Step 25.3*). So if the price model explains the difference, it is not plainly
+through the budget.
+
+### Alex's decisions
+
+- **The rule is revised.** The chip is kept only if its pooled mean delta against
+  `FastF1_RuleRise2p5` is positive in both 2025 and 2026, the two seasons under the current
+  price model, with no margin. 2023–24 are reported and do not count. 2025 is +56.6, so 2026
+  decides.
+- **This was revised after the 2023–25 result was seen.** The reason is which seasons test the
+  final strategy, not the result itself, but a rule fixed first exists to stop exactly this,
+  and step 18 says so.
+- **2026 decides a choice, at a cost.** Step 17's 2026 result was seen before the chip was
+  considered. If the chip is kept because 2026 favoured it, the chipped strategy's 2026 lead
+  over P2PM is in-sample for that one yes-or-no choice. The live team stays on P2PM in 2026,
+  so this decides only how 2027 starts, and 2027 is the first season neither version has seen.
+- **Step 25.4 runs** as `plan.md` now sets out.
+- **Step 26 is added and runs alongside it:** race-by-race deltas against P2PM in 2025 and
+  2026, to show whether FastF1's lead builds steadily or in a few weekends, split between
+  sprint and normal weekends. It is descriptive only, so nothing about the strategy is chosen
+  from it.
+- **Proposed for step 18's "not run" list:** why the chip cost points in 2024, combinations of
+  the levers, a sprint variant and a second 2026 seed. Not yet decided: whether 2025's worst
+  tenth of teams, 420 points behind P2PM, is looked into before step 18 or listed as not run.
