@@ -4,6 +4,7 @@ Efforts under `docs/`:
 
 | Effort | State |
 | --- | --- |
+| [`aggregate_rank_v1`](docs/aggregate_rank_v1/) | in progress |
 | [`backtest_v1`](docs/backtest_v1/) | done |
 | [`data_capture_v1`](docs/data_capture_v1/) | in progress |
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
@@ -15,24 +16,6 @@ Efforts under `docs/`:
 Global list of not-yet-started work. Freeform. When an item is picked up, create `docs/<effort-name>/` (see `docs/` and `agentic`'s `shared/persistent-docs.md`) and move the item there.
 
 An entry that runs past ~350 words gets its own `docs/<effort-name>/proposal.md`, leaving a short pointer entry in this list. Picking the item up then adds `requirements.md` / `plan.md` / `log.md` beside it as usual. The threshold is a prompt to judge, not a gate — it is where the entries here actually split (2026-07-30: seven at 110-330 words, two at 537 and 766), not a target. Note this puts a `docs/<effort-name>/` directory in place before work starts, which `agentic`'s `shared/persistent-docs.md` does not describe; it is a deliberate local extension, worth proposing upstream if it sticks.
-
-## Bring `AggregateRank` into line with the indicator conclusions
-
-`AggregateRank` still adds every rank column at weight 1.0, with only
-`METRIC_WEIGHTS` in `fast_f1/metrics.py` setting constructor rolling points to
-zero. `docs/indicator_analysis_v1/log.md`, *Conclusions*, wants driver +
-constructor + FP3 on normal weekends, driver + constructor on sprint weekends,
-and odds for race 1, which one flat dict cannot say. So the ranking
-`fast_f1.cli` prints each race is on the older signal.
-
-Nothing outside `fast_f1` reads the column. `fastf1_v2` builds its signal from
-the component columns and defines it once in `fast_f1`, so reuse that definition
-here rather than writing a second one. Changing the column moves the stored
-values in `data/fastf1_practice_rolling_metrics.xlsx`, and tests in
-`test_fastf1_metrics.py` and `test_fast_f1_output.py` pin today's weights.
-
-Raised by Alex 2026-11-01, and moved here from `docs/fastf1_v2/` as its question 6
-decided the strategy does not depend on it.
 
 ## Lift concentration calculation into `StrategyBase`
 
