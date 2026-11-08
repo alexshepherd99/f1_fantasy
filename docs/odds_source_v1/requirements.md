@@ -125,6 +125,14 @@ constraint. Back-filling is out of scope (decision D1).
   code. A team missing from it stops the run with an error.
 - **D12 — *Thread the odds file path through `fast_f1.output`* is folded in**
   and removed from `BACKLOG.md`.
+- **D13 — Alex saves the page from his browser** as `.mhtml` into `outputs/`
+  (git-ignored), and the script parses the saved file. It never fetches the
+  page itself (see *Fetching the page*).
+- **D14 — New columns, one per last completed session:** `Odds_PreFP1`,
+  `Odds_FP1`, `Odds_FP2`, `Odds_FP3`, `Odds_SQ`, `Odds_Sprint`, `Odds_Q`.
+- **D15 — An unmapped driver gets a blank `Constructor`** and a printed
+  warning, for Alex to fix by hand. Until then their odds count for no
+  constructor.
 
 ## Constraints already in force
 
@@ -154,14 +162,33 @@ instead of the odds. So a plain HTTP fetch does not work. Getting past the
 check with a scripted browser is the kind of evasion this repo should not
 build. Oddschecker's terms of use have not been read.
 
+## The saved page, checked 2026-11-08
+
+From Alex's sample save of the Brazilian Grand Prix winner page, taken on race
+day.
+
+- **The odds are data, not just markup.** The page embeds them as JSON in the
+  props of a `GridGroupIsland` component. The *Winner* market (`betTypeName`
+  `Win Market`) holds one entry per driver, each with a price from every
+  bookmaker (about 25), in fractional and decimal form. The page also names
+  the race and its start time, so a run can check it matches the race FastF1
+  says is next.
+- **Bookmakers disagree widely.** Verstappen ranged from 9/2 to 353/50, and
+  the long shots by a factor of two or more. Which price to take is open
+  question 1.
+- **The page can list a driver who is not racing.** It held 23 drivers for 22
+  seats, including Ocon, priced by one bookmaker, while Camara held the Haas
+  seat. Open question 2.
+- **It carries identifying data**: browser, screen size, time zone, location
+  info and tracking IDs. It is never committed. Test fixtures are written by
+  hand in the same JSON shape.
+
 ## Open questions
 
-1. **How does the page reach the script?** Recommended: Alex saves the page
-   from his browser and the script parses the saved file. Everything else
-   (FastF1 phase, name mapping, columns, CSV write) stays automatic.
-2. **New column names.** Proposed: one per last completed session, so
-   `Odds_PreFP1`, `Odds_FP1`, `Odds_FP2`, `Odds_FP3`, `Odds_SQ`, `Odds_Sprint`,
-   `Odds_Q`. That covers sprint weekends without a mapping rule.
-3. **Constructor for an unmapped driver.** With no code there is no team from
-   FastF1. Proposed: leave `Constructor` blank and print a warning, for Alex to
-   fix by hand. Until fixed, those odds count for no constructor.
+1. **Which price per driver?** Options: Oddschecker's best price, the median
+   across bookmakers, or one named bookmaker. Recommended: the median, as it
+   is stable against one outlier price.
+2. **A listed driver who is not in the race.** Recommended: drop an entry
+   priced by fewer than half the bookmakers, with a warning. Ocon had 1 of 25,
+   every racing driver 20 or more. Dropping entries FastF1 does not list would
+   also drop a new driver before his first session, which D6 keeps.

@@ -48,3 +48,15 @@ One plain request to the Oddschecker F1 page got a 403 and a bot-check page.
 script, and getting round the check is not something to build. The proposal
 now in `requirements.md` is that Alex saves the page from his browser and the
 script parses the file.
+
+## 2026-11-08 — Third answers, and the sample page
+
+Alex agreed the saved-page route, the session-named columns and the blank
+constructor for an unmapped driver (D13–D15), and saved a sample page.
+
+The sample parses cleanly: the odds sit as JSON inside the page, one entry per
+driver with every bookmaker's price. Two findings became open questions:
+bookmakers' prices differ widely, so the script needs a rule for which to take,
+and the page listed a driver who was not racing. The page also carries browser
+and tracking details, so test fixtures are written by hand, not cut from it.
+The survey used throwaway scripts outside the repo.
