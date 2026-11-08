@@ -25,7 +25,22 @@ first.
   race it already holds.** Alex's historical analysis depends on it, so none of
   it may change. BoxBox never revises a value the workbook holds, even where
   the two disagree. The one gap it fills is 2026 race 20's points, which the
-  workbook holds as zero placeholders until the race results are in.
+  workbook does not have yet (it holds zeros in their place).
+- **Zero points for a race not yet run are not data.** The workbook holds
+  them only to work around a limitation in today's code. The CSV need not
+  keep them (Alex, 2026-11-08): a race not yet run can have prices and empty
+  points. If callers still need the zeros, the loader supplies them, so what
+  it returns stays the same.
+- **A copy of both BoxBox files is saved every week from 2026-11-08,** into
+  `outputs/boxbox/<YYYY-MM-DD>/` (the date saved), which git ignores. These
+  copies are the history the analysis in chunk 5 works from, since BoxBox
+  serves only the current version. The first copy is from 2026-11-08. Every
+  fetcher run will also save the files it read, the same way. Until the
+  fetcher exists, the weekly copy is saved by hand, from the repo root:
+
+  ```bash
+  d=outputs/boxbox/$(date -u +%F); mkdir -p "$d" && for f in driver_history season_summary; do curl -fsS -o "$d/$f.json" "https://boxboxf1fantasy.com/data/$f.json"; done
+  ```
 - **The archive moves to long-format CSV, carried over from `data_capture_v1`.**
   A CSV diffs in git, so every race the fetcher writes can be reviewed as a
   diff before it is committed. That matters more for numbers a script fetched
@@ -76,7 +91,9 @@ Alex before any CSV is written or any loader code is changed, as
   `load_all_archive_data` are run against the workbook for every season and
   both asset types and their output is saved. After the rewrite they are run
   against the CSV, and each frame must be exactly equal (`DataFrame.equals`,
-  so dtypes and row order count too).
+  so dtypes and row order count too). This holds even where the CSV leaves
+  out the zero points the workbook holds, since the comparison is of what the
+  loaders return, not of the files.
 - **Same derived values.** `helpers.load_with_derivations` gives the same
   three frames for every season, before and after.
 - **Same results.** `backtest_v1`'s stored P2PM rows are re-simulated and must
@@ -147,7 +164,7 @@ under the checks above.
 
 In long format a driver who doesn't take part in a race simply has no row, so
 there is no null pair to get right. The remaining case is "price known, race
-not yet run", which is one row with a price and `Points = 0`. That turns the
+not yet run", which is one row with a price and no points. That turns the
 null-vs-zero rule in `CLAUDE.md`, which a person has to remember, into a
 property of the layout.
 
@@ -188,16 +205,16 @@ Chunks 1–4 carry over from `data_capture_v1`. Chunks 5 and 6 are new.
   cases: drivers with results but no 2026 price (`TSU` with 3 races,
   `HIR_HAAS` with 1), and a driver with a price but no results (`CAM`). The
   archive records the same seat changes from its side (for example `HAD@RED`
-  has no rows for races 12–14). Where older versions of the files come from
-  is itself open. BoxBox serves only the current one, so the candidates are a
-  web archive, or snapshots saved from now on.
+  has no rows for races 12–14). The analysis works from the weekly copies
+  saved from 2026-11-08, so it gets richer as the copies build up. Whether a
+  web archive holds versions from before then has not been checked.
 - **How does the fetcher tell that BoxBox has not updated yet?** The
   candidates are `has_actual` for the race just held, `generated_at` against
   the race date, and whether any price moved. The analysis above should show
   which of these are reliable.
 - **Which rows may a re-run rewrite?** The race just held and the next race
   are the obvious ones. The rule has to keep every value the workbook held
-  fixed, apart from 2026 race 20's placeholder points.
+  fixed, apart from filling in 2026 race 20's points.
 - **How are the identifier maps kept?** Fixed tables in code, as
   `odds_source`'s `TEAM_CODES` does, raising on anything they lack, or derived
   from the archive's previous race.
@@ -207,8 +224,11 @@ Chunks 1–4 carry over from `data_capture_v1`. Chunks 5 and 6 are new.
 - **Row order and number format in the CSV.** A git-diffable store only pays
   off if writing one race produces a diff for that race alone. Settle this
   with the schema in chunk 2.
-- **Migrating mid-season.** 2026 is live, with race 20 holding prices and
-  zeroed points. The migration has to keep that state as it is.
+- **Migrating mid-season.** 2026 is live, with race 20 holding prices but no
+  points yet. The migration has to carry that state over.
+- **Do callers need the zero points?** If nothing above the loader needs them,
+  the loader returns empty points for a race not yet run. That would change
+  what it returns, so it needs a check of its own.
 
 ## Definition of done
 

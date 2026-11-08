@@ -78,3 +78,20 @@ The scope wording on the golden source was tightened. BoxBox never changes a
 value the workbook holds. The one gap it fills is 2026 race 20's points,
 which the workbook holds as zero placeholders. The earlier wording ("only adds
 races") would have stopped that.
+
+## 2026-11-08 — Weekly BoxBox copies, and zero points dropped
+
+**Weekly copies.** BoxBox serves only the current files, so the analysis of
+mid-season driver changes needs copies saved over time. Alex chose to save
+both files every week from now on, into `outputs/boxbox/<YYYY-MM-DD>/`, which
+git ignores. The download made when the effort opened is the first copy
+(`2026-11-08`). Until the fetcher exists and saves its own copies, they are
+saved by hand with the command in `requirements.md`. A web archive might hold
+earlier versions, but that has not been checked.
+
+**Zero points.** The workbook's zero points for a race not yet run are a
+workaround for a limitation in today's code, not data. Alex is happy for the
+CSV to leave them out. The checks on the loader rewrite are unaffected, as
+they compare what the loaders return rather than the files. Whether callers
+still need the zeros, and so whether the loader has to fill them in, is a new
+open question.
