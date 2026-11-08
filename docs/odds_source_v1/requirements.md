@@ -1,8 +1,7 @@
 # odds_source_v1 — Requirements
 
-**Status**: opened 2026-11-08, partly agreed (see *Decisions*). The open
-questions below need answers before `plan.md` is written. Execution log in
-`log.md`.
+**Status**: agreed 2026-11-08 (see *Decisions*). Implementation plan in
+`plan.md`; execution log in `log.md`.
 
 ## The problem (original backlog entry, unchanged)
 
@@ -133,6 +132,12 @@ constraint. Back-filling is out of scope (decision D1).
 - **D15 — An unmapped driver gets a blank `Constructor`** and a printed
   warning, for Alex to fix by hand. Until then their odds count for no
   constructor.
+- **D16 — A driver's price is the median across bookmakers**, as it is stable
+  against one outlier price.
+- **D17 — A page entry priced by fewer than half the bookmakers is dropped,**
+  with a warning. In the sample, Ocon had 1 of 25 and every racing driver 20 or
+  more. Dropping entries FastF1 does not list was rejected 2026-11-08: it would
+  drop a new driver before his first session, which D6 keeps.
 
 ## Constraints already in force
 
@@ -174,21 +179,18 @@ day.
   the race and its start time, so a run can check it matches the race FastF1
   says is next.
 - **Bookmakers disagree widely.** Verstappen ranged from 9/2 to 353/50, and
-  the long shots by a factor of two or more. Which price to take is open
-  question 1.
+  the long shots by a factor of two or more. D16 takes the median.
 - **The page can list a driver who is not racing.** It held 23 drivers for 22
   seats, including Ocon, priced by one bookmaker, while Camara held the Haas
-  seat. Open question 2.
+  seat. D17 drops such entries.
+- **Page names are not FastF1's full names**: "Kimi Antonelli" and "Alex
+  Albon", where FastF1 is expected to have longer forms (not yet checked),
+  and accents may vary ("Perez", "Hulkenberg"). Matching goes on accent-free
+  surname first.
 - **It carries identifying data**: browser, screen size, time zone, location
   info and tracking IDs. It is never committed. Test fixtures are written by
   hand in the same JSON shape.
 
 ## Open questions
 
-1. **Which price per driver?** Options: Oddschecker's best price, the median
-   across bookmakers, or one named bookmaker. Recommended: the median, as it
-   is stable against one outlier price.
-2. **A listed driver who is not in the race.** Recommended: drop an entry
-   priced by fewer than half the bookmakers, with a warning. Ocon had 1 of 25,
-   every racing driver 20 or more. Dropping entries FastF1 does not list would
-   also drop a new driver before his first session, which D6 keeps.
+None. Implementation plan in `plan.md`.

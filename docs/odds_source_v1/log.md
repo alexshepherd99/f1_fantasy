@@ -60,3 +60,17 @@ bookmakers' prices differ widely, so the script needs a rule for which to take,
 and the page listed a driver who was not racing. The page also carries browser
 and tracking details, so test fixtures are written by hand, not cut from it.
 The survey used throwaway scripts outside the repo.
+
+## 2026-11-08 — Requirements agreed, plan written
+
+Alex chose the median price (D16) and dropping thinly priced entries (D17).
+No questions remain, and `plan.md` is written: nine steps and two gates.
+
+Two choices made in the plan, for Alex's review:
+
+- **The race and column come from the saved page, not the clock.** The page
+  names its race and carries its save time, so a rerun of the same page gives
+  the same answer, and Gate 1 can use the Brazil sample after the race. A
+  session counts as done an hour after its scheduled start.
+- **The workbook's unnamed tenth column is dropped** in the CSV conversion. It
+  holds one stray value and nothing reads it.
