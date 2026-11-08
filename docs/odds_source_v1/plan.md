@@ -28,11 +28,7 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 
 6. ~~Map names and teams~~ — done 2026-11-08, see log *Step 6*.
 
-7. **Write the race's rows.** For the race, set the column and `Odds` for
-   every driver priced, overwriting (D8, D9). A driver already in the file for
-   that race but not priced this run keeps his row, with this column and
-   `Odds` blank. New drivers are appended after that race's rows. A test
-   proves every other race's rows are byte-for-byte unchanged.
+7. ~~Write the race's rows~~ — done 2026-11-08, see log *Step 7*.
 
 8. **The CLI.** `odds_source/cli.py` loads the credentials first, as
    `fast_f1.cli` does, takes the page path (default: newest `.mhtml` in

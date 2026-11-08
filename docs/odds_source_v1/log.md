@@ -280,3 +280,44 @@ cache, which the new stale-cache test does.
 Noted for step 8: an ad hoc session load outside `fast_f1.cli` let FastF1 fall
 back to its default cache in the home directory. The CLI must set the cache up
 as `fast_f1.cli` does.
+
+## 2026-11-08 — Step 7: the race's rows are written
+
+`odds_source/odds_file.py`'s `write_race_odds(path, point, entries)` reads and
+writes the CSV as text with the `csv` module, never pandas, so a row it does
+not touch is written back as it was. It writes through a temporary file and
+`os.replace`, so a failure part way leaves the file whole.
+
+As planned: each priced driver's `Odds` and snapshot column are set,
+overwriting; a driver in the file for that race but not priced this run keeps
+the row with both blanked; new drivers follow the race's rows. Settled while
+building it:
+
+- **All seven snapshot columns are added on the first write**, after the
+  legacy ones. Adding a column changes every line in the file, so the plan's
+  "every other race byte-for-byte unchanged" cannot hold for that one write.
+  Adding them all at once means it happens once. The tests check other races'
+  values after a first write and their bytes after a later one.
+- **A race with no rows yet goes after the races before it**, not at the end
+  of the file.
+- **Nothing else in an existing row changes**, `Constructor` included. A
+  driver's team does not change within a weekend, so overwriting it could only
+  undo a hand fix, such as a constructor filled in for an unmatched name.
+
+`StrategyBettingOdds` was checked for the D15 case: it looks odds up only for
+the drivers it can pick, so an unmatched name's row adds a key it never reads,
+and the real driver scores 0.0 until the row is fixed.
+
+Red was the import failure only. Seven mutations, each restored and green
+before the next: keeping an unpriced driver's odds (1 red), adding only this
+run's column (3), new drivers at the end of the file (1), a new race at the end
+of the file (1), setting the column but not `Odds` (2), copying instead of
+replacing, which leaves the temporary file (1), and rewriting other races'
+text (3).
+
+**Run on real data**, from a scratch script: the whole chain on the Brazil page,
+writing into a scratch copy of the real CSV. 440 rows, none added, as all 22
+matched existing rows; nothing changed outside race 20; in race 20 only `Odds`
+changed besides the new `Odds_Q`, which equals it; the hand-entered
+`Odds_Pre_Weekend` prices are kept; `load_odds` reads 22 drivers from the copy.
+The real CSV was not touched. Suite: 580 passed.
