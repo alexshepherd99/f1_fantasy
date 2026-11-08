@@ -21,6 +21,28 @@ METRIC_WEIGHTS: dict[str, float] = {
     "ConstructorRollingPointsRank": 0.0,
 }
 
+FIRST_RACE = 1
+
+FORMAT_NORMAL = "normal"
+FORMAT_SPRINT = "sprint"
+FORMAT_SPRINT_FP1 = "sprint_fp1"
+
+# Which session fills the early and late slots on each weekend format.
+_FORMAT_SESSIONS = {
+    FORMAT_NORMAL: ("FP2", "FP3"),
+    FORMAT_SPRINT: ("FP1", "SQ"),
+    FORMAT_SPRINT_FP1: ("FP1", None),
+}
+
+# The slots added on each weekend format: the combination `indicator_analysis_v1` chose
+# for fantasy points (see its log's *Conclusions*). A 2023 sprint weekend, which the
+# analysis left out, takes the sprint rule, as that needs no practice session.
+SIGNAL_SLOTS = {
+    FORMAT_NORMAL: ("driver_rolling", "constructor_rolling", "late"),
+    FORMAT_SPRINT: ("driver_rolling", "constructor_rolling"),
+    FORMAT_SPRINT_FP1: ("driver_rolling", "constructor_rolling"),
+}
+
 
 def get_rolling_window_races(race_num: int, rolling_window: int = 3) -> list[int]:
     """Return the list of prior race numbers included in a rolling window."""
@@ -304,6 +326,63 @@ def calculate_odds_rank(
     df_result["Season"] = season_year
     df_result["Race"] = race_num
     return df_result
+
+
+def _weekend_formats(metrics: pd.DataFrame) -> pd.Series:
+    """Classify each row's weekend from the sessions any driver in the race has."""
+    formats = pd.Series(index=metrics.index, dtype=object)
+    for (season, race_num), race in metrics.groupby(["Season", "Race"]):
+        if race["FP2_MinLapTime_rank"].notna().any():
+            formats[race.index] = FORMAT_NORMAL
+        elif race["SQ_MinLapTime_rank"].notna().any():
+            formats[race.index] = FORMAT_SPRINT
+        elif race["FP1_MinLapTime_rank"].notna().any():
+            formats[race.index] = FORMAT_SPRINT_FP1
+        else:
+            msg = f"No practice sessions found for {season} race {race_num}"
+            logger.error(msg)
+            raise ValueError(msg)
+    return formats
+
+
+def slot_values(frame: pd.DataFrame, slot_index: int, suffix: str) -> pd.Series:
+    """Pick one session column per row: slot 0 is early, slot 1 is late.
+
+    Args:
+        frame: Rows holding a ``format`` column, as ``add_signal_inputs`` adds it.
+        slot_index: 0 for the early session, 1 for the late one.
+        suffix: The session column's name after ``<session>_``, such as ``MinLapTime_rank``.
+
+    Returns:
+        One value per row, missing where the format has no session in that slot.
+    """
+    values = pd.Series(float("nan"), index=frame.index, dtype=float)
+    for race_format, sessions in _FORMAT_SESSIONS.items():
+        session = sessions[slot_index]
+        if session is not None:
+            mask = frame["format"] == race_format
+            values[mask] = pd.to_numeric(frame.loc[mask, f"{session}_{suffix}"])
+    return values
+
+
+def add_signal_inputs(metrics: pd.DataFrame) -> pd.DataFrame:
+    """Add each row's weekend format and the indicator slots, from metrics rows alone.
+
+    Reads no race results, so it suits a race not yet run. Returns a copy holding
+    ``format``, the slots ``driver_rolling``, ``constructor_rolling``, ``early`` and
+    ``late``, and ``odds``. Higher is better for each.
+
+    Raises:
+        ValueError: A race has no practice sessions.
+    """
+    frame = metrics.copy()
+    frame["format"] = _weekend_formats(frame)
+    frame["driver_rolling"] = frame["RollingPointsRank"]
+    frame["constructor_rolling"] = frame["ConstructorRollingPointsRank"]
+    frame["odds"] = frame["OddsRank"]
+    frame["early"] = slot_values(frame, 0, "MinLapTime_rank")
+    frame["late"] = slot_values(frame, 1, "MinLapTime_rank")
+    return frame
 
 
 def aggregate_metrics(df: pd.DataFrame) -> pd.DataFrame:

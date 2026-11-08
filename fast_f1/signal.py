@@ -16,15 +16,13 @@ from typing import Callable
 import pandas as pd
 
 from common import AssetType
-from fast_f1.indicator_analysis import (
+from fast_f1.indicator_analysis import combination_signal
+from fast_f1.metrics import (
     FIRST_RACE,
-    FORMAT_NORMAL,
-    FORMAT_SPRINT,
-    FORMAT_SPRINT_FP1,
+    SIGNAL_SLOTS,
     add_signal_inputs,
-    combination_signal,
+    get_rolling_window_races,
 )
-from fast_f1.metrics import get_rolling_window_races
 from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, load_existing_metrics
 from import_data.derivations import get_race_driver_constructor_pairs
 from import_data.import_history import _FILE_ARCHIVE_INPUTS, load_all_archive_data
@@ -34,14 +32,6 @@ logger = logging.getLogger(__name__)
 # The seasons any table is built from. 2026 is left out, as it is the season the
 # strategy is judged on (see docs/fastf1_v2/requirements.md, question 7).
 TABLE_SEASONS = (2023, 2024, 2025)
-
-# The slots added on each weekend format. A 2023 sprint weekend, which the analysis
-# left out, takes the sprint rule, as that needs no practice session.
-SIGNAL_SLOTS = {
-    FORMAT_NORMAL: ("driver_rolling", "constructor_rolling", "late"),
-    FORMAT_SPRINT: ("driver_rolling", "constructor_rolling"),
-    FORMAT_SPRINT_FP1: ("driver_rolling", "constructor_rolling"),
-}
 
 # Rounding lets signals that differ only by floating point noise count as equal, so a
 # race whose signals are all equal is caught rather than stretched on that noise.

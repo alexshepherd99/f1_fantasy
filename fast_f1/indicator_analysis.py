@@ -12,6 +12,12 @@ import pandas as pd
 from scipy.stats import spearmanr
 
 from common import AssetType, setup_logging
+from fast_f1.metrics import (
+    FIRST_RACE,
+    FORMAT_SPRINT_FP1,
+    add_signal_inputs,
+    slot_values,
+)
 from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, DEFAULT_OUTPUT_DIRECTORY
 from import_data.import_history import load_all_archive_data
 from import_data.odds import _FILE_BETTING_ODDS
@@ -19,7 +25,6 @@ from import_data.odds import _FILE_BETTING_ODDS
 logger = logging.getLogger(__name__)
 
 RACE_KEYS = ["Season", "Race"]
-FIRST_RACE = 1
 
 BOOTSTRAP_RESAMPLES = 10_000
 BOOTSTRAP_SEED = 20261031
@@ -43,17 +48,6 @@ ODDS_PRE_WEEKEND_SNAPSHOT = "Odds_Pre_Weekend"
 NEVER_RACED_STATUSES = ("Did not start", "Withdrew")
 FINISHED_STATUSES = ("Finished", "Lapped")
 
-FORMAT_NORMAL = "normal"
-FORMAT_SPRINT = "sprint"
-FORMAT_SPRINT_FP1 = "sprint_fp1"
-
-# Which session fills the early and late slots on each weekend format.
-_FORMAT_SESSIONS = {
-    FORMAT_NORMAL: ("FP2", "FP3"),
-    FORMAT_SPRINT: ("FP1", "SQ"),
-    FORMAT_SPRINT_FP1: ("FP1", None),
-}
-
 # Sorts a pit-lane start, which FastF1 records as grid 0, behind any real grid slot.
 _PIT_LANE_GRID = 99.0
 
@@ -71,34 +65,6 @@ def _fantasy_points(archive: pd.DataFrame) -> pd.DataFrame:
         "Driver": fantasy["Driver"].str.split("@").str[0],
         "target_fantasy": fantasy["Points"],
     })
-
-
-def _weekend_formats(metrics: pd.DataFrame) -> pd.Series:
-    """Classify each row's weekend from the sessions any driver in the race has."""
-    formats = pd.Series(index=metrics.index, dtype=object)
-    for (season, race_num), race in metrics.groupby(["Season", "Race"]):
-        if race["FP2_MinLapTime_rank"].notna().any():
-            formats[race.index] = FORMAT_NORMAL
-        elif race["SQ_MinLapTime_rank"].notna().any():
-            formats[race.index] = FORMAT_SPRINT
-        elif race["FP1_MinLapTime_rank"].notna().any():
-            formats[race.index] = FORMAT_SPRINT_FP1
-        else:
-            msg = f"No practice sessions found for {season} race {race_num}"
-            logger.error(msg)
-            raise ValueError(msg)
-    return formats
-
-
-def _slot_values(frame: pd.DataFrame, slot_index: int, suffix: str) -> pd.Series:
-    """Pick one session column per row: slot 0 is early, slot 1 is late."""
-    values = pd.Series(float("nan"), index=frame.index, dtype=float)
-    for race_format, sessions in _FORMAT_SESSIONS.items():
-        session = sessions[slot_index]
-        if session is not None:
-            mask = frame["format"] == race_format
-            values[mask] = pd.to_numeric(frame.loc[mask, f"{session}_{suffix}"])
-    return values
 
 
 def build_analysis_frame(metrics: pd.DataFrame, archive: pd.DataFrame) -> pd.DataFrame:
@@ -139,36 +105,17 @@ def _frame_from_kept_rows(kept: pd.DataFrame, archive: pd.DataFrame) -> pd.DataF
     frame["target_finish"] = -frame["Position"]
     frame["finished"] = frame["Status"].isin(FINISHED_STATUSES)
     frame["grid"] = -frame["GridPosition"].replace(0.0, _PIT_LANE_GRID)
-    frame["early_laps"] = _slot_values(frame, 0, "TotalLapCount")
-    frame["late_laps"] = _slot_values(frame, 1, "TotalLapCount")
-    frame["early_stint"] = _slot_values(frame, 0, "MaxLapsInStint")
-    frame["late_stint"] = _slot_values(frame, 1, "MaxLapsInStint")
+    frame["early_laps"] = slot_values(frame, 0, "TotalLapCount")
+    frame["late_laps"] = slot_values(frame, 1, "TotalLapCount")
+    frame["early_stint"] = slot_values(frame, 0, "MaxLapsInStint")
+    frame["late_stint"] = slot_values(frame, 1, "MaxLapsInStint")
 
-    early_time = _slot_values(frame, 0, "MinLapTime")
-    late_time = _slot_values(frame, 1, "MinLapTime")
+    early_time = slot_values(frame, 0, "MinLapTime")
+    late_time = slot_values(frame, 1, "MinLapTime")
     frame["no_time"] = early_time.isna() | (
         late_time.isna() & (frame["format"] != FORMAT_SPRINT_FP1)
     )
     return frame.reset_index(drop=True)
-
-
-def add_signal_inputs(metrics: pd.DataFrame) -> pd.DataFrame:
-    """Add each row's weekend format and the indicator slots, from metrics rows alone.
-
-    Reads no race results, so it suits a race not yet run. Returns a copy holding
-    ``format``, the four ``COMBINATION_SLOTS`` and ``odds``. Higher is better for each.
-
-    Raises:
-        ValueError: A race has no practice sessions.
-    """
-    frame = metrics.copy()
-    frame["format"] = _weekend_formats(frame)
-    frame["driver_rolling"] = frame["RollingPointsRank"]
-    frame["constructor_rolling"] = frame["ConstructorRollingPointsRank"]
-    frame["odds"] = frame["OddsRank"]
-    frame["early"] = _slot_values(frame, 0, "MinLapTime_rank")
-    frame["late"] = _slot_values(frame, 1, "MinLapTime_rank")
-    return frame
 
 
 def _first_race_prices(archive: pd.DataFrame) -> pd.DataFrame:
