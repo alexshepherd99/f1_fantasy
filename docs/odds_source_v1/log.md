@@ -353,3 +353,24 @@ copy. The real CSV was not touched. FastF1's `enable_cache` deprecation warning
 prints on every run, as it does for `fast_f1.cli`.
 
 Suite: 587 passed. Gate 2 waits for the next race weekend.
+
+## 2026-11-08 — Step 10: `indicator_analysis` reads the captured columns
+
+`ODDS_LEAK_SNAPSHOT` and `ODDS_PRE_WEEKEND_SNAPSHOT` became tuples,
+`ODDS_LEAK_SNAPSHOTS` (`Odds_Post_Quali`, `Odds_Q`) and
+`ODDS_PRE_WEEKEND_SNAPSHOTS` (`Odds_Pre_Weekend`, `Odds_PreFP1`). The new names
+are imported from `odds_source.schedule` rather than repeated. The three
+places that compared against one name now test membership: the held-out
+season's odds races, race 1's odds, and the pre-weekend split.
+
+How a captured race is placed is unchanged: `odds_capture_points` already takes
+the first `Odds_` column matching every driver. Should two snapshots of a race
+be identical, it takes the earlier one, whose odds knew no more, so nothing
+leaks.
+
+Red in stages: with a capture map putting race 4 in `Odds_Q` and race 2 in
+`Odds_PreFP1`, the held-out season scored 6 odds races instead of 5, and race 1
+scored a season captured into `Odds_Q`. With the leak rule fixed, the
+pre-weekend split then counted 2 races instead of 3; fixing it turned all
+green. The existing tests, which use the legacy names, cover the unchanged
+branch. `indicator_analysis.main()` was not run. Suite: 589 passed.

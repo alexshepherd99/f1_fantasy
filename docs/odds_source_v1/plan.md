@@ -32,12 +32,8 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 
 8. ~~The CLI~~ — done (verified at Gate 1) 2026-11-08, see log *Step 8*.
 
-10. **Teach `indicator_analysis` the new columns**, test first, before step 9.
-   It finds which snapshot each race's `Odds` came from by matching columns,
-   then excludes races whose odds knew qualifying (`ODDS_LEAK_SNAPSHOT`,
-   `Odds_Post_Quali`) and splits out pre-weekend ones
-   (`ODDS_PRE_WEEKEND_SNAPSHOT`, `Odds_Pre_Weekend`). A captured race would
-   match `Odds_Q` or `Odds_PreFP1` instead, so neither rule would apply.
+10. ~~Teach `indicator_analysis` the new columns~~ — done 2026-11-08, see log
+   *Step 10*.
 
 9. **Docs.** `README.md` (odds input: CSV, new columns, the capture command),
    `CLAUDE.md` (the workbook references and the new package), `BACKLOG.md`

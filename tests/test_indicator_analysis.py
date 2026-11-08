@@ -619,6 +619,21 @@ def test_run_analysis_splits_the_odds_comparison_by_capture_point(report: dict):
     assert during["races"] == 2
 
 
+def test_run_analysis_reads_captured_snapshots_as_the_legacy_ones():
+    """odds_source captures into Odds_Q and Odds_PreFP1, not the legacy columns."""
+    captured = run_analysis(_analysis_frame(), {**_CAPTURE, 2: "Odds_PreFP1", 4: "Odds_Q"})
+
+    def races(scope: str) -> int:
+        return _comparison(
+            captured, target="target_fantasy", format="odds",
+            comparison="odds vs best non-odds", scope=scope,
+        )["races"]
+
+    assert races("2026") == 5  # race 4, captured after qualifying, left out
+    assert races("pre_weekend") == 3
+    assert races("during_weekend") == 2
+
+
 def test_run_analysis_scores_both_targets_and_the_grid_ceiling(report: dict):
     assert set(report["winners"]["target"]) == {"target_fantasy", "target_finish"}
     grid = report["standalone"]
@@ -986,6 +1001,18 @@ def test_first_race_odds_captured_after_qualifying_are_not_scored():
     ]["season"]
     assert sorted(map(str, seasons)) == ["2026", "all"]
     assert "price" in set(table["signal"])
+
+
+def test_first_race_odds_captured_into_odds_q_are_not_scored():
+    frame = pd.concat([
+        _first_race_season(2026, [1.0, 2.0, 3.0]),
+        _first_race_season(2027, [1.0, 2.0, 3.0]),
+    ], ignore_index=True)
+    table = first_race_table(frame, {2026: "Odds_Post_FP2", 2027: "Odds_Q"})
+    seasons = table[
+        (table["signal"] == "odds") & (table["target"] == "target_fantasy")
+    ]["season"]
+    assert sorted(map(str, seasons)) == ["2026", "all"]
 
 
 def test_first_race_capture_points_are_per_season_and_ignore_later_races():

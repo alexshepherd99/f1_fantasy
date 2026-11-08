@@ -21,6 +21,7 @@ from fast_f1.metrics import (
 from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, DEFAULT_OUTPUT_DIRECTORY
 from import_data.import_history import load_all_archive_data
 from import_data.odds import _FILE_BETTING_ODDS
+from odds_source.schedule import PRE_FP1_COLUMN, SESSION_COLUMNS
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,10 @@ COMPARED_FORMATS = ("normal", "sprint")
 
 FIRST_RACE_COMPARED_SIGNALS = ("price", "prior_season", "early", "late", "early_late")
 
-ODDS_LEAK_SNAPSHOT = "Odds_Post_Quali"
-ODDS_PRE_WEEKEND_SNAPSHOT = "Odds_Pre_Weekend"
+# Snapshots that knew the grid, and ones taken before any running, under the
+# legacy hand-entered columns and the ones odds_source captures into
+ODDS_LEAK_SNAPSHOTS = ("Odds_Post_Quali", SESSION_COLUMNS["Qualifying"])
+ODDS_PRE_WEEKEND_SNAPSHOTS = ("Odds_Pre_Weekend", PRE_FP1_COLUMN)
 
 NEVER_RACED_STATUSES = ("Did not start", "Withdrew")
 FINISHED_STATUSES = ("Finished", "Lapped")
@@ -429,7 +432,7 @@ def _usable_odds_races(frame: pd.DataFrame, capture_points: dict[int, str]) -> p
     """The held-out season's rows, less any race whose odds knew qualifying."""
     return frame[
         (frame["Season"] == HOLDOUT_SEASON)
-        & (frame["Race"].map(capture_points) != ODDS_LEAK_SNAPSHOT)
+        & ~frame["Race"].map(capture_points).isin(ODDS_LEAK_SNAPSHOTS)
     ]
 
 
@@ -495,7 +498,7 @@ def first_race_table(frame: pd.DataFrame, capture_points: dict[int, str]) -> pd.
     snapshot knew qualifying.
     """
     snapshots = frame["Season"].map(capture_points)
-    usable_odds = frame[snapshots.notna() & (snapshots != ODDS_LEAK_SNAPSHOT)]
+    usable_odds = frame[snapshots.notna() & ~snapshots.isin(ODDS_LEAK_SNAPSHOTS)]
     common = frame.dropna(subset=list(FIRST_RACE_COMPARED_SIGNALS))
     candidates = [
         *(("own", signal, frame) for signal in (*FIRST_RACE_COMPARED_SIGNALS, "grid")),
@@ -631,7 +634,7 @@ def _odds_comparisons(
         ("aggregate with odds vs best non-odds", aggregate, best),
     ]
     pre_weekend = {
-        race for race, column in capture_points.items() if column == ODDS_PRE_WEEKEND_SNAPSHOT
+        race for race, column in capture_points.items() if column in ODDS_PRE_WEEKEND_SNAPSHOTS
     }
     scopes = {
         str(HOLDOUT_SEASON): lambda scores: scores,
