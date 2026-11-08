@@ -303,3 +303,34 @@ The check is decided now so that 2027 tests it blind:
   probably be smaller than one season's noise.
 
 Raised by Alex 2026-11-08.
+
+## Refuse odds-page names that could act as spreadsheet formulas
+
+A name on a saved Oddschecker page that matches no driver is kept as the page
+spells it (`odds_source/drivers.py:125`) and written unchanged into
+`data/f1_betting_odds.csv` (`odds_source/odds_file.py:74`), a committed file.
+The page is third-party text: a name starting with `=`, `+`, `-` or `@` would
+be read as a formula by a spreadsheet application opening the file. Today only
+the git diff review stands in the way.
+
+Refuse, with a `ValueError` before anything is written, a name that is not
+letters (accents allowed), spaces, hyphens and apostrophes, rather than escaping
+it, so the file never holds anything but a name. Matched names already become
+driver codes and are unaffected.
+
+Raised by the code security review, 2026-11-08.
+
+## Refuse non-finite numbers in BoxBox's files
+
+`boxbox/source.py`'s `_number` accepts any JSON number, and Python's
+`json.loads` reads the non-standard `NaN` and `Infinity` as numbers. A `NaN`
+price is refused later as a missing price, but checked on 2026-11-08, `inf`
+passes `read_archive_file` and the integrity checks, so a points or price
+value of `inf` would be written into the archive CSVs with only the printed
+report and the git diff review to catch it.
+
+Make `_number` raise `BoxBoxDataError` for a value that is not finite. Whether
+to also bound prices (positive, below some ceiling) is worth deciding at the
+same time.
+
+Raised by the code security review, 2026-11-08.
