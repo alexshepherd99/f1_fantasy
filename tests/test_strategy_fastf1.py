@@ -7,9 +7,11 @@ from common import AssetType
 from helpers import load_with_derivations
 from linear.strategy_base import VarType
 from linear.strategy_factory import factory_strategy
-from linear.strategy_fastf1 import StrategyFastF1
+from backtest.variants import make_variant
+from linear.strategy_fastf1 import StrategyFastF1, StrategyFastF1RuleRise
 from races.season import factory_season
-from races.team import Team
+from races.team import Team, factory_team_lists
+from scripts.run_single_team import run_for_team
 
 _DRIVER_PAIRS = {
     "D1@C1": "C1",
@@ -86,8 +88,10 @@ def stub_tables(monkeypatch) -> tuple[_StubTables, list]:
     return tables, files_loaded
 
 
-def _strategy(max_cost: float, max_moves: int, race_num: int = 5, **kwargs) -> StrategyFastF1:
-    """The fixture race and team, with any argument overridden by ``kwargs``."""
+def _strategy(
+    max_cost: float, max_moves: int, race_num: int = 5, cls: type[StrategyFastF1] = StrategyFastF1, **kwargs
+) -> StrategyFastF1:
+    """The fixture race and team as a ``cls``, with any argument overridden by ``kwargs``."""
     arguments = dict(
         team_drivers=["D1@C1", "D2@C1"],
         team_constructors=["C1", "C2"],
@@ -102,7 +106,7 @@ def _strategy(max_cost: float, max_moves: int, race_num: int = 5, **kwargs) -> S
         race_num=race_num,
         season_year=2025,
     )
-    return StrategyFastF1(**(arguments | kwargs))
+    return cls(**(arguments | kwargs))
 
 
 def _selected(strat: StrategyFastF1) -> set[str]:
@@ -467,3 +471,45 @@ def test_strategy_fastf1_solves_a_real_race(settings):
         assert all(a in strat._values for a in selected)
     else:
         assert all(strat._values.get(a, 0.0) > 0.0 for a in selected)
+
+
+def test_strategy_fastf1_rule_rise_is_the_chosen_setting(stub_tables):
+    """fastf1_v2's chosen setting: a price-rise reward of 2.5, every other default kept."""
+    tables, _ = stub_tables
+
+    strat = _strategy(max_cost=25.0, max_moves=2, race_num=7, cls=StrategyFastF1RuleRise)
+
+    assert StrategyFastF1RuleRise.__name__ == "StrategyFastF1RuleRise"
+    assert isinstance(strat, StrategyFastF1)
+    assert strat._price_rise_reward == 2.5
+    assert strat._drs_coefficient == 1.0
+    assert strat._budget_reward == 0.0
+    assert strat._negative_penalty == 0.0
+    assert tables.rises_requested == [(2025, 7)]
+
+
+def test_strategy_fastf1_rule_rise_will_not_take_another_reward(stub_tables):
+    """The reward is fixed, so the name always means the setting that was back-tested."""
+    with pytest.raises(TypeError, match="price_rise_reward"):
+        _strategy(max_cost=25.0, max_moves=2, cls=StrategyFastF1RuleRise, price_rise_reward=5.0)
+
+
+def test_strategy_fastf1_rule_rise_plays_as_the_backtested_variant():
+    """A 2025 season, race for race, as step 17's ``FastF1_RuleRise2p5`` built by ``make_variant``."""
+    season = factory_season(*load_with_derivations(season=2025), 2025)
+
+    def _run(strategy) -> list[dict]:
+        # A fresh team per run, since run_for_team mutates the team it is given
+        team = factory_team_lists(
+            drivers=["BOR@KCK", "HAD@VRB", "ALB@WIL", "ALO@AST", "HUL@KCK"],
+            constructors=["KCK", "AST"],
+            race=season.races[1],
+        )
+        rows = run_for_team(strategy, team, season, 2025, 1)
+        return [{key: value for key, value in row.items() if key != "strategy"} for row in rows]
+
+    variant_rows = _run(make_variant(StrategyFastF1, "FastF1_RuleRise2p5", price_rise_reward=2.5))
+
+    assert _run(StrategyFastF1RuleRise) == variant_rows
+    # Without this, the test could pass with the reward doing nothing
+    assert _run(StrategyFastF1) != variant_rows

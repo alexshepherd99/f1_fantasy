@@ -145,3 +145,18 @@ class StrategyFastF1(StrategyBase):
             if drivers[d].value() > 0.5 and value > best_value:
                 best_driver, best_value = d, value
         return best_driver
+
+
+class StrategyFastF1RuleRise(StrategyFastF1):
+    """fastf1_v2's chosen setting: `StrategyFastF1` with a price-rise reward of 2.5.
+
+    Every other setting keeps its default: DRS coefficient 1, no budget reward and no
+    negative penalty. It beat `StrategyMaxP2PM` in 2025 and in 2026 through race 18,
+    back-tested as `FastF1_RuleRise2p5` (``BACKTEST_LOG.md``). The reward is fixed, so the
+    name always means that setting: passing ``price_rise_reward`` raises ``TypeError``.
+    Other arguments are as for `StrategyFastF1`.
+    """
+    PRICE_RISE_REWARD = 2.5
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, price_rise_reward=self.PRICE_RISE_REWARD, **kwargs)
