@@ -131,5 +131,7 @@ built, before 2027 race 1.
 **Gate 1: the first real captures, checked against the app.** Brazil (2026
 race 20's points, Las Vegas prices), then at least one more race. Alex checks
 the written values against the F1 Fantasy app and reviews the CSV diff before
-committing. Running before BoxBox updates should show the "no price has
-moved" refusal.
+committing. BoxBox publishes points and prices together, so a run before it
+updates is a correction of the not-yet-held race at unchanged prices, which
+leaves the files as they are. The "no price has moved" refusal is a guard
+against a partial update and is not expected to fire.
