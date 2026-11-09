@@ -9,6 +9,7 @@ import pandas as pd
 
 from backtest.runner import SAMPLE_COLUMNS, append_results
 from backtest.sample import DEFAULT_BAND_EDGES, STARTING_RACE, sample_starting_teams
+from backtest.store import get_starting_key, open_batch_results_file
 from common import setup_logging
 from helpers import load_with_derivations
 from linear.strategy_base import StrategyBase
@@ -17,7 +18,6 @@ from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
 from races.season import Race, factory_season
 from races.team import factory_team_row
-from scripts.run_multiple_teams import get_starting_key, open_batch_results_file
 from scripts.run_single_team import run_for_team
 
 # `get_row_intermediate_results` spreads the team over numbered columns, each

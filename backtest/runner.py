@@ -8,12 +8,12 @@ import pandas as pd
 
 from backtest.metrics import POOLED_BAND, pair_with_baseline, rank_challengers, season_summary, verdict
 from backtest.sample import STARTING_RACE, sample_starting_teams
+from backtest.store import get_starting_key, open_batch_results_file
 from helpers import load_with_derivations
 from linear.strategy_base import StrategyBase
 from linear.strategy_p2pm import StrategyMaxP2PM
 from races.season import Season, factory_season
 from races.team import factory_team_row
-from scripts.run_multiple_teams import get_starting_key, open_batch_results_file
 from scripts.run_single_team import run_for_team
 
 # Columns the sample adds to the priced combinations, which are not assets

@@ -16,12 +16,12 @@ from backtest.per_race import (
     team_summary,
 )
 from backtest.sample import DEFAULT_BAND_EDGES, sample_starting_teams
+from backtest.store import get_starting_key, open_batch_results_file
 from helpers import load_with_derivations
 from linear.strategy_max_points import StrategyMaxPoints
 from linear.strategy_p2pm import StrategyMaxP2PM
 from races.season import factory_season
 from races.team import factory_team_row
-from scripts.run_multiple_teams import get_starting_key, open_batch_results_file
 from scripts.run_single_team import run_for_team
 
 _SEASON = 2023

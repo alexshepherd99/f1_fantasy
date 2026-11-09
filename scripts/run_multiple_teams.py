@@ -1,9 +1,9 @@
 """Run batch simulations across seasons and strategies, appending results to a parquet batch results file."""
 
-import os
 import pandas as pd
 import logging
 
+from backtest.store import get_starting_key, open_batch_results_file
 from common import F1_SEASON_CONSTRUCTORS, setup_logging
 from helpers import load_with_derivations
 from linear.strategy_base import StrategyBase
@@ -22,21 +22,6 @@ _FILE_BATCH_RESULTS_PARQET = "outputs/f1_fantasy_results_batch.parquet"
 _FILE_BATCH_RESULTS_EXCEL = "outputs/f1_fantasy_results_batch.csv"
 _SUB_STRAT = "unlimited_chip_4"
 
-
-def get_starting_key(strat_name: str, season: int, team: Team, sub_strat: str = "") -> str:
-    if len(sub_strat) > 0:
-        return f"({strat_name}:{sub_strat})({season}){team}"
-    else:
-        return f"({strat_name})({season}){team}"
-    
-
-def open_batch_results_file(fn: str) -> pd.DataFrame:
-    if not os.path.exists(fn):
-        return pd.DataFrame(columns=["sim_key"])
-    
-    df = pd.read_parquet(fn)
-    logging.debug(f"Opened {fn} with shape {df.shape}")
-    return df
 
 def write_batch_results(df_batch_results: pd.DataFrame, rows_append: list) -> pd.DataFrame:
     df_tmp = pd.DataFrame(rows_append)
