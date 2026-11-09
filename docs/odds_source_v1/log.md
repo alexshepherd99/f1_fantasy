@@ -434,6 +434,14 @@ Two findings, neither a fault:
 Alex reviewed the diff and confirmed the odds. As expected, the first write
 changes every line once, adding the seven columns' commas to the older rows.
 
-**Every step and both gates are done.** Still not run:
-`indicator_analysis.main()`. Refreshing the odds nearer the race is routine
-use, outside this effort.
+**Every step and both gates are done.** Refreshing the odds nearer the race is
+routine use, outside this effort.
+
+**`indicator_analysis.main()` run on the real data afterwards**, the last item
+listed as not run. It took about 2 minutes and wrote all seven tables
+byte-for-byte identical to the previous run's, as expected: it scores only
+races already in the metrics file, so race 21 does not enter it, and every
+earlier race is found in the same legacy columns. That previous run, at 17:58
+on 2026-11-08, came after steps 3 and 10 but was not logged here, so the note
+above that it had not run was already stale. Nothing from the effort remains
+unrun.
