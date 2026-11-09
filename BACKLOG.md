@@ -11,6 +11,7 @@ Efforts under `docs/`:
 | [`fastf1_v1`](docs/fastf1_v1/) | done |
 | [`fastf1_v2`](docs/fastf1_v2/) | done |
 | [`indicator_analysis_v1`](docs/indicator_analysis_v1/) | done |
+| [`live_picks_v1`](docs/live_picks_v1/) | in progress |
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
 | [`odds_source_v1`](docs/odds_source_v1/) | done |
@@ -158,45 +159,6 @@ does not use it. See `docs/odds_drs_v1/log.md`.] What it can and cannot buy:
 
 Raised 2026-09-28, from `max_points_v1`.
 
-## Live mid-season picks with `StrategyFastF1`
-
-**Only if** `fastf1_v2`'s back-test finds `StrategyFastF1` more effective than
-`StrategyMaxP2PM`, and Alex wants to use it for mid-season picks. Otherwise drop
-this item. [2026-11-08: the first condition is met. `FastF1_RuleRise2p5` beat P2PM
-in 2025 and 2026 through race 18 (`BACKTEST_LOG.md`). The live 2026 team stays on
-P2PM, so this is for 2027 at the earliest. The chosen setting is now the class
-`StrategyFastF1RuleRise` in `linear/strategy_fastf1.py` (`fastf1_v2` step 27), so a
-script can pass it to `factory_strategy`. No script does yet.]
-
-The strategy reads only the stored metrics file,
-`data/fastf1_practice_rolling_metrics.csv`, and never calls FastF1. So a live pick
-is two stages: build the race's metrics rows (after FP3 on a normal weekend), then
-run the strategy. Today that route has three gaps, reasoned from the code on
-2026-11-06 and not run:
-
-- **Single-race mode writes elsewhere.** `fast_f1.cli --season S --race N` saves to
-  `outputs/fastf1_race_S_N.csv`, which the strategy does not read. Pointing the
-  strategy at that file fails, as the expected-points tables need the 2023–25 rows.
-- **Historical mode freezes the row.** `--historical --season S` does add the race to
-  the strategy's file, but it skips stored races, so the row built before the race
-  had results is never rebuilt. Step 3b.3 of `fastf1_v2` had to check for such rows.
-  It also exits 1 for the rounds not yet run. Since the file became CSV, such a row
-  also reformats every stored line: its missing `Points` turn the column to floats,
-  so `15` is rewritten `15.0` (simulated on a copy 2026-11-08, values unchanged). A
-  run after the race only adds lines, so `git diff --numstat` on the file showing
-  any deletions marks a reformat or a cut-off write.
-- **A missing race fails quietly.** With no metrics rows for the race, the strategy
-  scores every asset zero and still returns a team. That is right for the back-test
-  (2026 race 19, plan step 6.5) and wrong for a live pick, which should raise.
-
-The work: a way to put the current race's rows into the strategy's file and rebuild
-them once results exist, a live-pick entry point that raises when the race has no
-signal, and one command or documented sequence running both stages.
-`load_signal_tables` caches per process, so a single process doing both stages
-would have to build the rows before its first strategy call.
-
-Raised by Alex 2026-11-06, during `fastf1_v2` step 6.
-
 ## Re-assess `StrategyFastF1`'s tuning values when 2026 finishes
 
 **For Alex, once the 2026 season is over.** `fastf1_v2` step 15.1 set the
@@ -333,3 +295,31 @@ to also bound prices (positive, below some ceiling) is worth deciding at the
 same time.
 
 Raised by the code security review, 2026-11-08.
+
+## Capture a new season from BoxBox
+
+`boxbox/` handles only a season already in the archive (`CLAUDE.md`, *boxbox*).
+A new season's first capture would have to add its assets and race-1 prices, and
+`common.F1_SEASON_CONSTRUCTORS`, `boxbox/mapping.py`'s `TEAM_CODES` and
+`cli.WORKBOOK_LAST_RACE` all need the new season. Until then the new season goes
+into the archive CSVs by hand.
+
+A prerequisite for real use of `live_picks_v1`'s race-1 mode (its D30), so needed
+before 2027's first race. BoxBox serves only the current season and prices are
+published after winter testing, so it can only be run for real then.
+
+Raised by Alex 2026-11-09, from `live_picks_v1`.
+
+## Shadow teams per strategy, tracked live
+
+`live_picks_v1` records only the pick Alex played (its D8). Each strategy's pick
+there is made from Alex's team, chosen by whichever strategy he played, so a season
+of them does not show how a strategy would do on its own. A shadow team per
+strategy, picked by that strategy every race with its own budget and free moves,
+would give a live head-to-head through 2027 alongside the back-test.
+
+The back-test already measures the same thing on the same archive, so the case
+needs making before building: what a live shadow shows that a back-test rerun at
+season end does not.
+
+Raised by Alex 2026-11-09, from `live_picks_v1`.
