@@ -590,3 +590,25 @@ to the line-up shows `new`, and one leaving shows `dropped`.
 The new test failed against the old format before the change, and again
 against the first version, which printed `10` rather than `10.0`, before the
 one-decimal format.
+
+## 2026-11-09 — Gate 1: first real capture (Brazil)
+
+BoxBox had published Brazil's results and the new prices by 07:12 UTC. A dry
+run at 11:44 UTC saved its copy to `outputs/boxbox/2026-11-09T114401Z/` and
+showed a capture: race 20's points and race 21's prices. There were no
+refusals and no warnings, so BoxBox's earlier 2026 points still match the
+archive. The write used `--from-copy` on that same copy, so the files match
+the preview exactly.
+
+The diff touched only 2026 race 20 and race 21 rows:
+
+- Every line removed was a race-20 row with empty points: 22 drivers and 11
+  constructors.
+- Every line added is either that same row with its points filled in, or a
+  new race-21 row.
+
+The full suite passed on the updated archive (656). Alex checked every point
+and price against the F1 Fantasy app, and they all matched, before the CSVs
+were committed.
+
+**Still open for Gate 1:** at least one more race.
