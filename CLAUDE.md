@@ -26,6 +26,13 @@ Propose changes to `agentic` with the **`propose-shared-change`**
 skill — it defines how a draft crosses from this session to one
 that can write to `agentic`.
 
+## Changelog
+
+`CHANGELOG.md` holds dated one-liners, newest first. Add one in the commit that
+finishes an effort, and in a commit-only change that alters behaviour or results.
+Routine race-weekend data, odds and team updates never get one. Dated history
+goes there, not into `README.md` or this file.
+
 ## Commands
 
 Activate the venv or prefix commands with it: `venv/bin/python`. The repo is not an installed package — modules import from repo root (`from races.team import Team`), so **`PYTHONPATH` must include the repo root** when running anything outside pytest (pytest's own rootdir insertion handles tests fine).
