@@ -25,8 +25,6 @@ After writing the initial version of the code mostly by hand, future iterations 
 ## Usage scripts
 
 - **run_single_team.py** : Run all strategies for a given team in a given season, saving the results out to Excel format.  Starting race can be specified within the script, so that you can predict from a particular point within the season against your team at that time.
-- **run_multiple_teams.py** : Full back-testing script, running all strategies against all available seasons, for every possible starting team combination above a specified total value.  Outputs are written to a parquet format file every 100 simulations, in case of interuption; when re-running, any simulations already present in the output will be skipped.  For comparing a strategy against P2PM, the sampled **backtest** module below is quicker and reports paired results.
-- **batch_results_xl.py** : convert the parquet output file from run_multiple_teams.py into a csv format, for analysis and importing into Tableau.
 - **check_run_ppm.py** : generate an Excel version of the strategy input data, plus any derivation calculations.
 - **select_starting_team.py** : identify the best starting line-up for a given season, based on cost ratio of driver to constructor.
 - **select_odds_start.py** : similar to the above to identify a starting line-up for a given season, based on available betting odds.  Requires thinking about driver concentration risk. 
@@ -102,6 +100,9 @@ PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyMaxBudget
 # smaller and quicker, or other seasons and band edges
 PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyZeroStop --sample-size 20
 PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyZeroStop --seasons 2026 --bands 90 95 99.5 100
+
+# every starting team in a band: a band smaller than the sample size is taken whole
+PYTHONPATH=. venv/bin/python -m backtest.cli --strategies StrategyZeroStop --bands 99.5 100 --sample-size 100000
 ```
 
 `--sample-size` is per band, so the default of 500 draws 1,500 teams a season.  At roughly 0.4 seconds a simulation, the default run takes about 30 minutes per strategy, P2PM included, so about 85 minutes with two challengers.  Seasons default to the completed ones, listed in `COMPLETED_SEASONS` in `backtest/cli.py`; add a season there once it has finished.

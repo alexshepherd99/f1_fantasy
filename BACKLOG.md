@@ -14,7 +14,7 @@ Efforts under `docs/`:
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
 | [`odds_source_v1`](docs/odds_source_v1/) | done |
-| [`remove_batch_script_v1`](docs/remove_batch_script_v1/) | in progress |
+| [`remove_batch_script_v1`](docs/remove_batch_script_v1/) | done |
 
 Global list of not-yet-started work. Freeform. When an item is picked up, create `docs/<effort-name>/` (see `docs/` and `agentic`'s `shared/persistent-docs.md`) and move the item there.
 
@@ -80,13 +80,12 @@ deliberately — it is what populates a lap's `Deleted` flag.
 
 ## No test exercises any script's `__main__` block
 
-Tests reach into `scripts/` for individual functions — `run_multiple_teams`,
-`run_single_team` (`tests/test_run_batch.py:9-10`), `check_run_ppm`
-(`tests/test_derivations.py:11`) and `select_starting_team`
-(`tests/test_select_starting_team.py:1`) — but a `__main__` block never runs on
-import, so the wiring inside one is exercised by nothing. That is true of all
-six scripts, including the four whose functions are covered. Two have no
-test importing them at all: `batch_results_xl.py` and `select_odds_start.py`.
+Tests reach into `scripts/` for individual functions — `run_single_team`
+(`tests/test_run_batch.py:5`), `check_run_ppm` (`tests/test_derivations.py:11`)
+and `select_starting_team` (`tests/test_select_starting_team.py:1`) — but a
+`__main__` block never runs on import, so the wiring inside one is exercised by
+nothing. That is true of all four scripts, including the three whose functions
+are covered. One has no test importing it at all: `select_odds_start.py`.
 
 The gap is not theoretical. `scripts/get_fastf1_data.py` was deleted on
 2026-07-27 (recoverable at `1282518~1`) after drifting twice without a single
@@ -95,12 +94,10 @@ argument that had been removed from `generate_historical_metrics` hours
 earlier, so it would have raised `TypeError` on its first real call. Both
 defects sat in its `__main__` block and were found by grepping for callers.
 
-Two live instances of the same shape:
+One live instance of the same shape (a second, `batch_results_xl.py`'s import
+of private names from `run_multiple_teams`, went with both scripts on
+2026-11-09):
 
-- `batch_results_xl.py:7` imports `_FILE_BATCH_RESULTS_PARQET` and
-  `_FILE_BATCH_RESULTS_EXCEL` from `scripts.run_multiple_teams` — private
-  names, across module boundaries. Renaming either breaks the script and
-  nothing fails.
 - `select_odds_start.py:73` hardcodes `select_odds_start_for_season(2026)` in
   its `__main__` block, the same stale-constant shape that made
   `get_fastf1_data.py` wrong.
