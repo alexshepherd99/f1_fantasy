@@ -26,8 +26,7 @@ BASELINE = StrategyMaxP2PM
 def append_results(store: pd.DataFrame, rows: list[dict], path: str) -> pd.DataFrame:
     """Append result rows to the store and write the whole store to `path`.
 
-    Stands in for `scripts.run_multiple_teams.write_batch_results`, which
-    hardcodes its output path. Nothing is written when there are no rows.
+    Nothing is written when there are no rows.
 
     Args:
         store: Results so far, as opened by `open_batch_results_file`.

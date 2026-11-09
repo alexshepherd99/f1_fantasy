@@ -8,11 +8,8 @@ import pandas as pd
 from races.team import Team
 
 
-def get_starting_key(strat_name: str, season: int, team: Team, sub_strat: str = "") -> str:
-    if len(sub_strat) > 0:
-        return f"({strat_name}:{sub_strat})({season}){team}"
-    else:
-        return f"({strat_name})({season}){team}"
+def get_starting_key(strat_name: str, season: int, team: Team) -> str:
+    return f"({strat_name})({season}){team}"
 
 
 def open_batch_results_file(fn: str) -> pd.DataFrame:
