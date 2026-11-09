@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project does
 
-Applies linear programming (PuLP) to optimise F1 Fantasy team selection. It back-tests strategies (zero-stop, max-budget, max P2PM, betting odds) against all possible starting team combinations for historic seasons, accounting for game mechanics: forced transfers when a team driver becomes unavailable, price variation through the season, and unused-transfer bonuses. See `README.md` for the full strategy write-up, game-mechanic caveats (chips not handled except P2PM's race-4 reset, no cross-team point carry when a driver switches constructors mid-season, concentration risk mostly unmanaged) and the current season's team log.
+Applies linear programming (PuLP) to optimise F1 Fantasy team selection. It back-tests strategies (zero-stop, max-budget, max P2PM, betting odds) against all possible starting team combinations for historic seasons, accounting for game mechanics: forced transfers when a team driver becomes unavailable, price variation through the season, and unused-transfer bonuses. See `README.md` for the full strategy write-up, game-mechanic caveats (chips not handled except P2PM's race-4 reset, no cross-team point carry when a driver switches constructors mid-season, concentration risk mostly unmanaged), and `TEAM_2026.md` for the current season's team log.
 
 ## Shared agents/skills/conventions
 

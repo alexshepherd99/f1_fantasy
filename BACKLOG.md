@@ -262,7 +262,7 @@ The only chip any strategy plays is the race-4 unlimited-moves chip: P2PM has it
 built in, and `fastf1_v2` step 25 tested it for FastF1 and did not keep it, as it
 helped in two seasons and cost points in two. The live game has others,
 including Limitless, the 3x boost, No Negative, Autopilot and the free transfer.
-Alex played several in 2026 (`README.md`, *2026 team*). None is modelled, so
+Alex played several in 2026 (`TEAM_2026.md`). None is modelled, so
 the back-tests cannot say when to play them or what they are worth. Unlike the
 race-4 chip, most need a view across the season of when to play them, which no
 strategy here takes (`README.md`, caveats).
