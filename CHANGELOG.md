@@ -2,6 +2,7 @@
 
 What changed, newest first, one line each. The effort's docs carry the detail.
 
+- **2026-11-09** — README and CLAUDE.md tidied; changelog added; 2026 team log moved to [TEAM_2026.md](TEAM_2026.md) ([readme_tidy_v1](docs/readme_tidy_v1/))
 - **2026-11-09** — Old batch back-test scripts removed; `backtest` is the only multi-team back-test ([remove_batch_script_v1](docs/remove_batch_script_v1/))
 - **2026-11-08** — FastF1 strategy with a price-rise reward beats Max P2PM in back-test; the live 2026 team stays on Max P2PM ([fastf1_v2](docs/fastf1_v2/))
 - **2026-10-31** — `fast_f1` signs in to an F1 account, which the timing service now requires

@@ -40,3 +40,27 @@ that the file paths, links and commands in the files it writes exist.
 4. Rewrite `README.md`.
 5. Tidy `CLAUDE.md`.
 6. Close the effort.
+
+## 2026-11-09 — Done
+
+All six steps landed, one commit each.
+
+- **Step 2** also repointed CLAUDE.md's team-log reference and `BACKLOG.md`'s
+  chips item, which named the README's *2026 team* section. The moved table was
+  diffed against the README's and is byte-identical.
+- **Step 3**'s backfill is the agreed list, dated by each effort's closing commit.
+- **Step 4** states each topic once: the race-4 chip under *Limitations*, the odds
+  conversion under *Input data*, back-test results by one link to
+  `BACKTEST_LOG.md`. It adds the missing Max P2PM without reset strategy and the
+  `scripts`, `boxbox` and `odds_source` modules, fixes `import_data`'s "Excel
+  inputs", and drops the "several hours" run-time and "all possible" starting
+  teams, which the sampled back-test no longer matches. The odds strategy's
+  "never back-tested" line, and its bracketed correction, became one sentence
+  stating why it was tested on 2026 alone; the odds file holds only 2026, which
+  was checked.
+- **Step 5** keeps CLAUDE.md's rules and drops what README.md already says: the
+  `fast_f1` session list, the data file formats and back-test results.
+
+Checked, and could have failed: every repo path, link target and CSV header the
+new README names exists or matches; the 27 paths CLAUDE.md names exist; the four
+CLIs it gives answer `--help`. Docs only, so the test suite was not run.
