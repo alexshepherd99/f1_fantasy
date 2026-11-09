@@ -399,3 +399,41 @@ at Gate 1. **What has not been run:** a real write into
 page, runs the command, and reviews the CSV's git diff before committing. The
 first real run adds the seven snapshot columns, so every line of that diff
 changes once; after that a run changes only its race's lines.
+
+## 2026-11-09 — Gate 2: the first real run; effort done
+
+The day after Brazil, with Las Vegas two weeks away, Alex saved Oddschecker's
+Las Vegas winner page and the command ran against the real
+`data/f1_betting_odds.csv` (`41abc78`). Suite green before the run: 656
+passed.
+
+It placed the page as 2026 race 21, `Odds_PreFP1` (saved 12:08 UTC, before
+any session), and read the driver list from Brazil's race, as planned for a
+run before FP1. All 22 drivers matched, with the same driver and team pairs as
+race 20, and none was dropped: all 15 active bookmakers priced every driver
+but Câmara, who had 11.
+
+Checked against a copy of the file taken before the run, by a scratch script:
+440 rows became 462, the 22 new ones together after race 20; no value changed
+in any existing row, and the seven new columns are blank on all of them; in
+race 21, `Odds` equals `Odds_PreFP1` and no other snapshot is filled. The
+script caught one changed race 20 price in a damaged copy, so it can fail.
+`load_odds` reads 22 drivers and 11 constructors for race 21.
+
+Two findings, neither a fault:
+
+- **Fourteen drivers are all at 500/1.** Their median is 500/1 because 8–11
+  of the 15 bookmakers quote every back-of-grid driver at that price this far
+  out. A snapshot this early cannot rank them; a later one, which Alex may
+  take as routine use, can.
+- **`Odds` changes method at race 21.** Alex's hand-entered prices for races
+  1–20 were each driver's best price across the bookmakers; captured prices
+  are the median (D16). Alex is happy with the median. `README.md` now says
+  so beside the legacy columns.
+
+Alex reviewed the diff and confirmed the odds. As expected, the first write
+changes every line once, adding the seven columns' commas to the older rows.
+
+**Every step and both gates are done.** Still not run:
+`indicator_analysis.main()`. Refreshing the odds nearer the race is routine
+use, outside this effort.

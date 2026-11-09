@@ -43,4 +43,5 @@ credentials through `fast_f1.auth`, as `fast_f1.cli` does. Nothing in `races/`,
 *Step 8*.
 
 **Gate 2 — the first real run**, at the next race weekend. Alex reviews the
-git diff of the CSV before committing it.
+git diff of the CSV before committing it. Cleared 2026-11-09, see log
+*Gate 2*.

@@ -73,7 +73,7 @@ It reads the newest saved page (or one named on the command line), asks FastF1 w
 
 A session counts as finished an hour after its scheduled start.  The page is only fetched by the browser: Oddschecker refuses scripted requests, and getting round that is not something to build.
 
-The legacy columns **Odds_Pre_Weekend**, **Odds_Post_FP2**, **Odds_Pre_Quali** and **Odds_Post_Quali** hold the hand-entered snapshots for 2026 races 1–20 and are no longer written.
+The legacy columns **Odds_Pre_Weekend**, **Odds_Post_FP2**, **Odds_Pre_Quali** and **Odds_Post_Quali** hold the hand-entered snapshots for 2026 races 1–20 and are no longer written.  Those were each driver's best price across the bookmakers, not the median, so **Odds** changes method at race 21, the first race captured.
 
 ## Strategies
 
