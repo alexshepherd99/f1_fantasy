@@ -3,8 +3,10 @@ import logging
 import pytest
 
 from common import AssetType
+from linear.strategy_base import COST_PROHIBITIVE
+from linear.strategy_budget import StrategyMaxBudget
 from races.season import Season
-from simulate.pick import Pick, next_free_moves, solve_race
+from simulate.pick import Pick, limitless_cap, next_free_moves, solve_race
 from tests.simulate_fixtures import (
     SEASON,
     StrategyInfeasible,
@@ -66,3 +68,39 @@ def test_solve_race_raises_when_the_solver_is_not_optimal(budget_season, caplog)
 @pytest.mark.parametrize("moves_used, expected", [(0, 3), (1, 3), (2, 2), (3, 2), (7, 2)])
 def test_next_free_moves(moves_used, expected):
     assert next_free_moves(moves_used) == expected
+
+
+@pytest.mark.parametrize("max_cost, expected", [
+    ({}, ("T1", 30.0, 0.0)),
+    ({"max_cost": 65.0}, ("T2", 60.0, 5.0)),
+])
+def test_solve_race_takes_a_cost_cap_in_place_of_the_team_budget(max_cost, expected):
+    # T2 costs 40 and scores, but the team is worth 30 with nothing unused
+    race_1 = make_race(1)
+    race_2 = make_race(2, prices={"T2": 40.0}, scores={"T2": 10.0})
+
+    pick = solve_race(StrategyMaxScore, make_team(["A@T1", "B@T1"], "T1"), race_2, race_1, SEASON, 2, **max_cost)
+
+    assert (pick.constructors[0], pick.cost, pick.unused_budget) == expected
+
+
+def test_limitless_cap_is_the_sum_of_every_available_price():
+    race = make_race(1, prices={"A@T1": 1.5, "T2": 30.0})
+    del race.drivers["D@T2"]
+
+    # A, B, C, then T1 and T2
+    assert limitless_cap(race) == 1.5 + 10.0 + 10.0 + 10.0 + 30.0
+
+
+def test_limitless_cap_still_forces_out_a_driver_who_has_left_the_race():
+    # StrategyBase prices a held driver who has left at COST_PROHIBITIVE so no budget
+    # keeps him; StrategyMaxBudget would keep him under any cap that reached it
+    race_1 = make_race(1)
+    race_2 = make_race(2)
+    del race_2.drivers["A@T1"]
+    team = make_team(["A@T1", "B@T1"], "T1")
+
+    pick = solve_race(StrategyMaxBudget, team, race_2, race_1, SEASON, max_moves=3, max_cost=limitless_cap(race_2))
+
+    assert "A@T1" not in pick.drivers
+    assert limitless_cap(race_2) < COST_PROHIBITIVE

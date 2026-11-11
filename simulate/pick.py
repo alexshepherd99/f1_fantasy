@@ -32,7 +32,7 @@ class Pick:
 
 
 def solve_race(strategy: type[StrategyBase], team: Team, race: Race, race_prev: Race, season_year: int,
-               max_moves: int) -> Pick:
+               max_moves: int, max_cost: float | None = None) -> Pick:
     """Solve `strategy` for `team` at `race` and return its pick, leaving `team` unchanged.
 
     Args:
@@ -42,6 +42,8 @@ def solve_race(strategy: type[StrategyBase], team: Team, race: Race, race_prev: 
         race_prev: The race before, for the price of a held driver no longer in `race`.
         season_year: The season, passed to the strategy.
         max_moves: The moves allowed.
+        max_cost: The most the pick may cost, in place of the team's value plus its unused budget,
+            as for Limitless (`limitless_cap`). None keeps the team's budget.
 
     Returns:
         The pick.
@@ -49,7 +51,8 @@ def solve_race(strategy: type[StrategyBase], team: Team, race: Race, race_prev: 
     Raises:
         RuntimeError: If the solver does not return an optimal solution.
     """
-    strat = factory_strategy(race, race_prev, team, strategy, max_moves=max_moves, season_year=season_year)
+    strat = factory_strategy(race, race_prev, team, strategy, max_moves=max_moves, season_year=season_year,
+                             max_cost=max_cost)
 
     model = strat.execute()
 
@@ -70,6 +73,15 @@ def solve_race(strategy: type[StrategyBase], team: Team, race: Race, race_prev: 
         cost=strat._lp_variables[VarType.TotalCost].value(),
         unused_budget=strat._lp_variables[VarType.UnusedBudget].value(),
     )
+
+
+def limitless_cap(race: Race) -> float:
+    """Return the cost cap for a Limitless race: the sum of every driver's and constructor's price in it.
+
+    Any team of the race fits under it, and it stays far below `COST_PROHIBITIVE`, the price
+    `StrategyBase` gives a held driver no longer in the race, so such a driver is still forced out.
+    """
+    return sum(d.price for d in race.drivers.values()) + sum(c.price for c in race.constructors.values())
 
 
 def next_free_moves(moves_used: int) -> int:
