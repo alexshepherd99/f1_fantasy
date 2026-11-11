@@ -91,3 +91,36 @@ proposed (below).
 
 Suite 657 → 676, all green. `run_single_team.py`'s 2026 replay that re-solves races
 comes in step 2's verification, before and after `max_cost`.
+
+## 2026-11-11 — Step 2: `max_cost` and the Limitless cap
+
+Done (verified).
+
+- **`factory_strategy(..., max_cost: float | None = None)`** (D6), the only change
+  in `linear/`. `None` keeps `team.total_budget(race, race_prev)`. One side effect:
+  when a cap is given the team's budget is not computed, so the `KeyError` for a held
+  driver priced in neither race does not arise. The test went red on behaviour (30.5
+  where 55.5 was given) with the argument accepted but ignored.
+- **`solve_race(..., max_cost=None)`** passes it through, and **`limitless_cap(race)`**
+  (D7) sums every available driver's and constructor's price. The test of a held
+  driver who has left the race uses `StrategyMaxBudget`, which keeps him under any
+  cap at or above `COST_PROHIBITIVE`. Mutating the cap to 2,000,000 made the test
+  fail with him kept, at a cost of 1,000,019.99.
+- **Verification, run, not reasoned**, on the final code of both commits, which also
+  covers step 1:
+  - **2026 replays** through `run_for_team`, recorded at `3fb7715` before the
+    change and again after: the full season from the race-1 line-up (re-solving
+    races 2–21) and `run_single_team.py`'s live configuration from race 21. Both
+    were exactly equal. A copy with one `total_points` plus 1 compared unequal.
+  - **Back-test rows.** `backtest_v1`'s P2PM sample was re-simulated into a
+    scratch store: seed 1, 500 per band, 2023–25, 4,500 runs, 27 minutes. Against
+    the P2PM rows in `outputs/backtest_v1_results.parquet` there were the same
+    4,500 `sim_key`s, none on either side only, and all 40 columns **exactly equal**
+    by `DataFrame.equals`. A copy with one `total_points` plus 1 compared unequal.
+- Suite 676 → 683, all green. The probe scripts were session scratch files and are
+  not kept.
+
+Nothing in this step needed an R12 entry: both core-module changes were granted,
+and nothing worked around them.
+
+**Next: step 3, the team file.** No network, and no core-module changes expected.
