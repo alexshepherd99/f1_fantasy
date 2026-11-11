@@ -9,7 +9,7 @@ from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
 from linear.strategy_zero_stop import StrategyZeroStop
 from races.season import Season, factory_season
 from races.team import Team, factory_team_lists
-from scripts.run_single_team import run_for_team
+from simulate.season import run_for_team
 
 _SEASON = 2025
 

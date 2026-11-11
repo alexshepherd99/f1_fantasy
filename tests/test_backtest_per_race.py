@@ -22,7 +22,7 @@ from linear.strategy_max_points import StrategyMaxPoints
 from linear.strategy_p2pm import StrategyMaxP2PM
 from races.season import factory_season
 from races.team import factory_team_row
-from scripts.run_single_team import run_for_team
+from simulate.season import run_for_team
 
 _SEASON = 2023
 _STRATEGIES = [StrategyMaxP2PM, StrategyMaxPoints]

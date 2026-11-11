@@ -18,7 +18,7 @@ from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
 from races.season import Race, factory_season
 from races.team import factory_team_row
-from scripts.run_single_team import run_for_team
+from simulate.season import run_for_team
 
 # `get_row_intermediate_results` spreads the team over numbered columns, each
 # with `_val` and `_pts` companions that these deliberately exclude
@@ -148,7 +148,7 @@ def add_full_stacks(per_race: pd.DataFrame) -> pd.DataFrame:
 def row_assets(row: Mapping[str, object]) -> tuple[list[str], list[str]]:
     """Return the drivers and constructors a per-race result row holds.
 
-    `scripts.run_single_team.get_row_intermediate_results` spreads the team
+    `simulate.season.get_row_intermediate_results` spreads the team
     across numbered `D1..Dn` and `C1..Cn` columns, which is the only record of
     what a team held mid-season once the simulation has moved on.
 

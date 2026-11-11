@@ -7,7 +7,7 @@ from linear.strategy_fastf1 import StrategyFastF1RuleRise
 from linear.strategy_p2pm import StrategyMaxP2PM
 from races.season import factory_season
 from races.team import factory_team_lists
-from scripts.run_single_team import run_for_team
+from simulate.season import run_for_team
 
 # Every per-race row of a 2025 season for two strategies, recorded from the code
 # before live_picks_v1 moved run_for_team (its D3): the back-test must not change

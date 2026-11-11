@@ -11,7 +11,7 @@ from backtest.variants import make_variant
 from linear.strategy_fastf1 import StrategyFastF1, StrategyFastF1RuleRise
 from races.season import factory_season
 from races.team import Team, factory_team_lists
-from scripts.run_single_team import run_for_team
+from simulate.season import run_for_team
 
 _DRIVER_PAIRS = {
     "D1@C1": "C1",

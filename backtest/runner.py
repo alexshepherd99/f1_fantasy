@@ -14,7 +14,7 @@ from linear.strategy_base import StrategyBase
 from linear.strategy_p2pm import StrategyMaxP2PM
 from races.season import Season, factory_season
 from races.team import factory_team_row
-from scripts.run_single_team import run_for_team
+from simulate.season import run_for_team
 
 # Columns the sample adds to the priced combinations, which are not assets
 SAMPLE_COLUMNS = ["total_value", "band"]
