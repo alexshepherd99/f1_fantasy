@@ -7,6 +7,7 @@ from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_factory import factory_strategy
 from races.season import factory_season
 from races.team import Team
+from tests.simulate_fixtures import make_race, make_team
 
 
 def test_strategy_factory():
@@ -151,3 +152,14 @@ def test_strategy_factory_driver_change():
     assert strat_budget_b._prices_assets["LAW@VRB"] == 8.4
     assert "LAW@VRB" in strat_budget_b._all_available_drivers
     assert strat_budget_b._all_available_driver_pairs.get("LAW@VRB") == "VRB"
+
+
+@pytest.mark.parametrize("max_cost, expected", [({}, 30.5), ({"max_cost": None}, 30.5), ({"max_cost": 55.5}, 55.5)])
+def test_strategy_factory_max_cost_replaces_the_team_budget_when_given(max_cost, expected):
+    # Team worth 30 at race 1's prices, with 0.5 unused
+    race = make_race(1)
+    team = make_team(["A@T1", "B@T1"], "T1", unused_budget=0.5)
+
+    strat = factory_strategy(race, race, team, StrategyMaxBudget, max_moves=2, season_year=999, **max_cost)
+
+    assert strat._max_cost == expected

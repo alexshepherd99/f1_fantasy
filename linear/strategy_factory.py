@@ -4,11 +4,12 @@ from races.season import Race
 from races.team import Team
 
 
-def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[StrategyBase], max_moves, season_year: int) -> StrategyBase:
+def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[StrategyBase], max_moves, season_year: int, max_cost: float | None = None) -> StrategyBase:
     """Create and return a configured instance of `strategy` for a given race and team.
 
     Gathers current prices and derivations from the `race` object and computes the
-    budget available using `team.total_budget` (using `race_prev` if needed).
+    budget available using `team.total_budget` (using `race_prev` if needed), unless
+    `max_cost` is given, in which case that is the budget.
     """
     team_drivers = team.assets[AssetType.DRIVER]
     team_constructors = team.assets[AssetType.CONSTRUCTOR]
@@ -16,7 +17,8 @@ def factory_strategy(race: Race, race_prev: Race, team: Team, strategy: type[Str
     all_available_constructors = list(race.constructors.keys())
     all_available_driver_pairs = {driver: race.drivers[driver].constructor for driver in race.drivers}
     prev_available_driver_pairs = {driver: race_prev.drivers[driver].constructor for driver in race_prev.drivers}
-    max_cost = team.total_budget(race, race_prev)  # Previous race, in case current race has no driver valuation
+    if max_cost is None:
+        max_cost = team.total_budget(race, race_prev)  # Previous race, in case current race has no driver valuation
 
     all_derivs = set()
     prices_assets = {}
