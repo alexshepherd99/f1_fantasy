@@ -59,7 +59,24 @@ def get_strat_display_name(strategy: type[StrategyBase], sub_strat: str = ""):
         return f"{strategy.__name__}"
 
 
-def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, season_year: int, race_num_start: int, sub_strat: str = "") -> list:
+def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, season_year: int, race_num_start: int, sub_strat: str = "", bonus_free_transfer: bool = False) -> list:
+    """Simulate `team` from `race_num_start` to the season's last race, one result row per race.
+
+    The start race keeps the team given; each later race is picked by `strategy`. The
+    team is changed in place, so pass a fresh one per run.
+
+    Args:
+        strategy: The strategy class picking each race.
+        team: The team held at the start race, with its unused budget.
+        season: The season's races.
+        season_year: The season, passed to the strategy.
+        race_num_start: The race the team is held for.
+        sub_strat: Appended to the strategy's name in the rows, after a colon.
+        bonus_free_transfer: Whether the first race picked has a free move carried over, so 3 moves rather than 2.
+
+    Returns:
+        One row per race, as `get_row_intermediate_results` builds it.
+    """
     # Strategy name we'll use for the results data set
     strat_name = get_strat_display_name(strategy, sub_strat)
 
@@ -67,7 +84,7 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
     rows = []
 
     # Free moves for the next race picked
-    max_moves = 2
+    max_moves = 3 if bonus_free_transfer else 2
 
     # Number of moves used to get to this team
     used_moves = -1

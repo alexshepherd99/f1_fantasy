@@ -107,6 +107,24 @@ def test_run_for_team_starts_after_race_1_from_the_team_given(budget_season):
     assert (rows[1]["used_moves"], _held(rows[1])) == (0, ("A@T1", "B@T1", "T1"))
 
 
+@pytest.mark.parametrize("bonus, expected", [
+    ({}, (2, 2, ("A@T1", "D@T2", "T1"))),
+    ({"bonus_free_transfer": False}, (2, 2, ("A@T1", "D@T2", "T1"))),
+    ({"bonus_free_transfer": True}, (3, 3, ("A@T1", "D@T2", "T2"))),
+])
+def test_run_for_team_starts_with_a_carried_free_move_when_asked(bonus, expected):
+    # Race 3 favours a line-up 3 moves from the team held at race 2
+    season = Season(season=SEASON, races={
+        1: make_race(1),
+        2: make_race(2),
+        3: make_race(3, scores={"A@T1": 30.0, "D@T2": 20.0, "T2": 10.0}),
+    })
+
+    rows = run_for_team(StrategyMaxScore, make_team(["B@T1", "C@T2"], "T1"), season, SEASON, 2, **bonus)
+
+    assert (rows[1]["max_moves"], rows[1]["used_moves"], _held(rows[1])) == expected
+
+
 def test_run_for_team_raises_when_the_solver_is_not_optimal(budget_season, caplog):
     team = make_team(["A@T1", "B@T1"], "T1")
 
