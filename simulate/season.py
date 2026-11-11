@@ -1,13 +1,10 @@
 """Simulate one team race by race through a season, one result row per race."""
 
-import logging
-from pulp.constants import LpStatusOptimal
-
 from common import AssetType
-from linear.strategy_base import StrategyBase, VarType
-from linear.strategy_factory import factory_strategy
+from linear.strategy_base import StrategyBase
 from races.season import Season, Race
 from races.team import Team
+from simulate.pick import next_free_moves, solve_race
 
 
 def get_row_intermediate_results(
@@ -69,8 +66,8 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
     # Collection to put all the results rows into
     rows = []
 
-    # Flag to indicate if the next round should have a bonus free transfer
-    bonus_free_transfer = False
+    # Free moves for the next race picked
+    max_moves = 2
 
     # Number of moves used to get to this team
     used_moves = -1
@@ -84,50 +81,25 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
     starting_value_c = team.total_value_constructors(season.races[race_num_start])
 
     for race_num in races:
-        # Do we have a bonus free transfer from the previous race?
-        max_moves = 3 if bonus_free_transfer else 2
-
         # Needed for a fallback price when driver is no longer available for selection
         race_prev = season.races[race_num] if race_num == 1 else season.races[race_num - 1]
 
-        # First race already has a team selection, skip this out
+        # Row values for this race; the start race keeps the team given
+        race_max_moves = max_moves
         if race_num > race_num_start:
+            pick = solve_race(strategy, team, season.races[race_num], race_prev, season_year, max_moves)
 
-            strat = factory_strategy(season.races[race_num], race_prev, team, strategy, max_moves=max_moves, season_year=season_year)
-
-            model = strat.execute()
-
-            # If model failed, we need to barf - it should never be impossible to solve
-            if model.status != LpStatusOptimal:
-                logging.error(f"LP model returned {model.status}")
-                logging.error(f"Team: {str(team)}")
-                logging.error(f"Season {season.season} race {race_num}")
-                logging.error([[d,v.varValue] for d,v in strat._lp_variables[VarType.TeamDrivers].items()])
-                logging.error([[d,v.varValue] for d,v in strat._lp_variables[VarType.TeamConstructors].items()])
-                raise RuntimeError()
-
-            # Extract selected assets from the LP model
-            model_drivers = [d for d,v in strat._lp_variables[VarType.TeamDrivers].items() if v.varValue == 1]
-            model_constructors = [c for c,v in strat._lp_variables[VarType.TeamConstructors].items() if v.varValue == 1]
-
-            # Update the unused budget based on the new team selection
-            team.unused_budget = strat._lp_variables[VarType.UnusedBudget].value()
-
-            # Set the free transfer flag if we used less than two moves
-            bonus_free_transfer = strat._lp_variables[VarType.TeamMoves].value() < 2
-
-            # Update the used moves for the next iteration
-            used_moves = int(strat._lp_variables[VarType.TeamMoves].value())
-
-            # Re-populate the team with the selected assets
+            # Re-populate the team with the pick
+            team.unused_budget = pick.unused_budget
             team.remove_all_assets()
-            for d in model_drivers:
+            for d in pick.drivers:
                 team.add_asset(AssetType.DRIVER, d)
-            for c in model_constructors:
+            for c in pick.constructors:
                 team.add_asset(AssetType.CONSTRUCTOR, c)
+            team.drs_driver = pick.drs_driver
 
-            # Update the team DRS driver
-            team.drs_driver = strat.get_drs_driver()
+            used_moves = pick.moves_used
+            max_moves = next_free_moves(pick.moves_used)
 
         # Update team points based on the last race
         race_points = team.update_points(season.races[race_num])
@@ -143,7 +115,7 @@ def run_for_team(strategy: type[StrategyBase], team: Team, season: Season, seaso
                 race_prev,
                 race_num,
                 race_points,
-                max_moves,
+                race_max_moves,
                 used_moves,
                 starting_value,
                 starting_value_d,
