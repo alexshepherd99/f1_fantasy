@@ -44,3 +44,50 @@ Added to `BACKLOG.md`: shadow teams per strategy, and BoxBox capture of a new
 season, which race-1 mode needs for real use (D30).
 
 No code written.
+
+## 2026-11-11 — Step 1: shared code moved to `simulate/`
+
+Done. Alex settled four questions up front so the step could run unattended: the
+pin is a JSON fixture and stays, replacing `test_run_batch.py`'s length-only check;
+`run_single_team.py`'s `__main__` may overwrite its xlsx; on a step 2 mismatch,
+investigate and stop; and the API shape for `simulate/pick.py` and `max_cost` as
+proposed (below).
+
+- **1.1 Pin.** `data/test_run_for_team_2025.json` holds every per-race row of 2025
+  from Alex's 2025 starting team, for `StrategyMaxP2PM` and `StrategyFastF1RuleRise`
+  (2 × 24 rows), recorded from the code before anything moved. Two recordings in
+  separate processes were byte-identical. P2PM's run includes both 2- and 3-move
+  races; FastF1's never carries a move. `tests/test_simulate_season.py` compares
+  rows exactly. It cannot fail before a change, so it was checked by mutation: the
+  carry rule at `< 1` failed P2PM at race 9, and dropping the DRS assignment failed
+  both at race 2.
+- **1.2 Move.** `run_for_team`, `get_row_intermediate_results` and
+  `get_strat_display_name` moved to `simulate/season.py` unchanged, apart from one
+  trailing-whitespace line. `run_single_team.py` keeps its settings and `__main__`.
+  `backtest/runner.py`, `backtest/per_race.py` and five test files now import from
+  `simulate`. `run_single_team.py` was run before and after the move: its xlsx was
+  equal by `DataFrame.equals`. That run starts at 2026 race 21, the last priced
+  race, so it re-solves nothing and only shows the script still runs.
+- **1.3 Test gaps (D4).** All on a hand-built world (`tests/simulate_fixtures.py`):
+  four drivers in two constructors, and a test strategy that maximises a `score`
+  deriv and nominates the cheapest driver for DRS. The tests cover the free-move
+  carry-over at both edges of the rule, unused budget and the DRS driver carried
+  into the next race, a start after race 1, the error when the solver is not
+  optimal, the row's columns and order, and the name helper. Each was confirmed by
+  a mutation that turned it red: the rule at `< 1` and at `< 3`, unused budget not
+  carried, DRS not set, solving the start race, the raise removed, the name's
+  separator, and the row's rounding.
+- **1.4 Split.** `simulate/pick.py` has `solve_race(strategy, team, race, race_prev,
+  season_year, max_moves) -> Pick`, a frozen dataclass of sorted drivers and
+  constructors, DRS driver, `moves_used` (`int` of the solver's value, as before),
+  `cost` and `unused_budget` (the solver's value, unrounded, as before). It leaves the
+  team unchanged, and its `RuntimeError` now has a message. `next_free_moves` is the
+  rule on its own: 3 after fewer than 2 moves, else 2. It tests the `int` where the
+  old code tested the float, which gives the same answer for any value ≥ 0.
+  `run_for_team` applies each pick. Tests went red against stubs first, and the pin
+  is unchanged.
+- **1.5 `bonus_free_transfer`** (D2), default `False`: the first race picked gets 3
+  moves. It went red with the argument accepted but ignored.
+
+Suite 657 → 676, all green. `run_single_team.py`'s 2026 replay that re-solves races
+comes in step 2's verification, before and after `max_cost`.
