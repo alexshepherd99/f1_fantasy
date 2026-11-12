@@ -236,3 +236,74 @@ unscored with a row before it), and every prompt path with real typing rather th
 piped answers. Gate 1 (D31) still needs the first real race.
 
 Suite 729 → 783, all green.
+
+## 2026-11-12 — Step 5: data collection in the script
+
+Done, apart from FastF1 (step 6). Every run now collects before it picks:
+
+- **`boxbox`**: `CaptureNotYet`, a subclass of `CaptureRefused`, for "results in but
+  no price moved" and for the workbook race BoxBox does not show held yet.
+  `boxbox.cli.capture()` is the old body of `main`, which now only catches. The
+  first commit of this step went in with the workbook site unchanged and its test
+  red, because a `&&` chain ending in `tail` hid the failure. It was fixed and
+  amended before any push.
+- **`odds_source.cli`**: `place_page` and `write_page_odds` split out of `main`, each
+  taking its FastF1 call as an optional argument. Both refactors were checked by
+  mutation: the existing CLI tests fail when the split-out function stops writing.
+- **`live/collect.py`**: `collect_boxbox` maps the capture to done (capture or
+  correct), not yet, refused (other refusals, files not understood) or failed
+  (download and file errors). `collect_odds` places every saved page, skips with a
+  note those for another race, and writes the race's pages oldest first by their
+  save time. The FastF1 account and cache are set up only when there is a page to
+  place. *Decided here:* any exception from FastF1 fails the odds step rather than
+  the run, as FastF1 raises its own error types as well as network ones.
+- **`live/cli.py`** (D25–D27): BoxBox runs first, then the next race is read, then
+  that race's odds pages, then the pick, which loads the archive only after every
+  write. Each outcome prints as it ends and again in a closing summary, and a
+  refused or failed step gives exit 1 even when a pick was recorded. From race 2,
+  a race with no `Odds` gets a banner before the confirmations and a line in the
+  summary, without changing the exit code. *Decided here:* `--skip-collection` picks
+  from what is already captured, for a rerun in the same week (to change the chip,
+  say). Its steps show as skipped. The pick-flow tests use it so they never reach
+  the network.
+
+Tests with red first: the BoxBox outcome classes, the odds outcomes and their order,
+the summary, the exit code and the warning. Three that passed against stubs were
+checked by mutation: a credentials failure (tightened to name the credentials file
+after removing the sign-in still passed it), the `Odds` check, and the no-warning
+case.
+
+**Run, not only tested.** `live.cli` with the network, on scratch copies of both
+archive files and the odds file, a scratch team file holding the real race-20 row
+with its points blank, and a scratch pages folder holding the committed
+hand-written test page. In order:
+
+- BoxBox downloaded and ran in correct mode for race 21 (done).
+- The test page signed in to FastF1 and was placed by the real 2026 schedule as race
+  20, so it was skipped with its note. The odds step was "not yet". The real odds
+  file already has race 21's `Odds`, so there was no warning.
+- Race 20 was scored at 329, the app's figure.
+- The defaults came from that row: unused 0.2, 2 free moves.
+- P2PM picked BOR for HUL, DRS VER, and the row and the record were written.
+- The summary was right and the exit code 0.
+- `md5sum` showed the three files in `data/` unchanged, and `git status` was clean.
+
+**Not run:** a capture (results plus new prices) through the script, a real
+Oddschecker save, and the missing-odds banner on real data.
+
+**Found on that run, for Alex: BoxBox has gone back to race 20's prices.** Its newest
+file (generated 2026-11-09 21:01 UTC) gives every race-21 price equal to the
+archive's race-20 price: VER 28.8, HUL 7.8, LEC 24.7, PER 3.0, FER 28.8, RED 33.3.
+The archive's race-21 prices came from its 07:12 file that morning (VER 29.1,
+HUL 7.2). Any BoxBox run now, by `live.cli` or `boxbox.cli`, rewrites race 21's
+prices back to race 20's in correct mode. The script's pick that run then uses
+them: the same team, with 2.2 unused instead of 1.0. Nothing in `data/` was
+changed. Which set the app shows is not known here. The general point: correct mode
+now runs on every live run, so a stale BoxBox file rewrites prices and the same
+run's pick uses them before the diff is reviewed. One option, not built: have the
+script ask before writing a correction that changes prices.
+
+Suite 783 → 802, all green.
+
+**Next: step 6, FastF1.** Gate 1 (D31) waits for the first real race picked with the
+script.
