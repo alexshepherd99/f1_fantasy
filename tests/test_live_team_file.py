@@ -1,6 +1,9 @@
+from dataclasses import replace
+
 import pytest
 
-from live.team_file import COLUMNS, TeamFileError, TeamRow, read_team_file
+from live.team_file import COLUMNS, TeamFileError, TeamRow, check_known, read_team_file
+from tests.live_fixtures import make_race
 
 HEADER = ",".join(COLUMNS) + "\n"
 ROW_20 = "2026,20,StrategyMaxP2PM,,HUL@AUD,LAW@VRB,LEC@FER,PER@CAD,VER@RED,FER,RED,VER@RED,2,1,135.3,1.0,329,329\n"
@@ -101,3 +104,25 @@ def test_allows_a_chip_once_in_each_season(tmp_path):
     row_2027 = _swap(ROW_21, "Season", "2027")
 
     assert [r.season for r in read_team_file(_file(tmp_path, ROW_21 + row_2027))] == [2026, 2027]
+
+
+ROW = TeamRow(season=2026, race=20, strategy="StrategyMaxP2PM", chip="",
+              drivers=("HUL@AUD", "LAW@VRB", "LEC@FER", "PER@CAD", "VER@RED"), constructors=("FER", "RED"),
+              drs="VER@RED", free_moves=2, moves_used=1, team_value=135.3, unused_budget=1.0,
+              points_predicted=None, points=None)
+
+
+def test_a_row_of_the_race_is_known():
+    check_known(ROW, make_race(20))
+
+
+def test_refuses_a_driver_not_in_the_race():
+    with pytest.raises(TeamFileError, match="PER@CAD"):
+        check_known(ROW, make_race(20, drop=("PER@CAD",)))
+
+
+def test_refuses_a_constructor_not_in_the_race():
+    row = replace(ROW, constructors=("FER", "XXX"))
+
+    with pytest.raises(TeamFileError, match="XXX"):
+        check_known(row, make_race(20))

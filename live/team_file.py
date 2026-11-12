@@ -11,6 +11,8 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from races.season import Race
+
 logger = logging.getLogger(__name__)
 
 TEAM_FILE = "data/live_team.csv"
@@ -148,6 +150,18 @@ def check_row(row: TeamRow, where: str = "row") -> None:
         _fail(f"{where}: DRS {row.drs!r} is not one of the drivers")
     if (row.unused_budget is None) != (row.chip == LIMITLESS):
         _fail(f"{where}: UnusedBudget must be blank after Limitless and only then")
+
+
+def check_known(row: TeamRow, race: Race) -> None:
+    """Check that every driver and constructor in `row` is in `race`, its race in the archive.
+
+    Raises:
+        TeamFileError: Naming the identifiers the race does not have.
+    """
+    unknown = [d for d in row.drivers if d not in race.drivers]
+    unknown += [c for c in row.constructors if c not in race.constructors]
+    if unknown:
+        _fail(f"Season {row.season} race {row.race}: {', '.join(unknown)} not in the race")
 
 
 def _check_assets(assets: tuple[str, ...], count: int, kind: str, where: str, well_formed) -> None:
