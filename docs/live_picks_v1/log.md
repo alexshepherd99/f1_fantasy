@@ -124,3 +124,59 @@ Nothing in this step needed an R12 entry: both core-module changes were granted,
 and nothing worked around them.
 
 **Next: step 3, the team file.** No network, and no core-module changes expected.
+
+## 2026-11-12 — Steps 3–5 settled up front
+
+Alex asked for steps 3, 4 and 5 to run unattended and settled these first:
+
+- **A season with no row, next race after race 1** (a mid-season start, such as a
+  2026 handover): the script asks for the held team, unused budget and free moves
+  with no defaults, and does not score a last race. Race-1 mode (step 7) only when
+  the next race is race 1. This refines D29.
+- **Final Fix**: the chip is chosen at the choice prompt like the other chips. When
+  its race is scored the script asks for the driver swapped out and in, and predicts
+  with that team. The row keeps the pre-race pick, and the next race holds that pick:
+  the swap does not carry. This settles D24's "through the team entered".
+- **Real runs** may use the network (BoxBox, FastF1's schedule and driver lists) with
+  scratch copies of the archive, odds and team files, so nothing in `data/` changes.
+- **Defaults accepted**: no `data/live_team.csv` is created, Alex starts it at the
+  handover; chip strings `Wildcard`, `Limitless`, `Extra DRS`, `No Negative`,
+  `Autopilot`, `Final Fix`, blank for none; Wildcard and Limitless come from `--chip`,
+  the rest from the choice prompt, only unused ones offered, and recording
+  `StrategyMaxP2PM` at race 4 sets `Wildcard`; a Limitless row's `UnusedBudget` is
+  blank; each run's record is `outputs/live_picks/<season>_<race>_<utc>.json`;
+  manual entry takes full identifiers; BoxBox's "not yet" refusals get their own
+  subclass of `CaptureRefused`; saved odds pages are read every run and never moved;
+  step 6 (FastF1) stays out; unforeseen design calls are decided and logged here, and
+  any ungranted change to a core module stops the run.
+
+## 2026-11-12 — Step 3: the team file
+
+Done. `live/team_file.py`, no network and no core-module change.
+
+- **Reading** (`read_team_file`): typed `TeamRow`s, or none when the file does not
+  exist yet. It refuses a wrong header or field count, a value of the wrong type, a
+  driver or constructor list that is not five (two) distinct sorted identifiers, a
+  DRS driver not in the team, an unknown chip, a chip twice in a season, races out of
+  order or repeated, and an `UnusedBudget` blank anywhere but a Limitless row.
+- **Against the race** (`check_known`): every identifier must be in the race in the
+  archive. Kept separate from reading, as it needs the season loaded.
+- **Writing** (`write_row`): replaces the race's row or inserts it in race order,
+  through a temporary file, with money to one decimal place. Every other line keeps
+  its bytes: mutating the writer to re-format every row failed the three tests that
+  check this, against a hand-written row with extra decimal places. It refuses a
+  final row (points filled) and any result that breaks a rule, leaving the file as
+  it was.
+- **Held team** (`held_for`, D21): team and budget from the last row without
+  Limitless, free moves from the last row, passed on by Wildcard or Limitless,
+  otherwise `simulate.pick.next_free_moves`. A row for the race itself, from a rerun
+  before the race, is ignored (mutating `<` to `<=` failed that test). A missing
+  race between rows gets no special rule: the defaults come from the last row, and
+  the confirmations (D12) correct them.
+
+`tests/live_fixtures.py` is a hand-built world of twelve drivers in six constructors.
+Suite 683 → 729, all green.
+
+One finding for step 4: the archive loader turns a race's empty `Points` into 0, so
+"the archive holds its points" (D15, D24) is read from the raw file
+(`read_archive_file`), where they are NaN.
