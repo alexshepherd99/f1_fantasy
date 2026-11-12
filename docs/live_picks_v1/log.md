@@ -180,3 +180,59 @@ Suite 683 → 729, all green.
 One finding for step 4: the archive loader turns a race's empty `Points` into 0, so
 "the archive holds its points" (D15, D24) is read from the raw file
 (`read_archive_file`), where they are NaN.
+
+## 2026-11-12 — Step 4: first usable script, P2PM only
+
+Done. `PYTHONPATH=. venv/bin/python -m live.cli [--chip wildcard|limitless]`, with
+`--team-file`, `--archive-dir` and `--record-dir` for scratch runs.
+
+- **`helpers.load_with_derivations(season, fn=data)`**: the directory now passes
+  through, default unchanged, so the script and its tests can point at another
+  archive. `helpers.py` is not a core module. Mutating the constructor load to drop
+  it failed the test.
+- **`live/archive.py`**: the next race (D15) and whether a race has points, both from
+  the raw driver file. Today's archive gives 2026 race 21.
+- **`live/points.py`** (D24): DRS twice, Extra DRS three times, Autopilot on the
+  top-scoring driver, Final Fix's swap, No Negative left out. With DRS on VER it
+  gives the app's 329 for the 2026 race-20 team.
+  *Decided here:* when Final Fix swaps out the DRS driver, DRS goes to the driver
+  swapped in. Not checked against the app.
+- **`live/lineup.py`** (D16, D20, D22): P2PM after race 1. At race 4,
+  `StrategyMaxP2PMNoReset` is listed before `StrategyMaxP2PM` while the Wildcard is
+  unused, so if both pick the same team it is recorded as the one that spends no
+  chip. *Decided here.* Options merge on team and DRS driver.
+- **`live/display.py`** (D13, D14, D23): the table puts the held team and each option
+  side by side, with prices. A held driver who has left the race is priced at the
+  race before, as `Team` prices him. A typed team must be five known drivers and
+  two known constructors.
+- **`live/cli.py`**: scores each unscored row the archive now has points for, then
+  confirmations (D12), the line-up, the table, the choice (D23), DRS (D14) and the
+  chip (D19). A chip already played refuses `--chip`; the prompt offers only unused
+  chips. Race 1 is refused until step 7. *Decided here:* a typed team over budget is
+  asked for again; one using more moves than are free is allowed with a warning, as
+  the app allows it at a points cost. Before replacing the race's own row, from an
+  earlier run, the script asks, defaulting to no. A pick made after a race has run
+  but before BoxBox has captured it would otherwise overwrite the row actually
+  played.
+- **`live/record.py`** (D8): every run, whether or not it records, saves the team
+  held, every option, the race's prices and the row written to
+  `outputs/live_picks/<season>_<race>_<utc>.json`.
+
+Tests run the script end to end on a 2023 archive cut (`tests/live_archive.py`) with
+the real P2PM classes and scripted answers. Its pick must equal `solve_race` on the
+same team, budget and moves: the D31 comparison, run on 2023. Two tests passed
+before the code existed (recording nothing, declining the replace). Each was then
+confirmed by a mutation that made it fail: "x" falling through to option 1, and the
+answer to the replace prompt ignored. The Limitless test was added after the code,
+and failed when the cap was removed (97.2 against 121.2).
+
+**Run, not only tested.** `live.cli` on the real archive, with a scratch team file
+and record folder, answers piped in. Held: the race-20 team, unused 0.2 (race 20's
+137.7 budget less its 137.5 value) and 2 free moves (race 20 made two). The script
+picked BOR for HUL with DRS on VER, leaving 1.0 unused. That is the race-21 team in
+`TEAM_2026.md`, and the unused budget `run_single_team.py` holds for race 21. The
+repo was unchanged afterwards. **Not run yet:** scoring a real race (no 2026 race is
+unscored with a row before it), and every prompt path with real typing rather than
+piped answers. Gate 1 (D31) still needs the first real race.
+
+Suite 729 → 783, all green.
