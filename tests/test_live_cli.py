@@ -1,5 +1,6 @@
 """The live script end to end, on an archive cut from 2023 and a team file in a temporary folder."""
 
+import json
 from dataclasses import replace
 
 import pytest
@@ -218,6 +219,40 @@ def test_p2pms_race_4_pick_plays_the_wildcard(tmp_path):
 
     row = read_team_file(world["team_file"])[1]
     assert (row.strategy, row.chip, row.drivers) == ("StrategyMaxP2PM", "Wildcard", options[0].pick.drivers)
+
+
+def _record(world) -> dict:
+    files = list(world["records"].glob(f"{SEASON}_6_*.json"))
+    assert len(files) == 1
+    return json.loads(files[0].read_text())
+
+
+def test_each_run_saves_every_pick_with_prices(world):
+    inputs = Inputs(*HELD_TEXT, "50.0", "2", "", "", "")
+
+    _run(world, inputs)
+
+    season = _season(world)
+    race = season.races[6]
+    pick = solve_race(StrategyMaxP2PM, _team(), race, season.races[5], SEASON, max_moves=2)
+    record = _record(world)
+    assert (record["season"], record["race"], record["chip"]) == (SEASON, 6, "")
+    assert record["held"] == {"drivers": list(HELD_DRIVERS), "constructors": list(HELD_CONSTRUCTORS),
+                              "unused_budget": UNUSED, "free_moves": 2,
+                              "value": pytest.approx(_team().total_value(race, season.races[5]))}
+    assert [(o["strategies"], o["drivers"], o["constructors"], o["moves_used"]) for o in record["options"]] == [
+        (["StrategyMaxP2PM"], list(pick.drivers), list(pick.constructors), pick.moves_used)]
+    assert record["prices"]["VER@RED"] == race.drivers["VER@RED"].price
+    assert record["prices"]["RED"] == race.constructors["RED"].price
+    assert record["recorded"]["drivers"] == list(read_team_file(world["team_file"])[0].drivers)
+
+
+def test_a_run_recording_nothing_still_saves_its_picks(world):
+    _run(world, Inputs(*HELD_TEXT, "50.0", "2", "x"))
+
+    record = _record(world)
+    assert record["recorded"] is None
+    assert len(record["options"]) == 1
 
 
 def test_race_1_is_refused(tmp_path):

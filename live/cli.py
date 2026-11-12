@@ -17,6 +17,7 @@ import logging
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
+from datetime import datetime, timezone
 
 from common import AssetType, setup_logging
 from helpers import load_with_derivations
@@ -25,6 +26,7 @@ from live.archive import next_race, race_scored
 from live.display import default_drs, format_prices, format_table, manual_pick, parse_team
 from live.lineup import Option, implied_chip, run_lineup, strategies_for
 from live.points import predict_points
+from live.record import write_record
 from live.team_file import (
     AUTOPILOT,
     EXTRA_DRS,
@@ -220,6 +222,7 @@ def _held_pick(confirmed: Confirmed) -> Pick:
 
 def run(args: argparse.Namespace, input_fn: InputFn) -> None:
     """One run, from scoring the last race to recording the pick."""
+    run_at = datetime.now(timezone.utc)
     drivers_raw = read_archive_file(AssetType.DRIVER, args.archive_dir)
     season_year, race_num = next_race(drivers_raw)
     if race_num == 1:
@@ -254,10 +257,31 @@ def run(args: argparse.Namespace, input_fn: InputFn) -> None:
                                  [(f"{i} {' = '.join(o.strategies)}", o.pick) for i, o in enumerate(options, start=1)],
                                  race, race_prev)))
 
+    row = choose_row(rows, options, confirmed, season_year, race, race_prev, budget, chip, chips_used, input_fn)
+    written = None
+    try:
+        if row is None:
+            print("Nothing recorded.")
+        else:
+            write_row(args.team_file, row)
+            written = row
+            print(f"Recorded race {race_num} in {args.team_file}. Review its git diff and commit it.")
+    finally:
+        held = {"drivers": sorted(confirmed.team.assets[AssetType.DRIVER]),
+                "constructors": sorted(confirmed.team.assets[AssetType.CONSTRUCTOR]),
+                "unused_budget": confirmed.team.unused_budget, "free_moves": confirmed.free_moves,
+                "value": confirmed.value}
+        path = write_record(args.record_dir, run_at, season_year, race, chip, held, options, written)
+        print(f"Saved this run's picks to {path}")
+
+
+def choose_row(rows: list[TeamRow], options: list[Option], confirmed: Confirmed, season_year: int, race: Race,
+               race_prev: Race, budget: float, chip: str, chips_used: set[str], input_fn: InputFn) -> TeamRow | None:
+    """The row Alex chooses to record, with its DRS driver and chip, or None to record nothing."""
+    race_num = int(race.race)
     chosen = choose(options, confirmed, race, race_prev, budget, chip, input_fn)
     if chosen is None:
-        print("Nothing recorded.")
-        return
+        return None
     strategy, pick = chosen
     drs = ask(input_fn, "DRS driver", pick.drs_driver, lambda a: _one_of(a, set(pick.drivers)))
     chip_played = choose_chip(strategy, race_num, chip, chips_used, input_fn)
@@ -268,12 +292,10 @@ def run(args: argparse.Namespace, input_fn: InputFn) -> None:
                   points_predicted=None, points=None)
 
     existing = [r for r in rows if (r.season, r.race) == (season_year, race_num)]
-    if existing and ask(input_fn, f"Race {race_num} already has a row ({existing[0].strategy}); replace it? y/n", "n",
-                        lambda a: _one_of(a.lower(), {"y", "n"})) == "n":
-        print("Nothing recorded.")
-        return
-    write_row(args.team_file, row)
-    print(f"Recorded race {race_num} in {args.team_file}. Review its git diff and commit it.")
+    if existing and ask(input_fn, f"Race {race_num} already has a row ({existing[0].strategy}); replace it? y/n",
+                        "n", lambda a: _one_of(a.lower(), {"y", "n"})) == "n":
+        return None
+    return row
 
 
 def main(argv: Sequence[str] | None = None, input_fn: InputFn = input) -> int:
