@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from races.season import Race
+from simulate.pick import next_free_moves
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,52 @@ class TeamRow:
     unused_budget: float | None
     points_predicted: int | None
     points: int | None
+
+
+@dataclass(frozen=True)
+class Held:
+    """The team going into a race, as the file gives it; Alex confirms or corrects each figure (D12).
+
+    Attributes:
+        drivers: The drivers held, sorted.
+        constructors: The constructors held, sorted.
+        unused_budget: The budget left over.
+        free_moves: The free moves for the race.
+        team_race: The race whose row the team and budget come from.
+        last_race: The last race with a row, which the free moves come from.
+    """
+    drivers: tuple[str, ...]
+    constructors: tuple[str, ...]
+    unused_budget: float
+    free_moves: int
+    team_race: int
+    last_race: int
+
+
+def held_for(rows: list[TeamRow], season: int, race: int) -> Held:
+    """Work out the team held going into `race` from the season's rows before it (D21).
+
+    The team and unused budget come from the last row without Limitless, as the app puts the
+    team back after it. The free moves come from the last row: a chip race passes on the free
+    moves it had, and otherwise fewer than 2 moves used gives 3, else 2. A row for `race`
+    itself, from an earlier run before the race, is ignored.
+
+    Raises:
+        TeamFileError: If the season has a row after `race`, or no row before it without Limitless.
+    """
+    season_rows = [r for r in rows if r.season == season]
+    after = [r.race for r in season_rows if r.race > race]
+    if after:
+        _fail(f"Season {season} has rows for races {after}, after race {race}")
+    before = [r for r in season_rows if r.race < race]
+    team_rows = [r for r in before if r.chip != LIMITLESS]
+    if not team_rows:
+        _fail(f"Season {season} has no row before race {race} without Limitless to take the team from")
+
+    last, team = before[-1], team_rows[-1]
+    free_moves = last.free_moves if last.chip in (WILDCARD, LIMITLESS) else next_free_moves(last.moves_used)
+    return Held(drivers=team.drivers, constructors=team.constructors, unused_budget=team.unused_budget,
+                free_moves=free_moves, team_race=team.race, last_race=last.race)
 
 
 def read_team_file(path: Path | str) -> list[TeamRow]:

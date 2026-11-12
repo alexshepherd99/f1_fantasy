@@ -2,7 +2,16 @@ from dataclasses import replace
 
 import pytest
 
-from live.team_file import COLUMNS, TeamFileError, TeamRow, check_known, read_team_file, write_row
+from live.team_file import (
+    COLUMNS,
+    Held,
+    TeamFileError,
+    TeamRow,
+    check_known,
+    held_for,
+    read_team_file,
+    write_row,
+)
 from tests.live_fixtures import make_race
 
 HEADER = ",".join(COLUMNS) + "\n"
@@ -220,3 +229,73 @@ def test_writes_a_limitless_row_with_no_unused_budget(tmp_path):
     write_row(path, limitless)
 
     assert read_team_file(path) == [limitless]
+
+
+TEAM_A = ("HUL@AUD", "LAW@VRB", "LEC@FER", "PER@CAD", "VER@RED")
+TEAM_B = ("ANT@MER", "HAM@FER", "LEC@FER", "RUS@MER", "VER@RED")
+
+
+def _row(race: int, moves_used: int = 1, free_moves: int = 2, chip: str = "", drivers=TEAM_A,
+         unused_budget: float | None = 1.0, season: int = 2026) -> TeamRow:
+    return replace(ROW, season=season, race=race, chip=chip, drivers=drivers, drs=drivers[0],
+                   moves_used=moves_used, free_moves=free_moves, unused_budget=unused_budget)
+
+
+@pytest.mark.parametrize("moves_used, free_moves", [(0, 3), (1, 3), (2, 2), (3, 2)])
+def test_free_moves_follow_the_moves_used(moves_used, free_moves):
+    rows = [_row(19), _row(20, moves_used=moves_used, free_moves=3)]
+
+    assert held_for(rows, 2026, 21).free_moves == free_moves
+
+
+def test_the_team_and_budget_come_from_the_last_row():
+    rows = [_row(19, unused_budget=4.0), _row(20, drivers=TEAM_B, unused_budget=0.7)]
+
+    assert held_for(rows, 2026, 21) == Held(drivers=TEAM_B, constructors=("FER", "RED"), unused_budget=0.7,
+                                            free_moves=3, team_race=20, last_race=20)
+
+
+def test_a_wildcard_race_passes_on_its_free_moves():
+    rows = [_row(19), _row(20, chip="Wildcard", drivers=TEAM_B, moves_used=5, free_moves=3)]
+
+    held = held_for(rows, 2026, 21)
+
+    assert (held.drivers, held.free_moves) == (TEAM_B, 3)
+
+
+def test_after_limitless_the_team_and_budget_come_from_the_row_before():
+    rows = [_row(19, unused_budget=0.4),
+            _row(20, chip="Limitless", drivers=TEAM_B, moves_used=5, free_moves=3, unused_budget=None)]
+
+    assert held_for(rows, 2026, 21) == Held(drivers=TEAM_A, constructors=("FER", "RED"), unused_budget=0.4,
+                                            free_moves=3, team_race=19, last_race=20)
+
+
+def test_a_row_for_the_race_itself_is_ignored():
+    rows = [_row(19, moves_used=2), _row(20, drivers=TEAM_B, moves_used=0)]
+
+    assert held_for(rows, 2026, 20) == Held(drivers=TEAM_A, constructors=("FER", "RED"), unused_budget=1.0,
+                                            free_moves=2, team_race=19, last_race=19)
+
+
+def test_other_seasons_are_ignored():
+    rows = [_row(19, season=2025, moves_used=0), _row(3, drivers=TEAM_B, moves_used=2, season=2026)]
+
+    held = held_for(rows, 2026, 4)
+
+    assert (held.drivers, held.free_moves, held.team_race) == (TEAM_B, 2, 3)
+
+
+def test_refuses_a_season_without_a_row_before_the_race():
+    with pytest.raises(TeamFileError, match="no row"):
+        held_for([_row(19, season=2025), _row(5)], 2026, 5)
+
+
+def test_refuses_a_season_with_only_limitless_before_the_race():
+    with pytest.raises(TeamFileError, match="no row"):
+        held_for([_row(5, chip="Limitless", unused_budget=None)], 2026, 6)
+
+
+def test_refuses_a_row_after_the_race():
+    with pytest.raises(TeamFileError, match="after"):
+        held_for([_row(5), _row(7)], 2026, 6)
