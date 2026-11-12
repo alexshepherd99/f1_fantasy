@@ -41,16 +41,24 @@ def world(tmp_path):
     return _world(tmp_path, next_race=6)
 
 
-def _world(tmp_path, next_race: int) -> dict:
+ODDS_HEADER = "Driver,Constructor,Season,Race,Odds\n"
+
+
+def _world(tmp_path, next_race: int, odds: str = f"VER,RED,{SEASON},6,5-4\n") -> dict:
     archive = tmp_path / "archive"
     archive.mkdir()
     write_archive(archive, last_race=next_race, unscored=(next_race,))
-    return {"archive": archive, "team_file": tmp_path / "live_team.csv", "records": tmp_path / "records"}
+    (tmp_path / "pages").mkdir()
+    (tmp_path / "odds.csv").write_text(ODDS_HEADER + odds)
+    return {"archive": archive, "team_file": tmp_path / "live_team.csv", "records": tmp_path / "records",
+            "pages": tmp_path / "pages", "odds": tmp_path / "odds.csv", "copies": tmp_path / "copies"}
 
 
-def _run(world, inputs: Inputs, *extra: str) -> int:
+def _run(world, inputs: Inputs, *extra: str, collect: bool = False, **injected) -> int:
     return main(["--team-file", str(world["team_file"]), "--archive-dir", str(world["archive"]),
-                 "--record-dir", str(world["records"]), *extra], input_fn=inputs)
+                 "--record-dir", str(world["records"]), "--pages-dir", str(world["pages"]),
+                 "--odds-file", str(world["odds"]), "--copy-dir", str(world["copies"]),
+                 *([] if collect else ["--skip-collection"]), *extra], input_fn=inputs, **injected)
 
 
 def _season(world):
@@ -259,3 +267,61 @@ def test_race_1_is_refused(tmp_path):
     world = _world(tmp_path, next_race=1)
 
     assert _run(world, Inputs()) == 1
+
+
+def _no_network(url):
+    raise ConnectionError("no network")
+
+
+def test_a_failed_step_still_picks_then_exits_1_naming_it(world, capsys):
+    inputs = Inputs(*HELD_TEXT, "50.0", "2", "", "", "")
+
+    assert _run(world, inputs, collect=True, boxbox_fetch=_no_network) == 1
+
+    assert read_team_file(world["team_file"])[0].race == 6
+    summary = capsys.readouterr().out.split("Summary:")[1]
+    assert "BoxBox: failed - no network" in summary
+    assert f"Odds: not yet - no saved page in {world['pages']}" in summary
+    assert "Pick: done - recorded race 6" in summary
+
+
+def test_collection_runs_before_the_pick(world, capsys):
+    inputs = Inputs(*HELD_TEXT, "50.0", "2", "x")
+
+    _run(world, inputs, collect=True, boxbox_fetch=_no_network)
+
+    out = capsys.readouterr().out
+    assert out.index("BoxBox: failed") < out.index("Held") < out.index("Summary:")
+
+
+def test_skipping_collection_is_reported(world, capsys):
+    assert _run(world, Inputs(*HELD_TEXT, "50.0", "2", "x")) == 0
+
+    summary = capsys.readouterr().out.split("Summary:")[1]
+    assert "BoxBox: skipped" in summary
+    assert "Pick: done - nothing recorded" in summary
+
+
+def test_missing_odds_warn_at_the_top_and_in_the_summary_without_failing(tmp_path, capsys):
+    world = _world(tmp_path, next_race=6, odds=f"VER,RED,{SEASON},5,5-4\n")
+
+    assert _run(world, Inputs(*HELD_TEXT, "50.0", "2", "x")) == 0
+
+    out = capsys.readouterr().out
+    warning = f"No odds for season {SEASON} race 6"
+    assert out.index(warning) < out.index("Held")
+    assert warning in out.split("Summary:")[1]
+
+
+def test_odds_present_give_no_warning(world, capsys):
+    _run(world, Inputs(*HELD_TEXT, "50.0", "2", "x"))
+
+    assert "No odds" not in capsys.readouterr().out
+
+
+def test_a_refused_pick_is_in_the_summary(tmp_path, capsys):
+    world = _world(tmp_path, next_race=1)
+
+    _run(world, Inputs())
+
+    assert "Pick: refused - " in capsys.readouterr().out.split("Summary:")[1]

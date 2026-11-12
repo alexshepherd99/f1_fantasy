@@ -1,13 +1,16 @@
 """Pick the live team for the next race (live_picks_v1).
 
-Run before each race, once the race's prices are in the archive::
+Run before each race, after saving any Oddschecker winner pages into ``outputs/``::
 
-    PYTHONPATH=. venv/bin/python -m live.cli [--chip wildcard|limitless]
+    PYTHONPATH=. venv/bin/python -m live.cli [--chip wildcard|limitless] [--skip-collection]
 
-It scores the last race played once the archive has its points, asks Alex to
-confirm the team held, its unused budget and free moves, runs the race's
-strategies, shows their picks side by side with prices, and records the pick
-he chooses in ``data/live_team.csv``. Review that file's git diff and commit it.
+It first captures BoxBox's points and prices into the archive and every saved
+odds page for the next race into the odds file. It then scores the last race
+played once the archive has its points, asks Alex to confirm the team held, its
+unused budget and free moves, runs the race's strategies, shows their picks side
+by side with prices, and records the pick he chooses in ``data/live_team.csv``.
+It ends with a summary of each step, and exits 1 if any was refused or failed.
+Review the git diff of every data file it wrote and commit them.
 """
 
 from __future__ import annotations
@@ -19,10 +22,24 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
+from boxbox.source import DEFAULT_COPY_DIR
 from common import AssetType, setup_logging
+from fast_f1.output import DEFAULT_OUTPUT_DIRECTORY
 from helpers import load_with_derivations
 from import_data.import_history import _DIR_ARCHIVE_INPUTS, read_archive_file
+from import_data.odds import _FILE_BETTING_ODDS
 from live.archive import next_race, race_scored
+from live.collect import (
+    DONE,
+    FAILED,
+    REFUSED,
+    SKIPPED,
+    OddsApi,
+    StepOutcome,
+    collect_boxbox,
+    collect_odds,
+    odds_present,
+)
 from live.display import default_drs, format_prices, format_table, manual_pick, parse_team
 from live.lineup import Option, implied_chip, run_lineup, strategies_for
 from live.points import predict_points
@@ -83,6 +100,11 @@ def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--team-file", default=TEAM_FILE, help="the team file")
     parser.add_argument("--archive-dir", default=_DIR_ARCHIVE_INPUTS, help="directory holding the archive CSVs")
     parser.add_argument("--record-dir", default=DEFAULT_RECORD_DIR, help="where each run's record is saved")
+    parser.add_argument("--copy-dir", default=DEFAULT_COPY_DIR, help="where each BoxBox download is saved")
+    parser.add_argument("--pages-dir", default=str(DEFAULT_OUTPUT_DIRECTORY), help="where saved odds pages are")
+    parser.add_argument("--odds-file", default=_FILE_BETTING_ODDS, help="the odds file to write into")
+    parser.add_argument("--skip-collection", action="store_true",
+                        help="pick from the data already captured, without BoxBox or the odds pages")
     return parser.parse_args(argv)
 
 
@@ -220,11 +242,9 @@ def _held_pick(confirmed: Confirmed) -> Pick:
                 cost=confirmed.value, unused_budget=team.unused_budget)
 
 
-def run(args: argparse.Namespace, input_fn: InputFn) -> None:
-    """One run, from scoring the last race to recording the pick."""
-    run_at = datetime.now(timezone.utc)
-    drivers_raw = read_archive_file(AssetType.DRIVER, args.archive_dir)
-    season_year, race_num = next_race(drivers_raw)
+def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, race_num: int, drivers_raw,
+              run_at: datetime) -> TeamRow | None:
+    """Pick for the next race, from scoring the last race to recording the pick; returns the row written, if any."""
     if race_num == 1:
         raise RunStopped(f"Season {season_year}'s next race is race 1, which race-1 mode picks; it is not built yet")
     chip = CHIP_ARGUMENTS.get(args.chip, "")
@@ -273,6 +293,7 @@ def run(args: argparse.Namespace, input_fn: InputFn) -> None:
                 "value": confirmed.value}
         path = write_record(args.record_dir, run_at, season_year, race, chip, held, options, written)
         print(f"Saved this run's picks to {path}")
+    return written
 
 
 def choose_row(rows: list[TeamRow], options: list[Option], confirmed: Confirmed, season_year: int, race: Race,
@@ -298,16 +319,78 @@ def choose_row(rows: list[TeamRow], options: list[Option], confirmed: Confirmed,
     return row
 
 
-def main(argv: Sequence[str] | None = None, input_fn: InputFn = input) -> int:
-    """Run once. Returns the exit code: 0 done, 1 refused or failed."""
+def main(argv: Sequence[str] | None = None, input_fn: InputFn = input,
+         boxbox_fetch: Callable[[str], bytes] | None = None, odds_api: OddsApi | None = None,
+         season_constructors: dict[int, int] | None = None) -> int:
+    """Run once: collect the week's data, then pick (D25, D26).
+
+    Every step runs whatever the steps before it gave. Returns the exit code: 1 if any step
+    was refused or failed, even when a pick was recorded, else 0.
+    """
     args = parse_arguments(argv)
+    run_at = datetime.now(timezone.utc)
+    outcomes: list[StepOutcome] = []
+    warnings: list[str] = []
+
+    if args.skip_collection:
+        outcomes.append(_report(StepOutcome("BoxBox", SKIPPED, "--skip-collection")))
+    else:
+        outcomes.append(_report(collect_boxbox(args.archive_dir, args.copy_dir, boxbox_fetch, season_constructors)))
+
     try:
-        run(args, input_fn)
-    except (RunStopped, TeamFileError, ValueError, OSError) as exc:
-        logger.error(f"Stopped: {exc}")
-        print(f"Stopped: {exc}", file=sys.stderr)
-        return 1
-    return 0
+        drivers_raw = read_archive_file(AssetType.DRIVER, args.archive_dir)
+        season_year, race_num = next_race(drivers_raw)
+    except (ValueError, OSError) as exc:
+        outcomes.append(_report(StepOutcome("Pick", REFUSED, f"no next race: {exc}")))
+        return _summarise(outcomes, warnings)
+
+    if args.skip_collection:
+        outcomes.append(_report(StepOutcome("Odds", SKIPPED, "--skip-collection")))
+    else:
+        outcomes.append(_report(collect_odds(args.pages_dir, args.odds_file, season_year, race_num, odds_api)))
+    if race_num > 1:
+        warnings += _odds_warning(args, season_year, race_num)
+
+    try:
+        written = pick_race(args, input_fn, season_year, race_num, drivers_raw, run_at)
+        outcomes.append(StepOutcome("Pick", DONE, f"recorded race {race_num}" if written else "nothing recorded"))
+    except (RunStopped, TeamFileError, ValueError) as exc:
+        logger.error(f"Pick refused: {exc}")
+        outcomes.append(StepOutcome("Pick", REFUSED, str(exc)))
+    except OSError as exc:
+        logger.error(f"Pick failed: {exc}")
+        outcomes.append(StepOutcome("Pick", FAILED, str(exc)))
+    return _summarise(outcomes, warnings)
+
+
+def _report(outcome: StepOutcome) -> StepOutcome:
+    print(_outcome_line(outcome))
+    return outcome
+
+
+def _outcome_line(outcome: StepOutcome) -> str:
+    return f"{outcome.step}: {outcome.status} - {outcome.detail}"
+
+
+def _odds_warning(args: argparse.Namespace, season_year: int, race_num: int) -> list[str]:
+    """A loud warning, printed now and returned for the summary, when the race has no odds (D27)."""
+    try:
+        if odds_present(args.odds_file, season_year, race_num):
+            return []
+        warning = (f"No odds for season {season_year} race {race_num} in {args.odds_file}. The pick does not "
+                   f"need them, but the record of this race's odds has a gap: save the race's Oddschecker page "
+                   f"into {args.pages_dir} and run again.")
+    except OSError as exc:
+        warning = f"Could not read the odds file to check for race {race_num}'s odds: {exc}"
+    logger.warning(warning)
+    print("\n".join(["!" * 72, f"WARNING: {warning}", "!" * 72]))
+    return [warning]
+
+
+def _summarise(outcomes: list[StepOutcome], warnings: list[str]) -> int:
+    print("\n".join(["", "Summary:", *[f"  {_outcome_line(o)}" for o in outcomes],
+                     *[f"  WARNING: {w}" for w in warnings]]))
+    return 1 if any(o.status in (REFUSED, FAILED) for o in outcomes) else 0
 
 
 if __name__ == "__main__":

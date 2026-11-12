@@ -28,6 +28,8 @@ DONE = "done"
 NOT_YET = "not yet"
 REFUSED = "refused"
 FAILED = "failed"
+# A step the run was told to leave out
+SKIPPED = "skipped"
 
 SAVED_PAGE_SUFFIX = ".mhtml"
 
