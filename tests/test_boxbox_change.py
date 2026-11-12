@@ -1,6 +1,6 @@
 import pytest
 
-from boxbox.change import CAPTURE, CORRECT, ArchiveRow, CaptureRefused, decide_change
+from boxbox.change import CAPTURE, CORRECT, ArchiveRow, CaptureNotYet, CaptureRefused, decide_change
 from boxbox.source import parse_files
 from common import AssetType
 from import_data.import_history import read_archive_file
@@ -88,7 +88,7 @@ def test_capture_on_the_last_race_fills_points_only(tmp_path):
 def test_capture_refuses_when_prices_have_not_moved(tmp_path):
     summary = modified(season_summary(), lambda s: _with_prices(s, _RACE_3_DRIVER_PRICES, _RACE_3_CONSTRUCTOR_PRICES))
 
-    with pytest.raises(CaptureRefused, match="price"):
+    with pytest.raises(CaptureNotYet, match="price"):
         _decide(tmp_path, summary=summary)
 
 
@@ -97,22 +97,24 @@ def test_capture_refuses_unmoved_prices_even_with_a_new_driver(tmp_path):
         _with_prices(s, _RACE_3_DRIVER_PRICES, _RACE_3_CONSTRUCTOR_PRICES)
         s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
 
-    with pytest.raises(CaptureRefused, match="price"):
+    with pytest.raises(CaptureNotYet, match="price"):
         _decide(tmp_path, summary=modified(season_summary(), stale_with_swap))
 
 
 def test_capture_refuses_when_the_race_already_has_points(tmp_path):
     drivers = DRIVERS_CSV.replace("2026,3,RED,VER,,28.5", "2026,3,RED,VER,31,28.5")
 
-    with pytest.raises(CaptureRefused, match="already has points"):
+    with pytest.raises(CaptureRefused, match="already has points") as refused:
         _decide(tmp_path, drivers_csv=drivers)
+    assert not isinstance(refused.value, CaptureNotYet)
 
 
 def test_capture_refuses_when_a_driver_in_the_race_has_no_result(tmp_path):
     history = modified(driver_history(), lambda h: h["drivers"]["ANT"]["rounds"].pop())
 
-    with pytest.raises(CaptureRefused, match="ANT"):
+    with pytest.raises(CaptureRefused, match="ANT") as refused:
         _decide(tmp_path, history=history)
+    assert not isinstance(refused.value, CaptureNotYet)
 
 
 def test_capture_refuses_a_result_for_a_driver_not_in_the_race(tmp_path):
@@ -160,7 +162,7 @@ def test_correct_rewrites_the_race_not_yet_held(tmp_path):
 
 
 def test_correct_refuses_a_race_from_the_workbook(tmp_path):
-    with pytest.raises(CaptureRefused, match="workbook"):
+    with pytest.raises(CaptureNotYet, match="workbook"):
         _decide(tmp_path, summary=modified(season_summary(), _before_update), golden={2026: 3})
 
 

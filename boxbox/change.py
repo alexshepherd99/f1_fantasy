@@ -31,6 +31,10 @@ class CaptureRefused(Exception):
     """The run cannot write safely; nothing is written."""
 
 
+class CaptureNotYet(CaptureRefused):
+    """BoxBox is not updated yet for what the run would write; a later run may succeed."""
+
+
 @dataclass(frozen=True)
 class ArchiveRow:
     """One row of an archive CSV. ``driver`` is None for a constructor row."""
@@ -55,9 +59,9 @@ class Change:
     warnings: list[str] = field(default_factory=list)
 
 
-def _refuse(message: str) -> None:
+def _refuse(message: str, refusal: type[CaptureRefused] = CaptureRefused) -> None:
     logger.error(message)
-    raise CaptureRefused(message)
+    raise refusal(message)
 
 
 def _rows(df: pd.DataFrame, is_driver: bool) -> list[ArchiveRow]:
@@ -181,7 +185,8 @@ def decide_change(
         if target <= golden_last_race.get(season, 0):
             _refuse(f"BoxBox does not show race {target} (round {target_round}) held yet, so there are no "
                     f"results to capture: run again once it does. A correction is not possible either, as race "
-                    f"{target} of {season} came from the workbook; change it by hand if it must change")
+                    f"{target} of {season} came from the workbook; change it by hand if it must change",
+                    CaptureNotYet)
         new_drivers, new_constructors = _current_prices(data, season, target)
         return Change(
             mode=CORRECT, season=season, target_race=target,
@@ -202,7 +207,7 @@ def decide_change(
                  if _key(row) in held_prices and held_prices[_key(row)] != row.price]
         if not moved:
             _refuse(f"BoxBox has race {target}'s results but no price has moved since: "
-                    "its prices are not updated yet. Run again later")
+                    "its prices are not updated yet. Run again later", CaptureNotYet)
         driver_rows[target + 1] = _in_season_order(next_drivers, season_drivers)
         constructor_rows[target + 1] = _in_season_order(next_constructors, season_constructors)
 
