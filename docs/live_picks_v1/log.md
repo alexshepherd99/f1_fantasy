@@ -305,5 +305,139 @@ script ask before writing a correction that changes prices.
 
 Suite 783 → 802, all green.
 
-**Next: step 6, FastF1.** Gate 1 (D31) waits for the first real race picked with the
-script.
+## 2026-11-12 — Handover for the next session
+
+### Start here
+
+1. **Investigate BoxBox's reverted prices** (below). Alex checked the app after this
+   session: **VER is 29.1**, the archive's race-21 price. So the archive is right
+   and BoxBox's newest file is wrong or stale. Until this is understood, **do not run
+   `boxbox.cli` or `live.cli` without `--skip-collection` or `--dry-run` for real**:
+   either would rewrite race 21's prices to race 20's.
+2. **Review the proposed fix** (below) with Alex. Nothing is built yet.
+3. Then step 6 (FastF1). Gate 1 (D31) waits for the first real race picked with the
+   script.
+
+### The BoxBox problem
+
+The saved copies under `outputs/boxbox/`, by the time BoxBox generated each file:
+
+| Copy saved | Generated (UTC) | VER | HUL |
+| --- | --- | --- | --- |
+| `2026-11-08`, `2026-11-08T212131Z` | 2026-11-08 07:23 | 28.8 | 7.8 |
+| `2026-11-09T114401Z`, `2026-11-09T120931Z` | 2026-11-09 07:12 | 29.1 | 7.2 |
+| this session's scratch copy | 2026-11-09 21:01 | 28.8 | 7.8 |
+
+The 07:12 file was captured as race 21's prices (`data_capture_v2` Gate 1), and Alex
+checked every one against the app then. The 21:01 file gives every race-21 price
+equal to the archive's race-20 price: VER 28.8, HUL 7.8, LEC 24.7, PER 3.0, FER 28.8,
+RED 33.3. In correct mode `decide_change` takes current prices as truth, so it would
+rewrite every one of them. The app still shows 29.1, so BoxBox has regressed and the
+app has not.
+
+Questions for the investigation:
+
+- Does BoxBox's newest file still show race 20's prices? Fetch a fresh copy with
+  `boxbox.cli --dry-run --copy-dir <scratch>`, which writes nothing.
+- Is it only `season_summary.json`'s `current_price` that went back, or do
+  `rounds`/`has_actual` and `driver_history.json` differ between the 07:12 and 21:01
+  files too? Diff the two saved copies.
+- Is this a one-off on BoxBox's side, or a pattern after each race, such as a
+  rebuild from an older snapshot? Only later races can show that, so the copies
+  saved from now on are the evidence.
+
+### Proposed fix, for Alex to review (not built)
+
+Two parts. Each is small and works without the other.
+
+- **A. `live.cli` asks before writing a correction that changes prices.** The BoxBox
+  step runs `capture` as a dry run first. If the change is a correction (correct
+  mode) and any price differs from the archive's, the script shows the price table
+  it already prints and asks: "Write these corrected prices? y/n [n]". On no,
+  nothing is written. The step ends as *refused*, "correction declined", so the exit
+  code is 1 and the summary shows it, and the pick goes ahead on the archive as it
+  stands. On yes, it writes from the same downloaded copy (`--from-copy`), so what is
+  written is what was shown. A capture (results plus the next race's prices) and a
+  correction that changes only the line-up are written without asking, as now.
+  This covers any wrong correction, not just this one, but only in the live script.
+- **B. `boxbox.change` refuses a correction that only repeats the race before.** In
+  correct mode, if every asset priced in both the target race and the race before
+  has its current BoxBox price equal to the race before's archived price, and at
+  least one differs from the target's, refuse with `CaptureRefused`: "BoxBox shows
+  race N-1's prices for race N; its file looks stale". This covers `boxbox.cli` as
+  well. It catches only this exact failure: a real correction made after a price
+  update would not look like this.
+
+Recommended: A, because a wrong price correction made without Alex seeing it is the
+risk, whatever the cause. B only if the investigation shows BoxBox repeats this
+pattern. Each would be tested first in the usual way. A needs `collect_boxbox` to
+take the input function. B's test is the 21:01 file's shape against the fixture
+archive.
+
+### The session's report, as given to Alex
+
+Steps 3, 4 and 5 are done, committed and pushed. The suite went from 683 to 802
+tests, all passing, and the log has an entry for each step.
+
+**Before your next real run:** BoxBox's newest file has gone back to race 20's
+prices. Every race-21 price it gives equals the archive's race-20 price (VER 28.8,
+HUL 7.8, LEC 24.7). The archive's race-21 prices came from BoxBox's file the morning
+of 9 November (VER 29.1, HUL 7.2). So any BoxBox run now, by the new script or by
+`boxbox.cli` itself, would rewrite race 21's prices back to race 20's. I haven't
+touched `data/`, because I can't tell which set the app shows. It's worth checking
+VER's price in the app first.
+
+The same thing is a weak spot in step 5's design: every run now fetches BoxBox and
+corrects prices, so a stale BoxBox file changes the prices that run picks with,
+before you see the diff. One fix would be for the script to ask before writing a
+correction that changes prices. I haven't built it; it's your call.
+
+**What's built:**
+
+- **Step 3, the team file:** reads, checks and writes `data/live_team.csv`, leaving
+  rows it doesn't touch byte for byte. It also works out the team, unused budget and
+  free moves for the next race, including after Wildcard and Limitless.
+- **Step 4, the script:** `PYTHONPATH=. venv/bin/python -m live.cli [--chip
+  wildcard|limitless]` follows the plan. It refuses race 1 until step 7, and every
+  run saves all the picks it offered under `outputs/live_picks/`.
+- **Step 5, data collection:** BoxBox, then the saved odds pages for the next race,
+  then the pick. It ends with a summary and exits 1 if a step was refused or failed,
+  even when a pick was recorded. It warns loudly when the race has no odds.
+
+**Calls I made, all logged:**
+
+- When Final Fix swaps out the DRS driver, DRS goes to the driver swapped in. I
+  haven't checked this against the app.
+- A typed team over budget is asked for again. One using more moves than are free is
+  allowed, with a warning about the points cost.
+- The script asks before replacing a race's existing row, defaulting to no. Without
+  that, a run after the race but before BoxBox has the results would overwrite the
+  pick you played.
+- A new `--skip-collection` flag picks from what's already captured, for a rerun in
+  the same week.
+- `helpers.load_with_derivations` takes an optional archive folder (same default),
+  and `boxbox.cli` and `odds_source.cli` have their main bodies split into functions
+  the script calls. None of these are core modules.
+
+**Real runs:** two, with nothing in `data/` changed afterwards:
+
+- **Offline:** given the race-20 team, unused 0.2 and 2 free moves, the script picked
+  the team you played at race 21 (BOR for HUL, DRS on VER) with 1.0 unused, matching
+  `run_single_team.py`.
+- **With the network:** a real BoxBox download and a real FastF1 sign-in and
+  schedule. It scored race 20 at 329, the app's figure.
+
+**Not yet run:**
+
+- a BoxBox capture of race results and new prices through the script
+- a real Oddschecker page
+- the missing-odds warning on real data
+- typing answers at a real terminal (I piped them in)
+- Gate 1, which needs the first real race picked with the script
+
+**Two slips, both fixed:** I added one block of tests with a shell command instead
+of the editor. And I committed one change with a test still failing, because the
+failure was hidden in a chained command; I fixed it and amended the commit before
+pushing.
+
+Step 6 (FastF1) is next and is best started in a fresh session from the log.

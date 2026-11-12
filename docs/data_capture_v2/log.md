@@ -612,3 +612,14 @@ and price against the F1 Fantasy app, and they all matched, before the CSVs
 were committed.
 
 **Still open for Gate 1:** at least one more race.
+
+## 2026-11-12 — BoxBox went back to race 20's prices
+
+Found by `live_picks_v1`'s step-5 run on scratch copies. BoxBox's file generated
+2026-11-09 21:01 UTC gives every race-21 price equal to race 20's (VER 28.8, where the
+07:12 file captured 29.1). Alex checked the app on 2026-11-12: VER is 29.1, so the
+archive is right and BoxBox's file is not. A correct-mode run now would rewrite all
+of race 21's prices. Nothing in `data/` changed. The evidence, the questions to
+investigate and a proposed fix for review are in `docs/live_picks_v1/log.md`,
+*Handover for the next session*. Until they are settled, run `boxbox.cli` only with
+`--dry-run`.
