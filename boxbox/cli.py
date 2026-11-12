@@ -109,31 +109,53 @@ def describe(change: Change, drivers: pd.DataFrame, constructors: pd.DataFrame, 
     return lines
 
 
+def capture(archive_dir: str, copy_dir: str, fetch: Callable[[str], bytes] | None = None,
+            season_constructors: dict[int, int] | None = None, from_copy: str | None = None,
+            dry_run: bool = False) -> Change:
+    """Run one capture, printing what it does, and return the change written.
+
+    Args:
+        archive_dir: The directory holding the archive CSVs.
+        copy_dir: Where a download is saved.
+        fetch: Returns a URL's body; defaults to an HTTP GET.
+        season_constructors: Constructors per season, for the integrity checks.
+        from_copy: A saved copy's folder to read instead of downloading.
+        dry_run: Show the change but write nothing.
+
+    Raises:
+        CaptureRefused: If the change is doubtful; `CaptureNotYet` if BoxBox is not updated yet.
+        BoxBoxDataError: If BoxBox's files are not as expected.
+        OSError: If a download, read or write fails.
+    """
+    if from_copy:
+        raw = _read_copy(Path(from_copy))
+        print(f"Read the saved copy in {from_copy}")
+    else:
+        raw = download_files(fetch)
+        print(f"Saved a copy to {save_copy(raw, copy_dir, datetime.now(timezone.utc))}")
+    data = parse_files(raw)
+    drivers = read_archive_file(AssetType.DRIVER, archive_dir)
+    constructors = read_archive_file(AssetType.CONSTRUCTOR, archive_dir)
+    change = decide_change(drivers, constructors, data, WORKBOOK_LAST_RACE)
+    print("\n".join(describe(change, drivers, constructors, data)))
+    if dry_run:
+        print("Dry run: nothing written.")
+        return change
+    write_change(change, archive_dir, season_constructors or F1_SEASON_CONSTRUCTORS)
+    print(f"Wrote to {archive_dir}. Review the CSVs' git diff before committing.")
+    return change
+
+
 def main(argv: Sequence[str] | None = None, fetch: Callable[[str], bytes] | None = None,
          season_constructors: dict[int, int] | None = None) -> int:
     """Run one capture. Returns the exit code: 0 written (or dry run), 1 refused or failed."""
     args = parse_arguments(argv)
     try:
-        if args.from_copy:
-            raw = _read_copy(Path(args.from_copy))
-            print(f"Read the saved copy in {args.from_copy}")
-        else:
-            raw = download_files(fetch)
-            print(f"Saved a copy to {save_copy(raw, args.copy_dir, datetime.now(timezone.utc))}")
-        data = parse_files(raw)
-        drivers = read_archive_file(AssetType.DRIVER, args.archive_dir)
-        constructors = read_archive_file(AssetType.CONSTRUCTOR, args.archive_dir)
-        change = decide_change(drivers, constructors, data, WORKBOOK_LAST_RACE)
-        print("\n".join(describe(change, drivers, constructors, data)))
-        if args.dry_run:
-            print("Dry run: nothing written.")
-            return 0
-        write_change(change, args.archive_dir, season_constructors or F1_SEASON_CONSTRUCTORS)
+        capture(args.archive_dir, args.copy_dir, fetch, season_constructors, args.from_copy, args.dry_run)
     except (CaptureRefused, BoxBoxDataError, OSError) as exc:
         logger.error(f"Nothing written: {exc}")
         print(f"Nothing written: {exc}", file=sys.stderr)
         return 1
-    print(f"Wrote to {args.archive_dir}. Review the CSVs' git diff before committing.")
     return 0
 
 
