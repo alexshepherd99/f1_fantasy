@@ -15,7 +15,10 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from collections.abc import Callable
 from pathlib import Path
+
+import pandas as pd
 
 from common import setup_logging
 from fast_f1.api import get_event_schedule, get_session_drivers
@@ -73,15 +76,46 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        page = read_saved_page(page_path)
-        point = find_capture_point(page, get_event_schedule(page.race_start.year))
-        entries = match_drivers(page.prices, load_entry_list(point, fetch=get_session_drivers))
+        page, point = place_page(page_path)
+        write_page_odds(page_path, page, point, args.odds_file)
     except ValueError:
         # already logged with what was wrong; the odds file has not been touched
         sys.exit(1)
 
-    write_race_odds(args.odds_file, point, entries)
-    _report(page_path, page, point, entries, args.odds_file)
+
+def place_page(page_path: Path, schedule_fn: Callable[[int], pd.DataFrame] | None = None
+               ) -> tuple[SavedOddsPage, CapturePoint]:
+    """Read a saved page and place it in its race weekend.
+
+    Args:
+        page_path: The saved page.
+        schedule_fn: Gives a season's event schedule; defaults to FastF1's.
+
+    Raises:
+        ValueError: If the page cannot be read or placed; already logged.
+    """
+    page = read_saved_page(page_path)
+    return page, find_capture_point(page, (schedule_fn or get_event_schedule)(page.race_start.year))
+
+
+def write_page_odds(page_path: Path, page: SavedOddsPage, point: CapturePoint, odds_file: str,
+                    drivers_fn: Callable[[int, int, str], pd.DataFrame] | None = None) -> list[OddsEntry]:
+    """Match a placed page's drivers and write its odds into the odds file, reporting what was written.
+
+    Args:
+        page_path: The saved page, for the report.
+        page: The page as read.
+        point: Where the page sits in its weekend.
+        odds_file: The odds file to write into.
+        drivers_fn: Gives a session's drivers; defaults to FastF1's.
+
+    Raises:
+        ValueError: If the drivers cannot be matched; already logged, and the file is untouched.
+    """
+    entries = match_drivers(page.prices, load_entry_list(point, fetch=drivers_fn or get_session_drivers))
+    write_race_odds(odds_file, point, entries)
+    _report(page_path, page, point, entries, odds_file)
+    return entries
 
 
 if __name__ == "__main__":
