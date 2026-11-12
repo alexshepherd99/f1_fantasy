@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import pytest
 
-from live.team_file import COLUMNS, TeamFileError, TeamRow, check_known, read_team_file
+from live.team_file import COLUMNS, TeamFileError, TeamRow, check_known, read_team_file, write_row
 from tests.live_fixtures import make_race
 
 HEADER = ",".join(COLUMNS) + "\n"
@@ -126,3 +126,97 @@ def test_refuses_a_constructor_not_in_the_race():
 
     with pytest.raises(TeamFileError, match="XXX"):
         check_known(row, make_race(20))
+
+
+# Race 19 written by hand with more decimal places than the writer uses, so a rewrite would show
+ROW_19_BY_HAND = "2026,19,StrategyMaxP2PM,,HAD@RED,HUL@AUD,LAW@VRB,LIN@VRB,VER@RED,FER,RED,VER@RED,3,1,134.00,0.50,283,283\n"
+
+
+def test_writes_a_new_file_with_its_header(tmp_path):
+    path = tmp_path / "live_team.csv"
+
+    write_row(path, ROW)
+
+    assert path.read_text() == HEADER + "2026,20,StrategyMaxP2PM,,HUL@AUD,LAW@VRB,LEC@FER,PER@CAD,VER@RED,FER,RED,VER@RED,2,1,135.3,1.0,,\n"
+
+
+def test_adds_a_race_after_the_others_keeping_their_bytes(tmp_path):
+    path = _file(tmp_path, ROW_19_BY_HAND)
+
+    write_row(path, ROW)
+
+    assert path.read_text().startswith(HEADER + ROW_19_BY_HAND)
+    assert read_team_file(path)[1] == ROW
+
+
+def test_adds_a_race_in_race_order(tmp_path):
+    path = _file(tmp_path, ROW_19_BY_HAND + ROW_21)
+
+    write_row(path, ROW)
+
+    assert [r.race for r in read_team_file(path)] == [19, 20, 21]
+    assert path.read_text().startswith(HEADER + ROW_19_BY_HAND)
+    assert path.read_text().endswith(ROW_21)
+
+
+def test_replaces_the_race_row_keeping_the_others_bytes(tmp_path):
+    path = _file(tmp_path, ROW_19_BY_HAND + ROW_20.replace(",329,329\n", ",,\n"))
+    rerun = replace(ROW, drs="LEC@FER", moves_used=2)
+
+    write_row(path, rerun)
+
+    assert path.read_text().startswith(HEADER + ROW_19_BY_HAND)
+    assert read_team_file(path) == [read_team_file(path)[0], rerun]
+
+
+def test_fills_the_points_of_the_race_row(tmp_path):
+    path = _file(tmp_path, ROW_20.replace(",329,329\n", ",,\n"))
+    scored = replace(read_team_file(path)[0], points_predicted=330, points=329)
+
+    write_row(path, scored)
+
+    assert read_team_file(path) == [scored]
+
+
+def test_refuses_to_rewrite_a_final_row(tmp_path):
+    path = _file(tmp_path, ROW_20)
+
+    with pytest.raises(TeamFileError, match="final"):
+        write_row(path, replace(ROW, points=300))
+
+    assert path.read_text() == HEADER + ROW_20
+
+
+def test_refuses_a_row_that_breaks_the_file_rules(tmp_path):
+    path = _file(tmp_path, ROW_21)
+
+    with pytest.raises(TeamFileError, match="Extra DRS"):
+        write_row(path, replace(ROW, race=22, chip="Extra DRS"))
+
+    assert path.read_text() == HEADER + ROW_21
+
+
+def test_refuses_a_row_that_breaks_a_row_rule(tmp_path):
+    path = _file(tmp_path, ROW_19_BY_HAND)
+
+    with pytest.raises(TeamFileError, match="DRS"):
+        write_row(path, replace(ROW, drs="BOR@AUD"))
+
+    assert path.read_text() == HEADER + ROW_19_BY_HAND
+
+
+def test_writes_money_to_one_decimal_place(tmp_path):
+    path = tmp_path / "live_team.csv"
+
+    write_row(path, replace(ROW, team_value=135.29999999, unused_budget=0.30000000004))
+
+    assert ",135.3,0.3,," in path.read_text()
+
+
+def test_writes_a_limitless_row_with_no_unused_budget(tmp_path):
+    path = tmp_path / "live_team.csv"
+    limitless = replace(ROW, chip="Limitless", unused_budget=None)
+
+    write_row(path, limitless)
+
+    assert read_team_file(path) == [limitless]

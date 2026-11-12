@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -93,6 +94,61 @@ def read_team_file(path: Path | str) -> list[TeamRow]:
     rows = [_parse(fields, f"{path} line {i}") for i, fields in enumerate(lines[1:], start=2)]
     _check_rows(rows, str(path))
     return rows
+
+
+def write_row(path: Path | str, row: TeamRow) -> None:
+    """Put `row` into the team file, replacing the row for its race or adding it in race order.
+
+    Every other line keeps its bytes. Money is written to one decimal place, as the app shows it.
+    The file is created with its header if it does not exist yet.
+
+    Raises:
+        TeamFileError: If the race's row is final (its points are filled), or the file with
+            `row` in it would break one of its rules. The file is then left as it was.
+    """
+    path = Path(path)
+    body = []
+    if path.exists():
+        read_team_file(path)
+        with path.open(newline="", encoding="utf-8") as handle:
+            body = list(csv.reader(handle))[1:]
+
+    key = (row.season, row.race)
+    keys = [(int(fields[0]), int(fields[1])) for fields in body]
+    fields = _fields(row)
+    if key in keys:
+        at = keys.index(key)
+        if body[at][COLUMNS.index("Points")] != "":
+            _fail(f"{path}: season {row.season} race {row.race} has its points, so its row is final")
+        body[at] = fields
+    else:
+        at = next((i for i, k in enumerate(keys) if k > key), len(body))
+        body.insert(at, fields)
+
+    rows = [_parse(f, f"{path} line {i}") for i, f in enumerate(body, start=2)]
+    _check_rows(rows, str(path))
+
+    temporary = path.with_name(f".{path.name}.tmp")
+    with temporary.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(COLUMNS)
+        writer.writerows(body)
+    os.replace(temporary, path)
+    logger.info(f"Wrote season {row.season} race {row.race} into {path}")
+
+
+def _money(value: float | None) -> str:
+    return "" if value is None else f"{value:.1f}"
+
+
+def _optional(value: int | None) -> str:
+    return "" if value is None else str(value)
+
+
+def _fields(row: TeamRow) -> list[str]:
+    return [str(row.season), str(row.race), row.strategy, row.chip, *row.drivers, *row.constructors, row.drs,
+            str(row.free_moves), str(row.moves_used), _money(row.team_value), _money(row.unused_budget),
+            _optional(row.points_predicted), _optional(row.points)]
 
 
 def _fail(message: str) -> None:
