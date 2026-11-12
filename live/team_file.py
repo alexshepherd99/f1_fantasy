@@ -1,0 +1,170 @@
+"""The live team file, `data/live_team.csv`: one row per race played (live_picks_v1 D9).
+
+The file is read and written as text with the `csv` module, never through pandas,
+so a row a run does not touch is written back exactly as it was.
+"""
+
+from __future__ import annotations
+
+import csv
+import logging
+from dataclasses import dataclass
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+TEAM_FILE = "data/live_team.csv"
+
+WILDCARD = "Wildcard"
+LIMITLESS = "Limitless"
+EXTRA_DRS = "Extra DRS"
+NO_NEGATIVE = "No Negative"
+AUTOPILOT = "Autopilot"
+FINAL_FIX = "Final Fix"
+CHIPS = (WILDCARD, LIMITLESS, EXTRA_DRS, NO_NEGATIVE, AUTOPILOT, FINAL_FIX)
+
+NUM_DRIVERS = 5
+NUM_CONSTRUCTORS = 2
+DRIVER_COLUMNS = [f"D{i}" for i in range(1, NUM_DRIVERS + 1)]
+CONSTRUCTOR_COLUMNS = [f"C{i}" for i in range(1, NUM_CONSTRUCTORS + 1)]
+COLUMNS = ["Season", "Race", "Strategy", "Chip", *DRIVER_COLUMNS, *CONSTRUCTOR_COLUMNS, "DRS", "FreeMoves",
+           "MovesUsed", "TeamValue", "UnusedBudget", "PointsPredicted", "Points"]
+
+
+class TeamFileError(ValueError):
+    """The team file, or a row for it, breaks one of its rules."""
+
+
+@dataclass(frozen=True)
+class TeamRow:
+    """One race played.
+
+    Attributes:
+        season: The season.
+        race: The race number.
+        strategy: The strategy's class name, `StrategyBettingOdds:<limit>` at race 1, or `Manual`.
+        chip: The chip played, one of `CHIPS`, or "" for none.
+        drivers: The drivers, sorted.
+        constructors: The constructors, sorted.
+        drs: The DRS driver, one of `drivers`.
+        free_moves: The free moves available this race.
+        moves_used: The moves made from the team held into this one.
+        team_value: The team's value at this race's prices.
+        unused_budget: The budget left after the pick; None after Limitless, whose budget never carries.
+        points_predicted: The points the archive gives the team, once scored.
+        points: The app's points, which count; once filled the row is final.
+    """
+    season: int
+    race: int
+    strategy: str
+    chip: str
+    drivers: tuple[str, ...]
+    constructors: tuple[str, ...]
+    drs: str
+    free_moves: int
+    moves_used: int
+    team_value: float
+    unused_budget: float | None
+    points_predicted: int | None
+    points: int | None
+
+
+def read_team_file(path: Path | str) -> list[TeamRow]:
+    """Read and check the team file.
+
+    Args:
+        path: The file. A file that does not exist yet holds no rows.
+
+    Returns:
+        The rows, in file order.
+
+    Raises:
+        TeamFileError: If the file breaks one of its rules.
+    """
+    path = Path(path)
+    if not path.exists():
+        return []
+    with path.open(newline="", encoding="utf-8") as handle:
+        lines = list(csv.reader(handle))
+    if not lines or lines[0] != COLUMNS:
+        _fail(f"{path}: header is not {','.join(COLUMNS)}")
+    rows = [_parse(fields, f"{path} line {i}") for i, fields in enumerate(lines[1:], start=2)]
+    _check_rows(rows, str(path))
+    return rows
+
+
+def _fail(message: str) -> None:
+    logger.error(message)
+    raise TeamFileError(message)
+
+
+def _int(value: str, column: str, where: str) -> int:
+    try:
+        return int(value)
+    except ValueError:
+        _fail(f"{where}: {column} {value!r} is not a whole number")
+
+
+def _float(value: str, column: str, where: str) -> float:
+    try:
+        return float(value)
+    except ValueError:
+        _fail(f"{where}: {column} {value!r} is not a number")
+
+
+def _parse(fields: list[str], where: str) -> TeamRow:
+    if len(fields) != len(COLUMNS):
+        _fail(f"{where}: {len(fields)} fields, not {len(COLUMNS)}")
+    value = dict(zip(COLUMNS, fields))
+    row = TeamRow(
+        season=_int(value["Season"], "Season", where),
+        race=_int(value["Race"], "Race", where),
+        strategy=value["Strategy"],
+        chip=value["Chip"],
+        drivers=tuple(value[c] for c in DRIVER_COLUMNS),
+        constructors=tuple(value[c] for c in CONSTRUCTOR_COLUMNS),
+        drs=value["DRS"],
+        free_moves=_int(value["FreeMoves"], "FreeMoves", where),
+        moves_used=_int(value["MovesUsed"], "MovesUsed", where),
+        team_value=_float(value["TeamValue"], "TeamValue", where),
+        unused_budget=None if value["UnusedBudget"] == "" else _float(value["UnusedBudget"], "UnusedBudget", where),
+        points_predicted=None if value["PointsPredicted"] == "" else _int(value["PointsPredicted"], "PointsPredicted",
+                                                                           where),
+        points=None if value["Points"] == "" else _int(value["Points"], "Points", where),
+    )
+    check_row(row, where)
+    return row
+
+
+def check_row(row: TeamRow, where: str = "row") -> None:
+    """Check the rules one row must keep on its own, raising `TeamFileError` if it breaks one."""
+    if not row.strategy:
+        _fail(f"{where}: Strategy is empty")
+    if row.chip and row.chip not in CHIPS:
+        _fail(f"{where}: chip {row.chip!r} is not one of {', '.join(CHIPS)}")
+    _check_assets(row.drivers, NUM_DRIVERS, "drivers", where, lambda d: "@" in d)
+    _check_assets(row.constructors, NUM_CONSTRUCTORS, "constructors", where, lambda c: "@" not in c)
+    if row.drs not in row.drivers:
+        _fail(f"{where}: DRS {row.drs!r} is not one of the drivers")
+    if (row.unused_budget is None) != (row.chip == LIMITLESS):
+        _fail(f"{where}: UnusedBudget must be blank after Limitless and only then")
+
+
+def _check_assets(assets: tuple[str, ...], count: int, kind: str, where: str, well_formed) -> None:
+    if len(assets) != count or not all(assets) or not all(well_formed(a) for a in assets):
+        _fail(f"{where}: {kind} {assets} are not {count} identifiers")
+    if list(assets) != sorted(set(assets)):
+        _fail(f"{where}: {kind} {assets} are not sorted and distinct")
+
+
+def _check_rows(rows: list[TeamRow], where: str) -> None:
+    """Check the rules between rows: races in order, once each, and each chip once a season."""
+    for before, after in zip(rows, rows[1:]):
+        if (before.season, before.race) >= (after.season, after.race):
+            _fail(f"{where}: season {after.season} race {after.race} is out of order or repeated")
+    played = set()
+    for row in rows:
+        if row.chip:
+            if (row.season, row.chip) in played:
+                _fail(f"{where}: {row.chip} is played twice in season {row.season}")
+            played.add((row.season, row.chip))
