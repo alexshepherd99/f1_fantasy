@@ -84,6 +84,15 @@ a race has results with changed inputs reported (D28); running
 D29. Depends on D30's backlog item for real use, or the new season's prices entered
 into the archive by hand.
 
+### 8. Score the season's final race
+
+Found in step 7 (`log.md`, 2026-11-13): once every race of the latest season has
+points, `next_race` raises before scoring runs, and race-1 mode scores no row of the
+season before. So the last row of a season keeps blank `Points` unless filled by
+hand. The fix scores the latest season's unscored rows before looking for the next
+race (D24). Needed before the final race of the first season the file covers: Abu
+Dhabi (race 23) if the handover is in 2026, otherwise the end of 2027.
+
 ## Gates
 
 - **Gate 1 — first real race with the script** (after step 4). D31: the script's
