@@ -623,3 +623,64 @@ of race 21's prices. Nothing in `data/` changed. The evidence, the questions to
 investigate and a proposed fix for review are in `docs/live_picks_v1/log.md`,
 *Handover for the next session*. Until they are settled, run `boxbox.cli` only with
 `--dry-run`.
+
+## 2026-11-13 — The price fix is made here, not in `live_picks_v1`
+
+Alex found that the capture reads prices from the wrong BoxBox file:
+`season_summary.json`. BoxBox's `predictions.json` holds the prices the app shows.
+
+**Decided with Alex:** the fix is made in this effort, starting in a fresh session.
+The reasons:
+
+- The fault is in `boxbox/`. `boxbox.cli` run on its own would rewrite the prices
+  too.
+- Gate 1 is still open, so the next real capture checks the new source.
+
+`live_picks_v1` carries on meanwhile, running `live.cli` with `--skip-collection`.
+Its proposed fix A stays there as a backstop: the script asks before writing a
+correction that changes prices. Its fix B (refuse a correction that repeats the
+race before) is dropped for now. Until this effort's fix is built, run `boxbox.cli`
+only with `--dry-run`.
+
+**Deadline:** the capture after Las Vegas. Team lock is 2026-11-21 04:00 UTC, and
+BoxBox labels the race round 23.
+
+**What the files showed on 2026-11-13**, read with a web fetch and not saved:
+
+| | `season_summary.json` | `predictions.json` |
+| --- | --- | --- |
+| `generated_at` (UTC) | 2026-11-09 21:01 | 2026-11-09 07:12 |
+| VER / HUL / LEC / PER | 28.8 / 7.8 / 24.7 / 3.0 | 29.1 / 7.2 / 25.0 / 3.6 |
+| Red Bull | 33.3 | 33.6 |
+| Matches the app | no | yes (VER checked by Alex) |
+
+BoxBox's index page, `https://boxboxf1fantasy.com/data/`, lists 11 files, all
+updated 2026-11-09. It says they can be fetched directly and states no limits on
+scripted access.
+
+What `predictions.json` looks like:
+
+- It holds the current round's projections. Its top-level `round` is 23 and it has
+  its own `generated_at`. Its schema is in `predictions.schema.json`.
+- `drivers` is an array keyed by `driver_id`, a code such as `VER`, with
+  `current_price` on each driver.
+- `constructors` is an array keyed by `constructor_id`, a slug such as `red_bull`,
+  with `current_price` on each constructor.
+- It has no results or points.
+- No field says which race its prices are for. The only race label near them is
+  `driver_assets.source.price_status`: `"official_confirmed_6.0M_for_round_22"`.
+
+**To investigate before building:**
+
+1. **Is `predictions.json` newer, or only older?** It was generated at 07:12, the
+   same time as the `season_summary.json` file captured correctly at Gate 1. It may
+   be right only because BoxBox has not regenerated it since the 21:01 rebuild. The
+   copies saved after Las Vegas show whether it stays right.
+2. **Prices from one file, points from another.** Points still come from
+   `driver_history.json`, so the capture would read two files that BoxBox may
+   generate at different times. Decide how the capture checks that they agree.
+3. **Which race the prices are for, and how teams are named.** The file does not say
+   which race the prices are for. It names constructors by slugs that `TEAM_CODES`
+   does not hold.
+4. Still open from `live_picks_v1`'s handover: diff the saved 07:12 and 21:01 copies
+   to see whether `rounds`/`has_actual` or `driver_history.json` differ too.

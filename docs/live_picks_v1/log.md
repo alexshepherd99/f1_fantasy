@@ -441,3 +441,21 @@ failure was hidden in a chained command; I fixed it and amended the commit befor
 pushing.
 
 Step 6 (FastF1) is next and is best started in a fresh session from the log.
+
+## 2026-11-13 — BoxBox prices: the fix moves to `data_capture_v2`
+
+Alex found that the capture reads prices from the wrong BoxBox file
+(`season_summary.json`). BoxBox's `predictions.json` holds the prices the app shows.
+
+**Decided with Alex:** the fix is made in `data_capture_v2`, in a fresh session.
+The fault is in `boxbox/`, and that effort's Gate 1 is still open. Its log entry for
+2026-11-13 has the evidence and the questions to investigate. This replaces items 1
+and 2 of the handover's *Start here*:
+
+- **The investigation** moves to `data_capture_v2`.
+- **Fix A** (the script asks before writing a correction that changes prices) stays
+  open here as a backstop, to decide once the source is fixed.
+- **Fix B** (refuse a correction that repeats the race before) is dropped for now.
+
+Until `data_capture_v2`'s fix is in, run `live.cli` only with `--skip-collection`.
+Step 6 (FastF1) can go ahead meanwhile.
