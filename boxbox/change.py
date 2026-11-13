@@ -87,10 +87,10 @@ def _boxbox_results(data: BoxBoxData) -> tuple[dict[str, dict[int, float]], dict
 
 def _current_prices(data: BoxBoxData, season: int, race: int,
                     held_round: int | None = None) -> tuple[list[ArchiveRow], list[ArchiveRow]]:
-    """BoxBox's prices as rows for ``race``, refusing if they are for another round.
+    """BoxBox's prices as rows for ``race``, refusing if they are for another round or provisional.
 
     Prices still for ``held_round``, the race just held, mean BoxBox is not
-    updated yet; any other round is refused outright.
+    updated yet, as do provisional ones; any other round is refused outright.
     """
     race_round = round_for_race(data, race)
     if data.prices_round != race_round:
@@ -98,6 +98,9 @@ def _current_prices(data: BoxBoxData, season: int, race: int,
             _refuse(f"BoxBox's prices are still for round {held_round}, the race just held, not round "
                     f"{race_round} (race {race}): its prices are not updated yet. Run again later", CaptureNotYet)
         _refuse(f"BoxBox's prices are for round {data.prices_round}, but race {race} is round {race_round}")
+    if data.provisional_prices:
+        _refuse(f"BoxBox marks the price of {', '.join(data.provisional_prices)} provisional. "
+                "Run again once it is confirmed", CaptureNotYet)
     drivers = [
         ArchiveRow(season, race, constructor_code(slug), driver_code(key), None, price)
         for key, (slug, price) in data.driver_prices.items()

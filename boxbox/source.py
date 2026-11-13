@@ -60,7 +60,8 @@ class BoxBoxData:
     disambiguates), constructors by slug (``red_bull``). Results map a calendar
     round to points; prices are each asset's ``current_price``, and a driver's
     price comes with the constructor slug BoxBox lists for them. The prices
-    are ``predictions.json``'s, for calendar round ``prices_round``;
+    are ``predictions.json``'s, for calendar round ``prices_round``, and
+    ``provisional_prices`` lists the drivers whose price it marks provisional;
     ``summary_*`` hold ``season_summary.json``'s.
     """
 
@@ -75,6 +76,7 @@ class BoxBoxData:
     summary_constructor_prices: dict[str, float]
     prices_round: int
     prices_generated_at: str
+    provisional_prices: list[str]
 
 
 def _http_get(url: str) -> bytes:
@@ -177,6 +179,18 @@ def _constructor_prices(entries: dict[str, dict], where: str) -> dict[str, float
     }
 
 
+def _provisional(drivers: dict[str, dict], where: str) -> list[str]:
+    """Drivers whose ``price_provisional`` is true; the flag is optional, and absent means not provisional."""
+    provisional = []
+    for key, entry in drivers.items():
+        flag = entry.get("price_provisional", False)
+        if not isinstance(flag, bool):
+            _fail(f"{where} {key}: expected true or false for price_provisional, found {flag!r}")
+        if flag:
+            provisional.append(key)
+    return provisional
+
+
 def parse_files(raw: dict[str, bytes]) -> BoxBoxData:
     """Parse and check the three files.
 
@@ -223,4 +237,5 @@ def parse_files(raw: dict[str, bytes]) -> BoxBoxData:
                                                        f"{SEASON_SUMMARY} constructor_prices"),
         prices_round=int(_number(_field(prediction, "round", PREDICTIONS), f"{PREDICTIONS} round")),
         prices_generated_at=_field(prediction, "generated_at", PREDICTIONS),
+        provisional_prices=_provisional(predicted_drivers, f"{PREDICTIONS} drivers"),
     )

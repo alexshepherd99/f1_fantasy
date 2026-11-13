@@ -124,6 +124,20 @@ def test_correct_refuses_prices_for_another_round(tmp_path):
         _before_update(tmp_path, lambda p: p.update(round=5))
 
 
+def _provisional_had(prediction: dict) -> None:
+    prediction["drivers"][1]["price_provisional"] = True
+
+
+def test_capture_refuses_a_provisional_price(tmp_path):
+    with pytest.raises(CaptureNotYet, match="HAD provisional"):
+        _decide(tmp_path, prediction=modified(predictions(), _provisional_had))
+
+
+def test_correct_refuses_a_provisional_price(tmp_path):
+    with pytest.raises(CaptureNotYet, match="HAD provisional"):
+        _before_update(tmp_path, _provisional_had)
+
+
 def test_capture_refuses_when_the_race_already_has_points(tmp_path):
     drivers = DRIVERS_CSV.replace("2026,3,RED,VER,,28.5", "2026,3,RED,VER,31,28.5")
 

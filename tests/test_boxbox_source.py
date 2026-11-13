@@ -102,6 +102,15 @@ def test_parse_files_reads_the_round_and_time_of_the_prices():
     assert (data.prices_round, data.prices_generated_at) == (5, "2026-11-10T07:00:01+00:00")
 
 
+def test_parse_files_lists_drivers_whose_price_is_provisional():
+    def flag(p):
+        p["drivers"][1]["price_provisional"] = True
+        p["drivers"][2].pop("price_provisional")  # optional in BoxBox's schema: absent is not provisional
+
+    assert parse_files(raw_files()).provisional_prices == []
+    assert parse_files(raw_files(prediction=modified(predictions(), flag))).provisional_prices == ["HAD"]
+
+
 @pytest.mark.parametrize(
     "change, message",
     [
@@ -115,6 +124,7 @@ def test_parse_files_reads_the_round_and_time_of_the_prices():
         (lambda p: p["constructors"][1].pop("current_price"), "current_price"),
         (lambda p: p["constructors"][0].pop("constructor_id"), "constructor_id"),
         (lambda p: p["drivers"].append(dict(p["drivers"][0])), "twice"),
+        (lambda p: p["drivers"][0].update(price_provisional="no"), "price_provisional"),
     ],
 )
 def test_parse_files_rejects_unexpected_predictions(change, message):
