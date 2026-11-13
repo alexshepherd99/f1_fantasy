@@ -4,10 +4,12 @@ Run before each race, after saving any Oddschecker winner pages into ``outputs/`
 
     PYTHONPATH=. venv/bin/python -m live.cli [--chip wildcard|limitless] [--skip-collection]
 
-It first captures BoxBox's points and prices into the archive and every saved
-odds page for the next race into the odds file. It then scores the last race
-played once the archive has its points, asks Alex to confirm the team held, its
-unused budget and free moves, runs the race's strategies, shows their picks side
+It first captures BoxBox's points and prices into the archive, every saved odds
+page for the next race into the odds file, and the season's FastF1 metrics up to
+the next race, once its sessions have run, into the metrics file. It then scores
+the last race played once the archive has its points, asks Alex to confirm the
+team held, its unused budget and free moves, runs the race's strategies (the
+FastF1 strategy only when the metrics file has the race), shows their picks side
 by side with prices, and records the pick he chooses in ``data/live_team.csv``.
 It ends with a summary of each step, and exits 1 if any was refused or failed.
 Review the git diff of every data file it wrote and commit them.
@@ -24,7 +26,7 @@ from datetime import datetime, timezone
 
 from boxbox.source import DEFAULT_COPY_DIR
 from common import AssetType, setup_logging
-from fast_f1.output import DEFAULT_OUTPUT_DIRECTORY
+from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, DEFAULT_OUTPUT_DIRECTORY
 from helpers import load_with_derivations
 from import_data.import_history import _DIR_ARCHIVE_INPUTS, read_archive_file
 from import_data.odds import _FILE_BETTING_ODDS
@@ -34,16 +36,18 @@ from live.collect import (
     FAILED,
     REFUSED,
     SKIPPED,
+    FastF1Api,
     OddsApi,
     StepOutcome,
     collect_boxbox,
+    collect_fastf1,
     collect_odds,
     odds_present,
 )
 from live.display import default_drs, format_prices, format_table, manual_pick, parse_team
-from live.lineup import Option, implied_chip, run_lineup, strategies_for
+from live.lineup import Option, add_to_lineup, fastf1_strategy, has_signal, implied_chip, run_lineup, strategies_for
 from live.points import predict_points
-from live.record import write_record
+from live.record import race_metrics_rows, write_record
 from live.team_file import (
     AUTOPILOT,
     EXTRA_DRS,
@@ -103,6 +107,8 @@ def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--copy-dir", default=DEFAULT_COPY_DIR, help="where each BoxBox download is saved")
     parser.add_argument("--pages-dir", default=str(DEFAULT_OUTPUT_DIRECTORY), help="where saved odds pages are")
     parser.add_argument("--odds-file", default=_FILE_BETTING_ODDS, help="the odds file to write into")
+    parser.add_argument("--metrics-file", default=str(DEFAULT_HISTORICAL_OUTPUT),
+                        help="the FastF1 metrics file to write into, which the FastF1 strategy reads")
     parser.add_argument("--skip-collection", action="store_true",
                         help="pick from the data already captured, without BoxBox or the odds pages")
     return parser.parse_args(argv)
@@ -243,8 +249,11 @@ def _held_pick(confirmed: Confirmed) -> Pick:
 
 
 def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, race_num: int, drivers_raw,
-              run_at: datetime) -> TeamRow | None:
-    """Pick for the next race, from scoring the last race to recording the pick; returns the row written, if any."""
+              run_at: datetime, outcomes: list[StepOutcome]) -> TeamRow | None:
+    """Pick for the next race, from scoring the last race to recording the pick; returns the row written, if any.
+
+    How the FastF1 pick went is added to `outcomes`.
+    """
     if race_num == 1:
         raise RunStopped(f"Season {season_year}'s next race is race 1, which race-1 mode picks; it is not built yet")
     chip = CHIP_ARGUMENTS.get(args.chip, "")
@@ -269,6 +278,8 @@ def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, rac
     budget = limitless_cap(race) if chip == LIMITLESS else confirmed.budget
     options = run_lineup(strategies_for(race_num, WILDCARD in chips_used), confirmed.team, race, race_prev,
                          season_year, confirmed.free_moves, chip)
+    options, fastf1_outcome = _add_fastf1(args.metrics_file, options, confirmed, season_year, race, race_prev, chip)
+    outcomes.append(_report(fastf1_outcome))
     print(f"Team value {confirmed.value:.1f}, budget {budget:.1f}, free moves "
           f"{'unlimited' if chip else confirmed.free_moves}{f', {chip}' if chip else ''}")
     print("\n".join(format_table(_held_pick(confirmed),
@@ -289,9 +300,33 @@ def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, rac
                 "constructors": sorted(confirmed.team.assets[AssetType.CONSTRUCTOR]),
                 "unused_budget": confirmed.team.unused_budget, "free_moves": confirmed.free_moves,
                 "value": confirmed.value}
-        path = write_record(args.record_dir, run_at, season_year, race, chip, held, options, written)
+        path = write_record(args.record_dir, run_at, season_year, race, chip, held, options, written,
+                            race_metrics_rows(args.metrics_file, season_year, race_num))
         print(f"Saved this run's picks to {path}")
     return written
+
+
+def _add_fastf1(metrics_file: str, options: list[Option], confirmed: Confirmed, season_year: int, race: Race,
+                race_prev: Race, chip: str) -> tuple[list[Option], StepOutcome]:
+    """Add the FastF1 strategy's pick when the race has its signal (D16, D18).
+
+    Returns:
+        The line-up, and how the FastF1 pick went: done, skipped without the signal, or
+        failed with the error, the other picks kept.
+    """
+    step = "FastF1 pick"
+    race_num = int(race.race)
+    try:
+        if not has_signal(metrics_file, season_year, race_num):
+            return options, StepOutcome(step, SKIPPED, f"no FastF1 signal for season {season_year} race {race_num} "
+                                                       f"in {metrics_file}")
+        added = add_to_lineup(options, fastf1_strategy(metrics_file), confirmed.team, race, race_prev, season_year,
+                              confirmed.free_moves, chip)
+    # The signal fails in types that share no useful base; any of them loses only this pick, not the run's
+    except Exception as exc:
+        logger.exception("FastF1 pick failed")
+        return options, StepOutcome(step, FAILED, str(exc))
+    return added, StepOutcome(step, DONE, "offered")
 
 
 def choose_row(rows: list[TeamRow], options: list[Option], confirmed: Confirmed, season_year: int, race: Race,
@@ -319,7 +354,7 @@ def choose_row(rows: list[TeamRow], options: list[Option], confirmed: Confirmed,
 
 def main(argv: Sequence[str] | None = None, input_fn: InputFn = input,
          boxbox_fetch: Callable[[str], bytes] | None = None, odds_api: OddsApi | None = None,
-         season_constructors: dict[int, int] | None = None) -> int:
+         season_constructors: dict[int, int] | None = None, fastf1_api: FastF1Api | None = None) -> int:
     """Run once: collect the week's data, then pick (D25, D26).
 
     Every step runs whatever the steps before it gave. Returns the exit code: 1 if any step
@@ -349,8 +384,16 @@ def main(argv: Sequence[str] | None = None, input_fn: InputFn = input,
     if race_num > 1:
         warnings += _odds_warning(args, season_year, race_num)
 
+    if args.skip_collection:
+        outcomes.append(_report(StepOutcome("FastF1", SKIPPED, "--skip-collection")))
+    elif race_num == 1:
+        outcomes.append(_report(StepOutcome("FastF1", SKIPPED, "race 1 is picked on betting odds alone")))
+    else:
+        outcomes.append(_report(collect_fastf1(args.metrics_file, season_year, race_num, run_at, fastf1_api,
+                                               args.odds_file)))
+
     try:
-        written = pick_race(args, input_fn, season_year, race_num, drivers_raw, run_at)
+        written = pick_race(args, input_fn, season_year, race_num, drivers_raw, run_at, outcomes)
         outcomes.append(StepOutcome("Pick", DONE, f"recorded race {race_num}" if written else "nothing recorded"))
     except (RunStopped, TeamFileError, ValueError) as exc:
         logger.error(f"Pick refused: {exc}")

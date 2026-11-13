@@ -3,13 +3,15 @@
 import json
 from dataclasses import replace
 
+import pandas as pd
 import pytest
 
 from common import AssetType
 from helpers import load_with_derivations
 from linear.strategy_p2pm import StrategyMaxP2PM
 from live.cli import main
-from live.lineup import run_lineup
+from live.collect import FastF1Api
+from live.lineup import fastf1_strategy, run_lineup
 from live.points import predict_points
 from live.team_file import TeamRow, read_team_file, write_row
 from races.season import factory_season
@@ -44,20 +46,34 @@ def world(tmp_path):
 ODDS_HEADER = "Driver,Constructor,Season,Race,Odds\n"
 
 
-def _world(tmp_path, next_race: int, odds: str = f"VER,RED,{SEASON},6,5-4\n") -> dict:
+METRICS_HEADER = ("Season,Race,Driver,Points,RollingPoints,RollingPointsRank,ConstructorRollingPointsRank,"
+                  "FP2_MinLapTime_rank,FP3_MinLapTime_rank,SQ_MinLapTime_rank,FP1_MinLapTime_rank,OddsRank,"
+                  "AggregateRank\n")
+RACE_6_METRICS = f"{SEASON},6,VER,,60.0,1.0,1.0,0.9,0.8,,,0.0,2.7\n"
+
+
+def _world(tmp_path, next_race: int, odds: str = f"VER,RED,{SEASON},6,5-4\n", metrics: str = "") -> dict:
     archive = tmp_path / "archive"
     archive.mkdir()
     write_archive(archive, last_race=next_race, unscored=(next_race,))
     (tmp_path / "pages").mkdir()
     (tmp_path / "odds.csv").write_text(ODDS_HEADER + odds)
+    (tmp_path / "metrics.csv").write_text(METRICS_HEADER + metrics)
     return {"archive": archive, "team_file": tmp_path / "live_team.csv", "records": tmp_path / "records",
-            "pages": tmp_path / "pages", "odds": tmp_path / "odds.csv", "copies": tmp_path / "copies"}
+            "pages": tmp_path / "pages", "odds": tmp_path / "odds.csv", "copies": tmp_path / "copies",
+            "metrics": tmp_path / "metrics.csv"}
+
+
+def _unreachable(season):
+    raise ConnectionError("no network")
 
 
 def _run(world, inputs: Inputs, *extra: str, collect: bool = False, **injected) -> int:
+    injected.setdefault("fastf1_api", FastF1Api(schedule=_unreachable, build=None))
     return main(["--team-file", str(world["team_file"]), "--archive-dir", str(world["archive"]),
                  "--record-dir", str(world["records"]), "--pages-dir", str(world["pages"]),
                  "--odds-file", str(world["odds"]), "--copy-dir", str(world["copies"]),
+                 "--metrics-file", str(world["metrics"]),
                  *([] if collect else ["--skip-collection"]), *extra], input_fn=inputs, **injected)
 
 
@@ -325,3 +341,112 @@ def test_a_refused_pick_is_in_the_summary(tmp_path, capsys):
     _run(world, Inputs())
 
     assert "Pick: refused - " in capsys.readouterr().out.split("Summary:")[1]
+
+
+class _StubTables:
+    """Stands in for the FastF1 strategy's ``SignalTables``: set values, and no price rises."""
+
+    def values(self, season: int, race: int) -> dict[str, float]:
+        return {"VER@RED": 30.0, "PER@RED": 20.0, "RED": 40.0}
+
+    def price_rise(self, season: int, race: int) -> dict[str, float]:
+        return {}
+
+
+@pytest.fixture
+def signal(monkeypatch) -> list:
+    """Give the FastF1 strategy set values in place of the real tables, recording each file it reads.
+
+    The real tables need the 2023-25 metrics rows matched to the real archive, as in
+    ``tests/test_strategy_fastf1.py``.
+    """
+    read = []
+
+    def _load(fn_metrics):
+        read.append(fn_metrics)
+        return _StubTables()
+
+    monkeypatch.setattr("linear.strategy_fastf1.load_signal_tables", _load)
+    return read
+
+
+def test_the_fastf1_pick_is_offered_when_the_race_has_signal(tmp_path, signal, capsys):
+    world = _world(tmp_path, next_race=6, metrics=RACE_6_METRICS)
+
+    assert _run(world, Inputs(*HELD_TEXT, "50.0", "2", "x")) == 0
+
+    season = _season(world)
+    pick = solve_race(fastf1_strategy(str(world["metrics"])), _team(), season.races[6], season.races[5], SEASON,
+                      max_moves=2)
+    options = _record(world)["options"]
+    assert [o["drivers"] for o in options if "StrategyFastF1RuleRise" in o["strategies"]] == [list(pick.drivers)]
+    assert signal[-1] == str(world["metrics"])
+    assert "FastF1 pick: done" in capsys.readouterr().out.split("Summary:")[1]
+
+
+def test_the_fastf1_pick_is_skipped_without_signal(world, signal, capsys):
+    assert _run(world, Inputs(*HELD_TEXT, "50.0", "2", "x")) == 0
+
+    assert [o["strategies"] for o in _record(world)["options"]] == [["StrategyMaxP2PM"]]
+    assert signal == []
+    summary = capsys.readouterr().out.split("Summary:")[1]
+    assert f"FastF1 pick: skipped - no FastF1 signal for season {SEASON} race 6 in {world['metrics']}" in summary
+
+
+def test_a_fastf1_pick_that_fails_still_records_then_exits_1(tmp_path, monkeypatch, capsys):
+    def _load(fn_metrics):
+        raise ValueError("No single fantasy pair for 2023 race 6: DOO")
+
+    monkeypatch.setattr("linear.strategy_fastf1.load_signal_tables", _load)
+    world = _world(tmp_path, next_race=6, metrics=RACE_6_METRICS)
+
+    assert _run(world, Inputs(*HELD_TEXT, "50.0", "2", "", "", "")) == 1
+
+    assert read_team_file(world["team_file"])[0].strategy == "StrategyMaxP2PM"
+    summary = capsys.readouterr().out.split("Summary:")[1]
+    assert "FastF1 pick: failed - No single fantasy pair for 2023 race 6: DOO" in summary
+    assert "Pick: done - recorded race 6" in summary
+
+
+def test_the_record_keeps_the_races_metrics_rows(tmp_path, signal):
+    world = _world(tmp_path, next_race=6, metrics=RACE_6_METRICS)
+
+    _run(world, Inputs(*HELD_TEXT, "50.0", "2", "x"))
+
+    rows = _record(world)["fastf1_metrics"]
+    assert [(r["Driver"], r["FP3_MinLapTime_rank"], r["Points"]) for r in rows] == [("VER", 0.8, None)]
+
+
+def _schedule_after_the_race(season):
+    """A schedule whose race 6 ran long ago, so its sessions have all run."""
+    start = pd.Timestamp("2023-05-26 11:30")
+    return pd.DataFrame({
+        "RoundNumber": [6],
+        **{f"Session{i}": [name] for i, name in enumerate(
+            ["Practice 1", "Practice 2", "Practice 3", "Qualifying", "Race"], start=1)},
+        **{f"Session{i}DateUtc": [start + pd.Timedelta(days=i)] for i in range(1, 6)},
+    })
+
+
+def _build(season, race):
+    return pd.DataFrame({
+        "Season": [season], "Race": [race], "Driver": ["VER"], "Points": [None if race == 6 else 25],
+        "RollingPoints": [60.0], "RollingPointsRank": [1.0], "ConstructorRollingPointsRank": [1.0],
+        "FP2_MinLapTime_rank": [0.9], "FP3_MinLapTime_rank": [0.8], "OddsRank": [0.0], "AggregateRank": [2.7],
+    })
+
+
+def test_collection_builds_the_metrics_before_the_fastf1_pick(world, signal, capsys):
+    api = FastF1Api(schedule=_schedule_after_the_race, build=_build)
+
+    _run(world, Inputs(*HELD_TEXT, "50.0", "2", "x"), collect=True, boxbox_fetch=_no_network, fastf1_api=api)
+
+    out = capsys.readouterr().out
+    assert out.index("Odds: not yet") < out.index("FastF1: done - built races 1, 2, 3, 4, 5, 6") < out.index("Held")
+    assert any("StrategyFastF1RuleRise" in o["strategies"] for o in _record(world)["options"])
+
+
+def test_skipping_collection_skips_the_fastf1_step(world, capsys):
+    _run(world, Inputs(*HELD_TEXT, "50.0", "2", "x"))
+
+    assert "FastF1: skipped - --skip-collection" in capsys.readouterr().out.split("Summary:")[1]
