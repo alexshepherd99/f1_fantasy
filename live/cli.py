@@ -12,7 +12,9 @@ team held, its unused budget and free moves, runs the race's strategies (the
 FastF1 strategy only when the metrics file has the race), shows their picks side
 by side with prices, and records the pick he chooses in ``data/live_team.csv``.
 At race 1 nothing is held or scored: the odds strategy picks the whole team at
-each concentration limit, budget 100, and the race's odds are required.
+each concentration limit, budget 100, and the race's odds are required. Once every
+race of the season has points, the run scores the last races played and ends: the
+season is over, which is not a refusal.
 It ends with a summary of each step, and exits 1 if any was refused or failed.
 Review the git diff of every data file it wrote and commit them.
 """
@@ -32,7 +34,7 @@ from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, DEFAULT_OUTPUT_DIRECTORY
 from helpers import load_with_derivations
 from import_data.import_history import _DIR_ARCHIVE_INPUTS, read_archive_file
 from import_data.odds import _FILE_BETTING_ODDS
-from live.archive import next_race, race_scored
+from live.archive import SeasonOver, next_race, race_scored
 from live.collect import (
     DONE,
     FAILED,
@@ -279,12 +281,7 @@ def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, rac
     race, race_prev = season.races[race_num], season.races[race_num - 1]
     print(f"Season {season_year}, race {race_num}")
 
-    rows = read_team_file(args.team_file)
-    for row in rows:
-        if row.season == season_year:
-            if row.race not in season.races:
-                raise RunStopped(f"The team file has season {season_year} race {row.race}, which the archive lacks")
-            check_known(row, season.races[row.race])
+    rows = _read_rows(args.team_file, season_year, season)
     rows = score_rows(rows, season_year, race_num, season, drivers_raw, args.team_file, input_fn)
 
     chips_used = {r.chip for r in rows if r.season == season_year and r.race < race_num and r.chip}
@@ -309,6 +306,29 @@ def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, rac
             "unused_budget": confirmed.team.unused_budget, "free_moves": confirmed.free_moves,
             "value": confirmed.value}
     return _write_and_record(args, run_at, season_year, race, chip, held, options, row)
+
+
+def end_season(args: argparse.Namespace, input_fn: InputFn, season_year: int, drivers_raw) -> str:
+    """Score the season's rows still without points, once the archive has every race's (D24); returns the outcome.
+
+    No race is left to pick for, which is the season's normal end.
+    """
+    season = factory_season(*load_with_derivations(season_year, args.archive_dir), season_year)
+    rows = _read_rows(args.team_file, season_year, season)
+    score_rows(rows, season_year, max(season.races) + 1, season, drivers_raw, args.team_file, input_fn)
+    print(f"Season {season_year} is over: every race has points.")
+    return f"season {season_year} over, no race left to pick for"
+
+
+def _read_rows(team_file: str, season_year: int, season: Season) -> list[TeamRow]:
+    """The team file's rows, each of `season_year`'s checked against the archive's race."""
+    rows = read_team_file(team_file)
+    for row in rows:
+        if row.season == season_year:
+            if row.race not in season.races:
+                raise RunStopped(f"The team file has season {season_year} race {row.race}, which the archive lacks")
+            check_known(row, season.races[row.race])
+    return rows
 
 
 def pick_race_1(args: argparse.Namespace, input_fn: InputFn, season_year: int, run_at: datetime) -> TeamRow | None:
@@ -428,6 +448,9 @@ def main(argv: Sequence[str] | None = None, input_fn: InputFn = input,
     try:
         drivers_raw = read_archive_file(AssetType.DRIVER, args.archive_dir)
         season_year, race_num = next_race(drivers_raw)
+    except SeasonOver as over:
+        outcomes.append(_pick_step(lambda: end_season(args, input_fn, over.season, drivers_raw)))
+        return _summarise(outcomes, warnings)
     except (ValueError, OSError) as exc:
         outcomes.append(_report(StepOutcome("Pick", REFUSED, f"no next race: {exc}")))
         return _summarise(outcomes, warnings)
@@ -447,16 +470,24 @@ def main(argv: Sequence[str] | None = None, input_fn: InputFn = input,
         outcomes.append(_report(collect_fastf1(args.metrics_file, season_year, race_num, run_at, fastf1_api,
                                                args.odds_file)))
 
-    try:
+    def pick() -> str:
         written = pick_race(args, input_fn, season_year, race_num, drivers_raw, run_at, outcomes)
-        outcomes.append(StepOutcome("Pick", DONE, f"recorded race {race_num}" if written else "nothing recorded"))
+        return f"recorded race {race_num}" if written else "nothing recorded"
+
+    outcomes.append(_pick_step(pick))
+    return _summarise(outcomes, warnings)
+
+
+def _pick_step(step: Callable[[], str]) -> StepOutcome:
+    """Run the pick step, which returns how it went, as an outcome: refused or failed when it raises."""
+    try:
+        return StepOutcome("Pick", DONE, step())
     except (RunStopped, TeamFileError, ValueError) as exc:
         logger.error(f"Pick refused: {exc}")
-        outcomes.append(StepOutcome("Pick", REFUSED, str(exc)))
+        return StepOutcome("Pick", REFUSED, str(exc))
     except OSError as exc:
         logger.error(f"Pick failed: {exc}")
-        outcomes.append(StepOutcome("Pick", FAILED, str(exc)))
-    return _summarise(outcomes, warnings)
+        return StepOutcome("Pick", FAILED, str(exc))
 
 
 def _report(outcome: StepOutcome) -> StepOutcome:

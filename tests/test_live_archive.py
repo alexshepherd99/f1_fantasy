@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from live.archive import next_race, race_scored
+from live.archive import SeasonOver, next_race, race_scored
 
 NAN = float("nan")
 
@@ -23,11 +23,12 @@ def test_the_next_race_is_the_latest_seasons_first_without_points():
     assert next_race(drivers) == (2026, 3)
 
 
-def test_refuses_a_season_with_every_race_scored():
-    drivers = _drivers([(2026, 1, 10.0), (2026, 2, 5.0)])
+def test_a_season_with_every_race_scored_is_over():
+    drivers = _drivers([(2025, 1, NAN), (2026, 1, 10.0), (2026, 2, 5.0)])
 
-    with pytest.raises(ValueError, match="2026"):
+    with pytest.raises(SeasonOver, match="2026") as over:
         next_race(drivers)
+    assert over.value.season == 2026
 
 
 def test_a_race_with_points_is_scored():

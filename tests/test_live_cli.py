@@ -406,6 +406,46 @@ def test_odds_present_give_no_warning(world, capsys):
     assert "No odds" not in capsys.readouterr().out
 
 
+def _season_over_world(tmp_path) -> dict:
+    """Paths for a run once every race of the archive's season, 2023 races 1 to 6, has points."""
+    world = _world(tmp_path, next_race=6)
+    write_archive(world["archive"], last_race=6)
+    return world
+
+
+def test_the_final_race_is_scored_and_the_season_ends(tmp_path, capsys):
+    world = _season_over_world(tmp_path)
+    write_row(world["team_file"], _row(6))
+    inputs = Inputs("")
+
+    assert _run(world, inputs) == 0
+
+    predicted = predict_points(_row(6), _season(world).races[6])
+    assert read_team_file(world["team_file"]) == [_row(6, points=predicted)]
+    assert inputs.prompts == [f"Race 6 points: the archive gives {predicted}; the app's figure [{predicted}]: "]
+    assert f"Pick: done - season {SEASON} over, no race left to pick for" in capsys.readouterr().out.split(
+        "Summary:")[1]
+
+
+def test_a_season_over_with_nothing_to_score_exits_0(tmp_path, capsys):
+    world = _season_over_world(tmp_path)
+
+    assert _run(world, Inputs()) == 0
+
+    assert not world["team_file"].exists()
+    assert f"season {SEASON} over" in capsys.readouterr().out.split("Summary:")[1]
+
+
+def test_a_season_over_refuses_a_row_the_archive_lacks(tmp_path, capsys):
+    world = _season_over_world(tmp_path)
+    write_row(world["team_file"], _row(7))
+
+    assert _run(world, Inputs()) == 1
+
+    assert f"Pick: refused - The team file has season {SEASON} race 7" in capsys.readouterr().out.split(
+        "Summary:")[1]
+
+
 def test_a_refused_pick_is_in_the_summary(tmp_path, capsys):
     world = _world(tmp_path, next_race=1)
 
