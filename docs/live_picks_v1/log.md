@@ -625,4 +625,30 @@ race of the latest season has points, `next_race` raises before scoring runs, an
 race-1 mode scores no row of the season before. So the last row of 2026 (or any
 season) keeps blank `Points` unless filled by hand. A fix would score the latest
 season's unscored rows before looking for the next race. This is D24's scoring, so
-it belongs to this effort, but it was not in step 7.
+it belongs to this effort, but it was not in step 7. [Now plan step 8.]
+
+## 2026-11-13 — First real runs, and the handover at Las Vegas
+
+Alex ran `live.cli` himself, twice:
+
+1. **Through Claude Code's `!` prefix.** It collected, then failed at the first
+   prompt with `EOFError`, as `!` gives no stdin (now plan step 9). BoxBox
+   corrected race 21 at +0.0 on every price, so the archive kept its bytes. One
+   Oddschecker page, saved 21:47 UTC, was placed as race 21 `Odds_PreFP1`; it
+   replaced 7 drivers' prices from an earlier pre-FP1 save. FastF1 built races 19
+   and 20 (44 lines added, none changed), and race 21 waits for FP2 and FP3.
+2. **In his own terminal with `--skip-collection`.** He entered the race-20 team,
+   unused budget 0.2 and 2 free moves, and recorded P2PM's pick. `x` is accepted
+   only at the choice prompt, not at the held-team prompts; Alex chose not to change
+   that.
+
+**Decided by Alex:** races 19 and 20 go into the metrics file as built, with
+FastF1's own number formatting, despite the failed byte-identical check on race 18
+(step 6). The odds and the team file are committed too.
+
+**Handover at race 21 (D11, D33).** `data/live_team.csv` starts with race 21:
+P2PM's pick, BOR for HUL, VER as DRS, value 138.5 with 1.0 unused. That equals the
+race-21 row in `TEAM_2026.md`. Still to do: `TEAM_2026.md`'s pointer to the file
+(plan, *Before closing*), and Gate 1 once race 21 has points. Gate 1 needs the
+prediction to equal the app's figure or differ by a nameable effect; the pick
+already equals `run_single_team.py`'s. Plan step 8 is now needed before Abu Dhabi.
