@@ -93,6 +93,15 @@ hand. The fix scores the latest season's unscored rows before looking for the ne
 race (D24). Needed before the final race of the first season the file covers: Abu
 Dhabi (race 23) if the handover is in 2026, otherwise the end of 2027.
 
+### 9. Stop cleanly when input runs out
+
+Found 2026-11-13, when Alex ran `live.cli` through Claude Code's `!` prefix, which
+gives no stdin: the first prompt raised `EOFError` and the run ended in a traceback.
+The collection steps had already written their files, but no summary was printed and
+no record saved. The fix treats end of input as the pick stopped: the run records
+nothing, saves its record if the picks were made, prints the summary with the pick
+refused ("no input"), and exits 1.
+
 ## Gates
 
 - **Gate 1 — first real race with the script** (after step 4). D31: the script's
