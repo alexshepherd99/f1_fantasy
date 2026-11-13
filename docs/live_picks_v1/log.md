@@ -652,3 +652,44 @@ race-21 row in `TEAM_2026.md`. Still to do: `TEAM_2026.md`'s pointer to the file
 (plan, *Before closing*), and Gate 1 once race 21 has points. Gate 1 needs the
 prediction to equal the app's figure or differ by a nameable effect; the pick
 already equals `run_single_team.py`'s. Plan step 8 is now needed before Abu Dhabi.
+
+## 2026-11-13 — Steps 8 and 9: the season's end, and input running out
+
+Two commits, each test seen failing first:
+
+1. **Step 8, season over.** `next_race` raises `SeasonOver` (with the season) in
+   place of `ValueError` once every race of the latest season has points. `live.cli`
+   then scores that season's rows still without points through `score_rows` and
+   reports "Pick: done - season N over, no race left to pick for", exit 0. A row
+   for a race the archive lacks is refused, as in the pick. Before the change the
+   new tests failed on behaviour: exit 1, "Pick: refused - no next race". The pick
+   step's refused/failed mapping moved into `_pick_step`, which both paths use.
+   Mutation: scoring only up to the last race, not past it, left race 6 unscored
+   and turned the scoring test red.
+2. **Step 9, no input.** `EOFError` from a prompt refuses the pick as "no input",
+   exit 1, after the summary. Choosing moved inside the record's `try/finally`
+   (`_choose_and_record`), so once picks are made the record is saved whatever
+   happens. The tests use an `EndingInputs` that raises `EOFError` when its answers
+   run out; the existing `Inputs` still raises `IndexError`, so a test expecting no
+   prompt cannot pass by being refused. Before the change all three failed with the
+   `EOFError` traceback. Mutation: choosing before the `try` turned the two
+   choice-prompt tests red (race 6 and race 1).
+
+The suite went from 878 to 884, all passing.
+
+**Real runs, on scratch copies, with `--skip-collection`; nothing in `data/` changed:**
+
+- **Step 9, real archive.** Stdin closed (`< /dev/null`): "Held drivers:", then
+  "Pick: refused - no input", exit 1, no record. With the race-20 team, 0.2 and 2
+  piped in, input ended at the choice prompt: the record was saved (P2PM's BOR for
+  HUL, 138.5, 1.0 unused, as in the race-21 row), the team file unchanged, exit 1.
+- **Step 8, real archive cut to 2026 races 1–20**, with a team file holding a
+  race-20 row for `TEAM_2026.md`'s team (VER as DRS, which the table does not
+  record): "Race 20 points: the archive gives 329", accepted, written as 329/329,
+  then "Pick: done - season 2026 over", exit 0, no record. 329 is the app's figure
+  in `TEAM_2026.md`.
+
+**Not yet run:** either path at Alex's terminal; the real season end after Abu
+Dhabi. Race-1 mode still scores no row of the season before, so 2026's last row
+must be scored by a run before 2027 enters the archive. BoxBox does not capture a
+new season (D30), so that is the expected order.
