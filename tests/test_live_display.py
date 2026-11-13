@@ -77,6 +77,17 @@ def test_the_table_puts_picks_side_by_side_with_prices():
     ]
 
 
+def test_the_table_without_a_team_held_shows_only_the_picks():
+    pick = Pick(drivers=("HAM@FER", "HUL@AUD", "LAW@VRB", "LEC@FER", "VER@RED"), constructors=("FER", "MER"),
+                drs_driver="VER@RED", moves_used=7, cost=99.9, unused_budget=0.1)
+
+    lines = format_table(None, [("1 StrategyBettingOdds:999.9", pick)], RACE, RACE)
+
+    assert lines[0] == "             1 StrategyBettingOdds:999.9"
+    assert lines[1] == "Driver       HAM@FER   21.5"
+    assert lines[-3:] == ["Moves        7", "Cost         99.9", "Unused       0.1"]
+
+
 def test_the_price_list_runs_most_expensive_first():
     lines = format_prices(RACE)
 

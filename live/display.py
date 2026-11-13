@@ -75,20 +75,23 @@ def manual_pick(drivers: tuple[str, ...], constructors: tuple[str, ...], drs: st
                 unused_budget=budget - cost)
 
 
-def format_table(held: Pick, options: list[tuple[str, Pick]], race: Race, race_prev: Race) -> list[str]:
+def format_table(held: Pick | None, options: list[tuple[str, Pick]], race: Race, race_prev: Race) -> list[str]:
     """The team held and each option side by side: assets with prices, then DRS, moves, cost and unused budget.
 
     The held team's DRS driver and moves are shown as "-": it was not picked for this race.
+    With no team held, as at race 1, only the options are shown.
     """
     def asset_cell(asset: str) -> str:
         return f"{asset:<8}{asset_price(asset, race, race_prev):>6.1f}"
 
     columns = []
-    for i, (title, pick) in enumerate([("Held", held), *options]):
+    shown = ([] if held is None else [("Held", held)]) + list(options)
+    for i, (title, pick) in enumerate(shown):
+        is_held = held is not None and i == 0
         columns.append([title]
                        + [asset_cell(d) for d in pick.drivers]
                        + [asset_cell(c) for c in pick.constructors]
-                       + (["-", "-"] if i == 0 else [pick.drs_driver, str(pick.moves_used)])
+                       + (["-", "-"] if is_held else [pick.drs_driver, str(pick.moves_used)])
                        + [f"{pick.cost:.1f}", f"{pick.unused_budget:.1f}"])
     labels = [""] + ["Driver"] * NUM_DRIVERS + ["Constructor"] * NUM_CONSTRUCTORS + ["DRS", "Moves", "Cost", "Unused"]
     widths = [max(len(cell) for cell in column) for column in columns]
