@@ -684,3 +684,37 @@ What `predictions.json` looks like:
    does not hold.
 4. Still open from `live_picks_v1`'s handover: diff the saved 07:12 and 21:01 copies
    to see whether `rounds`/`has_actual` or `driver_history.json` differ too.
+
+## 2026-11-13 — Investigation: prices move to `predictions.json`
+
+Fresh copies were taken at 20:23 UTC into a scratch folder, not saved under
+`outputs/`. BoxBox had regenerated nothing since 2026-11-09: `season_summary.json`
+was still the 21:01 file and `predictions.json` the 07:12 one. Findings, against the
+four questions above:
+
+1. **Still open.** Every driver and constructor price in `predictions.json` equals
+   the 07:12 `season_summary.json`'s, which Gate 1 captured into race 21 and Alex
+   checked against the app. But `predictions.json` has not been rebuilt since, so
+   it is not yet known whether BoxBox's 21:01 fault would reach it. The copies saved
+   after Las Vegas will show that.
+2. **Points and prices are tied by round.** `predictions.json`'s top-level `round`
+   is the race it projects, and its prices are the prices for that race. The
+   capture requires it to be the round of the race being priced.
+3. **Race and names.** The race is that top-level `round`: 23, Las Vegas, which is
+   archive race 21. **Correction to the entry above:** the constructor slugs are the
+   ones `TEAM_CODES` holds, and the driver codes are plain codes. The two files list
+   the same 22 drivers, each with the same team. Each driver also has a
+   `price_provisional` flag, false for all of them today.
+4. **Only the prices changed.** Today's `season_summary.json` (the 21:01 file) has
+   the same `rounds` and `has_actual` flags as the saved 07:12 copy.
+   `driver_history.json` is byte-identical to it. 20 of the 22 driver prices differ.
+
+**Decided with Alex:** the capture reads prices from `predictions.json` and no
+longer from `season_summary.json`. Points and the round list stay where they are.
+It refuses when `predictions.json`'s `round` is not the round of the race being
+priced (T+1 for a capture, T for a correction), or when any price is provisional.
+It warns, and still writes, when `season_summary.json`'s prices disagree, which
+shows whether BoxBox's 21:01 fault comes back. The download and saved copy gain
+`predictions.json` as a third file, so copies saved before this cannot be read
+with `--from-copy`. The real check is the capture after Las Vegas, Gate 1's
+second race, checked against the app.
