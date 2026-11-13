@@ -124,6 +124,51 @@ def test_correct_refuses_prices_for_another_round(tmp_path):
         _before_update(tmp_path, lambda p: p.update(round=5))
 
 
+def _summary_disagrees(summary: dict) -> None:
+    summary["driver_prices"]["VER"]["current_price"] = 28.5
+    summary["driver_prices"].pop("ANT")
+    summary["constructor_prices"]["mercedes"]["current_price"] = 31.0
+
+
+_SUMMARY_WARNING = ("season_summary.json's prices differ from predictions.json's, which are used "
+                    "(season_summary.json's first): ANT none against 20, VER 28.5 against 28.8, "
+                    "mercedes 31 against 31.2")
+
+
+def test_capture_warns_when_the_summary_prices_disagree(tmp_path):
+    change = _decide(tmp_path, summary=modified(season_summary(), _summary_disagrees))
+
+    assert change.warnings == [_SUMMARY_WARNING]
+    assert [row.price for row in change.driver_rows[4]][0] == 28.8
+
+
+def test_correct_warns_when_the_summary_prices_disagree(tmp_path):
+    def summary_before_update(s):
+        s["rounds"][2]["has_actual"] = False
+        for key, entry in list(s["driver_prices"].items()) + list(s["constructor_prices"].items()):
+            entry["current_price"] = RACE_3_PRICES[key]
+
+    def prediction_before_update(p):
+        _race_3_prices(p)
+        p["round"] = 4
+        set_prices(p, {"VER": 28.9})
+
+    change = _decide(tmp_path, summary=modified(season_summary(), summary_before_update),
+                     prediction=modified(predictions(), prediction_before_update))
+
+    assert change.mode == CORRECT
+    assert change.warnings == ["season_summary.json's prices differ from predictions.json's, which are used "
+                               "(season_summary.json's first): VER 28.5 against 28.9"]
+
+
+def test_capture_of_the_last_race_reads_no_prices_so_does_not_warn(tmp_path):
+    def last_round_and_disagreeing(s):
+        s["rounds"].pop()
+        _summary_disagrees(s)
+
+    assert _decide(tmp_path, summary=modified(season_summary(), last_round_and_disagreeing)).warnings == []
+
+
 def _provisional_had(prediction: dict) -> None:
     prediction["drivers"][1]["price_provisional"] = True
 

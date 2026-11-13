@@ -112,6 +112,23 @@ def _current_prices(data: BoxBoxData, season: int, race: int,
     return drivers, constructors
 
 
+def _summary_differences(data: BoxBoxData) -> list[str]:
+    """A warning naming each asset whose ``season_summary.json`` price differs from the one used, if any."""
+    used = {key: price for key, (_, price) in data.driver_prices.items()} | data.constructor_prices
+    summary = ({key: price for key, (_, price) in data.summary_driver_prices.items()}
+               | data.summary_constructor_prices)
+
+    def shown(price: float | None) -> str:
+        return "none" if price is None else f"{price:g}"
+
+    differences = [f"{key} {shown(summary.get(key))} against {shown(used.get(key))}"
+                   for key in sorted(used.keys() | summary.keys()) if summary.get(key) != used.get(key)]
+    if not differences:
+        return []
+    return ["season_summary.json's prices differ from predictions.json's, which are used "
+            f"(season_summary.json's first): {', '.join(differences)}"]
+
+
 def _in_season_order(new_rows: list[ArchiveRow], season_rows: list[ArchiveRow]) -> list[ArchiveRow]:
     """Assets already in the season first, in their file order; new assets after, as given."""
     order = {}
@@ -207,7 +224,7 @@ def decide_change(
             mode=CORRECT, season=season, target_race=target,
             driver_rows={target: _in_season_order(new_drivers, season_drivers)},
             constructor_rows={target: _in_season_order(new_constructors, season_constructors)},
-            warnings=warnings,
+            warnings=warnings + _summary_differences(data),
         )
 
     driver_rows = {target: _fill_points(target_drivers, driver_results, target_round, target, "drivers")}
@@ -225,6 +242,7 @@ def decide_change(
                     "its prices are not updated yet. Run again later", CaptureNotYet)
         driver_rows[target + 1] = _in_season_order(next_drivers, season_drivers)
         constructor_rows[target + 1] = _in_season_order(next_constructors, season_constructors)
+        warnings += _summary_differences(data)
 
     return Change(mode=CAPTURE, season=season, target_race=target, driver_rows=driver_rows,
                   constructor_rows=constructor_rows, warnings=warnings)
