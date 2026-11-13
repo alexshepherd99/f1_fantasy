@@ -14,7 +14,8 @@ by side with prices, and records the pick he chooses in ``data/live_team.csv``.
 At race 1 nothing is held or scored: the odds strategy picks the whole team at
 each concentration limit, budget 100, and the race's odds are required. Once every
 race of the season has points, the run scores the last races played and ends: the
-season is over, which is not a refusal.
+season is over, which is not a refusal. Its prompts need a terminal: if input ends
+first, nothing is recorded and the pick is refused, though any picks made are saved.
 It ends with a summary of each step, and exits 1 if any was refused or failed.
 Review the git diff of every data file it wrote and commit them.
 """
@@ -300,12 +301,12 @@ def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, rac
                                  [(f"{i} {' = '.join(o.strategies)}", o.pick) for i, o in enumerate(options, start=1)],
                                  race, race_prev)))
 
-    row = choose_row(rows, options, confirmed, season_year, race, race_prev, budget, chip, chips_used, input_fn)
     held = {"drivers": sorted(confirmed.team.assets[AssetType.DRIVER]),
             "constructors": sorted(confirmed.team.assets[AssetType.CONSTRUCTOR]),
             "unused_budget": confirmed.team.unused_budget, "free_moves": confirmed.free_moves,
             "value": confirmed.value}
-    return _write_and_record(args, run_at, season_year, race, chip, held, options, row)
+    return _choose_and_record(args, run_at, season_year, race, chip, held, options, lambda: choose_row(
+        rows, options, confirmed, season_year, race, race_prev, budget, chip, chips_used, input_fn))
 
 
 def end_season(args: argparse.Namespace, input_fn: InputFn, season_year: int, drivers_raw) -> str:
@@ -357,15 +358,23 @@ def pick_race_1(args: argparse.Namespace, input_fn: InputFn, season_year: int, r
 
     nothing_held = Confirmed(team=Team(unused_budget=RACE_1_BUDGET), free_moves=NUM_DRIVERS + NUM_CONSTRUCTORS,
                              value=0.0)
-    row = choose_row(rows, options, nothing_held, season_year, race, race, RACE_1_BUDGET, "", set(), input_fn)
-    return _write_and_record(args, run_at, season_year, race, "", None, options, row)
+    return _choose_and_record(args, run_at, season_year, race, "", None, options, lambda: choose_row(
+        rows, options, nothing_held, season_year, race, race, RACE_1_BUDGET, "", set(), input_fn))
 
 
-def _write_and_record(args: argparse.Namespace, run_at: datetime, season_year: int, race: Race, chip: str,
-                      held: dict | None, options: list[Option], row: TeamRow | None) -> TeamRow | None:
-    """Write the row chosen, if any, then save the run's record whatever happened; returns the row written."""
+def _choose_and_record(args: argparse.Namespace, run_at: datetime, season_year: int, race: Race, chip: str,
+                       held: dict | None, options: list[Option],
+                       choose: Callable[[], TeamRow | None]) -> TeamRow | None:
+    """Ask for the row to record and write it, if any, then save the run's record whatever happened.
+
+    The record keeps the picks even when choosing ends without an answer, as when input runs out.
+
+    Returns:
+        The row written, or None.
+    """
     written = None
     try:
+        row = choose()
         if row is None:
             print("Nothing recorded.")
         else:
@@ -488,6 +497,10 @@ def _pick_step(step: Callable[[], str]) -> StepOutcome:
     except OSError as exc:
         logger.error(f"Pick failed: {exc}")
         return StepOutcome("Pick", FAILED, str(exc))
+    # Input ends where stdin is closed, as under Claude Code's ``!``: no answer, so no pick
+    except EOFError:
+        logger.error("Pick refused: input ended before the prompts were answered")
+        return StepOutcome("Pick", REFUSED, "no input")
 
 
 def _report(outcome: StepOutcome) -> StepOutcome:

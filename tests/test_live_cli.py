@@ -37,6 +37,16 @@ class Inputs:
         return self.answers.pop(0)
 
 
+class EndingInputs(Inputs):
+    """Answers each prompt in turn, then ends input as a closed stdin does."""
+
+    def __call__(self, prompt: str) -> str:
+        if not self.answers:
+            self.prompts.append(prompt)
+            raise EOFError
+        return super().__call__(prompt)
+
+
 @pytest.fixture
 def world(tmp_path):
     """Paths for a run whose next race is 2023 race 6."""
@@ -444,6 +454,38 @@ def test_a_season_over_refuses_a_row_the_archive_lacks(tmp_path, capsys):
 
     assert f"Pick: refused - The team file has season {SEASON} race 7" in capsys.readouterr().out.split(
         "Summary:")[1]
+
+
+def test_input_ending_before_the_picks_refuses_and_saves_nothing(world, capsys):
+    inputs = EndingInputs()
+
+    assert _run(world, inputs) == 1
+
+    assert inputs.prompts == ["Held drivers: "]
+    assert not world["team_file"].exists()
+    assert not world["records"].exists()
+    assert "Pick: refused - no input" in capsys.readouterr().out.split("Summary:")[1]
+
+
+def test_input_ending_at_the_choice_records_nothing_but_saves_the_picks(world, capsys):
+    inputs = EndingInputs(*HELD_TEXT, "50.0", "2")
+
+    assert _run(world, inputs) == 1
+
+    assert inputs.prompts[-1].startswith("Pick 1-1")
+    assert not world["team_file"].exists()
+    record = _record(world)
+    assert (record["recorded"], len(record["options"])) == (None, 1)
+    assert "Pick: refused - no input" in capsys.readouterr().out.split("Summary:")[1]
+
+
+def test_input_ending_at_race_1s_choice_saves_the_picks(tmp_path):
+    world = _world(tmp_path, next_race=1, odds=RACE_1_ODDS)
+
+    assert _run(world, EndingInputs()) == 1
+
+    assert not world["team_file"].exists()
+    assert _record(world, race=1)["recorded"] is None
 
 
 def test_a_refused_pick_is_in_the_summary(tmp_path, capsys):
