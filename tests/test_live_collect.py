@@ -1,8 +1,21 @@
+from datetime import datetime, timezone
+
 import pandas as pd
 import pytest
 
 from boxbox.source import BOXBOX_URLS
-from live.collect import DONE, FAILED, NOT_YET, REFUSED, OddsApi, collect_boxbox, collect_odds, odds_present
+from live.collect import (
+    DONE,
+    FAILED,
+    NOT_YET,
+    REFUSED,
+    FastF1Api,
+    OddsApi,
+    collect_boxbox,
+    collect_fastf1,
+    collect_odds,
+    odds_present,
+)
 from tests.boxbox_fixtures import DRIVERS_CSV, RACE_3_PRICES, modified, predictions, raw_files, set_prices, write_archive
 from tests.test_odds_source_cli import _HEADER, _QUALIFYING, _SCHEDULE, _TEST_PAGE
 
@@ -150,3 +163,117 @@ def test_odds_present_ignores_a_race_with_blank_odds(tmp_path):
     path.write_text(_HEADER + "VER,RED,2026,20,,5-4,,,\n")
 
     assert not odds_present(str(path), 2026, 20)
+
+
+METRICS_HEADER = ("Season,Race,Driver,Points,RollingPoints,RollingPointsRank,ConstructorRollingPointsRank,"
+                  "FP1_MinLapTime_rank,FP2_MinLapTime_rank,FP3_MinLapTime_rank,SQ_MinLapTime_rank,OddsRank,"
+                  "AggregateRank\n")
+# Races 1 to 18 are stored with results, race 19 before its results, and race 20 not at all
+STORED_18 = "".join(f"2026,{r},VER,25,50.0,1.0,1.0,,0.9,0.8,,0.0,2.8\n2026,{r},NOR,18,40.0,0.0,0.0,,0.1,0.2,,0.0,0.2\n"
+                    for r in range(1, 19))
+STORED_19 = "2026,19,VER,,60.0,1.0,1.0,,0.9,0.5,,0.0,2.5\n2026,19,NOR,,30.0,0.0,0.0,,0.1,0.2,,0.0,0.2\n"
+# Las Vegas, a normal weekend whose FP3 starts 2026-11-21 00:30 UTC
+FP3_START = pd.Timestamp("2026-11-21 00:30")
+FASTF1_SCHEDULE = pd.DataFrame({
+    "RoundNumber": [21],
+    **{f"Session{i}": [name] for i, name in enumerate(
+        ["Practice 1", "Practice 2", "Practice 3", "Qualifying", "Race"], start=1)},
+    **{f"Session{i}DateUtc": [FP3_START + pd.Timedelta(days=i - 3)] for i in range(1, 6)},
+})
+AFTER_FP3 = datetime(2026, 11, 21, 2, 0, tzinfo=timezone.utc)
+BEFORE_FP3 = datetime(2026, 11, 20, 12, 0, tzinfo=timezone.utc)
+
+
+def _built(season, race, late_vers=0.5):
+    """A race's rows as FastF1 builds them: with results, unless race 21, which has not run."""
+    points = [None, None] if race == 21 else [25, 18]
+    return pd.DataFrame({
+        "Season": [season] * 2, "Race": [race] * 2, "Driver": ["VER", "NOR"], "Points": points,
+        "RollingPoints": [60.0, 30.0], "RollingPointsRank": [1.0, 0.0], "ConstructorRollingPointsRank": [1.0, 0.0],
+        "FP2_MinLapTime_rank": [0.9, 0.1], "FP3_MinLapTime_rank": [late_vers, 0.2], "OddsRank": [0.0, 0.0],
+        "AggregateRank": [2.4, 0.3],
+    })
+
+
+def _fastf1(tmp_path, build=_built):
+    metrics = tmp_path / "metrics.csv"
+    metrics.write_text(METRICS_HEADER + STORED_18 + STORED_19, encoding="utf-8")
+    calls = []
+
+    def recording(season, race):
+        calls.append(race)
+        return build(season, race)
+
+    return metrics, FastF1Api(schedule=lambda season: FASTF1_SCHEDULE, build=recording), calls
+
+
+def _stored_races(metrics) -> list[int]:
+    return [int(line.split(",")[1]) for line in metrics.read_text(encoding="utf-8").splitlines()[1:]]
+
+
+def test_fastf1_builds_each_race_missing_or_without_results_then_the_next(tmp_path):
+    metrics, api, calls = _fastf1(tmp_path)
+
+    outcome = collect_fastf1(str(metrics), 2026, 21, AFTER_FP3, api)
+
+    assert (outcome.step, outcome.status) == ("FastF1", DONE)
+    assert calls == [19, 20, 21]
+    assert "races 19, 20, 21" in outcome.detail
+    assert _stored_races(metrics)[34:] == [18, 18, 19, 19, 20, 20, 21, 21]
+    assert metrics.read_text(encoding="utf-8").startswith(METRICS_HEADER + STORED_18)
+
+
+def test_fastf1_waits_for_the_next_races_sessions(tmp_path):
+    metrics, api, calls = _fastf1(tmp_path)
+
+    outcome = collect_fastf1(str(metrics), 2026, 21, BEFORE_FP3, api)
+
+    assert outcome.status == NOT_YET
+    assert "FP3" in outcome.detail and "2026-11-21 00:30" in outcome.detail
+    assert calls == [19, 20]
+    assert _stored_races(metrics)[34:] == [18, 18, 19, 19, 20, 20]
+
+
+def test_fastf1_reports_a_signal_input_a_rebuild_changed(tmp_path, capsys):
+    metrics, api, _ = _fastf1(tmp_path, build=lambda season, race: _built(season, race, late_vers=0.7))
+
+    outcome = collect_fastf1(str(metrics), 2026, 21, AFTER_FP3, api)
+
+    assert "race 19: 1 signal input changed" in outcome.detail
+    out = capsys.readouterr().out
+    assert "Race 19 VER late: 0.5 -> 0.7" in out
+    assert "Race 20" not in out
+
+
+def test_fastf1_steps_over_a_race_that_fails(tmp_path):
+    def build(season, race):
+        if race == 20:
+            raise RuntimeError("Required practice session data missing for season 2026 race 20: FP3")
+        return _built(season, race)
+
+    metrics, api, calls = _fastf1(tmp_path, build=build)
+
+    outcome = collect_fastf1(str(metrics), 2026, 21, AFTER_FP3, api)
+
+    assert outcome.status == FAILED
+    assert "race 20" in outcome.detail and "FP3" in outcome.detail
+    assert calls == [19, 20, 21]
+    assert _stored_races(metrics)[34:] == [18, 18, 19, 19, 21, 21]
+
+
+def test_fastf1_without_the_next_race_in_the_schedule_is_failed(tmp_path):
+    metrics, api, _ = _fastf1(tmp_path)
+
+    outcome = collect_fastf1(str(metrics), 2026, 22, AFTER_FP3, api)
+
+    assert (outcome.status, "race 22" in outcome.detail) == (FAILED, True)
+
+
+def test_fastf1_without_fastf1_credentials_is_failed(tmp_path, monkeypatch):
+    monkeypatch.setattr("fast_f1.auth.CREDENTIALS_FILE", tmp_path / "absent")
+    metrics, _, _ = _fastf1(tmp_path)
+
+    outcome = collect_fastf1(str(metrics), 2026, 21, AFTER_FP3)
+
+    assert (outcome.status, str(tmp_path / "absent") in outcome.detail) == (FAILED, True)
+    assert metrics.read_text(encoding="utf-8") == METRICS_HEADER + STORED_18 + STORED_19
