@@ -92,6 +92,7 @@ def describe(change: Change, drivers: pd.DataFrame, constructors: pd.DataFrame, 
     rows = {race: change.driver_rows.get(race, []) + change.constructor_rows.get(race, [])
             for race in sorted(change.driver_rows)}
     lines = [f"BoxBox data generated {data.generated_at}",
+             f"Prices from predictions.json, generated {data.prices_generated_at}, for round {data.prices_round}",
              f"Season {change.season}, race {target}: {change.mode}"]
     if change.mode == CAPTURE:
         lines.append(f"  Race {target} points:")

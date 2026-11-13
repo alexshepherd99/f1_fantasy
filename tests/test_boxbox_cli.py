@@ -44,6 +44,7 @@ def test_capture_from_a_saved_copy_writes_and_reports(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "capture" in out and "race 3" in out
     assert "VER@RED" in out and "31" in out
+    assert "Prices from predictions.json, generated 2026-11-10T07:00:01+00:00, for round 5" in out
 
 
 def test_report_shows_old_price_new_price_and_difference(tmp_path, capsys):
