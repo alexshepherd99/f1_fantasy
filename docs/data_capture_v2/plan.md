@@ -87,20 +87,31 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 11. ~~The CLI and its docs~~ — done (dev) 2026-11-08, see log *Step 11*.
     Verified at Gate 1.
 
+12. ~~Prices from `predictions.json`~~ — done (dev) 2026-11-13, see log
+    *Step 12*. Added after `season_summary.json`'s prices went back a race
+    (log, 2026-11-12). Verified at Gate 1's second race.
+
 ## How a run works
 
 The target race `T` is the latest race of the season in the archive. Its
-calendar round is the `T`th entry of BoxBox's `rounds` list.
+calendar round is the `T`th entry of BoxBox's `rounds` list, in
+`season_summary.json`. Points come from `driver_history.json`. Prices come
+from `predictions.json`, whose top-level `round` is the race they are for.
 
 - **`T` has been held (`has_actual`): capture.** Fill `T`'s empty points from
   `driver_history.json`, and add race `T+1` with one row per priced asset in
-  `season_summary.json`, at its `current_price`.
+  `predictions.json`, at its `current_price`.
 - **`T` has not been held: correct.** Rewrite `T`'s rows (who has a row,
   and their prices) from the current prices. This is how a driver change
   after capture is fixed: re-run before the race. Points stay empty.
 
 **It refuses, writing nothing, when:**
 
+- **The prices are for another round.** `predictions.json`'s `round` must
+  be the round of the race being priced: `T+1` for a capture, `T` for a
+  correction. Still `T`'s round on a capture means BoxBox has the results
+  but not the new prices yet.
+- **Any price is provisional** (`price_provisional`, an optional flag).
 - **Capture, but no price has moved.** Every current price equals `T`'s
   price, which means BoxBox has the results but not the new prices yet.
 - **Capture, and `T` has points already.** Nothing is waiting to be filled.
@@ -119,7 +130,9 @@ calendar round is the `T`th entry of BoxBox's `rounds` list.
 **It warns, and still writes,** when BoxBox's points for an earlier race of
 the season differ from the archive's. The archive stays as it is, and the
 warning names each difference for Alex to look at. On 2026-11-08 every one of
-the 437 driver and 209 constructor results matched.
+the 437 driver and 209 constructor results matched. It also warns when
+`season_summary.json`'s prices differ from `predictions.json`'s, naming
+each; that shows whether BoxBox's 2026-11-09 fault in that file comes back.
 
 **Not handled yet:** a new season. The first 2027 run needs the season in
 `common.F1_SEASON_CONSTRUCTORS` and a race 1 written from prices alone. The
@@ -131,7 +144,9 @@ built, before 2027 race 1.
 **Gate 1: the first real captures, checked against the app.** Brazil (2026
 race 20's points, Las Vegas prices), then at least one more race. Alex checks
 the written values against the F1 Fantasy app and reviews the CSV diff before
-committing. BoxBox publishes points and prices together, so a run before it
-updates is a correction of the not-yet-held race at unchanged prices, which
-leaves the files as they are. The "no price has moved" refusal is a guard
-against a partial update and is not expected to fire.
+committing. A run before BoxBox updates is a correction of the not-yet-held
+race at unchanged prices, which leaves the files as they are. Points and
+prices now come from different files, which BoxBox can rebuild at different
+times, so the round check is the expected guard against a partial update;
+"no price has moved" stays behind it. The second race is also the first
+capture with prices from `predictions.json`.

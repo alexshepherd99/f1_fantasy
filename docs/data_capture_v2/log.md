@@ -718,3 +718,42 @@ shows whether BoxBox's 21:01 fault comes back. The download and saved copy gain
 `predictions.json` as a third file, so copies saved before this cannot be read
 with `--from-copy`. The real check is the capture after Las Vegas, Gate 1's
 second race, checked against the app.
+
+## 2026-11-13 — Step 12: prices from `predictions.json`
+
+Built in five commits, each test seen failing first:
+
+1. **Prices read from `predictions.json`.** It is downloaded, saved and read back
+   by `--from-copy` as a third file. `season_summary.json`'s prices are still
+   parsed, into `summary_*`. The tests now set prices in a `predictions` fixture,
+   and `RACE_3_PRICES`, `set_prices` and `swap_driver` moved into
+   `tests/boxbox_fixtures.py`. Red first: two URLs fetched, summary prices
+   returned, and malformed predictions accepted. Mutation: `--from-copy` reading
+   only the old two files turned four CLI tests red.
+2. **Refuse prices for another round.** A capture whose prices are still for the
+   race just held is `CaptureNotYet`. Any other mismatch, in either mode, is
+   refused outright.
+3. **The report names `predictions.json`'s `generated_at` and `round`**, beside
+   `season_summary.json`'s time.
+4. **Refuse provisional prices** as `CaptureNotYet`. An absent flag counts as not
+   provisional, as the schema makes it optional. A flag that isn't true or false is
+   a `BoxBoxDataError`.
+5. **Warn when the summary file's prices disagree**, naming each asset by BoxBox's
+   key. This happens only when the run reads prices. The last-race test passed
+   before the code existed, so it was proved by mutation: warning on every capture
+   turned it red.
+
+The suite went from 802 to 826, all passing.
+
+**Run against BoxBox's live files** (`--dry-run`, copy saved to a scratch
+folder): this was a correction of race 21 at round 23's prices, generated
+2026-11-09 07:12. Every price equals the archive's (+0.0), so a real run would
+leave the files as they are. The warning listed the 29 assets whose
+`season_summary.json` price differs. Before this fix the same run would have
+rewritten all of race 21's prices.
+
+**Not yet run:** a real capture with points. That is Gate 1's second race, after
+Las Vegas. The condition on 2026-11-13 (`--dry-run` only until this fix is built)
+is met, so `boxbox.cli` can write again, with the diff reviewed against the app
+as before. `live.cli`'s BoxBox step goes through the same `capture`, so it is
+fixed too. Its fix A backstop is still `live_picks_v1`'s to decide.
