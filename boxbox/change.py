@@ -85,7 +85,19 @@ def _boxbox_results(data: BoxBoxData) -> tuple[dict[str, dict[int, float]], dict
     return drivers, constructors
 
 
-def _current_prices(data: BoxBoxData, season: int, race: int) -> tuple[list[ArchiveRow], list[ArchiveRow]]:
+def _current_prices(data: BoxBoxData, season: int, race: int,
+                    held_round: int | None = None) -> tuple[list[ArchiveRow], list[ArchiveRow]]:
+    """BoxBox's prices as rows for ``race``, refusing if they are for another round.
+
+    Prices still for ``held_round``, the race just held, mean BoxBox is not
+    updated yet; any other round is refused outright.
+    """
+    race_round = round_for_race(data, race)
+    if data.prices_round != race_round:
+        if data.prices_round == held_round:
+            _refuse(f"BoxBox's prices are still for round {held_round}, the race just held, not round "
+                    f"{race_round} (race {race}): its prices are not updated yet. Run again later", CaptureNotYet)
+        _refuse(f"BoxBox's prices are for round {data.prices_round}, but race {race} is round {race_round}")
     drivers = [
         ArchiveRow(season, race, constructor_code(slug), driver_code(key), None, price)
         for key, (slug, price) in data.driver_prices.items()
@@ -200,7 +212,7 @@ def decide_change(
                                              "constructors")}
 
     if target < len(data.rounds):
-        next_drivers, next_constructors = _current_prices(data, season, target + 1)
+        next_drivers, next_constructors = _current_prices(data, season, target + 1, held_round=target_round)
         # Only assets priced in both races count: a newly listed driver is not evidence of an update
         held_prices = {_key(row): row.price for row in target_drivers + target_constructors}
         moved = [row for row in next_drivers + next_constructors

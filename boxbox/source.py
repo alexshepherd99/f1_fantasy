@@ -60,7 +60,8 @@ class BoxBoxData:
     disambiguates), constructors by slug (``red_bull``). Results map a calendar
     round to points; prices are each asset's ``current_price``, and a driver's
     price comes with the constructor slug BoxBox lists for them. The prices
-    are ``predictions.json``'s; ``summary_*`` hold ``season_summary.json``'s.
+    are ``predictions.json``'s, for calendar round ``prices_round``;
+    ``summary_*`` hold ``season_summary.json``'s.
     """
 
     season: int
@@ -72,6 +73,8 @@ class BoxBoxData:
     constructor_prices: dict[str, float]
     summary_driver_prices: dict[str, tuple[str, float]]
     summary_constructor_prices: dict[str, float]
+    prices_round: int
+    prices_generated_at: str
 
 
 def _http_get(url: str) -> bytes:
@@ -218,4 +221,6 @@ def parse_files(raw: dict[str, bytes]) -> BoxBoxData:
                                              f"{SEASON_SUMMARY} driver_prices"),
         summary_constructor_prices=_constructor_prices(_field(summary, "constructor_prices", SEASON_SUMMARY),
                                                        f"{SEASON_SUMMARY} constructor_prices"),
+        prices_round=int(_number(_field(prediction, "round", PREDICTIONS), f"{PREDICTIONS} round")),
+        prices_generated_at=_field(prediction, "generated_at", PREDICTIONS),
     )

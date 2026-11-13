@@ -96,10 +96,19 @@ def test_parse_files_takes_prices_from_predictions_not_the_summary():
     assert data.constructor_prices == {"red_bull": 30.4, "mercedes": 31.5}
 
 
+def test_parse_files_reads_the_round_and_time_of_the_prices():
+    data = parse_files(raw_files())
+
+    assert (data.prices_round, data.prices_generated_at) == (5, "2026-11-10T07:00:01+00:00")
+
+
 @pytest.mark.parametrize(
     "change, message",
     [
         (lambda p: p.update(season=2025), "season"),
+        (lambda p: p.pop("round"), "round"),
+        (lambda p: p.update(round="5"), "round"),
+        (lambda p: p.pop("generated_at"), "generated_at"),
         (lambda p: p.pop("drivers"), "drivers"),
         (lambda p: p["drivers"][0].pop("constructor"), "constructor"),
         (lambda p: p["drivers"][0].update(current_price="28.8"), "current_price"),

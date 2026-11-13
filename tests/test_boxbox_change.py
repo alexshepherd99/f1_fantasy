@@ -42,6 +42,7 @@ def _before_update(tmp_path, change=None, golden=None):
     """Decide with BoxBox as before round 4 is held: no results for it, prices still race 3's."""
     def prices(prediction):
         _race_3_prices(prediction)
+        prediction["round"] = 4
         if change:
             change(prediction)
 
@@ -100,6 +101,27 @@ def test_capture_refuses_unmoved_prices_even_with_a_new_driver(tmp_path):
 
     with pytest.raises(CaptureNotYet, match="price"):
         _decide(tmp_path, prediction=modified(predictions(), stale_with_swap))
+
+
+def test_capture_refuses_while_the_prices_are_still_for_the_race_just_held(tmp_path):
+    prediction = modified(predictions(), lambda p: p.update(round=4))
+
+    with pytest.raises(CaptureNotYet, match="round 4"):
+        _decide(tmp_path, prediction=prediction)
+
+
+@pytest.mark.parametrize("prices_round", [2, 6])
+def test_capture_refuses_prices_for_another_round(tmp_path, prices_round):
+    prediction = modified(predictions(), lambda p: p.update(round=prices_round))
+
+    with pytest.raises(CaptureRefused, match=f"round {prices_round}") as refused:
+        _decide(tmp_path, prediction=prediction)
+    assert not isinstance(refused.value, CaptureNotYet)
+
+
+def test_correct_refuses_prices_for_another_round(tmp_path):
+    with pytest.raises(CaptureRefused, match="round 5"):
+        _before_update(tmp_path, lambda p: p.update(round=5))
 
 
 def test_capture_refuses_when_the_race_already_has_points(tmp_path):
