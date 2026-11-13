@@ -652,6 +652,7 @@ race-21 row in `TEAM_2026.md`. Still to do: `TEAM_2026.md`'s pointer to the file
 (plan, *Before closing*), and Gate 1 once race 21 has points. Gate 1 needs the
 prediction to equal the app's figure or differ by a nameable effect; the pick
 already equals `run_single_team.py`'s. Plan step 8 is now needed before Abu Dhabi.
+[Pointer added 2026-11-13; the table's race 21–23 rows were removed, per D11.]
 
 ## 2026-11-13 — Steps 8 and 9: the season's end, and input running out
 
