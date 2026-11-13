@@ -580,3 +580,49 @@ sprint weekend's sessions check on real data.
 editor. Then I rewrote `live/lineup.py` through a Python script in the shell, and
 gave that command a description saying it had not run. It had. I restored the file
 from git and made the same change with the editor, so the diff was reviewable.
+
+## 2026-11-13 — Step 7: race-1 mode
+
+Built in four commits, each test seen failing first:
+
+1. **The team file at race 1.** `FreeMoves` and `MovesUsed` are blank at race 1 and
+   only there; `held_for` gives race 2 `RACE_2_FREE_MOVES` (2), whatever chip race 1
+   played. Mutation: dropping the rule turned four tests red.
+2. **`live.lineup.run_race1_lineup`** solves `StrategyBettingOdds` at 999.9, 4, 3, 2,
+   1 and 0 through `solve_race`, budget `RACE_1_BUDGET` (100), every move free. Picks
+   merge, labelled `StrategyBettingOdds:<limit>`, each with moves 7. The limit is set
+   by a subclass (R12 entry added), and the strategy's held team is a placeholder of
+   the cheapest assets. A limit no team can meet raises, as `solve_race` does: the
+   test world needed eight constructors for limit 0 to be possible, and the real grid
+   has eleven. `add_to_lineup`'s merge moved into `_merge`, which both use. Mutations:
+   not setting the limit turned the limit-0 test red; the team's budget in place of
+   100 turned the budget test red.
+3. **`format_table` with no team held** shows only the options.
+4. **`live.cli`'s race-1 mode** (`pick_race_1`): no team to confirm, no race to score.
+   It refuses with no odds for race 1 (D27) and refuses `--chip`. It offers the
+   line-up, a manual team against 100, and the prompt chips. The row has blank moves
+   and `UnusedBudget` 100 less the cost; the record's `held` is null. Writing the row
+   and the record moved into `_write_and_record`, which both modes use. The `--chip`
+   test passed before the mode existed, since race 1 was refused for everything, so
+   it was proved by mutation: without the refusal the run went on to ask for input.
+
+The suite went from 861 to 878, all passing.
+
+**Real runs, on scratch copies; nothing in `data/` changed:**
+
+- **2026 race 1**, from an archive cut to that race with its points blanked, and
+  the real 2026 race-1 odds. It offered five teams from the six limits (999.9 and 4
+  the same), each within 100, exit 0. **All six equal**
+  `scripts/select_odds_start.py`'s picks for 2026 (its logged drivers and
+  constructors). That script solves through `factory_strategy` with its own held
+  team and limit set on an instance.
+
+**Not yet run:** a race-1 pick recorded at a real terminal; Gate 2 proper (a new
+season's real prices and a real odds page), which waits for D30.
+
+**Found, not built:** the script cannot score a season's **final** race. Once every
+race of the latest season has points, `next_race` raises before scoring runs, and
+race-1 mode scores no row of the season before. So the last row of 2026 (or any
+season) keeps blank `Points` unless filled by hand. A fix would score the latest
+season's unscored rows before looking for the next race. This is D24's scoring, so
+it belongs to this effort, but it was not in step 7.
