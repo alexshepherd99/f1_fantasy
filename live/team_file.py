@@ -29,6 +29,8 @@ CHIPS = (WILDCARD, LIMITLESS, EXTRA_DRS, NO_NEGATIVE, AUTOPILOT, FINAL_FIX)
 
 NUM_DRIVERS = 5
 NUM_CONSTRUCTORS = 2
+# Race 1 picks the whole team, so race 2 starts on the game's free moves, with none carried
+RACE_2_FREE_MOVES = 2
 DRIVER_COLUMNS = [f"D{i}" for i in range(1, NUM_DRIVERS + 1)]
 CONSTRUCTOR_COLUMNS = [f"C{i}" for i in range(1, NUM_CONSTRUCTORS + 1)]
 COLUMNS = ["Season", "Race", "Strategy", "Chip", *DRIVER_COLUMNS, *CONSTRUCTOR_COLUMNS, "DRS", "FreeMoves",
@@ -51,8 +53,8 @@ class TeamRow:
         drivers: The drivers, sorted.
         constructors: The constructors, sorted.
         drs: The DRS driver, one of `drivers`.
-        free_moves: The free moves available this race.
-        moves_used: The moves made from the team held into this one.
+        free_moves: The free moves available this race; None at race 1, where the whole team is picked.
+        moves_used: The moves made from the team held into this one; None at race 1.
         team_value: The team's value at this race's prices.
         unused_budget: The budget left after the pick; None after Limitless, whose budget never carries.
         points_predicted: The points the archive gives the team, once scored.
@@ -65,8 +67,8 @@ class TeamRow:
     drivers: tuple[str, ...]
     constructors: tuple[str, ...]
     drs: str
-    free_moves: int
-    moves_used: int
+    free_moves: int | None
+    moves_used: int | None
     team_value: float
     unused_budget: float | None
     points_predicted: int | None
@@ -97,9 +99,10 @@ def held_for(rows: list[TeamRow], season: int, race: int) -> Held:
     """Work out the team held going into `race` from the season's rows before it (D21).
 
     The team and unused budget come from the last row without Limitless, as the app puts the
-    team back after it. The free moves come from the last row: a chip race passes on the free
-    moves it had, and otherwise fewer than 2 moves used gives 3, else 2. A row for `race`
-    itself, from an earlier run before the race, is ignored.
+    team back after it. The free moves come from the last row: after race 1, where the whole
+    team was picked, `RACE_2_FREE_MOVES`; a chip race passes on the free moves it had; and
+    otherwise fewer than 2 moves used gives 3, else 2. A row for `race` itself, from an
+    earlier run before the race, is ignored.
 
     Raises:
         TeamFileError: If the season has a row after `race`, or no row before it without Limitless.
@@ -114,7 +117,12 @@ def held_for(rows: list[TeamRow], season: int, race: int) -> Held:
         _fail(f"Season {season} has no row before race {race} without Limitless to take the team from")
 
     last, team = before[-1], team_rows[-1]
-    free_moves = last.free_moves if last.chip in (WILDCARD, LIMITLESS) else next_free_moves(last.moves_used)
+    if last.race == 1:
+        free_moves = RACE_2_FREE_MOVES
+    elif last.chip in (WILDCARD, LIMITLESS):
+        free_moves = last.free_moves
+    else:
+        free_moves = next_free_moves(last.moves_used)
     return Held(drivers=team.drivers, constructors=team.constructors, unused_budget=team.unused_budget,
                 free_moves=free_moves, team_race=team.race, last_race=last.race)
 
@@ -194,7 +202,7 @@ def _optional(value: int | None) -> str:
 
 def _fields(row: TeamRow) -> list[str]:
     return [str(row.season), str(row.race), row.strategy, row.chip, *row.drivers, *row.constructors, row.drs,
-            str(row.free_moves), str(row.moves_used), _money(row.team_value), _money(row.unused_budget),
+            _optional(row.free_moves), _optional(row.moves_used), _money(row.team_value), _money(row.unused_budget),
             _optional(row.points_predicted), _optional(row.points)]
 
 
@@ -229,8 +237,8 @@ def _parse(fields: list[str], where: str) -> TeamRow:
         drivers=tuple(value[c] for c in DRIVER_COLUMNS),
         constructors=tuple(value[c] for c in CONSTRUCTOR_COLUMNS),
         drs=value["DRS"],
-        free_moves=_int(value["FreeMoves"], "FreeMoves", where),
-        moves_used=_int(value["MovesUsed"], "MovesUsed", where),
+        free_moves=None if value["FreeMoves"] == "" else _int(value["FreeMoves"], "FreeMoves", where),
+        moves_used=None if value["MovesUsed"] == "" else _int(value["MovesUsed"], "MovesUsed", where),
         team_value=_float(value["TeamValue"], "TeamValue", where),
         unused_budget=None if value["UnusedBudget"] == "" else _float(value["UnusedBudget"], "UnusedBudget", where),
         points_predicted=None if value["PointsPredicted"] == "" else _int(value["PointsPredicted"], "PointsPredicted",
@@ -253,6 +261,9 @@ def check_row(row: TeamRow, where: str = "row") -> None:
         _fail(f"{where}: DRS {row.drs!r} is not one of the drivers")
     if (row.unused_budget is None) != (row.chip == LIMITLESS):
         _fail(f"{where}: UnusedBudget must be blank after Limitless and only then")
+    if (row.free_moves is None, row.moves_used is None) != (row.race == 1, row.race == 1):
+        _fail(f"{where}: FreeMoves and MovesUsed must be blank at race 1, where the whole team is picked, "
+              f"and only there")
 
 
 def check_known(row: TeamRow, race: Race) -> None:

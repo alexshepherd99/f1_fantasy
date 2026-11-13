@@ -85,6 +85,35 @@ def test_refuses_a_row_breaking_a_rule(tmp_path, column, value, match):
         read_team_file(path)
 
 
+ROW_1 = "2026,1,StrategyBettingOdds:3,,HUL@AUD,LAW@VRB,LEC@FER,PER@CAD,VER@RED,FER,RED,VER@RED,,,98.4,1.6,,\n"
+
+
+def test_race_1_has_no_moves(tmp_path):
+    row = read_team_file(_file(tmp_path, ROW_1))[0]
+
+    assert (row.race, row.strategy, row.free_moves, row.moves_used) == (1, "StrategyBettingOdds:3", None, None)
+
+
+@pytest.mark.parametrize("row, column, value", [
+    (ROW_1, "FreeMoves", "2"),
+    (ROW_1, "MovesUsed", "7"),
+    (ROW_20, "MovesUsed", ""),
+], ids=["race 1 free moves", "race 1 moves used", "race 20 blank moves used"])
+def test_moves_are_blank_at_race_1_and_only_there(tmp_path, row, column, value):
+    with pytest.raises(TeamFileError, match="race 1"):
+        read_team_file(_file(tmp_path, _swap(row, column, value)))
+
+
+def test_writes_race_1_with_blank_moves(tmp_path):
+    path = tmp_path / "live_team.csv"
+    race_1 = replace(ROW, race=1, strategy="StrategyBettingOdds:3", free_moves=None, moves_used=None)
+
+    write_row(path, race_1)
+
+    assert read_team_file(path) == [race_1]
+    assert ",VER@RED,,,135.3," in path.read_text()
+
+
 def test_refuses_a_short_row(tmp_path):
     path = _file(tmp_path, ROW_20.replace(",329,329\n", ",329\n"))
 
@@ -246,6 +275,14 @@ def test_free_moves_follow_the_moves_used(moves_used, free_moves):
     rows = [_row(19), _row(20, moves_used=moves_used, free_moves=3)]
 
     assert held_for(rows, 2026, 21).free_moves == free_moves
+
+
+@pytest.mark.parametrize("chip", ["", "Extra DRS"])
+def test_race_2_starts_on_2_free_moves(chip):
+    rows = [replace(_row(1, chip=chip, unused_budget=1.6), free_moves=None, moves_used=None)]
+
+    assert held_for(rows, 2026, 2) == Held(drivers=TEAM_A, constructors=("FER", "RED"), unused_budget=1.6,
+                                           free_moves=2, team_race=1, last_race=1)
 
 
 def test_the_team_and_budget_come_from_the_last_row():
