@@ -7,40 +7,46 @@ from import_data.import_history import read_archive_file
 from tests.boxbox_fixtures import (
     CONSTRUCTORS_CSV,
     DRIVERS_CSV,
+    RACE_3_PRICES,
     driver_history,
     modified,
+    predictions,
     raw_files,
     season_summary,
+    set_prices,
+    swap_driver,
     write_archive,
 )
 
-# Race 3's prices in the fixture archive, as BoxBox would show them before its update.
-_RACE_3_DRIVER_PRICES = {"VER": 28.5, "HAD": 9.8, "RUS": 27.1, "ANT": 20.2}
-_RACE_3_CONSTRUCTOR_PRICES = {"red_bull": 30, "mercedes": 31}
 
-
-def _decide(tmp_path, summary=None, history=None, drivers_csv=DRIVERS_CSV, constructors_csv=CONSTRUCTORS_CSV,
-            golden=None):
+def _decide(tmp_path, summary=None, history=None, prediction=None, drivers_csv=DRIVERS_CSV,
+            constructors_csv=CONSTRUCTORS_CSV, golden=None):
     fn = str(write_archive(tmp_path, drivers_csv, constructors_csv))
     return decide_change(
         read_archive_file(AssetType.DRIVER, fn),
         read_archive_file(AssetType.CONSTRUCTOR, fn),
-        parse_files(raw_files(summary, history)),
+        parse_files(raw_files(summary, history, prediction)),
         golden if golden is not None else {},
     )
 
 
-def _with_prices(summary: dict, drivers: dict, constructors: dict) -> None:
-    for key, price in drivers.items():
-        summary["driver_prices"][key]["current_price"] = price
-    for slug, price in constructors.items():
-        summary["constructor_prices"][slug]["current_price"] = price
+def _race_3_prices(prediction: dict) -> None:
+    set_prices(prediction, RACE_3_PRICES)
 
 
-def _before_update(summary: dict) -> None:
-    """BoxBox before round 4 is held: no results for it, prices still race 3's."""
-    summary["rounds"][2]["has_actual"] = False
-    _with_prices(summary, _RACE_3_DRIVER_PRICES, _RACE_3_CONSTRUCTOR_PRICES)
+def _swap_had_for_law(prediction: dict) -> None:
+    swap_driver(prediction, "HAD", "LAW", 7.0)
+
+
+def _before_update(tmp_path, change=None, golden=None):
+    """Decide with BoxBox as before round 4 is held: no results for it, prices still race 3's."""
+    def prices(prediction):
+        _race_3_prices(prediction)
+        if change:
+            change(prediction)
+
+    summary = modified(season_summary(), lambda s: s["rounds"][2].update(has_actual=False))
+    return _decide(tmp_path, summary=summary, prediction=modified(predictions(), prices), golden=golden)
 
 
 def test_capture_fills_the_race_just_held_and_prices_the_next(tmp_path):
@@ -68,10 +74,7 @@ def test_capture_fills_the_race_just_held_and_prices_the_next(tmp_path):
 
 
 def test_capture_takes_the_next_line_up_from_the_prices(tmp_path):
-    def swap(s):  # HAD replaced by LAW at Red Bull for the next race
-        s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
-
-    change = _decide(tmp_path, summary=modified(season_summary(), swap))
+    change = _decide(tmp_path, prediction=modified(predictions(), _swap_had_for_law))
 
     assert [(r.driver, r.price) for r in change.driver_rows[4]] == [
         ("VER", 28.8), ("RUS", 27.3), ("ANT", 20.0), ("LAW", 7.0)
@@ -86,19 +89,17 @@ def test_capture_on_the_last_race_fills_points_only(tmp_path):
 
 
 def test_capture_refuses_when_prices_have_not_moved(tmp_path):
-    summary = modified(season_summary(), lambda s: _with_prices(s, _RACE_3_DRIVER_PRICES, _RACE_3_CONSTRUCTOR_PRICES))
-
     with pytest.raises(CaptureNotYet, match="price"):
-        _decide(tmp_path, summary=summary)
+        _decide(tmp_path, prediction=modified(predictions(), _race_3_prices))
 
 
 def test_capture_refuses_unmoved_prices_even_with_a_new_driver(tmp_path):
-    def stale_with_swap(s):
-        _with_prices(s, _RACE_3_DRIVER_PRICES, _RACE_3_CONSTRUCTOR_PRICES)
-        s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
+    def stale_with_swap(p):
+        _race_3_prices(p)
+        _swap_had_for_law(p)
 
     with pytest.raises(CaptureNotYet, match="price"):
-        _decide(tmp_path, summary=modified(season_summary(), stale_with_swap))
+        _decide(tmp_path, prediction=modified(predictions(), stale_with_swap))
 
 
 def test_capture_refuses_when_the_race_already_has_points(tmp_path):
@@ -143,11 +144,7 @@ def test_capture_warns_on_an_earlier_race_that_differs(tmp_path):
 
 
 def test_correct_rewrites_the_race_not_yet_held(tmp_path):
-    def before_update_with_swap(s):
-        _before_update(s)
-        s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
-
-    change = _decide(tmp_path, summary=modified(season_summary(), before_update_with_swap))
+    change = _before_update(tmp_path, _swap_had_for_law)
 
     assert (change.mode, change.target_race) == (CORRECT, 3)
     assert change.driver_rows == {3: [
@@ -163,7 +160,7 @@ def test_correct_rewrites_the_race_not_yet_held(tmp_path):
 
 def test_correct_refuses_a_race_from_the_workbook(tmp_path):
     with pytest.raises(CaptureNotYet, match="workbook"):
-        _decide(tmp_path, summary=modified(season_summary(), _before_update), golden={2026: 3})
+        _before_update(tmp_path, golden={2026: 3})
 
 
 def test_refuses_when_an_earlier_round_is_not_held(tmp_path):
@@ -176,9 +173,10 @@ def test_refuses_when_an_earlier_round_is_not_held(tmp_path):
 def test_refuses_a_season_not_in_the_archive(tmp_path):
     summary = modified(season_summary(), lambda s: s.update(season=2027))
     history = modified(driver_history(), lambda h: h.update(season=2027))
+    prediction = modified(predictions(), lambda p: p.update(season=2027))
 
     with pytest.raises(CaptureRefused, match="2027"):
-        _decide(tmp_path, summary=summary, history=history)
+        _decide(tmp_path, summary=summary, history=history, prediction=prediction)
 
 
 def test_refuses_when_drivers_and_constructors_end_at_different_races(tmp_path):

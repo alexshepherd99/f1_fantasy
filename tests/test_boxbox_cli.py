@@ -6,9 +6,13 @@ from boxbox.source import BOXBOX_URLS
 from tests.boxbox_fixtures import (
     CONSTRUCTORS_CSV,
     DRIVERS_CSV,
+    RACE_3_PRICES,
     modified,
+    predictions,
     raw_files,
     season_summary,
+    set_prices,
+    swap_driver,
     write_archive,
 )
 
@@ -16,9 +20,9 @@ from tests.boxbox_fixtures import (
 main = partial(cli.main, season_constructors={2025: 1, 2026: 2})
 
 
-def _saved_copy(folder, summary=None):
+def _saved_copy(folder, prediction=None):
     folder.mkdir()
-    for name, body in raw_files(summary).items():
+    for name, body in raw_files(prediction=prediction).items():
         (folder / f"{name}.json").write_bytes(body)
     return folder
 
@@ -45,10 +49,7 @@ def test_capture_from_a_saved_copy_writes_and_reports(tmp_path, capsys):
 def test_report_shows_old_price_new_price_and_difference(tmp_path, capsys):
     archive = _archive(tmp_path)
 
-    def swap(s):  # HAD replaced by LAW for the next race
-        s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
-
-    copy = _saved_copy(tmp_path / "copy", modified(season_summary(), swap))
+    copy = _saved_copy(tmp_path / "copy", modified(predictions(), lambda p: swap_driver(p, "HAD", "LAW", 7.0)))
 
     main(["--from-copy", str(copy), "--archive-dir", str(archive), "--dry-run"])
 
@@ -78,11 +79,7 @@ def test_dry_run_writes_nothing(tmp_path, capsys):
 
 def test_refusal_exits_1_and_writes_nothing(tmp_path, capsys):
     archive = _archive(tmp_path)
-    stale = modified(season_summary(), lambda s: [
-        s["driver_prices"][k].update(current_price=p) for k, p in
-        {"VER": 28.5, "HAD": 9.8, "RUS": 27.1, "ANT": 20.2}.items()
-    ] + [s["constructor_prices"][k].update(current_price=p) for k, p in {"red_bull": 30, "mercedes": 31}.items()])
-    copy = _saved_copy(tmp_path / "copy", stale)
+    copy = _saved_copy(tmp_path / "copy", modified(predictions(), lambda p: set_prices(p, RACE_3_PRICES)))
 
     code = main(["--from-copy", str(copy), "--archive-dir", str(archive)])
 

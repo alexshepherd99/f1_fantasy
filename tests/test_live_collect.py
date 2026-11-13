@@ -3,19 +3,18 @@ import pytest
 
 from boxbox.source import BOXBOX_URLS
 from live.collect import DONE, FAILED, NOT_YET, REFUSED, OddsApi, collect_boxbox, collect_odds, odds_present
-from tests.boxbox_fixtures import DRIVERS_CSV, modified, raw_files, season_summary, write_archive
-from tests.test_boxbox_change import _RACE_3_CONSTRUCTOR_PRICES, _RACE_3_DRIVER_PRICES, _with_prices
+from tests.boxbox_fixtures import DRIVERS_CSV, RACE_3_PRICES, modified, predictions, raw_files, set_prices, write_archive
 from tests.test_odds_source_cli import _HEADER, _QUALIFYING, _SCHEDULE, _TEST_PAGE
 
 # The writer's integrity checks expect the BoxBox fixture's two teams
 TEAMS = {2025: 1, 2026: 2}
 
 
-def _boxbox(tmp_path, summary=None, drivers_csv=DRIVERS_CSV):
+def _boxbox(tmp_path, prediction=None, drivers_csv=DRIVERS_CSV):
     archive = tmp_path / "data"
     archive.mkdir()
     write_archive(archive, drivers=drivers_csv)
-    by_url = {url: raw_files(summary)[name] for name, url in BOXBOX_URLS.items()}
+    by_url = {url: raw_files(prediction=prediction)[name] for name, url in BOXBOX_URLS.items()}
     return archive, by_url.__getitem__
 
 
@@ -30,8 +29,8 @@ def test_boxbox_done_writes_the_capture(tmp_path):
 
 
 def test_boxbox_not_updated_is_not_yet(tmp_path):
-    stale = modified(season_summary(), lambda s: _with_prices(s, _RACE_3_DRIVER_PRICES, _RACE_3_CONSTRUCTOR_PRICES))
-    archive, fetch = _boxbox(tmp_path, summary=stale)
+    stale = modified(predictions(), lambda p: set_prices(p, RACE_3_PRICES))
+    archive, fetch = _boxbox(tmp_path, prediction=stale)
 
     outcome = collect_boxbox(str(archive), str(tmp_path / "copies"), fetch, TEAMS)
 

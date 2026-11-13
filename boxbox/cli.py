@@ -27,9 +27,8 @@ import pandas as pd
 from boxbox.archive_file import write_change
 from boxbox.change import CAPTURE, ArchiveRow, CaptureRefused, Change, decide_change
 from boxbox.source import (
+    BOXBOX_URLS,
     DEFAULT_COPY_DIR,
-    DRIVER_HISTORY,
-    SEASON_SUMMARY,
     BoxBoxData,
     BoxBoxDataError,
     download_files,
@@ -57,7 +56,7 @@ def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
 
 
 def _read_copy(folder: Path) -> dict[str, bytes]:
-    return {name: (folder / f"{name}.json").read_bytes() for name in (DRIVER_HISTORY, SEASON_SUMMARY)}
+    return {name: (folder / f"{name}.json").read_bytes() for name in BOXBOX_URLS}
 
 
 def _label(row: ArchiveRow) -> str:

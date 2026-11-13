@@ -5,16 +5,28 @@ from boxbox.change import CORRECT, ArchiveRow, CaptureRefused, Change, decide_ch
 from boxbox.source import parse_files
 from common import AssetType
 from import_data.import_history import read_archive_file
-from tests.boxbox_fixtures import CONSTRUCTORS_CSV, DRIVERS_CSV, modified, raw_files, season_summary, write_archive
+from tests.boxbox_fixtures import (
+    CONSTRUCTORS_CSV,
+    DRIVERS_CSV,
+    modified,
+    predictions,
+    raw_files,
+    swap_driver,
+    write_archive,
+)
 
 _DRIVERS_FILE = "f1_fantasy_drivers.csv"
 _CONSTRUCTORS_FILE = "f1_fantasy_constructors.csv"
 _TWO_TEAMS = {2025: 1, 2026: 2}  # the fixture's teams per season, for the integrity checks
 
 
-def _decide(fn, summary=None) -> Change:
+def _decide(fn, prediction=None) -> Change:
     return decide_change(read_archive_file(AssetType.DRIVER, fn), read_archive_file(AssetType.CONSTRUCTOR, fn),
-                         parse_files(raw_files(summary)), {})
+                         parse_files(raw_files(prediction=prediction)), {})
+
+
+def _swap_had_for_law(prediction: dict) -> None:
+    swap_driver(prediction, "HAD", "LAW", 7.0)
 
 
 def test_write_capture_fills_points_and_adds_the_next_race_beside_each_asset(tmp_path):
@@ -57,10 +69,7 @@ def test_write_capture_fills_points_and_adds_the_next_race_beside_each_asset(tmp
 def test_write_puts_a_new_driver_after_the_season_and_keeps_the_departed_ones_rows(tmp_path):
     fn = str(write_archive(tmp_path))
 
-    def swap(s):
-        s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
-
-    write_change(_decide(fn, modified(season_summary(), swap)), fn, _TWO_TEAMS)
+    write_change(_decide(fn, modified(predictions(), _swap_had_for_law)), fn, _TWO_TEAMS)
 
     lines = (tmp_path / _DRIVERS_FILE).read_text().splitlines()
     assert [line for line in lines if ",HAD," in line] == [
@@ -73,10 +82,7 @@ def test_write_puts_a_new_driver_at_the_end_of_its_season_not_of_the_file(tmp_pa
     later_season = "2027,1,RED,VER,1,30\n"
     fn = str(write_archive(tmp_path, drivers=DRIVERS_CSV + later_season))
 
-    def swap(s):
-        s["driver_prices"]["LAW"] = dict(s["driver_prices"].pop("HAD"), current_price=7.0)
-
-    write_change(_decide(fn, modified(season_summary(), swap)), fn, _TWO_TEAMS)
+    write_change(_decide(fn, modified(predictions(), _swap_had_for_law)), fn, _TWO_TEAMS)
 
     assert (tmp_path / _DRIVERS_FILE).read_text().splitlines()[-2:] == ["2026,4,RED,LAW,,7", later_season.strip()]
 

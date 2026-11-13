@@ -1,9 +1,15 @@
-"""Download, save and parse BoxBox F1 Fantasy's two published JSON files.
+"""Download, save and parse three of BoxBox F1 Fantasy's published JSON files.
 
 BoxBox publishes its data for scripted use: its ``robots.txt`` allows every
 agent on ``/data/``. Only the current season is served, and prices only as
 they stand now, so every download is saved as it was received
 (``save_copy``) to keep a history.
+
+Results and the round list come from ``driver_history.json`` and
+``season_summary.json``. Prices come from ``predictions.json``, which holds
+the prices the app shows: ``season_summary.json``'s went back to the previous
+race's after a rebuild on 2026-11-09 (``docs/data_capture_v2/log.md``). Its
+prices are still read, to check against.
 """
 
 from __future__ import annotations
@@ -21,9 +27,11 @@ logger = logging.getLogger(__name__)
 
 DRIVER_HISTORY = "driver_history"
 SEASON_SUMMARY = "season_summary"
+PREDICTIONS = "predictions"
 BOXBOX_URLS = {
     DRIVER_HISTORY: "https://boxboxf1fantasy.com/data/driver_history.json",
     SEASON_SUMMARY: "https://boxboxf1fantasy.com/data/season_summary.json",
+    PREDICTIONS: "https://boxboxf1fantasy.com/data/predictions.json",
 }
 DEFAULT_COPY_DIR = "outputs/boxbox"
 
@@ -46,12 +54,13 @@ class BoxBoxRound:
 
 @dataclass(frozen=True)
 class BoxBoxData:
-    """What the fetcher reads from BoxBox's two files, keyed as BoxBox keys it.
+    """What the fetcher reads from BoxBox's files, keyed as BoxBox keys it.
 
     Drivers are keyed by BoxBox's driver key (``VER``, or ``HIR_HAAS`` where it
     disambiguates), constructors by slug (``red_bull``). Results map a calendar
     round to points; prices are each asset's ``current_price``, and a driver's
-    price comes with the constructor slug BoxBox lists for them.
+    price comes with the constructor slug BoxBox lists for them. The prices
+    are ``predictions.json``'s; ``summary_*`` hold ``season_summary.json``'s.
     """
 
     season: int
@@ -61,6 +70,8 @@ class BoxBoxData:
     constructor_results: dict[str, dict[int, float]]
     driver_prices: dict[str, tuple[str, float]]
     constructor_prices: dict[str, float]
+    summary_driver_prices: dict[str, tuple[str, float]]
+    summary_constructor_prices: dict[str, float]
 
 
 def _http_get(url: str) -> bytes:
@@ -70,7 +81,7 @@ def _http_get(url: str) -> bytes:
 
 
 def download_files(fetch: Callable[[str], bytes] | None = None) -> dict[str, bytes]:
-    """Download both files, returning their bytes keyed by name.
+    """Download the files, returning their bytes keyed by name.
 
     Args:
         fetch: Returns a URL's body; defaults to an HTTP GET that raises on an
@@ -81,7 +92,7 @@ def download_files(fetch: Callable[[str], bytes] | None = None) -> dict[str, byt
 
 
 def save_copy(raw: dict[str, bytes], copy_dir: Path | str, now: datetime) -> Path:
-    """Save both files as received into a new folder named for ``now`` (UTC).
+    """Save the files as received into a new folder named for ``now`` (UTC).
 
     Raises:
         FileExistsError: If that folder already exists; a copy is never overwritten.
@@ -135,21 +146,51 @@ def _results(assets: dict, where: str) -> dict[str, dict[int, float]]:
     return results
 
 
+def _keyed(entries: list, id_field: str, where: str) -> dict[str, dict]:
+    """A ``predictions.json`` array as a dict keyed by each entry's ``id_field``."""
+    keyed = {}
+    for entry in entries:
+        key = _field(entry, id_field, where)
+        if key in keyed:
+            _fail(f"{where}: {key} listed twice")
+        keyed[key] = entry
+    return keyed
+
+
+def _driver_prices(entries: dict[str, dict], where: str) -> dict[str, tuple[str, float]]:
+    return {
+        key: (
+            _field(entry, "constructor", f"{where} {key}"),
+            _number(_field(entry, "current_price", f"{where} {key}"), f"{where} {key} current_price"),
+        )
+        for key, entry in entries.items()
+    }
+
+
+def _constructor_prices(entries: dict[str, dict], where: str) -> dict[str, float]:
+    return {
+        slug: _number(_field(entry, "current_price", f"{where} {slug}"), f"{where} {slug} current_price")
+        for slug, entry in entries.items()
+    }
+
+
 def parse_files(raw: dict[str, bytes]) -> BoxBoxData:
-    """Parse and check both files.
+    """Parse and check the three files.
 
     Raises:
-        BoxBoxDataError: If either file is unreadable, lacks a field the
-            fetcher relies on, holds a non-number where it expects one, lists
-            a round twice, lists rounds out of order, or the two files name
+        BoxBoxDataError: If any file is unreadable, lacks a field the fetcher
+            relies on, holds a non-number where it expects one, lists a round
+            or an asset twice, lists rounds out of order, or the files name
             different seasons.
     """
     history = _load_json(raw, DRIVER_HISTORY)
     summary = _load_json(raw, SEASON_SUMMARY)
+    prediction = _load_json(raw, PREDICTIONS)
 
     season = _field(summary, "season", SEASON_SUMMARY)
-    if _field(history, "season", DRIVER_HISTORY) != season:
-        _fail(f"season differs between files: {SEASON_SUMMARY} {season}, {DRIVER_HISTORY} {history['season']}")
+    for name, document in [(DRIVER_HISTORY, history), (PREDICTIONS, prediction)]:
+        if _field(document, "season", name) != season:
+            _fail(f"season differs between files: {SEASON_SUMMARY} {season}, {name} {document['season']}")
 
     rounds = [
         BoxBoxRound(int(_number(_field(r, "round", f"{SEASON_SUMMARY} rounds"), f"{SEASON_SUMMARY} rounds")),
@@ -160,19 +201,9 @@ def parse_files(raw: dict[str, bytes]) -> BoxBoxData:
     if numbers != sorted(set(numbers)):
         _fail(f"{SEASON_SUMMARY}: rounds are not in strictly increasing order: {numbers}")
 
-    driver_prices = {
-        key: (
-            _field(entry, "constructor", f"{SEASON_SUMMARY} driver_prices {key}"),
-            _number(_field(entry, "current_price", f"{SEASON_SUMMARY} driver_prices {key}"),
-                    f"{SEASON_SUMMARY} driver_prices {key} current_price"),
-        )
-        for key, entry in _field(summary, "driver_prices", SEASON_SUMMARY).items()
-    }
-    constructor_prices = {
-        slug: _number(_field(entry, "current_price", f"{SEASON_SUMMARY} constructor_prices {slug}"),
-                      f"{SEASON_SUMMARY} constructor_prices {slug} current_price")
-        for slug, entry in _field(summary, "constructor_prices", SEASON_SUMMARY).items()
-    }
+    predicted_drivers = _keyed(_field(prediction, "drivers", PREDICTIONS), "driver_id", f"{PREDICTIONS} drivers")
+    predicted_constructors = _keyed(_field(prediction, "constructors", PREDICTIONS), "constructor_id",
+                                    f"{PREDICTIONS} constructors")
 
     return BoxBoxData(
         season=season,
@@ -181,6 +212,10 @@ def parse_files(raw: dict[str, bytes]) -> BoxBoxData:
         driver_results=_results(_field(history, "drivers", DRIVER_HISTORY), f"{DRIVER_HISTORY} drivers"),
         constructor_results=_results(_field(history, "constructors", DRIVER_HISTORY),
                                      f"{DRIVER_HISTORY} constructors"),
-        driver_prices=driver_prices,
-        constructor_prices=constructor_prices,
+        driver_prices=_driver_prices(predicted_drivers, f"{PREDICTIONS} drivers"),
+        constructor_prices=_constructor_prices(predicted_constructors, f"{PREDICTIONS} constructors"),
+        summary_driver_prices=_driver_prices(_field(summary, "driver_prices", SEASON_SUMMARY),
+                                             f"{SEASON_SUMMARY} driver_prices"),
+        summary_constructor_prices=_constructor_prices(_field(summary, "constructor_prices", SEASON_SUMMARY),
+                                                       f"{SEASON_SUMMARY} constructor_prices"),
     )

@@ -12,10 +12,26 @@ from boxbox.source import (
     parse_files,
     save_copy,
 )
-from tests.boxbox_fixtures import driver_history, modified, raw_files, season_summary
+from tests.boxbox_fixtures import driver_history, modified, predictions, raw_files, season_summary, set_prices
 
 
-def test_download_files_fetches_both_urls():
+def test_download_files_fetches_the_three_files():
+    requested = []
+
+    def fake_fetch(url: str) -> bytes:
+        requested.append(url)
+        return b"{}"
+
+    download_files(fetch=fake_fetch)
+
+    assert sorted(requested) == [
+        "https://boxboxf1fantasy.com/data/driver_history.json",
+        "https://boxboxf1fantasy.com/data/predictions.json",
+        "https://boxboxf1fantasy.com/data/season_summary.json",
+    ]
+
+
+def test_download_files_keys_each_body_by_its_name():
     requested = []
 
     def fake_fetch(url: str) -> bytes:
@@ -67,6 +83,34 @@ def test_parse_files_reads_rounds_results_and_prices():
     assert data.constructor_results["mercedes"] == {1: 55.0, 2: 33.0, 4: 28.0}
     assert data.driver_prices["HAD"] == ("red_bull", 10.0)
     assert data.constructor_prices == {"red_bull": 30.4, "mercedes": 31.2}
+
+
+def test_parse_files_takes_prices_from_predictions_not_the_summary():
+    prediction = modified(predictions(), lambda p: set_prices(p, {"VER": 29.1, "mercedes": 31.5}))
+
+    data = parse_files(raw_files(prediction=prediction))
+
+    assert data.driver_prices == {
+        "VER": ("red_bull", 29.1), "HAD": ("red_bull", 10.0), "RUS": ("mercedes", 27.3), "ANT": ("mercedes", 20.0),
+    }
+    assert data.constructor_prices == {"red_bull": 30.4, "mercedes": 31.5}
+
+
+@pytest.mark.parametrize(
+    "change, message",
+    [
+        (lambda p: p.update(season=2025), "season"),
+        (lambda p: p.pop("drivers"), "drivers"),
+        (lambda p: p["drivers"][0].pop("constructor"), "constructor"),
+        (lambda p: p["drivers"][0].update(current_price="28.8"), "current_price"),
+        (lambda p: p["constructors"][1].pop("current_price"), "current_price"),
+        (lambda p: p["constructors"][0].pop("constructor_id"), "constructor_id"),
+        (lambda p: p["drivers"].append(dict(p["drivers"][0])), "twice"),
+    ],
+)
+def test_parse_files_rejects_unexpected_predictions(change, message):
+    with pytest.raises(BoxBoxDataError, match=message):
+        parse_files(raw_files(prediction=modified(predictions(), change)))
 
 
 @pytest.mark.parametrize(

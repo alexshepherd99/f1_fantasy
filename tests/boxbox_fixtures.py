@@ -4,7 +4,8 @@ A two-team 2026 season. Round 3 was cancelled, so BoxBox's rounds are 1, 2, 4
 and 5, which the archive numbers races 1 to 4. By default it is the day of a
 capture: round 4 (archive race 3) has been held and BoxBox has its results and
 the new prices, for round 5. The archive holds race 3's prices and empty
-points, waiting for those results.
+points, waiting for those results. Prices are read from ``predictions``;
+``season_summary`` carries the same ones.
 """
 
 from __future__ import annotations
@@ -64,11 +65,56 @@ def driver_history() -> dict:
     }
 
 
-def raw_files(summary: dict | None = None, history: dict | None = None) -> dict[str, bytes]:
-    """The two files as downloaded bytes, from the defaults or the given dicts."""
+def _predicted_driver(driver_id: str, constructor: str, price: float) -> dict:
+    return {"driver_id": driver_id, "name": driver_id.title(), "constructor": constructor,
+            "current_price": price, "price_provisional": False, "expected_points": 10.0}
+
+
+def predictions() -> dict:
+    """``predictions.json`` before round 5, at the same prices as ``season_summary``."""
+    return {
+        "race": "Five GP",
+        "round": 5,
+        "season": SEASON,
+        "generated_at": "2026-11-10T07:00:01+00:00",
+        "drivers": [
+            _predicted_driver("VER", "red_bull", 28.8),
+            _predicted_driver("HAD", "red_bull", 10.0),
+            _predicted_driver("RUS", "mercedes", 27.3),
+            _predicted_driver("ANT", "mercedes", 20.0),
+        ],
+        "constructors": [
+            {"constructor_id": "red_bull", "name": "Red Bull", "current_price": 30.4, "expected_points": 20.0},
+            {"constructor_id": "mercedes", "name": "Mercedes", "current_price": 31.2, "expected_points": 20.0},
+        ],
+    }
+
+
+# Race 3's prices in the fixture archive, as BoxBox would show them before its update.
+RACE_3_PRICES = {"VER": 28.5, "HAD": 9.8, "RUS": 27.1, "ANT": 20.2, "red_bull": 30.0, "mercedes": 31.0}
+
+
+def set_prices(prediction: dict, prices: dict[str, float]) -> None:
+    """Set ``current_price`` in ``prediction`` for each driver id or constructor slug in ``prices``."""
+    for entry in prediction["drivers"] + prediction["constructors"]:
+        key = entry.get("driver_id", entry.get("constructor_id"))
+        if key in prices:
+            entry["current_price"] = prices[key]
+
+
+def swap_driver(prediction: dict, old: str, new: str, price: float) -> None:
+    """Replace driver ``old`` in ``prediction`` with ``new`` at ``price``, in the same team."""
+    [entry] = [d for d in prediction["drivers"] if d["driver_id"] == old]
+    entry.update(driver_id=new, name=new.title(), current_price=price)
+
+
+def raw_files(summary: dict | None = None, history: dict | None = None,
+              prediction: dict | None = None) -> dict[str, bytes]:
+    """The three files as downloaded bytes, from the defaults or the given dicts."""
     return {
         "driver_history": json.dumps(history if history is not None else driver_history()).encode(),
         "season_summary": json.dumps(summary if summary is not None else season_summary()).encode(),
+        "predictions": json.dumps(prediction if prediction is not None else predictions()).encode(),
     }
 
 
