@@ -459,3 +459,41 @@ and 2 of the handover's *Start here*:
 
 Until `data_capture_v2`'s fix is in, run `live.cli` only with `--skip-collection`.
 Step 6 (FastF1) can go ahead meanwhile.
+
+## 2026-11-13 — Steps 6 and 7 settled up front
+
+`data_capture_v2` step 12 fixed the source: prices come from `predictions.json`, and a
+capture refuses prices for the wrong round. Alex asked for steps 6 and 7 to run
+unattended, under the same rules as steps 3–5 (calls decided and logged here; any
+ungranted core-module change stops the run), and settled these first:
+
+- **Fix A is parked** until the capture after Las Vegas (`data_capture_v2` Gate 1's
+  second race). If that capture is clean, fix A is dropped; if not, it is built.
+- **Step 6's shape:**
+  1. A writer in `fast_f1/output.py` that replaces one race's lines in the metrics
+     file, keeps every other line's bytes, places the rows in season/race order, and
+     refuses a column the header lacks.
+  2. A check from FastF1's schedule that the weekend's required sessions have run
+     (D17). A session not yet run ends the step *not yet*, naming it. A session the
+     schedule says has run but whose laps FastF1 has not published yet ends it
+     *failed*; Alex reruns later.
+  3. A FastF1 step in `live/collect.py`, after the odds step (D25). It builds every
+     race of the season up to the next race that the file lacks or holds without
+     results, and on a rebuild reports any changed signal input (D28).
+  4. `StrategyFastF1RuleRise` in the line-up when its signal for the race exists,
+     otherwise skipped with the reason (D16, D18). It is pointed at the run's
+     metrics file through `backtest/variants.make_variant`, keeping its name, since
+     `factory_strategy` cannot pass the file; logged in R12.
+  5. `live.cli` gains `--metrics-file`; the step's outcome joins the summary, and the
+     signal values a pick saw go into its `outputs/` record.
+- **A FastF1 strategy that raises** for a race that has a signal (say a metrics row
+  names a driver the fantasy race lacks) is skipped and shown as failed with the
+  error, and the exit code is 1. The other picks are shown as usual. The "no signal
+  yet" skip keeps exit 0.
+- **The real metrics file stops at 2026 race 18.** Races 19 and 20 are added and
+  committed in this effort, checked by: race 18 rebuilt from FastF1 coming out
+  byte-identical to its stored lines; `git diff --numstat` showing only added lines,
+  44 of them (2 races × 22); race 18's signal values unchanged.
+- **Race-1 mode (step 7)** records race 1 with `FreeMoves` and `MovesUsed` blank, as
+  the whole team is picked. Race 2 starts on 2 free moves, with no carry-over. Step 7
+  is built and tested on fixture data; real use waits for D30.
