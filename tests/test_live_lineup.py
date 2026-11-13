@@ -2,9 +2,11 @@ import pytest
 
 from common import AssetType
 from import_data.derivations import DerivationType, get_derivation_name
+from linear.strategy_fastf1 import StrategyFastF1RuleRise
 from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
-from live.lineup import implied_chip, run_lineup, strategies_for
+from live.display import default_drs
+from live.lineup import add_to_lineup, fastf1_strategy, has_signal, implied_chip, run_lineup, strategies_for
 from races.team import Team
 from tests.live_fixtures import make_race
 
@@ -106,3 +108,85 @@ def test_strategies_picking_different_teams_each_show():
 
     assert [o.strategies for o in options] == [("StrategyMaxP2PMNoReset",), ("StrategyMaxP2PM",)]
     assert [o.pick.moves_used for o in options] == [2, 4]
+
+
+class _StubTables:
+    """Stands in for the FastF1 strategy's ``SignalTables``: set values, and no price rises."""
+
+    def __init__(self, values: dict[str, float]):
+        self._values = values
+
+    def values(self, season: int, race: int) -> dict[str, float]:
+        return dict(self._values)
+
+    def price_rise(self, season: int, race: int) -> dict[str, float]:
+        return {}
+
+
+@pytest.fixture
+def signal_files(monkeypatch) -> dict[str, list]:
+    """Give the FastF1 strategy set values in place of a metrics file, recording each file it reads.
+
+    The real tables need the 2023-25 metrics rows matched to the real archive, which the
+    hand-built world cannot give, as in ``tests/test_strategy_fastf1.py``.
+    """
+    files: dict[str, list] = {"read": [], "values": VALUES}
+
+    def _load(fn_metrics):
+        files["read"].append(fn_metrics)
+        return _StubTables(files["values"])
+
+    monkeypatch.setattr("linear.strategy_fastf1.load_signal_tables", _load)
+    return files
+
+
+def test_a_pick_leaving_drs_to_the_default_is_given_it_before_merging():
+    race = _race(10, prices={"VER@RED": 11.0})
+
+    options = run_lineup([StrategyMaxP2PM], _team(unused_budget=1.0), race, _race(9), 2026, free_moves=2)
+
+    assert options[0].pick.drs_driver == default_drs(options[0].pick.drivers, race) == "VER@RED"
+
+
+def test_the_fastf1_strategy_reads_the_metrics_file_given(signal_files):
+    strategy = fastf1_strategy("scratch/metrics.csv")
+
+    options = add_to_lineup([], strategy, _team(), _race(10), _race(9), 2026, free_moves=2)
+
+    assert signal_files["read"] == ["scratch/metrics.csv"]
+    assert issubclass(strategy, StrategyFastF1RuleRise)
+    assert [o.strategies for o in options] == [("StrategyFastF1RuleRise",)]
+
+
+def test_a_strategy_added_with_the_same_pick_merges(signal_files):
+    options = run_lineup([StrategyMaxP2PM], _team(), _race(10), _race(9), 2026, free_moves=2)
+
+    merged = add_to_lineup(options, fastf1_strategy("m.csv"), _team(), _race(10), _race(9), 2026, free_moves=2)
+
+    assert [o.strategies for o in merged] == [("StrategyMaxP2PM", "StrategyFastF1RuleRise")]
+    assert [o.strategies for o in options] == [("StrategyMaxP2PM",)]
+
+
+def test_a_strategy_added_with_another_pick_shows_after(signal_files):
+    signal_files["values"] = {**VALUES, "HAM@FER": 0.1, "HAD@RED": 9.0}
+    options = run_lineup([StrategyMaxP2PM], _team(), _race(10), _race(9), 2026, free_moves=2)
+
+    added = add_to_lineup(options, fastf1_strategy("m.csv"), _team(), _race(10), _race(9), 2026, free_moves=2)
+
+    assert [o.strategies for o in added] == [("StrategyMaxP2PM",), ("StrategyFastF1RuleRise",)]
+    assert "HAD@RED" in added[1].pick.drivers
+
+
+def test_a_strategy_added_under_a_chip_gets_its_moves(signal_files):
+    options = add_to_lineup([], fastf1_strategy("m.csv"), _team(), _race(10), _race(9), 2026, free_moves=2,
+                            chip="Wildcard")
+
+    assert options[0].pick.moves_used == 4
+
+
+@pytest.mark.parametrize("race, present", [(21, True), (22, False)])
+def test_has_signal_reads_the_races_metrics_rows(tmp_path, race, present):
+    path = tmp_path / "metrics.csv"
+    path.write_text("Season,Race,Driver\n2025,22,VER\n2026,21,VER\n", encoding="utf-8")
+
+    assert has_signal(str(path), 2026, race) == present

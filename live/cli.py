@@ -269,8 +269,6 @@ def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, rac
     budget = limitless_cap(race) if chip == LIMITLESS else confirmed.budget
     options = run_lineup(strategies_for(race_num, WILDCARD in chips_used), confirmed.team, race, race_prev,
                          season_year, confirmed.free_moves, chip)
-    options = [Option(o.strategies, replace(o.pick, drs_driver=o.pick.drs_driver or default_drs(o.pick.drivers, race)))
-               for o in options]
     print(f"Team value {confirmed.value:.1f}, budget {budget:.1f}, free moves "
           f"{'unlimited' if chip else confirmed.free_moves}{f', {chip}' if chip else ''}")
     print("\n".join(format_table(_held_pick(confirmed),
