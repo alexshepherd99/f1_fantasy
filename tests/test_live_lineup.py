@@ -6,7 +6,17 @@ from linear.strategy_fastf1 import StrategyFastF1RuleRise
 from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
 from live.display import default_drs
-from live.lineup import add_to_lineup, fastf1_strategy, has_signal, implied_chip, run_lineup, strategies_for
+from live.lineup import (
+    add_to_lineup,
+    fastf1_strategy,
+    has_signal,
+    implied_chip,
+    run_lineup,
+    run_race1_lineup,
+    strategies_for,
+)
+from races.asset import Constructor, Driver
+from races.season import Race
 from races.team import Team
 from tests.live_fixtures import make_race
 
@@ -182,6 +192,67 @@ def test_a_strategy_added_under_a_chip_gets_its_moves(signal_files):
                             chip="Wildcard")
 
     assert options[0].pick.moves_used == 4
+
+
+# Race 1's world: sixteen drivers in eight constructors, enough for a team with no two assets
+# of one constructor. The rest of the field has no odds.
+RACE_1_PAIRS = {f"{code}@{team}": team for team, codes in {
+    "RED": ("VER", "HAD"), "MER": ("RUS", "ANT"), "FER": ("LEC", "HAM"), "MCL": ("NOR", "PIA"),
+    "AST": ("ALO", "STR"), "AUD": ("HUL", "BOR"), "VRB": ("LAW", "LIN"), "CAD": ("PER", "BOT")}.items()
+    for code in codes}
+RACE_1_ODDS = {"VER@RED": "1-1", "HAD@RED": "2-1", "RUS@MER": "3-1", "ANT@MER": "4-1", "LEC@FER": "5-1",
+               "NOR@MCL": "6-1"}
+
+
+def _race_1(prices: dict[str, float] | None = None) -> Race:
+    prices = prices or {}
+    drivers = {d: Driver(driver=d, constructor=c, price=prices.get(d, 10.0), points=0, derivs={})
+               for d, c in RACE_1_PAIRS.items()}
+    constructors = {c: Constructor(constructor=c, price=prices.get(c, 10.0), points=0, derivs={})
+                    for c in sorted(set(RACE_1_PAIRS.values()))}
+    return Race(race=1, drivers=drivers, constructors=constructors)
+
+
+def _odds_file(tmp_path, season: int = 2030) -> str:
+    path = tmp_path / "odds.csv"
+    path.write_text("Driver,Constructor,Season,Race,Odds\n" + "".join(
+        f"{d.split('@')[0]},{d.split('@')[1]},{season},1,{price}\n" for d, price in RACE_1_ODDS.items()))
+    return str(path)
+
+
+def test_race_1_runs_the_odds_strategy_at_each_concentration_limit(tmp_path):
+    options = run_race1_lineup(_race_1(), 2030, _odds_file(tmp_path))
+
+    labels = [label for option in options for label in option.strategies]
+    assert labels == ["StrategyBettingOdds:999.9", "StrategyBettingOdds:4", "StrategyBettingOdds:3",
+                      "StrategyBettingOdds:2", "StrategyBettingOdds:1", "StrategyBettingOdds:0"]
+
+
+def test_race_1_at_the_loosest_limit_picks_on_odds_alone(tmp_path):
+    options = run_race1_lineup(_race_1(), 2030, _odds_file(tmp_path))
+
+    assert options[0].pick.drivers == ("ANT@MER", "HAD@RED", "LEC@FER", "RUS@MER", "VER@RED")
+    assert options[0].pick.constructors == ("MER", "RED")
+    assert options[0].pick.drs_driver == "VER@RED"
+
+
+def test_race_1_at_limit_0_picks_no_two_assets_of_a_constructor(tmp_path):
+    options = run_race1_lineup(_race_1(), 2030, _odds_file(tmp_path))
+
+    pick = options[-1].pick
+    teams = [RACE_1_PAIRS[d] for d in pick.drivers] + list(pick.constructors)
+    assert options[-1].strategies[-1] == "StrategyBettingOdds:0"
+    assert len(set(teams)) == len(teams)
+
+
+def test_race_1_has_a_budget_of_100_and_picks_the_whole_team(tmp_path):
+    race = _race_1(prices={"VER@RED": 40.0, "HAD@RED": 30.0, "RED": 30.0})
+
+    pick = run_race1_lineup(race, 2030, _odds_file(tmp_path))[0].pick
+
+    assert pick.cost <= 100.0
+    assert pick.unused_budget == pytest.approx(100.0 - pick.cost)
+    assert pick.moves_used == 7
 
 
 @pytest.mark.parametrize("race, present", [(21, True), (22, False)])

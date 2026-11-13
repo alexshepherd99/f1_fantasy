@@ -1,4 +1,4 @@
-"""The strategies a live run offers for a race, and their picks (D16, D20, D22)."""
+"""The strategies a live run offers for a race, and their picks (D16, D20, D22, D29)."""
 
 from __future__ import annotations
 
@@ -6,9 +6,11 @@ import logging
 from dataclasses import dataclass, replace
 
 from backtest.variants import make_variant
+from common import AssetType
 from fast_f1.output import load_existing_metrics
 from linear.strategy_base import StrategyBase
 from linear.strategy_fastf1 import StrategyFastF1RuleRise
+from linear.strategy_odds import StrategyBettingOdds
 from linear.strategy_p2pm import StrategyMaxP2PM
 from linear.strategy_p2pm_no_reset import StrategyMaxP2PMNoReset
 from live.display import default_drs
@@ -21,6 +23,9 @@ logger = logging.getLogger(__name__)
 
 # The race at which StrategyMaxP2PM plays the Wildcard itself
 P2PM_WILDCARD_RACE = 4
+# Race 1's concentration limits, loosest first (D29), and its budget
+CONCENTRATION_LIMITS = (999.9, 4.0, 3.0, 2.0, 1.0, 0.0)
+RACE_1_BUDGET = 100.0
 
 
 @dataclass(frozen=True)
@@ -94,17 +99,72 @@ def add_to_lineup(options: list[Option], strategy: type[StrategyBase], team: Tea
     max_cost = limitless_cap(race) if chip == LIMITLESS else None
 
     pick = solve_race(strategy, team, race, race_prev, season_year, max_moves, max_cost)
-    # A pick leaving DRS to the default is given it here, so that it merges with one naming that driver
+    return _merge(options, strategy.__name__, pick, race)
+
+
+def _merge(options: list[Option], label: str, pick: Pick, race: Race) -> list[Option]:
+    """`options` with `pick` added under `label`, or `label` added to an option with the same team and DRS driver.
+
+    A pick leaving DRS to the default is given it first, so that it merges with one naming that driver.
+    """
     pick = replace(pick, drs_driver=pick.drs_driver or default_drs(pick.drivers, race))
     added = list(options)
     same = next((i for i, o in enumerate(added)
                  if (o.pick.drivers, o.pick.constructors, o.pick.drs_driver)
                  == (pick.drivers, pick.constructors, pick.drs_driver)), None)
     if same is None:
-        added.append(Option(strategies=(strategy.__name__,), pick=pick))
+        added.append(Option(strategies=(label,), pick=pick))
     else:
-        added[same] = Option(strategies=added[same].strategies + (strategy.__name__,), pick=added[same].pick)
+        added[same] = Option(strategies=added[same].strategies + (label,), pick=added[same].pick)
     return added
+
+
+def run_race1_lineup(race: Race, season_year: int, odds_file: str) -> list[Option]:
+    """Race 1's picks: `StrategyBettingOdds` at each of `CONCENTRATION_LIMITS` (D29).
+
+    Each has a budget of `RACE_1_BUDGET` and the whole team to pick. Identical picks merge, and
+    each is labelled `StrategyBettingOdds:<limit>`, as the team file records it.
+
+    Args:
+        race: Race 1.
+        season_year: The season.
+        odds_file: The odds file the strategy reads.
+
+    Returns:
+        One option per distinct pick, loosest limit first, each with every asset as a move.
+
+    Raises:
+        RuntimeError: As for `solve_race`, when no team meets a limit.
+    """
+    # The strategy needs a team held to count moves from; with every move free and the
+    # budget given, which team it is cannot change the pick
+    placeholder = Team(unused_budget=0.0)
+    for driver in sorted(race.drivers, key=lambda d: (race.drivers[d].price, d))[:NUM_DRIVERS]:
+        placeholder.add_asset(AssetType.DRIVER, driver)
+    for constructor in sorted(race.constructors, key=lambda c: (race.constructors[c].price, c))[:NUM_CONSTRUCTORS]:
+        placeholder.add_asset(AssetType.CONSTRUCTOR, constructor)
+
+    options: list[Option] = []
+    for limit in CONCENTRATION_LIMITS:
+        pick = solve_race(_odds_strategy(limit, odds_file), placeholder, race, race, season_year,
+                          NUM_DRIVERS + NUM_CONSTRUCTORS, RACE_1_BUDGET)
+        pick = replace(pick, moves_used=NUM_DRIVERS + NUM_CONSTRUCTORS)
+        options = _merge(options, f"{StrategyBettingOdds.__name__}:{limit:g}", pick, race)
+    return options
+
+
+def _odds_strategy(limit: float, odds_file: str) -> type[StrategyBase]:
+    """`StrategyBettingOdds` reading `odds_file`, held to a concentration limit.
+
+    The limit is an attribute the strategy sets in its constructor, not an argument, so
+    `make_variant` cannot pass it; this subclass sets it after, as
+    `scripts/select_odds_start.py` does.
+    """
+    def __init__(self, *args, **kwargs):
+        StrategyBettingOdds.__init__(self, *args, fn_odds=odds_file, **kwargs)
+        self.max_concentration = limit
+
+    return type(StrategyBettingOdds.__name__, (StrategyBettingOdds,), {"__init__": __init__})
 
 
 def fastf1_strategy(metrics_file: str) -> type[StrategyBase]:
