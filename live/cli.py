@@ -61,7 +61,7 @@ from live.lineup import (
     run_race1_lineup,
     strategies_for,
 )
-from live.points import predict_points
+from live.points import calculate_points
 from live.record import race_metrics_rows, write_record
 from live.team_file import (
     AUTOPILOT,
@@ -185,13 +185,14 @@ def score_rows(rows: list[TeamRow], season_year: int, race_num: int, season: Sea
             swapped_in = ask(input_fn, f"Race {row.race} Final Fix: driver swapped in", None,
                              lambda a: _one_of(a, set(race.drivers) - set(row.drivers)))
             final_fix = (out, swapped_in)
-        predicted = predict_points(row, race, final_fix)
-        default = str(predicted)
+        calculated = calculate_points(row, race, final_fix)
+        default = str(calculated)
         if row.chip == NO_NEGATIVE:
-            print(f"Race {row.race} played No Negative, which the prediction leaves out: type the app's figure.")
+            print(f"Race {row.race} played No Negative, which the calculation leaves out: type the app's figure.")
             default = None
-        points = ask(input_fn, f"Race {row.race} points: the archive gives {predicted}; the app's figure", default, int)
-        write_row(team_file, replace(row, points_predicted=predicted, points=points))
+        points = ask(input_fn, f"Race {row.race} points: the archive gives {calculated}; the app's figure", default,
+                     int)
+        write_row(team_file, replace(row, calculated_points=calculated, points=points))
     return read_team_file(team_file)
 
 
@@ -427,7 +428,7 @@ def choose_row(rows: list[TeamRow], options: list[Option], confirmed: Confirmed,
                   constructors=pick.constructors, drs=drs, free_moves=None if first else confirmed.free_moves,
                   moves_used=None if first else pick.moves_used, team_value=pick.cost,
                   unused_budget=None if chip == LIMITLESS else confirmed.budget - pick.cost,
-                  points_predicted=None, points=None)
+                  calculated_points=None, points=None)
 
     existing = [r for r in rows if (r.season, r.race) == (season_year, race_num)]
     if existing and ask(input_fn, f"Race {race_num} already has a row ({existing[0].strategy}); replace it? y/n",

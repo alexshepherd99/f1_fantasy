@@ -45,11 +45,11 @@ def test_reads_each_field_typed(tmp_path):
         TeamRow(season=2026, race=20, strategy="StrategyMaxP2PM", chip="",
                 drivers=("HUL@AUD", "LAW@VRB", "LEC@FER", "PER@CAD", "VER@RED"), constructors=("FER", "RED"),
                 drs="VER@RED", free_moves=2, moves_used=1, team_value=135.3, unused_budget=1.0,
-                points_predicted=329, points=329),
+                calculated_points=329, points=329),
         TeamRow(season=2026, race=21, strategy="Manual", chip="Extra DRS",
                 drivers=("BOR@AUD", "LAW@VRB", "LEC@FER", "PER@CAD", "VER@RED"), constructors=("FER", "RED"),
                 drs="LEC@FER", free_moves=3, moves_used=1, team_value=138.5, unused_budget=1.0,
-                points_predicted=None, points=None),
+                calculated_points=None, points=None),
     ]
 
 
@@ -147,7 +147,7 @@ def test_allows_a_chip_once_in_each_season(tmp_path):
 ROW = TeamRow(season=2026, race=20, strategy="StrategyMaxP2PM", chip="",
               drivers=("HUL@AUD", "LAW@VRB", "LEC@FER", "PER@CAD", "VER@RED"), constructors=("FER", "RED"),
               drs="VER@RED", free_moves=2, moves_used=1, team_value=135.3, unused_budget=1.0,
-              points_predicted=None, points=None)
+              calculated_points=None, points=None)
 
 
 def test_a_row_of_the_race_is_known():
@@ -176,6 +176,15 @@ def test_writes_a_new_file_with_its_header(tmp_path):
     write_row(path, ROW)
 
     assert path.read_text() == HEADER + "2026,20,StrategyMaxP2PM,,HUL@AUD,LAW@VRB,LEC@FER,PER@CAD,VER@RED,FER,RED,VER@RED,2,1,135.3,1.0,,\n"
+
+
+def test_the_header_names_each_column(tmp_path):
+    path = tmp_path / "live_team.csv"
+
+    write_row(path, ROW)
+
+    assert path.read_text().splitlines()[0] == ("Season,Race,Strategy,Chip,D1,D2,D3,D4,D5,C1,C2,DRS,FreeMoves,"
+                                                "MovesUsed,TeamValue,UnusedBudget,CalculatedPoints,Points")
 
 
 def test_adds_a_race_after_the_others_keeping_their_bytes(tmp_path):
@@ -209,7 +218,7 @@ def test_replaces_the_race_row_keeping_the_others_bytes(tmp_path):
 
 def test_fills_the_points_of_the_race_row(tmp_path):
     path = _file(tmp_path, ROW_20.replace(",329,329\n", ",,\n"))
-    scored = replace(read_team_file(path)[0], points_predicted=330, points=329)
+    scored = replace(read_team_file(path)[0], calculated_points=330, points=329)
 
     write_row(path, scored)
 

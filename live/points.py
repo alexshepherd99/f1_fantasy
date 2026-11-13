@@ -1,4 +1,4 @@
-"""Predict a played team's points from the archive's points for the race (D24)."""
+"""Calculate a played team's points from the archive's points for the race (D24)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from races.season import Race
 logger = logging.getLogger(__name__)
 
 
-def predict_points(row: TeamRow, race: Race, final_fix: tuple[str, str] | None = None) -> int:
+def calculate_points(row: TeamRow, race: Race, final_fix: tuple[str, str] | None = None) -> int:
     """The points the archive gives the team in `row` for `race`, with its chip modelled.
 
     Every driver and constructor scores their points, and the DRS driver's count twice.

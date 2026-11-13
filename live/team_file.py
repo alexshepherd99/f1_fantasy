@@ -34,7 +34,7 @@ RACE_2_FREE_MOVES = 2
 DRIVER_COLUMNS = [f"D{i}" for i in range(1, NUM_DRIVERS + 1)]
 CONSTRUCTOR_COLUMNS = [f"C{i}" for i in range(1, NUM_CONSTRUCTORS + 1)]
 COLUMNS = ["Season", "Race", "Strategy", "Chip", *DRIVER_COLUMNS, *CONSTRUCTOR_COLUMNS, "DRS", "FreeMoves",
-           "MovesUsed", "TeamValue", "UnusedBudget", "PointsPredicted", "Points"]
+           "MovesUsed", "TeamValue", "UnusedBudget", "CalculatedPoints", "Points"]
 
 
 class TeamFileError(ValueError):
@@ -57,7 +57,7 @@ class TeamRow:
         moves_used: The moves made from the team held into this one; None at race 1.
         team_value: The team's value at this race's prices.
         unused_budget: The budget left after the pick; None after Limitless, whose budget never carries.
-        points_predicted: The points the archive gives the team, once scored.
+        calculated_points: The points the archive gives the team, once scored.
         points: The app's points, which count; once filled the row is final.
     """
     season: int
@@ -71,7 +71,7 @@ class TeamRow:
     moves_used: int | None
     team_value: float
     unused_budget: float | None
-    points_predicted: int | None
+    calculated_points: int | None
     points: int | None
 
 
@@ -203,7 +203,7 @@ def _optional(value: int | None) -> str:
 def _fields(row: TeamRow) -> list[str]:
     return [str(row.season), str(row.race), row.strategy, row.chip, *row.drivers, *row.constructors, row.drs,
             _optional(row.free_moves), _optional(row.moves_used), _money(row.team_value), _money(row.unused_budget),
-            _optional(row.points_predicted), _optional(row.points)]
+            _optional(row.calculated_points), _optional(row.points)]
 
 
 def _fail(message: str) -> None:
@@ -241,8 +241,8 @@ def _parse(fields: list[str], where: str) -> TeamRow:
         moves_used=None if value["MovesUsed"] == "" else _int(value["MovesUsed"], "MovesUsed", where),
         team_value=_float(value["TeamValue"], "TeamValue", where),
         unused_budget=None if value["UnusedBudget"] == "" else _float(value["UnusedBudget"], "UnusedBudget", where),
-        points_predicted=None if value["PointsPredicted"] == "" else _int(value["PointsPredicted"], "PointsPredicted",
-                                                                           where),
+        calculated_points=None if value["CalculatedPoints"] == "" else _int(value["CalculatedPoints"],
+                                                                            "CalculatedPoints", where),
         points=None if value["Points"] == "" else _int(value["Points"], "Points", where),
     )
     check_row(row, where)

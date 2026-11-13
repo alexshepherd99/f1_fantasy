@@ -694,3 +694,13 @@ The suite went from 878 to 884, all passing.
 Dhabi. Race-1 mode still scores no row of the season before, so 2026's last row
 must be scored by a run before 2027 enters the archive. BoxBox does not capture a
 new season (D30), so that is the expected order.
+
+## 2026-11-13 — `PointsPredicted` renamed `CalculatedPoints`
+
+Decided by Alex: the column is worked out after the race from the archive's points,
+not forecast, so it is now `CalculatedPoints`. The code follows: `calculated_points`
+on `TeamRow`, `calculate_points` in `live/points.py`. A test pinning the literal
+header failed first (the existing tests build the header from `COLUMNS`, so could
+not). Agreed checks on `data/live_team.csv`, all passed: `git diff --numstat` 1 1,
+the header line only; the race-21 row read back through `read_team_file` equal,
+field for field, to its read before the change; suite 885, all passing.

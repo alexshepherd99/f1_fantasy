@@ -112,8 +112,8 @@ Numbered in the order they were settled. Q-numbers in `log.md` refer to the gril
   `csv` module so rows a run does not touch keep their bytes. Columns: `Season`,
   `Race`, `Strategy`, `Chip`, `D1`–`D5`, `C1`–`C2` (sorted), `DRS`, `FreeMoves`
   (available this race), `MovesUsed`, `TeamValue` (at this race's prices),
-  `UnusedBudget` (after the pick), `PointsPredicted`, `Points` (the app's figure,
-  which counts). `Strategy` holds the class name, `StrategyBettingOdds:<limit>` at
+  `UnusedBudget` (after the pick), `CalculatedPoints` (from the archive's points,
+  D24; `PointsPredicted` until 2026-11-13), `Points` (the app's figure, which counts). `Strategy` holds the class name, `StrategyBettingOdds:<limit>` at
   race 1, or `Manual`. (Q18)
 - **D10. A race's row is written when Alex chooses a pick** and replaced on a rerun
   before the race. Once `Points` is filled the row is final.

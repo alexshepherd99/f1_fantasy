@@ -12,7 +12,7 @@ from linear.strategy_p2pm import StrategyMaxP2PM
 from live.cli import main
 from live.collect import FastF1Api
 from live.lineup import fastf1_strategy, run_lineup, run_race1_lineup
-from live.points import predict_points
+from live.points import calculate_points
 from live.team_file import TeamRow, read_team_file, write_row
 from races.season import factory_season
 from races.team import Team
@@ -103,7 +103,7 @@ def _team(drivers=HELD_DRIVERS, constructors=HELD_CONSTRUCTORS, unused_budget=UN
 def _row(race: int, chip: str = "", points: int | None = None, moves_used: int = 1) -> TeamRow:
     return TeamRow(season=SEASON, race=race, strategy="StrategyMaxP2PM", chip=chip, drivers=HELD_DRIVERS,
                    constructors=HELD_CONSTRUCTORS, drs="NOR@MCL", free_moves=2, moves_used=moves_used,
-                   team_value=47.9, unused_budget=UNUSED, points_predicted=points, points=points)
+                   team_value=47.9, unused_budget=UNUSED, calculated_points=points, points=points)
 
 
 def test_a_season_with_no_row_asks_for_the_team_and_records_p2pms_pick(world):
@@ -119,7 +119,7 @@ def test_a_season_with_no_row_asks_for_the_team_and_records_p2pms_pick(world):
         season=SEASON, race=6, strategy="StrategyMaxP2PM", chip="", drivers=pick.drivers,
         constructors=pick.constructors, drs=pick.drs_driver or max(pick.drivers, key=lambda d: race.drivers[d].price),
         free_moves=2, moves_used=pick.moves_used, team_value=round(pick.cost, 1),
-        unused_budget=round(budget - pick.cost, 1), points_predicted=None, points=None)]
+        unused_budget=round(budget - pick.cost, 1), calculated_points=None, points=None)]
     assert inputs.prompts[0] == "Held drivers: "
 
 
@@ -129,22 +129,22 @@ def test_scores_the_last_race_and_offers_the_files_figures_as_defaults(world):
 
     assert _run(world, inputs) == 0
 
-    predicted = predict_points(_row(5), _season(world).races[5])
-    assert read_team_file(world["team_file"]) == [_row(5, moves_used=2, points=predicted)]
-    assert inputs.prompts[0] == f"Race 5 points: the archive gives {predicted}; the app's figure [{predicted}]: "
+    calculated = calculate_points(_row(5), _season(world).races[5])
+    assert read_team_file(world["team_file"]) == [_row(5, moves_used=2, points=calculated)]
+    assert inputs.prompts[0] == f"Race 5 points: the archive gives {calculated}; the app's figure [{calculated}]: "
     assert inputs.prompts[1:5] == ["Held drivers [ALO@AST,HUL@HAA,NOR@MCL,PIA@MCL,TSU@ALT]: ",
                                    "Held constructors [AST,HAA]: ", "Unused budget [50.0]: ",
                                    f"Free moves [{next_free_moves(2)}]: "]
 
 
-def test_the_apps_figure_is_recorded_beside_the_prediction(world):
+def test_the_apps_figure_is_recorded_beside_the_calculated_points(world):
     write_row(world["team_file"], _row(5))
     inputs = Inputs("250", "", "", "", "", "x")
 
     _run(world, inputs)
 
     row = read_team_file(world["team_file"])[0]
-    assert (row.points_predicted, row.points) == (predict_points(_row(5), _season(world).races[5]), 250)
+    assert (row.calculated_points, row.points) == (calculate_points(_row(5), _season(world).races[5]), 250)
 
 
 def test_final_fix_is_scored_with_the_swap(world):
@@ -153,8 +153,8 @@ def test_final_fix_is_scored_with_the_swap(world):
 
     _run(world, inputs)
 
-    expected = predict_points(_row(5, chip="Final Fix"), _season(world).races[5], final_fix=("TSU@ALT", "SAR@WIL"))
-    assert read_team_file(world["team_file"])[0].points_predicted == expected
+    expected = calculate_points(_row(5, chip="Final Fix"), _season(world).races[5], final_fix=("TSU@ALT", "SAR@WIL"))
+    assert read_team_file(world["team_file"])[0].calculated_points == expected
 
 
 def test_no_negative_needs_the_apps_figure(world):
@@ -316,7 +316,7 @@ def test_race_1_records_the_odds_pick_with_blank_moves(tmp_path):
                           drivers=expected.pick.drivers, constructors=expected.pick.constructors,
                           drs=expected.pick.drs_driver, free_moves=None, moves_used=None,
                           team_value=round(expected.pick.cost, 1), unused_budget=round(100.0 - expected.pick.cost, 1),
-                          points_predicted=None, points=None)
+                          calculated_points=None, points=None)
     assert row.strategy == "StrategyBettingOdds:999.9"
     assert not any(prompt.startswith("Held") for prompt in inputs.prompts)
 
@@ -430,9 +430,9 @@ def test_the_final_race_is_scored_and_the_season_ends(tmp_path, capsys):
 
     assert _run(world, inputs) == 0
 
-    predicted = predict_points(_row(6), _season(world).races[6])
-    assert read_team_file(world["team_file"]) == [_row(6, points=predicted)]
-    assert inputs.prompts == [f"Race 6 points: the archive gives {predicted}; the app's figure [{predicted}]: "]
+    calculated = calculate_points(_row(6), _season(world).races[6])
+    assert read_team_file(world["team_file"]) == [_row(6, points=calculated)]
+    assert inputs.prompts == [f"Race 6 points: the archive gives {calculated}; the app's figure [{calculated}]: "]
     assert f"Pick: done - season {SEASON} over, no race left to pick for" in capsys.readouterr().out.split(
         "Summary:")[1]
 
