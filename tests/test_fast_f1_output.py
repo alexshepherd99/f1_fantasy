@@ -14,6 +14,7 @@ from fast_f1.output import (
     generate_single_race_prediction,
     load_existing_metrics,
     save_metrics,
+    write_race_metrics,
 )
 
 
@@ -1126,6 +1127,96 @@ def test_save_metrics_stores_new_lap_times_in_days_beside_stored_ones(tmp_path):
 
     stored = load_existing_metrics(path)["FP2_MinLapTime"]
     assert stored.tolist() == [0.001052164351851852, pd.Timedelta(seconds=90.905) / pd.Timedelta(days=1)]
+
+
+# Lines for three races, each formatted differently, as a file built by successive
+# historical runs can be; the writer must leave the lines it does not replace alone.
+_FILE_HEADER = "Season,Race,Driver,Points,FP2_MinLapTime,AggregateRank\n"
+_FILE_LINES = [
+    "2026,17,VER,15,0.00105,0.9\n",
+    "2026,17,NOR,8,,0.4\n",
+    "2026,18,VER,,0.00106,0.8\n",
+    "2026,18,NOR,,,0.3\n",
+    "2026,20,VER,25.0,0.00107,0.7\n",
+]
+
+
+def _metrics_file(tmp_path: Path) -> Path:
+    path = tmp_path / "metrics.csv"
+    path.write_text(_FILE_HEADER + "".join(_FILE_LINES), encoding="utf-8")
+    return path
+
+
+def _race_rows(race: int, season: int = 2026) -> pd.DataFrame:
+    """A built race's rows, lowest AggregateRank first, with a lap time as a duration."""
+    return pd.DataFrame(
+        {
+            "Season": [season, season],
+            "Race": [race, race],
+            "Driver": ["NOR", "VER"],
+            "Points": [18, 25],
+            "FP2_MinLapTime": pd.to_timedelta([None, 86.4], unit="s"),
+            "AggregateRank": [0.2, 0.6],
+        }
+    )
+
+
+def test_write_race_metrics_replaces_only_that_races_lines(tmp_path):
+    path = _metrics_file(tmp_path)
+
+    write_race_metrics(_race_rows(18), path, 2026, 18)
+
+    assert path.read_text(encoding="utf-8") == (
+        _FILE_HEADER
+        + "".join(_FILE_LINES[:2])
+        + "2026,18,VER,25,0.001,0.6\n"
+        + "2026,18,NOR,18,,0.2\n"
+        + _FILE_LINES[4]
+    )
+
+
+def test_write_race_metrics_adds_a_race_in_season_and_race_order(tmp_path):
+    path = _metrics_file(tmp_path)
+
+    write_race_metrics(_race_rows(19), path, 2026, 19)
+    write_race_metrics(_race_rows(1, season=2027), path, 2027, 1)
+
+    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    assert [line[:7] for line in lines[1:]] == ["2026,17", "2026,17", "2026,18", "2026,18", "2026,19", "2026,19",
+                                                "2026,20", "2027,1,", "2027,1,"]
+    assert lines[1:5] == _FILE_LINES[:4]
+    assert lines[7] == _FILE_LINES[4]
+
+
+def test_write_race_metrics_leaves_blank_a_column_the_race_lacks(tmp_path):
+    path = _metrics_file(tmp_path)
+    rows = _race_rows(18).drop(columns=["FP2_MinLapTime"])
+
+    write_race_metrics(rows, path, 2026, 18)
+
+    assert "2026,18,VER,25,,0.6\n" in path.read_text(encoding="utf-8")
+
+
+def test_write_race_metrics_refuses_a_column_the_file_lacks(tmp_path, caplog):
+    path = _metrics_file(tmp_path)
+    rows = _race_rows(18).assign(SQ_MinLapTime=[0.001, 0.002])
+
+    with pytest.raises(ValueError, match="SQ_MinLapTime"):
+        write_race_metrics(rows, path, 2026, 18)
+
+    assert path.read_text(encoding="utf-8") == _FILE_HEADER + "".join(_FILE_LINES)
+    assert "SQ_MinLapTime" in caplog.text
+
+
+@pytest.mark.parametrize("rows", [_race_rows(19), _race_rows(18, season=2025), _race_rows(18).iloc[0:0]],
+                         ids=["another race", "another season", "no rows"])
+def test_write_race_metrics_refuses_rows_that_are_not_the_races(tmp_path, rows):
+    path = _metrics_file(tmp_path)
+
+    with pytest.raises(ValueError, match="season 2026 race 18"):
+        write_race_metrics(rows, path, 2026, 18)
+
+    assert path.read_text(encoding="utf-8") == _FILE_HEADER + "".join(_FILE_LINES)
 
 
 def test_metrics_files_default_to_csv(monkeypatch, tmp_path):

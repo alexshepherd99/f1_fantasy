@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import logging
 from pathlib import Path
 from typing import Iterable
@@ -291,6 +292,58 @@ def save_metrics(dataframe: pd.DataFrame, output_path: Path | str) -> None:
     ).reset_index(drop=True)
 
     dataframe.to_csv(path, index=False)
+
+
+def write_race_metrics(dataframe: pd.DataFrame, output_path: Path | str, season_year: int, race_num: int) -> None:
+    """Put one race's rows into a stored metrics file, keeping every other line's bytes.
+
+    The race's lines, if any, are replaced; otherwise its rows go before the first race
+    after it, so a file in season and race order stays so. The rows are written in the
+    header's column order, highest ``AggregateRank`` first, with lap times in days, as
+    ``save_metrics`` writes them. Unlike a historical run, this never reformats the
+    lines of other races (``docs/live_picks_v1/requirements.md``, D28).
+
+    Raises:
+        ValueError: ``dataframe`` is empty, holds a row for another race, or has a
+            column the file's header lacks. The file is then left as it was.
+    """
+    path = Path(output_path)
+    key = (season_year, race_num)
+    races = set(zip(dataframe["Season"], dataframe["Race"])) if not dataframe.empty else set()
+    if races != {key}:
+        _refuse(f"Rows to write for season {season_year} race {race_num} cover {sorted(races) or 'no race'}")
+
+    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    header = next(csv.reader(lines[:1]))
+    unknown = sorted(set(dataframe.columns) - set(header))
+    if unknown:
+        _refuse(f"Rows for season {season_year} race {race_num} have columns {path} lacks: {unknown}")
+
+    season_at, race_at = header.index("Season"), header.index("Race")
+    kept, insert_at = [lines[0]], None
+    for line in lines[1:]:
+        fields = next(csv.reader([line]))
+        line_key = (int(fields[season_at]), int(fields[race_at]))
+        if line_key == key:
+            continue
+        if line_key > key and insert_at is None:
+            insert_at = len(kept)
+        kept.append(line)
+
+    rows = _durations_in_days(dataframe).sort_values(
+        by=["Season", "Race", "AggregateRank"],
+        ascending=[True, True, False],
+    ).reindex(columns=header)
+    block = rows.to_csv(index=False, header=False, lineterminator="\n")
+    if insert_at is None:
+        insert_at = len(kept)
+    kept.insert(insert_at, block)
+    path.write_text("".join(kept), encoding="utf-8")
+
+
+def _refuse(message: str) -> None:
+    logger.error(message)
+    raise ValueError(message)
 
 
 def load_existing_metrics(output_path: Path | str) -> pd.DataFrame:
