@@ -11,6 +11,8 @@ the last race played once the archive has its points, asks Alex to confirm the
 team held, its unused budget and free moves, runs the race's strategies (the
 FastF1 strategy only when the metrics file has the race), shows their picks side
 by side with prices, and records the pick he chooses in ``data/live_team.csv``.
+At race 1 nothing is held or scored: the odds strategy picks the whole team at
+each concentration limit, budget 100, and the race's odds are required.
 It ends with a summary of each step, and exits 1 if any was refused or failed.
 Review the git diff of every data file it wrote and commit them.
 """
@@ -45,7 +47,17 @@ from live.collect import (
     odds_present,
 )
 from live.display import default_drs, format_prices, format_table, manual_pick, parse_team
-from live.lineup import Option, add_to_lineup, fastf1_strategy, has_signal, implied_chip, run_lineup, strategies_for
+from live.lineup import (
+    RACE_1_BUDGET,
+    Option,
+    add_to_lineup,
+    fastf1_strategy,
+    has_signal,
+    implied_chip,
+    run_lineup,
+    run_race1_lineup,
+    strategies_for,
+)
 from live.points import predict_points
 from live.record import race_metrics_rows, write_record
 from live.team_file import (
@@ -54,6 +66,8 @@ from live.team_file import (
     FINAL_FIX,
     LIMITLESS,
     NO_NEGATIVE,
+    NUM_CONSTRUCTORS,
+    NUM_DRIVERS,
     TEAM_FILE,
     WILDCARD,
     TeamFileError,
@@ -241,8 +255,11 @@ def choose_chip(strategy: str, race_num: int, chip: str, chips_used: set[str], i
                        lambda a: _one_of(a.lower(), set(by_name)))]
 
 
-def _held_pick(confirmed: Confirmed) -> Pick:
+def _held_pick(confirmed: Confirmed) -> Pick | None:
+    """The team held as a pick to show beside the options, or None when nothing is held, as at race 1."""
     team = confirmed.team
+    if not confirmed.assets:
+        return None
     return Pick(drivers=tuple(sorted(team.assets[AssetType.DRIVER])),
                 constructors=tuple(sorted(team.assets[AssetType.CONSTRUCTOR])), drs_driver="", moves_used=0,
                 cost=confirmed.value, unused_budget=team.unused_budget)
@@ -255,7 +272,7 @@ def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, rac
     How the FastF1 pick went is added to `outcomes`.
     """
     if race_num == 1:
-        raise RunStopped(f"Season {season_year}'s next race is race 1, which race-1 mode picks; it is not built yet")
+        return pick_race_1(args, input_fn, season_year, run_at)
     chip = CHIP_ARGUMENTS.get(args.chip, "")
 
     season = factory_season(*load_with_derivations(season_year, args.archive_dir), season_year)
@@ -287,6 +304,46 @@ def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, rac
                                  race, race_prev)))
 
     row = choose_row(rows, options, confirmed, season_year, race, race_prev, budget, chip, chips_used, input_fn)
+    held = {"drivers": sorted(confirmed.team.assets[AssetType.DRIVER]),
+            "constructors": sorted(confirmed.team.assets[AssetType.CONSTRUCTOR]),
+            "unused_budget": confirmed.team.unused_budget, "free_moves": confirmed.free_moves,
+            "value": confirmed.value}
+    return _write_and_record(args, run_at, season_year, race, chip, held, options, row)
+
+
+def pick_race_1(args: argparse.Namespace, input_fn: InputFn, season_year: int, run_at: datetime) -> TeamRow | None:
+    """Pick race 1 on betting odds alone, at each concentration limit (D29); returns the row written, if any.
+
+    Nothing is held, so there is no team to confirm and no race to score; the budget is
+    `RACE_1_BUDGET` and every move is free.
+    """
+    if args.chip:
+        raise RunStopped(f"Race 1 picks the whole team with every move free, so --chip {args.chip} does nothing there")
+    if not odds_present(args.odds_file, season_year, 1):
+        raise RunStopped(f"No odds for season {season_year} race 1 in {args.odds_file}: race 1 is picked on them. "
+                         f"Save the race's Oddschecker page into {args.pages_dir} and run again.")
+
+    season = factory_season(*load_with_derivations(season_year, args.archive_dir), season_year)
+    race = season.races[1]
+    print(f"Season {season_year}, race 1: picked on betting odds, budget {RACE_1_BUDGET:.1f}")
+    rows = read_team_file(args.team_file)
+    for row in rows:
+        if row.season == season_year:
+            check_known(row, season.races[row.race])
+
+    options = run_race1_lineup(race, season_year, args.odds_file)
+    print("\n".join(format_table(None, [(f"{i} {' = '.join(o.strategies)}", o.pick)
+                                        for i, o in enumerate(options, start=1)], race, race)))
+
+    nothing_held = Confirmed(team=Team(unused_budget=RACE_1_BUDGET), free_moves=NUM_DRIVERS + NUM_CONSTRUCTORS,
+                             value=0.0)
+    row = choose_row(rows, options, nothing_held, season_year, race, race, RACE_1_BUDGET, "", set(), input_fn)
+    return _write_and_record(args, run_at, season_year, race, "", None, options, row)
+
+
+def _write_and_record(args: argparse.Namespace, run_at: datetime, season_year: int, race: Race, chip: str,
+                      held: dict | None, options: list[Option], row: TeamRow | None) -> TeamRow | None:
+    """Write the row chosen, if any, then save the run's record whatever happened; returns the row written."""
     written = None
     try:
         if row is None:
@@ -294,14 +351,10 @@ def pick_race(args: argparse.Namespace, input_fn: InputFn, season_year: int, rac
         else:
             write_row(args.team_file, row)
             written = row
-            print(f"Recorded race {race_num} in {args.team_file}. Review its git diff and commit it.")
+            print(f"Recorded race {row.race} in {args.team_file}. Review its git diff and commit it.")
     finally:
-        held = {"drivers": sorted(confirmed.team.assets[AssetType.DRIVER]),
-                "constructors": sorted(confirmed.team.assets[AssetType.CONSTRUCTOR]),
-                "unused_budget": confirmed.team.unused_budget, "free_moves": confirmed.free_moves,
-                "value": confirmed.value}
         path = write_record(args.record_dir, run_at, season_year, race, chip, held, options, written,
-                            race_metrics_rows(args.metrics_file, season_year, race_num))
+                            race_metrics_rows(args.metrics_file, season_year, int(race.race)))
         print(f"Saved this run's picks to {path}")
     return written
 
@@ -339,9 +392,11 @@ def choose_row(rows: list[TeamRow], options: list[Option], confirmed: Confirmed,
     strategy, pick = chosen
     drs = ask(input_fn, "DRS driver", pick.drs_driver, lambda a: _one_of(a, set(pick.drivers)))
     chip_played = choose_chip(strategy, race_num, chip, chips_used, input_fn)
+    # Race 1 picks the whole team, so has no moves to record
+    first = race_num == 1
     row = TeamRow(season=season_year, race=race_num, strategy=strategy, chip=chip_played, drivers=pick.drivers,
-                  constructors=pick.constructors, drs=drs, free_moves=confirmed.free_moves,
-                  moves_used=pick.moves_used, team_value=pick.cost,
+                  constructors=pick.constructors, drs=drs, free_moves=None if first else confirmed.free_moves,
+                  moves_used=None if first else pick.moves_used, team_value=pick.cost,
                   unused_budget=None if chip == LIMITLESS else confirmed.budget - pick.cost,
                   points_predicted=None, points=None)
 

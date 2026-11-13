@@ -11,7 +11,7 @@ from helpers import load_with_derivations
 from linear.strategy_p2pm import StrategyMaxP2PM
 from live.cli import main
 from live.collect import FastF1Api
-from live.lineup import fastf1_strategy, run_lineup
+from live.lineup import fastf1_strategy, run_lineup, run_race1_lineup
 from live.points import predict_points
 from live.team_file import TeamRow, read_team_file, write_row
 from races.season import factory_season
@@ -245,8 +245,8 @@ def test_p2pms_race_4_pick_plays_the_wildcard(tmp_path):
     assert (row.strategy, row.chip, row.drivers) == ("StrategyMaxP2PM", "Wildcard", options[0].pick.drivers)
 
 
-def _record(world) -> dict:
-    files = list(world["records"].glob(f"{SEASON}_6_*.json"))
+def _record(world, race: int = 6) -> dict:
+    files = list(world["records"].glob(f"{SEASON}_{race}_*.json"))
     assert len(files) == 1
     return json.loads(files[0].read_text())
 
@@ -279,10 +279,81 @@ def test_a_run_recording_nothing_still_saves_its_picks(world):
     assert len(record["options"]) == 1
 
 
-def test_race_1_is_refused(tmp_path):
+RACE_1_ODDS = "".join(f"{driver},{team},{SEASON},1,{price}\n" for driver, team, price in [
+    ("VER", "RED", "1-1"), ("PER", "RED", "3-1"), ("ALO", "AST", "6-1"), ("HAM", "MER", "8-1"),
+    ("LEC", "FER", "8-1"), ("SAI", "FER", "12-1"), ("RUS", "MER", "14-1")])
+
+
+def test_race_1_without_odds_is_refused(tmp_path, capsys):
     world = _world(tmp_path, next_race=1)
 
     assert _run(world, Inputs()) == 1
+
+    assert not world["team_file"].exists()
+    summary = capsys.readouterr().out.split("Summary:")[1]
+    assert f"Pick: refused - No odds for season {SEASON} race 1 in {world['odds']}" in summary
+
+
+def test_race_1_records_the_odds_pick_with_blank_moves(tmp_path):
+    world = _world(tmp_path, next_race=1, odds=RACE_1_ODDS)
+    inputs = Inputs("", "", "")
+
+    assert _run(world, inputs) == 0
+
+    expected = run_race1_lineup(_season(world).races[1], SEASON, str(world["odds"]))[0]
+    row = read_team_file(world["team_file"])[0]
+    assert row == TeamRow(season=SEASON, race=1, strategy=expected.strategies[0], chip="",
+                          drivers=expected.pick.drivers, constructors=expected.pick.constructors,
+                          drs=expected.pick.drs_driver, free_moves=None, moves_used=None,
+                          team_value=round(expected.pick.cost, 1), unused_budget=round(100.0 - expected.pick.cost, 1),
+                          points_predicted=None, points=None)
+    assert row.strategy == "StrategyBettingOdds:999.9"
+    assert not any(prompt.startswith("Held") for prompt in inputs.prompts)
+
+
+def test_race_1_offers_each_concentration_limit_and_saves_them(tmp_path, capsys):
+    world = _world(tmp_path, next_race=1, odds=RACE_1_ODDS)
+
+    _run(world, Inputs("x"))
+
+    record = _record(world, race=1)
+    labels = [label for option in record["options"] for label in option["strategies"]]
+    assert labels == [f"StrategyBettingOdds:{limit}" for limit in ("999.9", "4", "3", "2", "1", "0")]
+    assert record["held"] is None
+    assert "Held" not in capsys.readouterr().out
+
+
+def test_race_1_takes_a_manual_team_against_a_budget_of_100(tmp_path):
+    world = _world(tmp_path, next_race=1, odds=RACE_1_ODDS)
+    team = ("ALO@AST,HUL@HAA,NOR@MCL,SAR@WIL,TSU@ALT", "AST,HAA")
+
+    assert _run(world, Inputs("m", *team, "", "")) == 0
+
+    race = _season(world).races[1]
+    cost = sum(race.drivers[d].price for d in team[0].split(",")) + sum(race.constructors[c].price for c in ("AST", "HAA"))
+    row = read_team_file(world["team_file"])[0]
+    assert (row.strategy, row.free_moves, row.moves_used, row.unused_budget) == ("Manual", None, None,
+                                                                                round(100.0 - cost, 1))
+
+
+def test_race_1_refuses_a_chip_argument(tmp_path):
+    world = _world(tmp_path, next_race=1, odds=RACE_1_ODDS)
+
+    assert _run(world, Inputs(), "--chip", "wildcard") == 1
+
+    assert not world["team_file"].exists()
+
+
+def test_race_2_starts_from_race_1s_row_on_2_free_moves(tmp_path):
+    world = _world(tmp_path, next_race=2)
+    race_1 = replace(_row(1), strategy="StrategyBettingOdds:3", free_moves=None, moves_used=None)
+    write_row(world["team_file"], race_1)
+    inputs = Inputs("", "", "", "", "", "x")
+
+    assert _run(world, inputs) == 0
+
+    assert inputs.prompts[1:5] == ["Held drivers [ALO@AST,HUL@HAA,NOR@MCL,PIA@MCL,TSU@ALT]: ",
+                                   "Held constructors [AST,HAA]: ", "Unused budget [50.0]: ", "Free moves [2]: "]
 
 
 def _no_network(url):

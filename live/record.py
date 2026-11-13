@@ -32,7 +32,7 @@ def race_metrics_rows(metrics_file: Path | str, season: int, race: int) -> list[
             for row in rows.to_dict(orient="records")]
 
 
-def write_record(record_dir: Path | str, run_at: datetime, season: int, race: Race, chip: str, held: dict,
+def write_record(record_dir: Path | str, run_at: datetime, season: int, race: Race, chip: str, held: dict | None,
                  options: list[Option], recorded: TeamRow | None, fastf1_metrics: list[dict]) -> Path:
     """Save one run's record as `<season>_<race>_<UTC time>.json` in `record_dir`.
 
@@ -42,7 +42,8 @@ def write_record(record_dir: Path | str, run_at: datetime, season: int, race: Ra
         season: The season.
         race: The race picked for, whose prices are saved.
         chip: The chip given with `--chip`, or "".
-        held: The team held as confirmed: drivers, constructors, unused budget, free moves and value.
+        held: The team held as confirmed: drivers, constructors, unused budget, free moves and value;
+            None at race 1, where nothing is held.
         options: Every pick on offer.
         recorded: The row recorded, or None.
         fastf1_metrics: The race's FastF1 metrics rows, from `race_metrics_rows`.
