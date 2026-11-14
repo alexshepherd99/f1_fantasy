@@ -203,7 +203,8 @@ Numbered in the order they were settled. Q-numbers in `log.md` refer to the gril
   unlimited. (Q5, Q6)
 - **D30. Race-1 mode needs the new season in the archive.** BoxBox capture does not
   handle a new season; that is a separate backlog item, a prerequisite for real use,
-  not part of this effort. (Q5)
+  not part of this effort. (Q5) *2026-11-14: the backlog item moved into
+  `data_capture_v2` (steps 13–17, Gate 2); still not part of this effort.*
 
 ### Verification
 
@@ -220,6 +221,6 @@ Numbered in the order they were settled. Q-numbers in `log.md` refer to the gril
 ## Out of scope
 
 - Shadow teams per strategy (backlog).
-- BoxBox capture of a new season (backlog; D30).
+- BoxBox capture of a new season (in `data_capture_v2`, scope added 2026-11-14; D30).
 - Changing `StrategyMaxP2PM` or switching the live 2026 team off it.
 - Modelling chips inside the strategies (*Model the game's other chips*, backlog).

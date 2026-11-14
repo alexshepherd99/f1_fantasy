@@ -757,3 +757,44 @@ Las Vegas. The condition on 2026-11-13 (`--dry-run` only until this fix is built
 is met, so `boxbox.cli` can write again, with the diff reviewed against the app
 as before. `live.cli`'s BoxBox step goes through the same `capture`, so it is
 fixed too. Its fix A backstop is still `live_picks_v1`'s to decide.
+
+## 2026-11-14 — Scope: starting a new season
+
+Alex took the backlog item *Capture a new season from BoxBox* into this
+effort, so that as much as possible is ready for 2027. It cannot be tested for
+real until the game publishes 2027's prices after winter testing. So it is
+built as done (dev) steps (13–17) with a gate (Gate 2), the pattern Gate 1
+already follows. Step 6 was already waiting for the end of 2026. The effort
+now stays open until 2027 race 1.
+
+The decisions are in `requirements.md`'s *Scope addition, 2026-11-14*. Alex
+chose each one from options:
+
+- Row order: the previous season's, with new assets after (over alphabetical,
+  or BoxBox's order).
+- Race-1 guard: round, provisional and nothing-held checks, plus the stale-price
+  guard (over the checks alone).
+- Constructor count: taken from BoxBox, with the `common.py` line printed for
+  Alex to add (over adding it by hand first, which leaves the suite red until
+  the capture).
+- Build before step 6's review (over waiting for it).
+- Start automatically, but only for the next season (over a `--new-season`
+  flag).
+- A finished season exits 0 (over keeping the exit-1 refusal all winter).
+- While unattended: commit and push each step. Park a step needing a decision
+  and carry on with independent ones (over stopping at the first blocker).
+
+**Two things the backlog entry had wrong.** `cli.WORKBOOK_LAST_RACE` needs no
+2027 entry, as a season it lacks has no workbook era (`.get(season, 0)`). And
+`TEAM_CODES` needs an entry only for a team new in 2027, which is not known
+yet, so it stays a Gate 2 hand edit.
+
+**The loader already copes.** A throwaway check (scratch folder, not kept)
+loaded a 2027 archive with only race-1 prices and empty points. It gave
+0-point rows and passed all three integrity checks, so no `import_data/` edit
+is expected. Step 14 keeps a test of it.
+
+**What BoxBox looks like between seasons is unknown.** The latest copy
+(2026-11-14) is still `phase: pre_fp`, round 23. The plan builds against
+2026's file structure. Step 6's winter copies and Gate 2 check that against
+the real changeover.

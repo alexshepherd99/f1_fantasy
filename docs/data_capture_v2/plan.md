@@ -4,7 +4,8 @@ Requirements and decisions are in `requirements.md`. One commit per step, test
 first for every behaviour change, suite green at the end of each. Steps 1–5
 moved the archive to CSV. Steps 7–11 build the BoxBox fetcher, and Gate 1
 checks its first captures against the app. Step 6 reviews its rules once
-enough weekly copies are saved.
+enough weekly copies are saved. Steps 13–17 start a new season (scope added
+2026-11-14), and Gate 2 checks the first real start, 2027 race 1.
 
 ## Shape
 
@@ -75,6 +76,10 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
    span the end of the 2026 season, look at what changes between them: when
    points appear, when prices move, and how a driver change shows up. Also
    check a web archive for older versions. Tighten the rules if they need it.
+   Since 2026-11-14 this also covers the new-season mode (steps 13–17), built
+   before this review. Keep the weekly dry runs going through the winter, so the
+   copies show how BoxBox's files change from 2026 to 2027. Do the review
+   before Gate 2.
 
 7. ~~Fetch and save~~ — done 2026-11-08, see log *Step 7*.
 
@@ -90,6 +95,61 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 12. ~~Prices from `predictions.json`~~ — done (dev) 2026-11-13, see log
     *Step 12*. Added after `season_summary.json`'s prices went back a race
     (log, 2026-11-12). Verified at Gate 1's second race.
+
+Steps 13–17 start a new season, per `requirements.md`'s *Scope addition,
+2026-11-14*. They run unattended (*Working unattended* there), done (dev)
+only, and Gate 2 verifies them.
+
+13. **A finished season is not a failure.** When the archive's latest race is
+    BoxBox's last listed round, is held and already has points, the run
+    reports that the season is complete, writes nothing and exits 0. The
+    copy is still saved, and the earlier-race warnings are still shown.
+    `live.collect.collect_boxbox` reports this as nothing to do, not as
+    refused. Every other "already has points" case is still refused.
+
+14. **Seasons in the archive match `common.py`.** A test reads the archive
+    CSVs and fails if they hold a season that `common.F1_SEASON_CONSTRUCTORS`
+    does not list. It passes on today's data, so it is proved by mutation
+    (a scratch archive with an extra season turns it red). A kept test also
+    shows that a race-1-only season (prices, empty points) loads through
+    `load_archive_data_season` and passes the integrity checks.
+
+15. **Decide a start.** `decide_change` gains a third mode, *start*, for
+    BoxBox's season when it is exactly one after the archive's latest. It
+    returns race 1's rows with empty points from `predictions.json`, in the
+    previous season's order with new assets after, and the number of
+    constructors BoxBox prices. It refuses:
+    - a season that is not the next one, or one already in the archive that
+      the existing modes handle;
+    - any round already held (race 1's prices can no longer be had: enter it
+      by hand);
+    - prices for a round other than BoxBox's first listed round (as not yet);
+    - provisional prices (as not yet);
+    - every carried-over asset still at its final previous-season price (as
+      not yet);
+    - unknown teams or driver keys, as today.
+    `driver_history.json` is not read for a start, so a pre-season file
+    without results is no obstacle. A test shows that a re-run before race 1
+    is held is an ordinary correction.
+
+16. **Write and report a start.** `write_change` places a new season's rows
+    after the previous season's last row, in the order step 15 gives, and
+    integrity-checks them against the constructor count from the change
+    rather than `common.py`. The report shows each asset's final price from
+    the previous season beside its new price, and marks assets new to the
+    season. After writing, it prints the line to add to
+    `common.F1_SEASON_CONSTRUCTORS` in the same commit. `live.collect`'s
+    summary names a start as one.
+
+17. **Rehearse, and update the docs.** Build a hand-made 2027 copy from a
+    saved 2026 copy: season 2027, no round held, prices for round 1, with
+    one team renamed and one driver moved. Run `boxbox.cli --from-copy`
+    against a scratch copy of the archive, never `data/`. Check that the
+    written rows load, follow the agreed order, and that each refusal
+    triggers on a copy edited to provoke it. Record the run in the log.
+    Then update `README.md`'s and `CLAUDE.md`'s BoxBox paragraphs and the
+    *Not handled yet* paragraph below, replacing "not handled yet" with how
+    a start works.
 
 ## How a run works
 
@@ -134,7 +194,7 @@ the 437 driver and 209 constructor results matched. It also warns when
 `season_summary.json`'s prices differ from `predictions.json`'s, naming
 each; that shows whether BoxBox's 2026-11-09 fault in that file comes back.
 
-**Not handled yet:** a new season. The first 2027 run needs the season in
+**Not handled yet:** a new season (being built in steps 13–17). The first 2027 run needs the season in
 `common.F1_SEASON_CONSTRUCTORS` and a race 1 written from prices alone. The
 fetcher refuses a `season` it does not find in the archive until that is
 built, before 2027 race 1.
@@ -150,3 +210,14 @@ prices now come from different files, which BoxBox can rebuild at different
 times, so the round check is the expected guard against a partial update;
 "no price has moved" stays behind it. The second race is also the first
 capture with prices from `predictions.json`.
+
+**Gate 2: the first real start, 2027 race 1.** This runs once the game has
+published 2027's prices, after winter testing, and after step 6's review of
+the winter copies. Alex runs the capture and checks every race-1 price and
+seat against the F1 Fantasy app. He adds the printed line to
+`common.F1_SEASON_CONSTRUCTORS`, plus any `TEAM_CODES` entry a new team needs,
+then reviews the CSV diff and commits with the suite green. Expect it to find
+differences in BoxBox's pre-season files that the hand-made copy could not
+foresee (an empty `driver_history.json`, a season change that lands in one
+file before the others, new fields). A re-run before race 1 that corrects a
+late driver change is part of the gate if one happens.

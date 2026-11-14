@@ -172,20 +172,6 @@ The check is decided now so that 2027 tests it blind:
 
 Raised by Alex 2026-11-08.
 
-## Capture a new season from BoxBox
-
-`boxbox/` handles only a season already in the archive (`CLAUDE.md`, *boxbox*).
-A new season's first capture would have to add its assets and race-1 prices, and
-`common.F1_SEASON_CONSTRUCTORS`, `boxbox/mapping.py`'s `TEAM_CODES` and
-`cli.WORKBOOK_LAST_RACE` all need the new season. Until then the new season goes
-into the archive CSVs by hand.
-
-A prerequisite for real use of `live_picks_v1`'s race-1 mode (its D30), so needed
-before 2027's first race. BoxBox serves only the current season and prices are
-published after winter testing, so it can only be run for real then.
-
-Raised by Alex 2026-11-09, from `live_picks_v1`.
-
 ## Shadow teams per strategy, tracked live
 
 `live_picks_v1` records only the pick Alex played (its D8). Each strategy's pick

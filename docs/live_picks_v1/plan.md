@@ -81,8 +81,9 @@ a race has results with changed inputs reported (D28); running
 
 ### 7. Race-1 mode
 
-D29. Depends on D30's backlog item for real use, or the new season's prices entered
-into the archive by hand.
+D29. For real use, depends on BoxBox starting the new season: `data_capture_v2` steps
+13–17 and its Gate 2, where that backlog item moved on 2026-11-14 (D30). Otherwise
+the new season's prices are entered into the archive by hand.
 
 ### 8. Score the season's final race
 
@@ -114,7 +115,10 @@ refused ("no input"), and exits 1.
   the prediction equals the app's points or differs by a nameable effect. A
   difference blocks the verified label and is investigated before the next pick.
 - **Gate 2 — pre-season 2027** (after step 7). A race-1 run on real prices and a
-  real odds page.
+  real odds page. Comes after, or in the same sitting as, `data_capture_v2`'s Gate 2,
+  which writes race 1 into the archive. One `live.cli` run can do both: the race-1
+  path loads the season directly (`load_with_derivations(season_year)`) and does not
+  need 2027 in `common.F1_SEASON_CONSTRUCTORS` yet (checked 2026-11-14).
 - **Gate 3 — first race with a FastF1 pick shown** (after step 6). D32: the pick
   equals a back-test-style `StrategyFastF1RuleRise` run on the same inputs. Also: the
   metrics file's `git diff --numstat` shows only that race's lines changed.

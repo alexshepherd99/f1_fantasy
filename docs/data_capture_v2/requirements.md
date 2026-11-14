@@ -80,6 +80,72 @@ same day. The steps are in `plan.md`.
   (who has a row, and their prices and points) to match BoxBox. It still
   never touches the history the workbook holds.
 
+## Scope addition, 2026-11-14: starting a new season
+
+Taken in from the `BACKLOG.md` item *Capture a new season from BoxBox*, raised
+by Alex 2026-11-09 from `live_picks_v1` (its D30). The aim is to have as much
+as possible ready before 2027 race 1. BoxBox serves only the current season,
+and the game publishes a season's prices after winter testing, so the first
+real run can only happen then (Gate 2). Until then it is built and rehearsed
+against hand-made files only, and reaches **done (dev)**. Decided by Alex
+2026-11-14:
+
+- **A run starts a season by itself, but only the next one.** When BoxBox's
+  season is exactly one after the archive's latest, the run *starts* that
+  season: it writes race 1's rows from `predictions.json`'s prices, with empty
+  points. Any other season BoxBox names that the archive lacks is refused.
+- **Race 1's prices must be for round 1, with none provisional and no round
+  held yet.** If a round is already held, race 1's prices can no longer be
+  had from BoxBox, so the run refuses and the race is entered by hand.
+- **Stale-price guard.** There is no earlier race whose prices should have
+  moved, so instead the run refuses (as not yet) if every asset carried over
+  from the previous season still has its final price from that season. That
+  would mean BoxBox is still serving last season's prices.
+- **Row order follows the previous season.** An asset is a driver in a seat
+  (`DRIVER@CONSTRUCTOR`) or a constructor code. Each asset that carries over
+  keeps the previous season's position. Assets new to the season (a new
+  team code, or a driver in a new seat) go after them, in BoxBox's order.
+  Row order is load-bearing (`CLAUDE.md`, *Data conventions*), and this keeps
+  it deterministic and close to how 2026 was ordered by hand.
+- **The constructor count comes from BoxBox, and Alex adds it to `common.py`.**
+  `load_all_archive_data` raises for a season in
+  `common.F1_SEASON_CONSTRUCTORS` that the archive lacks, so the count cannot
+  be added ahead of the first capture. Instead, the run integrity-checks the
+  new season against the number of constructors BoxBox prices. It then
+  prints the line to add to `common.F1_SEASON_CONSTRUCTORS`, which goes in
+  the same commit as the data. A test fails if the archive holds a season
+  `common.py` does not list, so the line cannot be forgotten. The capture
+  never edits source code.
+- **A finished season is not a failure.** Once the season's last round is
+  held and captured, a run finds nothing to do. It says the season is
+  complete, writes nothing and exits 0, so weekly dry runs over the winter
+  do not fail. The download is still saved. `live.cli`'s BoxBox step reports
+  it as nothing to do, not as a refusal.
+- **A start shows the previous season's prices beside the new ones,** and marks
+  assets new to the season, so the run can be checked against the app.
+- **Correcting race 1 before it is held needs nothing new.** Once race 1 is
+  in the archive, a re-run is an ordinary correction, as no workbook era
+  applies to a new season. A test proves it.
+- **`import_data/` is not expected to change.** A throwaway check on
+  2026-11-14 loaded a race-1-only season (prices, empty points) through
+  `load_archive_data_season`, and it passed the integrity checks. A kept test
+  proves it. If a core module turns out to need an edit, the step is parked
+  for Alex (see *Working unattended*).
+- **Out of scope:** everything else the new season needs outside `boxbox/`.
+  That includes `backtest.cli.COMPLETED_SEASONS`, `live_picks_v1`'s race-1
+  mode, odds and `fast_f1`, and any `TEAM_CODES` entry for a team that
+  appears in 2027. An unknown team is refused as today and added by hand at
+  Gate 2.
+
+### Working unattended
+
+Alex left steps 13–17 to run unattended (2026-11-14). Each step is one
+test-first commit with the suite green, pushed to main when it is done. If a
+step needs his decision, the question goes in the log, that step and anything
+depending on it are parked, and the independent steps go on. A summary at the
+end lists everything parked. Nothing writes to `data/`: the rehearsal (step
+17) runs against a scratch copy of the archive.
+
 ## Checks on the loader rewrite
 
 The bar is the one set for the last core-module change that could move results
@@ -215,5 +281,8 @@ Still open:
 - Writing one race produces a git diff covering that race and nothing else.
 - The fetcher has been run against the live BoxBox files for a real race
   weekend, not just against test fixtures.
+- A run starts the next season from BoxBox's race-1 prices. This has been
+  rehearsed against hand-made files (done (dev)) and run for real at 2027's
+  first capture (Gate 2, done (verified)).
 - `README.md` and `CLAUDE.md` describe the CSV archive and its source rather
   than the wide workbook and its null/zero rule.
