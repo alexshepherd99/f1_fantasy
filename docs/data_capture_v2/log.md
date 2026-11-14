@@ -823,3 +823,29 @@ summary whose last round is round 4.
   red. Each was restored from a copy, with the suite green in between.
 
 The suite went from 903 to 908, all passing.
+
+## 2026-11-14 — Step 14: seasons in the archive match `common.py`
+
+Tests only, so `import_data/` and `common.py` are unchanged.
+
+- **`tests/test_archive_integrity.py`** has `unlisted_seasons`: the seasons in
+  either archive CSV that `F1_SEASON_CONSTRUCTORS` lacks. One test asserts
+  there are none in `data/`, and its message says what to add. Another
+  shows that the helper finds a 2027 added to a fixture archive.
+- **`tests/test_import_history.py`** shows that a season holding only race-1
+  prices loads with 0 points and passes all three integrity checks. That is
+  how a new season stands after a start.
+
+Each passes on today's code, so each was proved by mutation, restored from a
+copy with the suite green in between:
+
+- `unlisted_seasons` returning an empty set: the fixture test went red
+  (`assert set() == {2027}`). A first attempt, `set() or {...}`, left it green
+  because it still evaluated the real set. It was redone as a plain
+  `return set()`.
+- `2026` removed from `common.F1_SEASON_CONSTRUCTORS`: the `data/` test went
+  red.
+- The loader's 0-points fill for a race not yet run removed: the race-1 test
+  went red (`IntCastingNaNError`).
+
+The suite went from 908 to 911, all passing.

@@ -324,6 +324,28 @@ def test_load_archive_data_season_fills_points_for_race_not_yet_run(tmp_path):
     assert_frame_equal(df_constructors, df_expected)
 
 
+def test_a_season_with_only_race_1_prices_loads_and_passes_the_integrity_checks(tmp_path):
+    """How a new season stands after BoxBox starts it: race 1 priced, nothing run yet."""
+    fn = _write_archive(
+        tmp_path,
+        [_DRIVERS_HEADER, "2027,1,MER,RUS,,27", "2027,1,MER,ANT,,23", "2027,1,RED,VER,,28", "2027,1,RED,HAD,,15"],
+        [_CONSTRUCTORS_HEADER, "2027,1,MER,,29", "2027,1,RED,,28"],
+    )
+
+    df_drivers = load_archive_data_season(AssetType.DRIVER, 2027, fn=fn)
+    df_constructors = load_archive_data_season(AssetType.CONSTRUCTOR, 2027, fn=fn)
+
+    assert df_drivers[["Driver", "Race", "Points", "Price"]].values.tolist() == [
+        ["RUS@MER", 1, 0.0, 27.0], ["ANT@MER", 1, 0.0, 23.0], ["VER@RED", 1, 0.0, 28.0], ["HAD@RED", 1, 0.0, 15.0],
+    ]
+    assert df_constructors[["Constructor", "Race", "Points", "Price"]].values.tolist() == [
+        ["MER", 1, 0, 29.0], ["RED", 1, 0, 28.0],
+    ]
+    check_merged_integrity_drivers(df_drivers, 2)
+    check_merged_integrity_constructors(df_constructors, 2)
+    check_drivers_against_constructors(df_drivers, df_constructors)
+
+
 def test_load_archive_data_season_constructor_points_are_integers(tmp_path):
     fn = _fixture_archive(tmp_path)
 

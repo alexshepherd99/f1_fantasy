@@ -108,7 +108,8 @@ only, and Gate 2 verifies them.
     `live.collect.collect_boxbox` reports this as nothing to do, not as
     refused. Every other "already has points" case is still refused.
 
-14. **Seasons in the archive match `common.py`.** A test reads the archive
+14. ~~Seasons in the archive match `common.py`~~ — done (dev) 2026-11-14, see
+    log *Step 14*. A test reads the archive
     CSVs and fails if they hold a season that `common.F1_SEASON_CONSTRUCTORS`
     does not list. It passes on today's data, so it is proved by mutation
     (a scratch archive with an extra season turns it red). A kept test also
