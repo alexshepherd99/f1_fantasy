@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from boxbox.change import COMPLETE, CaptureNotYet, CaptureRefused
-from boxbox.cli import capture
+from boxbox.change import COMPLETE, START, CaptureNotYet, CaptureRefused
+from boxbox.cli import capture, common_line
 from boxbox.source import BoxBoxDataError
 from fast_f1.api import get_event_schedule, get_session_drivers
 from fast_f1.auth import load_f1_credentials
@@ -74,6 +74,8 @@ def collect_boxbox(archive_dir: str, copy_dir: str, fetch: Callable[[str], bytes
         return StepOutcome(step, FAILED, str(exc))
     if change.mode == COMPLETE:
         return StepOutcome(step, DONE, f"season {change.season} complete: nothing to capture")
+    if change.mode == START:
+        return StepOutcome(step, DONE, f"start season {change.season} race 1: add {common_line(change)}")
     return StepOutcome(step, DONE, f"{change.mode} season {change.season} race {change.target_race}")
 
 

@@ -10,6 +10,7 @@ from tests.boxbox_fixtures import (
     DRIVERS_CSV_RACE_3_CAPTURED,
     RACE_3_PRICES,
     modified,
+    new_season_files,
     predictions,
     raw_files,
     season_ends_at_round_4,
@@ -103,6 +104,44 @@ def test_a_complete_season_exits_0_and_writes_nothing(tmp_path, capsys):
     assert (archive / "f1_fantasy_constructors.csv").read_text() == CONSTRUCTORS_CSV_RACE_3_CAPTURED
     out = capsys.readouterr().out
     assert "Season 2026 is complete" in out and "Nothing written" in out
+
+
+def _new_season_copy(folder):
+    folder.mkdir()
+    for name, body in new_season_files().items():
+        (folder / f"{name}.json").write_bytes(body)
+    return folder
+
+
+def test_start_writes_race_1_and_names_the_line_to_add_to_common(tmp_path, capsys):
+    archive = _archive(tmp_path, DRIVERS_CSV_RACE_3_CAPTURED, CONSTRUCTORS_CSV_RACE_3_CAPTURED)
+
+    code = main(["--from-copy", str(_new_season_copy(tmp_path / "copy")), "--archive-dir", str(archive)])
+
+    assert code == 0
+    assert (archive / "f1_fantasy_constructors.csv").read_text().endswith("2027,1,CAD,,6.2\n")
+    assert "Add 2027: 3 to common.F1_SEASON_CONSTRUCTORS" in capsys.readouterr().out
+
+
+def test_start_report_shows_last_seasons_final_prices_and_new_assets(tmp_path, capsys):
+    archive = _archive(tmp_path, DRIVERS_CSV_RACE_3_CAPTURED, CONSTRUCTORS_CSV_RACE_3_CAPTURED)
+
+    code = main(["--from-copy", str(_new_season_copy(tmp_path / "copy")), "--archive-dir", str(archive), "--dry-run"])
+
+    assert code == 0
+    assert (archive / "f1_fantasy_drivers.csv").read_text() == DRIVERS_CSV_RACE_3_CAPTURED
+    out = capsys.readouterr().out
+    lines = {" ".join(line.split()) for line in out.splitlines()}
+    assert {
+        "Season 2027, race 1: start",
+        "Race 1 prices, against season 2026's final prices (race 3), for 3 constructors:",
+        "VER@RED 28.5 -> 29.0 +0.5",
+        "LAW@RED new -> 8.0",
+        "HAD@RED 9.8 -> dropped",
+        "CAD new -> 6.2",
+        "MER 31.0 -> 31.5 +0.5",
+    } <= lines
+    assert "common.F1_SEASON_CONSTRUCTORS" not in out
 
 
 def test_unreadable_files_exit_1(tmp_path, capsys):

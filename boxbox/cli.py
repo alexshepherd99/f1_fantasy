@@ -9,7 +9,9 @@ either fills the race just held's points and prices the next race, or, before
 a race is held, corrects its line-up and prices. It prints each asset's
 previous and new values, and refuses with exit 1, writing nothing, when the
 data is not updated yet or does not add up. Once the season's last race is
-captured it says the season is complete, writes nothing and exits 0. Review the CSVs' git diff before
+captured it says the season is complete, writes nothing and exits 0. When
+BoxBox serves the next season it starts it, writing race 1's prices and
+printing the line to add to ``common.F1_SEASON_CONSTRUCTORS``. Review the CSVs' git diff before
 committing. ``--from-copy`` re-runs on a saved copy; ``--dry-run`` writes
 nothing. See ``docs/data_capture_v2/plan.md``, *How a run works*.
 """
@@ -26,7 +28,7 @@ from pathlib import Path
 import pandas as pd
 
 from boxbox.archive_file import write_change
-from boxbox.change import CAPTURE, COMPLETE, ArchiveRow, CaptureRefused, Change, decide_change
+from boxbox.change import CAPTURE, COMPLETE, START, ArchiveRow, CaptureRefused, Change, decide_change
 from boxbox.source import (
     BOXBOX_URLS,
     DEFAULT_COPY_DIR,
@@ -98,6 +100,12 @@ def describe(change: Change, drivers: pd.DataFrame, constructors: pd.DataFrame, 
     if change.mode == COMPLETE:
         lines.append(f"  Season {change.season} is complete: its last race, {target}, has its points. "
                      f"Nothing to capture until BoxBox serves season {change.season + 1}")
+    elif change.mode == START:
+        previous = change.season - 1
+        last_race = int(drivers.loc[drivers["Season"] == previous, "Race"].max())
+        lines.append(f"  Race 1 prices, against season {previous}'s final prices (race {last_race}), "
+                     f"for {change.new_season_constructors} constructors:")
+        lines += _price_lines(rows[target], _held(drivers, constructors, previous, last_race))
     elif change.mode == CAPTURE:
         lines.append(f"  Race {target} points:")
         lines += [f"    {_label(row):<10} {row.points:g}" for row in rows[target]]
@@ -150,7 +158,14 @@ def capture(archive_dir: str, copy_dir: str, fetch: Callable[[str], bytes] | Non
         return change
     write_change(change, archive_dir, season_constructors or F1_SEASON_CONSTRUCTORS)
     print(f"Wrote to {archive_dir}. Review the CSVs' git diff before committing.")
+    if change.mode == START:
+        print(f"Add {common_line(change)} in the same commit, then run the test suite.")
     return change
+
+
+def common_line(change: Change) -> str:
+    """The entry a start needs in ``common.F1_SEASON_CONSTRUCTORS``, whose loaders skip a season it lacks."""
+    return f"{change.season}: {change.new_season_constructors} to common.F1_SEASON_CONSTRUCTORS"
 
 
 def main(argv: Sequence[str] | None = None, fetch: Callable[[str], bytes] | None = None,

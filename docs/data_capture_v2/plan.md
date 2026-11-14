@@ -135,7 +135,8 @@ only, and Gate 2 verifies them.
     without results is no obstacle. A test shows that a re-run before race 1
     is held is an ordinary correction.
 
-16. **Write and report a start.** `write_change` places a new season's rows
+16. ~~Write and report a start~~ — done (dev) 2026-11-14, see log *Step 16*.
+    `write_change` places a new season's rows
     after the previous season's last row, in the order step 15 gives, and
     integrity-checks them against the constructor count from the change
     rather than `common.py`. The report shows each asset's final price from

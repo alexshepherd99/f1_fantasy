@@ -1,3 +1,5 @@
+import dataclasses
+
 import pytest
 
 from boxbox.archive_file import write_change
@@ -7,8 +9,11 @@ from common import AssetType
 from import_data.import_history import read_archive_file
 from tests.boxbox_fixtures import (
     CONSTRUCTORS_CSV,
+    CONSTRUCTORS_CSV_RACE_3_CAPTURED,
     DRIVERS_CSV,
+    DRIVERS_CSV_RACE_3_CAPTURED,
     modified,
+    new_season_files,
     predictions,
     raw_files,
     swap_driver,
@@ -129,3 +134,36 @@ def test_write_refuses_a_result_that_fails_the_integrity_checks_and_writes_nothi
     assert (tmp_path / _DRIVERS_FILE).read_text() == DRIVERS_CSV
     assert (tmp_path / _CONSTRUCTORS_FILE).read_text() == CONSTRUCTORS_CSV
     assert sorted(p.name for p in tmp_path.iterdir()) == [_CONSTRUCTORS_FILE, _DRIVERS_FILE]
+
+
+def _decide_start(fn) -> Change:
+    return decide_change(read_archive_file(AssetType.DRIVER, fn), read_archive_file(AssetType.CONSTRUCTOR, fn),
+                         parse_files(new_season_files()), {})
+
+
+def test_write_start_appends_the_new_season_and_checks_it_against_boxboxs_count(tmp_path):
+    fn = str(write_archive(tmp_path, DRIVERS_CSV_RACE_3_CAPTURED, CONSTRUCTORS_CSV_RACE_3_CAPTURED))
+
+    write_change(_decide_start(fn), fn, _TWO_TEAMS)  # _TWO_TEAMS has no 2027: the count comes from BoxBox
+
+    assert (tmp_path / _DRIVERS_FILE).read_text() == DRIVERS_CSV_RACE_3_CAPTURED + """2027,1,RED,VER,,29
+2027,1,MER,RUS,,27.5
+2027,1,MER,ANT,,21
+2027,1,CAD,BOT,,6
+2027,1,RED,LAW,,8
+2027,1,CAD,PER,,6.5
+"""
+    assert (tmp_path / _CONSTRUCTORS_FILE).read_text() == CONSTRUCTORS_CSV_RACE_3_CAPTURED + """2027,1,RED,,30.5
+2027,1,MER,,31.5
+2027,1,CAD,,6.2
+"""
+
+
+def test_write_start_refuses_a_new_season_that_does_not_match_boxboxs_count(tmp_path):
+    fn = str(write_archive(tmp_path, DRIVERS_CSV_RACE_3_CAPTURED, CONSTRUCTORS_CSV_RACE_3_CAPTURED))
+    change = dataclasses.replace(_decide_start(fn), new_season_constructors=2)
+
+    with pytest.raises(CaptureRefused, match="integrity"):
+        write_change(change, fn, _TWO_TEAMS)
+
+    assert (tmp_path / _DRIVERS_FILE).read_text() == DRIVERS_CSV_RACE_3_CAPTURED

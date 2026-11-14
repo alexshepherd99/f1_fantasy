@@ -3,7 +3,8 @@
 Rows of the races the change covers are taken out, and each new row goes
 straight after the last row of the same asset earlier in the season, so a
 capture lands beside each asset's previous race. An asset new to the season
-goes after the season's last row. Every other line is written back exactly as
+goes after the season's last row, and a new season after the file's last row,
+in the order given. Every other line is written back exactly as
 it was read.
 
 Both files are written to a scratch folder first, loaded through
@@ -90,6 +91,7 @@ def write_change(change: Change, fn: str, season_constructors: dict[int, int] = 
         change: The rows to write.
         fn: Directory holding the archive CSVs.
         season_constructors: Constructors expected per season, for the integrity checks.
+            A start checks against its own ``new_season_constructors`` instead.
 
     Raises:
         CaptureRefused: If the archive with the change applied fails to load or
@@ -106,7 +108,10 @@ def write_change(change: Change, fn: str, season_constructors: dict[int, int] = 
         for asset_type, text in texts.items():
             Path(scratch, _ARCHIVE_FILES[asset_type]).write_text(text)
         try:
-            _check(scratch, change.season, season_constructors[change.season])
+            # A new season is not in common.F1_SEASON_CONSTRUCTORS until after its start is written
+            num_constructors = (change.new_season_constructors if change.new_season_constructors is not None
+                                else season_constructors[change.season])
+            _check(scratch, change.season, num_constructors)
         except (ValueError, KeyError) as exc:
             message = f"The archive with this change fails its integrity checks, so nothing was written: {exc}"
             logger.error(message)

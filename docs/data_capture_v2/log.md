@@ -897,3 +897,35 @@ the write, as `common.py` has no 2027 count (`KeyError`, reported as failing
 the integrity checks). Nothing is written by mistake in between.
 
 The suite went from 911 to 920, all passing.
+
+## 2026-11-14 — Step 16: writing and reporting a start
+
+- **`write_change`** integrity-checks a start against its
+  `new_season_constructors`, not `common.py`. No placement change was needed:
+  with no earlier row of the season, `_place_rows` already appends each new
+  row after the file's last, in the order given.
+- **`describe`** reports a start as "Race 1 prices, against season 2026's final
+  prices (race 3), for 3 constructors", using the existing old/new/change
+  columns. A seat or team new to the season shows "new", and one that has gone
+  shows "dropped".
+- **`capture`** prints "Add 2027: 3 to common.F1_SEASON_CONSTRUCTORS in the
+  same commit, then run the test suite" after writing. A dry run does not
+  print it. The text comes from `boxbox.cli.common_line`, which
+  `live.collect.collect_boxbox` also uses for its done detail: "start season
+  2027 race 1: add 2027: 3 to common.F1_SEASON_CONSTRUCTORS".
+
+- **Seen failing first:** the writer test (`KeyError: 2027`, reported as failing
+  the integrity checks), both CLI tests (exit 1, and report lines missing),
+  and the collect test (refused, not done).
+- **Proved by mutation:** the test that a start whose count doesn't match its
+  teams is refused passed before the change, because the `KeyError` also
+  refused it. Hard-coding the count to 3 turned it red. Dropping the
+  `common.py` line and comparing against race 1 instead of the last race each
+  turned their test red. Each was restored from a copy, with the tests green
+  after.
+
+The writer tests were appended with a shell heredoc rather than the Edit
+tool, against Alex's standing rule. The content is as reviewed in the commit.
+Every later change used Edit.
+
+The suite went from 920 to 925, all passing.

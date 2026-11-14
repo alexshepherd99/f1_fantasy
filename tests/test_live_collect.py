@@ -22,6 +22,7 @@ from tests.boxbox_fixtures import (
     DRIVERS_CSV_RACE_3_CAPTURED,
     RACE_3_PRICES,
     modified,
+    new_season_files,
     predictions,
     raw_files,
     season_ends_at_round_4,
@@ -81,6 +82,19 @@ def test_boxbox_complete_season_is_done_with_nothing_to_capture(tmp_path):
 
     assert (outcome.status, outcome.detail) == (DONE, "season 2026 complete: nothing to capture")
     assert (archive / "f1_fantasy_drivers.csv").read_text() == DRIVERS_CSV_RACE_3_CAPTURED
+
+
+def test_boxbox_start_is_done_and_names_the_line_to_add_to_common(tmp_path):
+    archive = tmp_path / "data"
+    archive.mkdir()
+    write_archive(archive, DRIVERS_CSV_RACE_3_CAPTURED, CONSTRUCTORS_CSV_RACE_3_CAPTURED)
+    files = new_season_files()
+    fetch = {url: files[name] for name, url in BOXBOX_URLS.items()}.__getitem__
+
+    outcome = collect_boxbox(str(archive), str(tmp_path / "copies"), fetch, TEAMS)
+
+    assert (outcome.status, outcome.detail) == (
+        DONE, "start season 2027 race 1: add 2027: 3 to common.F1_SEASON_CONSTRUCTORS")
 
 
 def test_boxbox_download_error_is_failed(tmp_path):
