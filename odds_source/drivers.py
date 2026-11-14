@@ -7,6 +7,7 @@ from a fixed table of FastF1 team names, as teams change rarely (D11).
 from __future__ import annotations
 
 import logging
+import re
 import unicodedata
 from dataclasses import dataclass
 from typing import Callable
@@ -44,6 +45,11 @@ _SESSION_CODES = {
 }
 _RACE_CODE = "R"
 _ENTRY_COLUMNS = ["Abbreviation", "TeamName", "FirstName", "LastName"]
+
+# An unmatched name goes into a committed CSV as the page spells it, so it must be only a
+# name: a letter first, so no spreadsheet reads it as a formula, then letters, spaces,
+# hyphens, apostrophes and full stops. ``[^\W\d_]`` is any letter, accented or not.
+_PLAIN_NAME = re.compile(r"[^\W\d_](?:[^\W\d_]|[ .'’-])*")
 
 
 @dataclass(frozen=True)
@@ -107,8 +113,8 @@ def match_drivers(prices: dict[str, str], entry_list: pd.DataFrame) -> list[Odds
     is kept as the page spells it, with a warning (D6, D15).
 
     Raises:
-        ValueError: A matched driver's team is not in ``TEAM_CODES``, or two names
-            match the same driver.
+        ValueError: A matched driver's team is not in ``TEAM_CODES``, two names
+            match the same driver, or an unmatched name is not a plain name.
     """
     drivers = [
         (row.Abbreviation, row.TeamName, _normalise(row.LastName), _normalise(row.FirstName) + _normalise(row.LastName))
@@ -121,6 +127,8 @@ def match_drivers(prices: dict[str, str], entry_list: pd.DataFrame) -> list[Odds
         if len(candidates) > 1:
             candidates = [driver for driver in candidates if driver[3] == words]
         if len(candidates) != 1:
+            if not _PLAIN_NAME.fullmatch(name):
+                _fail(f"No driver matches {name!r}, and it is not a plain name, so it is not written to the odds file")
             logger.warning("No driver matches %s; kept by name with no constructor", name)
             entries.append(OddsEntry(name, "", odds))
             continue

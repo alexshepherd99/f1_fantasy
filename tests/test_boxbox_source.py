@@ -154,6 +154,25 @@ def test_parse_files_rejects_unexpected_structure(summary, history, message):
         parse_files(raw_files(summary, history))
 
 
+@pytest.mark.parametrize(
+    "summary, history, prediction",
+    [
+        (None, None, modified(predictions(), lambda p: p["drivers"][0].update(current_price=float("inf")))),
+        (None, None, modified(predictions(), lambda p: p["constructors"][0].update(current_price=float("nan")))),
+        (None, modified(driver_history(), lambda h: h["drivers"]["VER"]["rounds"][0].update(points=float("nan"))),
+         None),
+        (None, modified(driver_history(), lambda h: h["drivers"]["VER"]["rounds"][0].update(round=float("inf"))),
+         None),
+        (modified(season_summary(), lambda s: s["driver_prices"]["VER"].update(current_price=float("-inf"))), None,
+         None),
+    ],
+)
+def test_parse_files_rejects_numbers_that_are_not_finite(summary, history, prediction):
+    # json.loads reads BoxBox's non-standard NaN and Infinity as floats; json.dumps writes them for the fixtures
+    with pytest.raises(BoxBoxDataError, match="finite"):
+        parse_files(raw_files(summary, history, prediction))
+
+
 def test_parse_files_rejects_a_file_that_is_not_json():
     raw = raw_files()
     raw[SEASON_SUMMARY] = b"<html>maintenance</html>"

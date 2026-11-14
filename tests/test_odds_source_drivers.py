@@ -46,6 +46,17 @@ def test_an_unmatched_name_is_kept_with_no_constructor(caplog):
     assert "Esteban Ocon" in caplog.text
 
 
+@pytest.mark.parametrize("name", ["Pato O’Ward", "Jérôme d'Ambrosio", "Jean-Éric Vergne", "Carlos Sainz Jr."])
+def test_an_unmatched_name_may_hold_accents_apostrophes_hyphens_and_full_stops(name):
+    assert match_drivers({name: "500/1"}, _ENTRY_LIST) == [OddsEntry(name, "", "500/1")]
+
+
+@pytest.mark.parametrize("name", ["=1+1", "+44 Hamilton", "-Ocon", "@SUM(A1)", "Ocon=1", "Esteban\tOcon", " Ocon", ""])
+def test_stops_on_an_unmatched_name_that_is_not_plainly_a_name(name):
+    with pytest.raises(ValueError, match="not a plain name"):
+        match_drivers({name: "500/1"}, _ENTRY_LIST)
+
+
 def test_stops_on_a_team_missing_from_the_table():
     entry_list = _entry_list(("VER", "Red Bull Honda", "Max", "Verstappen"))
 

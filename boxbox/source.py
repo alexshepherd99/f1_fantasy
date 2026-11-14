@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -134,6 +135,9 @@ def _field(document: dict, key: str, where: str):
 def _number(value, where: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         _fail(f"{where}: expected a number, found {value!r}")
+    # json.loads reads the non-standard NaN and Infinity as floats, and inf would pass the archive's checks
+    if not math.isfinite(value):
+        _fail(f"{where}: expected a finite number, found {value!r}")
     return float(value)
 
 
