@@ -80,44 +80,6 @@ The related concern about the loads themselves is already resolved: `_load_sessi
 which cut a session load from ~4.2s to ~1.5s. `messages=True` is kept
 deliberately — it is what populates a lap's `Deleted` flag.
 
-## No test exercises any script's `__main__` block
-
-Tests reach into `scripts/` for individual functions — `run_single_team`
-(`tests/test_run_batch.py:5`), `check_run_ppm` (`tests/test_derivations.py:11`)
-and `select_starting_team` (`tests/test_select_starting_team.py:1`) — but a
-`__main__` block never runs on import, so the wiring inside one is exercised by
-nothing. That is true of all four scripts, including the three whose functions
-are covered. One has no test importing it at all: `select_odds_start.py`.
-
-The gap is not theoretical. `scripts/get_fastf1_data.py` was deleted on
-2026-07-27 (recoverable at `1282518~1`) after drifting twice without a single
-red test: its season list stopped at 2025, and it still passed a `race_numbers`
-argument that had been removed from `generate_historical_metrics` hours
-earlier, so it would have raised `TypeError` on its first real call. Both
-defects sat in its `__main__` block and were found by grepping for callers.
-
-One live instance of the same shape (a second, `batch_results_xl.py`'s import
-of private names from `run_multiple_teams`, went with both scripts on
-2026-11-09):
-
-- `select_odds_start.py:73` hardcodes `select_odds_start_for_season(2026)` in
-  its `__main__` block, the same stale-constant shape that made
-  `get_fastf1_data.py` wrong.
-
-Worth deciding the standard rather than patching case by case: either keep
-`__main__` blocks to a single call into a tested function so there is nothing
-in them to drift, or add an import smoke test over `scripts/` that would at
-least catch a broken signature or a renamed import. The first is cheaper and
-matches what `fast_f1/cli.py` already does.
-
-`scripts/scratch.py` was raised alongside this and is already resolved —
-deleted 2026-07-27, having been four lines putting a hardcoded
-`/workspaces/f1_fantasy` on `sys.path` that nothing imported.
-
-Raised 2026-07-27, immediately after deleting `get_fastf1_data.py`, when the
-question "what else is unprotected in the same way" turned out to have a
-concrete answer.
-
 ## Refine P2PM: better DRS nomination
 
 Not a priority. P2PM must not change before the 2026 season ends, so build this as a

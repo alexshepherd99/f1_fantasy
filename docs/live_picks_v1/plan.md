@@ -123,5 +123,4 @@ refused ("no input"), and exits 1.
 
 - `CHANGELOG.md` line; `README.md` and `CLAUDE.md` describe `simulate/` and `live/`.
 - `TEAM_2026.md` pointer to the file at the handover race (D11).
-- Remove the backlog item's remnants and check `BACKLOG.md`'s *No test exercises any
-  script's `__main__` block* still describes `run_single_team.py` correctly.
+- Remove the backlog item's remnants.
