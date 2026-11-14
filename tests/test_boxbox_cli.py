@@ -5,11 +5,14 @@ from boxbox import cli
 from boxbox.source import BOXBOX_URLS
 from tests.boxbox_fixtures import (
     CONSTRUCTORS_CSV,
+    CONSTRUCTORS_CSV_RACE_3_CAPTURED,
     DRIVERS_CSV,
+    DRIVERS_CSV_RACE_3_CAPTURED,
     RACE_3_PRICES,
     modified,
     predictions,
     raw_files,
+    season_ends_at_round_4,
     season_summary,
     set_prices,
     swap_driver,
@@ -20,17 +23,17 @@ from tests.boxbox_fixtures import (
 main = partial(cli.main, season_constructors={2025: 1, 2026: 2})
 
 
-def _saved_copy(folder, prediction=None):
+def _saved_copy(folder, prediction=None, summary=None):
     folder.mkdir()
-    for name, body in raw_files(prediction=prediction).items():
+    for name, body in raw_files(summary=summary, prediction=prediction).items():
         (folder / f"{name}.json").write_bytes(body)
     return folder
 
 
-def _archive(tmp_path):
+def _archive(tmp_path, drivers=DRIVERS_CSV, constructors=CONSTRUCTORS_CSV):
     folder = tmp_path / "data"
     folder.mkdir()
-    return write_archive(folder)
+    return write_archive(folder, drivers, constructors)
 
 
 def test_capture_from_a_saved_copy_writes_and_reports(tmp_path, capsys):
@@ -87,6 +90,19 @@ def test_refusal_exits_1_and_writes_nothing(tmp_path, capsys):
     assert code == 1
     assert (archive / "f1_fantasy_drivers.csv").read_text() == DRIVERS_CSV
     assert "not updated" in capsys.readouterr().err
+
+
+def test_a_complete_season_exits_0_and_writes_nothing(tmp_path, capsys):
+    archive = _archive(tmp_path, DRIVERS_CSV_RACE_3_CAPTURED, CONSTRUCTORS_CSV_RACE_3_CAPTURED)
+    copy = _saved_copy(tmp_path / "copy", summary=modified(season_summary(), season_ends_at_round_4))
+
+    code = main(["--from-copy", str(copy), "--archive-dir", str(archive)])
+
+    assert code == 0
+    assert (archive / "f1_fantasy_drivers.csv").read_text() == DRIVERS_CSV_RACE_3_CAPTURED
+    assert (archive / "f1_fantasy_constructors.csv").read_text() == CONSTRUCTORS_CSV_RACE_3_CAPTURED
+    out = capsys.readouterr().out
+    assert "Season 2026 is complete" in out and "Nothing written" in out
 
 
 def test_unreadable_files_exit_1(tmp_path, capsys):

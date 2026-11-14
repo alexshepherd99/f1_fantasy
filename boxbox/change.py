@@ -5,6 +5,8 @@ BoxBox shows it held, the run *captures*: it fills the target's empty points
 from BoxBox's results and adds the next race at BoxBox's current prices. If
 not, the run *corrects*: it rewrites the target's line-up and prices from the
 current prices, which is how a driver change after capture is put right.
+Once the season's last race is held and captured, the season is *complete*:
+the change holds no rows, and nothing is written.
 
 A run refuses (``CaptureRefused``) rather than write anything doubtful. It
 does not write files; it returns a ``Change`` holding complete replacement
@@ -25,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 CAPTURE = "capture"
 CORRECT = "correct"
+COMPLETE = "complete"
 
 
 class CaptureRefused(Exception):
@@ -183,7 +186,9 @@ def decide_change(
 
     Returns:
         The change, with a warning for each earlier race of the season whose
-        points BoxBox disagrees with. The archive's values are kept.
+        points BoxBox disagrees with. The archive's values are kept. For a
+        complete season the change has no rows, and the warnings cover its
+        last race too.
 
     Raises:
         CaptureRefused: As set out in ``plan.md``, *How a run works*.
@@ -206,10 +211,16 @@ def decide_change(
 
     target_drivers = [row for row in season_drivers if row.race == target]
     target_constructors = [row for row in season_constructors if row.race == target]
+    driver_results, constructor_results = _boxbox_results(data)
     if any(row.points is not None for row in target_drivers + target_constructors):
+        if target == len(data.rounds) and data.rounds[target - 1].has_actual:
+            # The season's last race is held and captured: nothing is left to do until the next season
+            warnings = (_earlier_differences(season_drivers, driver_results, data, target + 1)
+                        + _earlier_differences(season_constructors, constructor_results, data, target + 1))
+            return Change(mode=COMPLETE, season=season, target_race=target, driver_rows={},
+                          constructor_rows={}, warnings=warnings)
         _refuse(f"Race {target} already has points: there is nothing waiting to be captured")
 
-    driver_results, constructor_results = _boxbox_results(data)
     warnings = (_earlier_differences(season_drivers, driver_results, data, target)
                 + _earlier_differences(season_constructors, constructor_results, data, target))
 

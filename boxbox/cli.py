@@ -4,11 +4,12 @@ Run a few days after a race weekend::
 
     PYTHONPATH=. venv/bin/python -m boxbox.cli
 
-It downloads BoxBox's two files, saves a copy under ``outputs/boxbox/``, and
+It downloads BoxBox's files, saves a copy under ``outputs/boxbox/``, and
 either fills the race just held's points and prices the next race, or, before
 a race is held, corrects its line-up and prices. It prints each asset's
 previous and new values, and refuses with exit 1, writing nothing, when the
-data is not updated yet or does not add up. Review the CSVs' git diff before
+data is not updated yet or does not add up. Once the season's last race is
+captured it says the season is complete, writes nothing and exits 0. Review the CSVs' git diff before
 committing. ``--from-copy`` re-runs on a saved copy; ``--dry-run`` writes
 nothing. See ``docs/data_capture_v2/plan.md``, *How a run works*.
 """
@@ -25,7 +26,7 @@ from pathlib import Path
 import pandas as pd
 
 from boxbox.archive_file import write_change
-from boxbox.change import CAPTURE, ArchiveRow, CaptureRefused, Change, decide_change
+from boxbox.change import CAPTURE, COMPLETE, ArchiveRow, CaptureRefused, Change, decide_change
 from boxbox.source import (
     BOXBOX_URLS,
     DEFAULT_COPY_DIR,
@@ -94,7 +95,10 @@ def describe(change: Change, drivers: pd.DataFrame, constructors: pd.DataFrame, 
     lines = [f"BoxBox data generated {data.generated_at}",
              f"Prices from predictions.json, generated {data.prices_generated_at}, for round {data.prices_round}",
              f"Season {change.season}, race {target}: {change.mode}"]
-    if change.mode == CAPTURE:
+    if change.mode == COMPLETE:
+        lines.append(f"  Season {change.season} is complete: its last race, {target}, has its points. "
+                     f"Nothing to capture until BoxBox serves season {change.season + 1}")
+    elif change.mode == CAPTURE:
         lines.append(f"  Race {target} points:")
         lines += [f"    {_label(row):<10} {row.points:g}" for row in rows[target]]
         if target + 1 in rows:
@@ -112,7 +116,7 @@ def describe(change: Change, drivers: pd.DataFrame, constructors: pd.DataFrame, 
 def capture(archive_dir: str, copy_dir: str, fetch: Callable[[str], bytes] | None = None,
             season_constructors: dict[int, int] | None = None, from_copy: str | None = None,
             dry_run: bool = False) -> Change:
-    """Run one capture, printing what it does, and return the change written.
+    """Run one capture, printing what it does, and return the change: written, unless a dry run or a complete season.
 
     Args:
         archive_dir: The directory holding the archive CSVs.
@@ -138,6 +142,9 @@ def capture(archive_dir: str, copy_dir: str, fetch: Callable[[str], bytes] | Non
     constructors = read_archive_file(AssetType.CONSTRUCTOR, archive_dir)
     change = decide_change(drivers, constructors, data, WORKBOOK_LAST_RACE)
     print("\n".join(describe(change, drivers, constructors, data)))
+    if change.mode == COMPLETE:
+        print("Nothing written: the season is complete.")
+        return change
     if dry_run:
         print("Dry run: nothing written.")
         return change

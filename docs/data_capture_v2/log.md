@@ -798,3 +798,28 @@ is expected. Step 14 keeps a test of it.
 (2026-11-14) is still `phase: pre_fp`, round 23. The plan builds against
 2026's file structure. Step 6's winter copies and Gate 2 check that against
 the real changeover.
+
+## 2026-11-14 — Step 13: a finished season is not a failure
+
+`decide_change` has a fourth outcome, `COMPLETE`. It applies when the
+archive's latest race already has points, is BoxBox's last listed round, and
+BoxBox shows it held. The change has no rows. Its warnings compare every race
+of the season, the last one included, since the last race was never compared
+at capture time. Any other "already has points" case is still refused.
+`boxbox.cli` prints that the season is complete, writes nothing (dry run or
+not) and exits 0. `live.collect.collect_boxbox` returns done with "season N
+complete: nothing to capture". `README.md`'s BoxBox paragraph says so.
+
+New fixtures: an archive with race 3 captured at BoxBox's points, and a
+summary whose last round is round 4.
+
+- **Seen failing first:** the two change tests (refused "already has points"),
+  and the CLI and collect tests (`KeyError: 3` in `describe`, which had no
+  rows to report).
+- **Proved by mutation:** the test that a last race not held on BoxBox is still
+  refused passed before the change, as it guards the branch left alone.
+  Dropping the `has_actual` condition turned it red. Shifting the warning
+  boundary from `target + 1` to `target` turned the last-race warning test
+  red. Each was restored from a copy, with the suite green in between.
+
+The suite went from 903 to 908, all passing.

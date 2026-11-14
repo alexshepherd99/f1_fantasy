@@ -16,7 +16,19 @@ from live.collect import (
     collect_odds,
     odds_present,
 )
-from tests.boxbox_fixtures import DRIVERS_CSV, RACE_3_PRICES, modified, predictions, raw_files, set_prices, write_archive
+from tests.boxbox_fixtures import (
+    CONSTRUCTORS_CSV_RACE_3_CAPTURED,
+    DRIVERS_CSV,
+    DRIVERS_CSV_RACE_3_CAPTURED,
+    RACE_3_PRICES,
+    modified,
+    predictions,
+    raw_files,
+    season_ends_at_round_4,
+    season_summary,
+    set_prices,
+    write_archive,
+)
 from tests.test_odds_source_cli import _HEADER, _QUALIFYING, _SCHEDULE, _TEST_PAGE
 
 # The writer's integrity checks expect the BoxBox fixture's two teams
@@ -56,6 +68,19 @@ def test_boxbox_doubtful_is_refused(tmp_path):
     outcome = collect_boxbox(str(archive), str(tmp_path / "copies"), fetch, TEAMS)
 
     assert (outcome.status, "already has points" in outcome.detail) == (REFUSED, True)
+
+
+def test_boxbox_complete_season_is_done_with_nothing_to_capture(tmp_path):
+    archive = tmp_path / "data"
+    archive.mkdir()
+    write_archive(archive, DRIVERS_CSV_RACE_3_CAPTURED, CONSTRUCTORS_CSV_RACE_3_CAPTURED)
+    files = raw_files(summary=modified(season_summary(), season_ends_at_round_4))
+    fetch = {url: files[name] for name, url in BOXBOX_URLS.items()}.__getitem__
+
+    outcome = collect_boxbox(str(archive), str(tmp_path / "copies"), fetch, TEAMS)
+
+    assert (outcome.status, outcome.detail) == (DONE, "season 2026 complete: nothing to capture")
+    assert (archive / "f1_fantasy_drivers.csv").read_text() == DRIVERS_CSV_RACE_3_CAPTURED
 
 
 def test_boxbox_download_error_is_failed(tmp_path):

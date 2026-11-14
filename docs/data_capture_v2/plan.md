@@ -100,7 +100,8 @@ Steps 13–17 start a new season, per `requirements.md`'s *Scope addition,
 2026-11-14*. They run unattended (*Working unattended* there), done (dev)
 only, and Gate 2 verifies them.
 
-13. **A finished season is not a failure.** When the archive's latest race is
+13. ~~A finished season is not a failure~~ — done (dev) 2026-11-14, see log
+    *Step 13*. When the archive's latest race is
     BoxBox's last listed round, is held and already has points, the run
     reports that the season is complete, writes nothing and exits 0. The
     copy is still saved, and the earlier-race warnings are still shown.

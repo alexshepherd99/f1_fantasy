@@ -152,6 +152,20 @@ CONSTRUCTORS_CSV = """Season,Race,Constructor,Points,Price
 """
 
 
+# The archive once race 3 is captured, with BoxBox's points for round 4.
+DRIVERS_CSV_RACE_3_CAPTURED = (DRIVERS_CSV.replace("2026,3,RED,VER,,28.5", "2026,3,RED,VER,31,28.5")
+                               .replace("2026,3,RED,HAD,,9.8", "2026,3,RED,HAD,7.5,9.8")
+                               .replace("2026,3,MER,RUS,,27.1", "2026,3,MER,RUS,25,27.1")
+                               .replace("2026,3,MER,ANT,,20.2", "2026,3,MER,ANT,-2,20.2"))
+CONSTRUCTORS_CSV_RACE_3_CAPTURED = (CONSTRUCTORS_CSV.replace("2026,3,RED,,30", "2026,3,RED,44,30")
+                                    .replace("2026,3,MER,,31", "2026,3,MER,28,31"))
+
+
+def season_ends_at_round_4(summary: dict) -> None:
+    """Drop round 5 from ``summary``, so round 4 (archive race 3) is the season's last."""
+    summary["rounds"].pop()
+
+
 def write_archive(directory: Path, drivers: str = DRIVERS_CSV, constructors: str = CONSTRUCTORS_CSV) -> Path:
     """Write the fixture archive CSVs into ``directory`` and return it."""
     (directory / "f1_fantasy_drivers.csv").write_text(drivers)

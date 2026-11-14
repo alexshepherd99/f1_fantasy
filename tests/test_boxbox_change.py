@@ -1,17 +1,20 @@
 import pytest
 
-from boxbox.change import CAPTURE, CORRECT, ArchiveRow, CaptureNotYet, CaptureRefused, decide_change
+from boxbox.change import CAPTURE, COMPLETE, CORRECT, ArchiveRow, CaptureNotYet, CaptureRefused, decide_change
 from boxbox.source import parse_files
 from common import AssetType
 from import_data.import_history import read_archive_file
 from tests.boxbox_fixtures import (
     CONSTRUCTORS_CSV,
+    CONSTRUCTORS_CSV_RACE_3_CAPTURED,
     DRIVERS_CSV,
+    DRIVERS_CSV_RACE_3_CAPTURED,
     RACE_3_PRICES,
     driver_history,
     modified,
     predictions,
     raw_files,
+    season_ends_at_round_4,
     season_summary,
     set_prices,
     swap_driver,
@@ -188,6 +191,39 @@ def test_capture_refuses_when_the_race_already_has_points(tmp_path):
 
     with pytest.raises(CaptureRefused, match="already has points") as refused:
         _decide(tmp_path, drivers_csv=drivers)
+    assert not isinstance(refused.value, CaptureNotYet)
+
+
+def _complete(tmp_path, history=None, summary_change=season_ends_at_round_4):
+    """Decide with the season's last race already captured."""
+    return _decide(tmp_path, summary=modified(season_summary(), summary_change), history=history,
+                   drivers_csv=DRIVERS_CSV_RACE_3_CAPTURED, constructors_csv=CONSTRUCTORS_CSV_RACE_3_CAPTURED)
+
+
+def test_a_finished_season_is_complete_and_writes_nothing(tmp_path):
+    change = _complete(tmp_path)
+
+    assert (change.mode, change.season, change.target_race) == (COMPLETE, 2026, 3)
+    assert (change.driver_rows, change.constructor_rows, change.warnings) == ({}, {}, [])
+
+
+def test_a_finished_season_still_warns_on_differences_including_its_last_race(tmp_path):
+    history = modified(driver_history(), lambda h: h["drivers"]["VER"]["rounds"][2].update(points=30))
+
+    change = _complete(tmp_path, history=history)
+
+    assert change.mode == COMPLETE
+    assert len(change.warnings) == 1
+    assert "VER" in change.warnings[0] and "race 3" in change.warnings[0]
+
+
+def test_a_last_race_with_points_but_not_held_on_boxbox_is_refused(tmp_path):
+    def last_round_not_held(summary):
+        season_ends_at_round_4(summary)
+        summary["rounds"][-1]["has_actual"] = False
+
+    with pytest.raises(CaptureRefused, match="already has points") as refused:
+        _complete(tmp_path, summary_change=last_round_not_held)
     assert not isinstance(refused.value, CaptureNotYet)
 
 

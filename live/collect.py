@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from boxbox.change import CaptureNotYet, CaptureRefused
+from boxbox.change import COMPLETE, CaptureNotYet, CaptureRefused
 from boxbox.cli import capture
 from boxbox.source import BoxBoxDataError
 from fast_f1.api import get_event_schedule, get_session_drivers
@@ -58,7 +58,8 @@ def collect_boxbox(archive_dir: str, copy_dir: str, fetch: Callable[[str], bytes
     """Capture BoxBox's latest points and prices into the archive, as `boxbox.cli` does.
 
     Returns:
-        Done with the change written; not yet when BoxBox is not updated; refused when the
+        Done with the change written, or with nothing to capture once the season is complete;
+        not yet when BoxBox is not updated; refused when the
         change is doubtful or BoxBox's files are not understood; failed on a download or file error.
     """
     step = "BoxBox"
@@ -71,6 +72,8 @@ def collect_boxbox(archive_dir: str, copy_dir: str, fetch: Callable[[str], bytes
     except OSError as exc:
         logger.error(f"BoxBox capture failed: {exc}")
         return StepOutcome(step, FAILED, str(exc))
+    if change.mode == COMPLETE:
+        return StepOutcome(step, DONE, f"season {change.season} complete: nothing to capture")
     return StepOutcome(step, DONE, f"{change.mode} season {change.season} race {change.target_race}")
 
 
