@@ -95,8 +95,19 @@ def write_change(change: Change, fn: str, season_constructors: dict[int, int] = 
 
     Raises:
         CaptureRefused: If the archive with the change applied fails to load or
-            fails the integrity checks; the archive's files are left untouched.
+            fails the integrity checks, or the season is neither a start nor in
+            ``season_constructors``; the archive's files are left untouched.
     """
+    # A new season is not in common.F1_SEASON_CONSTRUCTORS until after its start is written
+    num_constructors = change.new_season_constructors
+    if num_constructors is None:
+        if change.season not in season_constructors:
+            message = (f"Season {change.season} is not in common.F1_SEASON_CONSTRUCTORS, so nothing was written: "
+                       f"add the line its start printed ({change.season}: its number of constructors), then run again")
+            logger.error(message)
+            raise CaptureRefused(message)
+        num_constructors = season_constructors[change.season]
+
     texts = {}
     for asset_type, rows_by_race in [(AssetType.DRIVER, change.driver_rows),
                                      (AssetType.CONSTRUCTOR, change.constructor_rows)]:
@@ -108,9 +119,6 @@ def write_change(change: Change, fn: str, season_constructors: dict[int, int] = 
         for asset_type, text in texts.items():
             Path(scratch, _ARCHIVE_FILES[asset_type]).write_text(text)
         try:
-            # A new season is not in common.F1_SEASON_CONSTRUCTORS until after its start is written
-            num_constructors = (change.new_season_constructors if change.new_season_constructors is not None
-                                else season_constructors[change.season])
             _check(scratch, change.season, num_constructors)
         except (ValueError, KeyError) as exc:
             message = f"The archive with this change fails its integrity checks, so nothing was written: {exc}"

@@ -145,7 +145,8 @@ only, and Gate 2 verifies them.
     `common.F1_SEASON_CONSTRUCTORS` in the same commit. `live.collect`'s
     summary names a start as one.
 
-17. **Rehearse, and update the docs.** Build a hand-made 2027 copy from a
+17. ~~Rehearse, and update the docs~~ — done (dev) 2026-11-14, see log
+    *Step 17*. Build a hand-made 2027 copy from a
     saved 2026 copy: season 2027, no round held, prices for round 1, with
     one team renamed and one driver moved. Run `boxbox.cli --from-copy`
     against a scratch copy of the archive, never `data/`. Check that the
@@ -198,10 +199,28 @@ the 437 driver and 209 constructor results matched. It also warns when
 `season_summary.json`'s prices differ from `predictions.json`'s, naming
 each; that shows whether BoxBox's 2026-11-09 fault in that file comes back.
 
-**Not handled yet:** a new season (being built in steps 13–17). The first 2027 run needs the season in
-`common.F1_SEASON_CONSTRUCTORS` and a race 1 written from prices alone. The
-fetcher refuses a `season` it does not find in the archive until that is
-built, before 2027 race 1.
+**A complete season (step 13).** When the target race already has points, is
+BoxBox's last listed round and is held, the run says the season is complete,
+writes nothing and exits 0. Its warnings cover every race of the season.
+
+**Starting a new season (steps 15–16).** When BoxBox's season is in neither
+archive file, the run *starts* it. It writes race 1 from `predictions.json`
+with empty points: the previous season's seats in its file order, then new
+seats and teams in BoxBox's order. It integrity-checks them against the
+number of constructors BoxBox prices, then prints the line to add to
+`common.F1_SEASON_CONSTRUCTORS` in the same commit. `driver_history.json` is
+not read. It refuses, writing nothing, when:
+
+- the season is not the archive's latest plus one, or is in only one file;
+- any round is already held (race 1 is then entered by hand);
+- the prices are for a round other than the first (not yet);
+- any price is provisional (not yet);
+- every carried-over asset is still at its price in the previous season's
+  last race (not yet).
+
+Once race 1 is written, a re-run before it is held is an ordinary correction.
+That needs the season in `common.F1_SEASON_CONSTRUCTORS`, and it refuses,
+saying so, until the line is added.
 
 ## Gates
 

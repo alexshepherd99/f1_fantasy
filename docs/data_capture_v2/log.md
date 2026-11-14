@@ -929,3 +929,58 @@ tool, against Alex's standing rule. The content is as reviewed in the commit.
 Every later change used Edit.
 
 The suite went from 920 to 925, all passing.
+
+## 2026-11-14 — Step 17: rehearsal and docs
+
+**Rehearsal.** A throwaway script in the session scratchpad (not kept) built
+2027 pre-season copies from the real saved copy `2026-11-14T202221Z`. Each
+one had season 2027, no round held, round 1's prices at +0.5 on every asset,
+and HAD and LAW swapped between Red Bull and Racing Bulls. `driver_history.json`
+was empty, and `season_summary.json` carried the same prices. Six variants
+each changed one thing. `boxbox.cli --from-copy` ran against a scratch copy
+of the archive, never `data/`:
+
+| Variant | Result |
+| --- | --- |
+| prices left at 2026's | exit 1: every carried-over asset still at its final 2026 price |
+| round 1 held | exit 1: enter race 1 by hand |
+| prices for round 2 | exit 1: prices not out yet |
+| VER provisional | exit 1: run again once confirmed |
+| `racing_bulls` renamed | exit 1: unknown constructor, add to `TEAM_CODES` |
+| season 2028 | exit 1: not the next season after 2026 |
+
+The scratch archive was byte-identical to `data/` after all six. The main
+copy then ran as a dry run (no change) and for real:
+
+- Both files kept every original byte as a prefix and gained 22 driver and 11
+  constructor lines, all 2027 race 1 with empty points.
+- 2027 loaded and passed the integrity checks with 11 constructors. 2023–26
+  loaded exactly as from `data/` (`DataFrame.equals`), and
+  `unlisted_seasons` reported only 2027.
+- The CLI printed "Add 2027: 11 to common.F1_SEASON_CONSTRUCTORS".
+- Seat order followed 2026's file. `LAW@RED` kept the position of its three
+  2026 races, before `CAM@HAA`, and `HAD@VRB` came last as the only new seat.
+  The report showed `LAW@RED` as "new", because it compares against race 21,
+  where LAW drove for Racing Bulls. That is accurate for "against the final
+  prices", and it is listed here so it is not a surprise at Gate 2.
+- The report showed `HAD@RED` and `LAW@VRB` as dropped, and every carried-over
+  asset at +0.5.
+
+**Found: a re-run before the `common.py` line was added refused with
+`...fails its integrity checks...: 2027`.** That is right to refuse, as the
+correction has no count to check against, but the message did not say what
+to do. `write_change` now refuses up front with "Season 2027 is not in
+common.F1_SEASON_CONSTRUCTORS ... add the line its start printed". This was
+seen failing first (the old message), and it is checked before the files are
+read. With 2027 passed in the constructor counts, as after the line is added,
+a re-run on the scratch archive corrected race 1 at unchanged prices (exit 0),
+and both files stayed byte-identical.
+
+**Docs.** `README.md`, `CLAUDE.md` and this plan's *How a run works* now
+describe the complete and start modes in place of "not handled yet".
+
+The suite went from 925 to 926.
+
+**Not executed:** anything against BoxBox's real 2027 files, which do not exist
+yet, and a start through `live.cli`, which needs Alex's terminal. Both are
+for Gate 2. Step 6's winter review comes first.

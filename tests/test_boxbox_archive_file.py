@@ -159,6 +159,20 @@ def test_write_start_appends_the_new_season_and_checks_it_against_boxboxs_count(
 """
 
 
+def test_write_refuses_a_season_common_lacks_and_says_what_to_add(tmp_path):
+    """A re-run before race 1 corrects it, but needs the season's line in common.py first."""
+    fn = str(write_archive(tmp_path, DRIVERS_CSV_RACE_3_CAPTURED, CONSTRUCTORS_CSV_RACE_3_CAPTURED))
+    write_change(_decide_start(fn), fn, _TWO_TEAMS)
+    started = (tmp_path / _DRIVERS_FILE).read_text()
+    correction = _decide_start(fn)
+    assert correction.mode == CORRECT
+
+    with pytest.raises(CaptureRefused, match=r"Season 2027 is not in common\.F1_SEASON_CONSTRUCTORS"):
+        write_change(correction, fn, _TWO_TEAMS)
+
+    assert (tmp_path / _DRIVERS_FILE).read_text() == started
+
+
 def test_write_start_refuses_a_new_season_that_does_not_match_boxboxs_count(tmp_path):
     fn = str(write_archive(tmp_path, DRIVERS_CSV_RACE_3_CAPTURED, CONSTRUCTORS_CSV_RACE_3_CAPTURED))
     change = dataclasses.replace(_decide_start(fn), new_season_constructors=2)
