@@ -66,20 +66,6 @@ strategy needs it. The metric now also exists as
 `backtest/per_race.py:concentration`, matching the odds strategy's definition, so
 a lift has a tested reference to check itself against.
 
-## `get_race_results` downloads sessions it then discards
-
-`get_race_results` warms a session cache as a side effect, loading
-FP1/FP2/FP3/SQ in full after the race — since 2026-07-27 in
-`_warm_practice_session_cache` (`fast_f1/api.py:253`). When no local cache
-directory is configured `_get_local_cache_path()` returns `None`, nothing is
-written and those four loads are pure waste — in the validation test that was
-~19s of a 27s run. Skip the warming when there is nowhere to write it.
-
-The related concern about the loads themselves is already resolved: `_load_session`
-(`fast_f1/api.py:110`) passes `telemetry=False, weather=False` as of 2026-07-25,
-which cut a session load from ~4.2s to ~1.5s. `messages=True` is kept
-deliberately — it is what populates a lap's `Deleted` flag.
-
 ## Refine P2PM: better DRS nomination
 
 Not a priority. P2PM must not change before the 2026 season ends, so build this as a

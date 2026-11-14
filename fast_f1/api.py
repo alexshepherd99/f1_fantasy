@@ -243,10 +243,11 @@ def get_race_results(season_year: int, race_num: int) -> pd.DataFrame:
     results["Constructor"] = results.get("TeamName")
     results["Season"] = season_year
     results["Race"] = race_num
+    # Warming only writes to the local cache, so without one it is pure download cost
     if cache_path is not None:
         _save_cached_dataframe(results, cache_path)
+        _warm_practice_session_cache(event, season_year, race_num)
 
-    _warm_practice_session_cache(event, season_year, race_num)
     return results
 
 

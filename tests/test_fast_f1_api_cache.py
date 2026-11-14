@@ -217,6 +217,31 @@ def test_api_loads_only_the_session_data_it_reads(monkeypatch, tmp_path):
     assert practice_session.load_kwargs["laps"] is True
 
 
+def test_api_skips_warming_practice_sessions_without_a_local_cache(monkeypatch):
+    """With no local cache to write to, loading practice laps is pure waste."""
+    race_session = FakeRaceSession(
+        pd.DataFrame(
+            {
+                "Abbreviation": ["HAM"],
+                "Status": ["Finished"],
+                "Position": [1],
+                "ClassifiedPosition": [1],
+                "GridPosition": [2],
+                "Points": [25],
+                "TeamName": ["Mercedes"],
+            }
+        )
+    )
+    practice_session = FakeSession(pd.DataFrame({"Driver": ["HAM"], "LapTime": [80.0]}))
+    event = FakeEvent({"R": race_session, "FP2": practice_session})
+    monkeypatch.setattr("fast_f1.api.get_event_for_race", lambda season, race: event)
+
+    results = get_race_results(2025, 1)
+
+    assert results["Abbreviation"].tolist() == ["HAM"]
+    assert practice_session.load_kwargs is None
+
+
 def test_api_caches_the_event_schedule_once_per_season(monkeypatch, tmp_path):
     """One schedule fetch serves every race in that season."""
     setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
