@@ -6,7 +6,9 @@ from BoxBox's results and adds the next race at BoxBox's current prices. If
 not, the run *corrects*: it rewrites the target's line-up and prices from the
 current prices, which is how a driver change after capture is put right.
 Once the season's last race is held and captured, the season is *complete*:
-the change holds no rows, and nothing is written.
+the change holds no rows, and nothing is written. When BoxBox serves the
+season after the archive's latest, the run *starts* it: it writes race 1 at
+BoxBox's prices, with no points.
 
 A run refuses (``CaptureRefused``) rather than write anything doubtful. It
 does not write files; it returns a ``Change`` holding complete replacement
@@ -28,6 +30,7 @@ logger = logging.getLogger(__name__)
 CAPTURE = "capture"
 CORRECT = "correct"
 COMPLETE = "complete"
+START = "start"
 
 
 class CaptureRefused(Exception):
@@ -52,7 +55,12 @@ class ArchiveRow:
 
 @dataclass(frozen=True)
 class Change:
-    """Complete replacement rows for each race the run writes, per asset type."""
+    """Complete replacement rows for each race the run writes, per asset type.
+
+    ``new_season_constructors`` is set only for a start: the number of
+    constructors BoxBox prices, which ``common.F1_SEASON_CONSTRUCTORS`` does not
+    hold yet for the new season.
+    """
 
     mode: str
     season: int
@@ -60,6 +68,7 @@ class Change:
     driver_rows: dict[int, list[ArchiveRow]]
     constructor_rows: dict[int, list[ArchiveRow]]
     warnings: list[str] = field(default_factory=list)
+    new_season_constructors: int | None = None
 
 
 def _refuse(message: str, refusal: type[CaptureRefused] = CaptureRefused) -> None:
@@ -132,12 +141,53 @@ def _summary_differences(data: BoxBoxData) -> list[str]:
             f"(season_summary.json's first): {', '.join(differences)}"]
 
 
-def _in_season_order(new_rows: list[ArchiveRow], season_rows: list[ArchiveRow]) -> list[ArchiveRow]:
-    """Assets already in the season first, in their file order; new assets after, as given."""
+def _seat(row: ArchiveRow) -> tuple[str, str | None]:
+    """An asset as the archive identifies it: a driver in a seat (``DRIVER@CONSTRUCTOR``), or a constructor."""
+    return row.constructor, row.driver
+
+
+def _in_season_order(new_rows: list[ArchiveRow], season_rows: list[ArchiveRow], key=_key) -> list[ArchiveRow]:
+    """Assets already in ``season_rows`` first, in their file order; new assets after, as given."""
     order = {}
     for row in season_rows:
-        order.setdefault(_key(row), len(order))
-    return sorted(new_rows, key=lambda row: order.get(_key(row), len(order)))
+        order.setdefault(key(row), len(order))
+    return sorted(new_rows, key=lambda row: order.get(key(row), len(order)))
+
+
+def _start(drivers: pd.DataFrame, constructors: pd.DataFrame, data: BoxBoxData) -> Change:
+    """Race 1 of the season after the archive's latest, at BoxBox's prices, or refuse."""
+    season = data.season
+    previous = int(max(drivers["Season"].max(), constructors["Season"].max()))
+    if season != previous + 1:
+        _refuse(f"Season {season} is not in the archive, and is not the next season after {previous}: "
+                "only the next season can be started")
+    held = [r.number for r in data.rounds if r.has_actual]
+    if held:
+        _refuse(f"BoxBox shows round {held[0]} of season {season} held already, so race 1's prices can no "
+                "longer be had from it. Enter race 1 by hand")
+    first_round = round_for_race(data, 1)
+    if data.prices_round != first_round:
+        _refuse(f"BoxBox's prices are for round {data.prices_round}, not round {first_round}, the first of "
+                f"season {season}: its prices are not out yet. Run again later", CaptureNotYet)
+    new_drivers, new_constructors = _current_prices(data, season, 1)
+
+    previous_drivers = _rows(drivers[drivers["Season"] == previous], True)
+    previous_constructors = _rows(constructors[constructors["Season"] == previous], False)
+    last_race = max(row.race for row in previous_drivers + previous_constructors)
+    final_prices = {_seat(row): row.price for row in previous_drivers + previous_constructors
+                    if row.race == last_race}
+    carried = [row for row in new_drivers + new_constructors if _seat(row) in final_prices]
+    if carried and all(row.price == final_prices[_seat(row)] for row in carried):
+        _refuse(f"Every asset carried over from season {previous} still has its final {previous} price: "
+                "BoxBox is still serving last season's prices. Run again later", CaptureNotYet)
+
+    return Change(
+        mode=START, season=season, target_race=1,
+        driver_rows={1: _in_season_order(new_drivers, previous_drivers, key=_seat)},
+        constructor_rows={1: _in_season_order(new_constructors, previous_constructors, key=_seat)},
+        warnings=_summary_differences(data),
+        new_season_constructors=len(new_constructors),
+    )
 
 
 def _earlier_differences(
@@ -188,7 +238,9 @@ def decide_change(
         The change, with a warning for each earlier race of the season whose
         points BoxBox disagrees with. The archive's values are kept. For a
         complete season the change has no rows, and the warnings cover its
-        last race too.
+        last race too. For a start (BoxBox's season is the one after the
+        archive's latest) it holds race 1 at BoxBox's prices, in the previous
+        season's order with new assets after, and the number of constructors.
 
     Raises:
         CaptureRefused: As set out in ``plan.md``, *How a run works*.
@@ -196,8 +248,10 @@ def decide_change(
     season = data.season
     season_drivers = _rows(drivers[drivers["Season"] == season], True)
     season_constructors = _rows(constructors[constructors["Season"] == season], False)
+    if not season_drivers and not season_constructors:
+        return _start(drivers, constructors, data)
     if not season_drivers or not season_constructors:
-        _refuse(f"Season {season} is not in the archive; starting a new season is not built yet")
+        _refuse(f"Season {season} is in only one of the archive files")
 
     target = max(row.race for row in season_drivers)
     if target != max(row.race for row in season_constructors):

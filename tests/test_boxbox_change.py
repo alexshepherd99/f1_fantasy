@@ -1,6 +1,15 @@
 import pytest
 
-from boxbox.change import CAPTURE, COMPLETE, CORRECT, ArchiveRow, CaptureNotYet, CaptureRefused, decide_change
+from boxbox.change import (
+    CAPTURE,
+    COMPLETE,
+    CORRECT,
+    START,
+    ArchiveRow,
+    CaptureNotYet,
+    CaptureRefused,
+    decide_change,
+)
 from boxbox.source import parse_files
 from common import AssetType
 from import_data.import_history import read_archive_file
@@ -12,6 +21,10 @@ from tests.boxbox_fixtures import (
     RACE_3_PRICES,
     driver_history,
     modified,
+    new_season_files,
+    new_season_history,
+    new_season_predictions,
+    new_season_summary,
     predictions,
     raw_files,
     season_ends_at_round_4,
@@ -287,13 +300,103 @@ def test_refuses_when_an_earlier_round_is_not_held(tmp_path):
         _decide(tmp_path, summary=summary)
 
 
-def test_refuses_a_season_not_in_the_archive(tmp_path):
-    summary = modified(season_summary(), lambda s: s.update(season=2027))
-    history = modified(driver_history(), lambda h: h.update(season=2027))
-    prediction = modified(predictions(), lambda p: p.update(season=2027))
+def _start(tmp_path, summary=None, history=None, prediction=None, drivers_csv=DRIVERS_CSV_RACE_3_CAPTURED,
+           constructors_csv=CONSTRUCTORS_CSV_RACE_3_CAPTURED):
+    """Decide with BoxBox serving 2027 before its first race, and 2026 complete in the archive.
 
-    with pytest.raises(CaptureRefused, match="2027"):
-        _decide(tmp_path, summary=summary, history=history, prediction=prediction)
+    BoxBox's pre-season ``driver_history.json`` has no results, which a start never reads.
+    """
+    fn = str(write_archive(tmp_path, drivers_csv, constructors_csv))
+    return decide_change(
+        read_archive_file(AssetType.DRIVER, fn),
+        read_archive_file(AssetType.CONSTRUCTOR, fn),
+        parse_files(new_season_files(summary, history, prediction)),
+        {2026: 2},
+    )
+
+
+def test_start_writes_race_1_in_the_previous_seasons_order_with_new_assets_after(tmp_path):
+    change = _start(tmp_path)
+
+    assert (change.mode, change.season, change.target_race, change.warnings) == (START, 2027, 1, [])
+    assert change.driver_rows == {1: [
+        ArchiveRow(2027, 1, "RED", "VER", None, 29.0),
+        ArchiveRow(2027, 1, "MER", "RUS", None, 27.5),
+        ArchiveRow(2027, 1, "MER", "ANT", None, 21.0),
+        ArchiveRow(2027, 1, "CAD", "BOT", None, 6.0),
+        ArchiveRow(2027, 1, "RED", "LAW", None, 8.0),
+        ArchiveRow(2027, 1, "CAD", "PER", None, 6.5),
+    ]}
+    assert change.constructor_rows == {1: [
+        ArchiveRow(2027, 1, "RED", None, None, 30.5),
+        ArchiveRow(2027, 1, "MER", None, None, 31.5),
+        ArchiveRow(2027, 1, "CAD", None, None, 6.2),
+    ]}
+    assert change.new_season_constructors == 3
+
+
+@pytest.mark.parametrize("season", [2022, 2028])
+def test_refuses_a_season_that_is_not_the_next_one(tmp_path, season):
+    summary = modified(new_season_summary(), lambda s: s.update(season=season))
+    history = modified(new_season_history(), lambda h: h.update(season=season))
+    prediction = modified(new_season_predictions(), lambda p: p.update(season=season))
+
+    with pytest.raises(CaptureRefused, match=f"{season}.*not the next season") as refused:
+        _start(tmp_path, summary=summary, history=history, prediction=prediction)
+    assert not isinstance(refused.value, CaptureNotYet)
+
+
+def test_start_refuses_once_a_round_is_held(tmp_path):
+    summary = modified(new_season_summary(), lambda s: s["rounds"][0].update(has_actual=True))
+
+    with pytest.raises(CaptureRefused, match="by hand") as refused:
+        _start(tmp_path, summary=summary)
+    assert not isinstance(refused.value, CaptureNotYet)
+
+
+def test_start_waits_for_prices_for_the_first_round(tmp_path):
+    with pytest.raises(CaptureNotYet, match="round 2"):
+        _start(tmp_path, prediction=modified(new_season_predictions(), lambda p: p.update(round=2)))
+
+
+def test_start_waits_for_a_provisional_price(tmp_path):
+    prediction = modified(new_season_predictions(), lambda p: p["drivers"][0].update(price_provisional=True))
+
+    with pytest.raises(CaptureNotYet, match="ANT provisional"):
+        _start(tmp_path, prediction=prediction)
+
+
+def test_start_waits_while_every_carried_over_price_is_last_seasons(tmp_path):
+    with pytest.raises(CaptureNotYet, match="2026"):
+        _start(tmp_path, prediction=modified(new_season_predictions(), _race_3_prices))
+
+
+def test_start_goes_ahead_when_some_carried_over_prices_are_last_seasons(tmp_path):
+    prediction = modified(new_season_predictions(), lambda p: set_prices(p, {"VER": 28.5, "mercedes": 31.0}))
+
+    assert _start(tmp_path, prediction=prediction).mode == START
+
+
+def test_start_refuses_a_season_in_only_one_archive_file(tmp_path):
+    with pytest.raises(CaptureRefused, match="only"):
+        _start(tmp_path, drivers_csv=DRIVERS_CSV_RACE_3_CAPTURED + "2027,1,RED,VER,,29\n")
+
+
+def test_a_rerun_before_race_1_is_held_corrects_it(tmp_path):
+    drivers = DRIVERS_CSV_RACE_3_CAPTURED + "2027,1,RED,VER,,29\n2027,1,RED,HAD,,9\n"
+    constructors = CONSTRUCTORS_CSV_RACE_3_CAPTURED + "2027,1,RED,,30.5\n"
+
+    def red_bull_only(prediction):
+        prediction["drivers"] = [d for d in prediction["drivers"] if d["constructor"] == "red_bull"]
+        prediction["constructors"] = [c for c in prediction["constructors"] if c["constructor_id"] == "red_bull"]
+
+    prediction = modified(new_season_predictions(), red_bull_only)
+
+    change = _start(tmp_path, prediction=prediction, drivers_csv=drivers, constructors_csv=constructors)
+
+    assert (change.mode, change.season, change.target_race) == (CORRECT, 2027, 1)
+    assert change.driver_rows == {1: [ArchiveRow(2027, 1, "RED", "VER", None, 29.0),
+                                      ArchiveRow(2027, 1, "RED", "LAW", None, 8.0)]}
 
 
 def test_refuses_when_drivers_and_constructors_end_at_different_races(tmp_path):

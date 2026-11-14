@@ -116,7 +116,8 @@ only, and Gate 2 verifies them.
     shows that a race-1-only season (prices, empty points) loads through
     `load_archive_data_season` and passes the integrity checks.
 
-15. **Decide a start.** `decide_change` gains a third mode, *start*, for
+15. ~~Decide a start~~ — done (dev) 2026-11-14, see log *Step 15*.
+    `decide_change` gains a third mode, *start*, for
     BoxBox's season when it is exactly one after the archive's latest. It
     returns race 1's rows with empty points from `predictions.json`, in the
     previous season's order with new assets after, and the number of

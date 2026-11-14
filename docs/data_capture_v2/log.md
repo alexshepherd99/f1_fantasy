@@ -849,3 +849,51 @@ copy with the suite green in between:
   went red (`IntCastingNaNError`).
 
 The suite went from 908 to 911, all passing.
+
+## 2026-11-14 — Step 15: deciding a start
+
+`decide_change` hands a season that neither archive file holds to `_start`. A
+season in only one file is refused. `_start` refuses (`CaptureRefused`
+unless marked):
+
+1. A season that is not the archive's latest plus one.
+2. Any round already held: race 1's prices are gone, so enter it by hand.
+3. Prices for a round other than BoxBox's first listed (`CaptureNotYet`).
+4. Provisional prices (`CaptureNotYet`, through the existing `_current_prices`).
+5. Every carried-over asset at its final previous-season price (`CaptureNotYet`).
+   "Final" means its price in the previous season's last race. "Carried over"
+   means the same seat (`DRIVER@CONSTRUCTOR`) or constructor code.
+
+Otherwise it returns `START` with race 1's rows, no points. The order is the
+previous season's file order by seat, with new seats and teams after in
+BoxBox's order (`_in_season_order` now takes the key). Its warnings are the
+existing `season_summary.json` price check, and `new_season_constructors`
+is the number of constructors priced. `driver_history.json` is not read.
+
+New fixture: BoxBox's 2027 files before round 1. The line-up is listed in a
+different order, LAW is in HAD's Red Bull seat, and Cadillac is new with BOT
+and PER. The results file is empty. `test_refuses_a_season_not_in_the_archive`
+(2027) became `test_refuses_a_season_that_is_not_the_next_one` (2022 and 2028).
+
+- **Seen failing first:** nine tests, each on the old refusal "starting a new
+  season is not built yet" (or its message not matching). The `START`
+  constant and the `new_season_constructors` field went in before the tests
+  ran, so the failures were about behaviour, not imports.
+- **Proved by mutation:** the test that a re-run before race 1 is held is an
+  ordinary correction passed before the change, as it guards the existing
+  path. Defaulting the workbook guard to race 1 turned it red. Nine mutations,
+  one per rule, each turned exactly its test red: guard off, `all` to `any`,
+  final price from race 1, no ordering, any later season accepted, no
+  held-round check, no first-round check, the workbook default above, and no
+  only-one-file check. Each was restored from a copy, and the suite was green
+  at the end.
+- **Changed while building:** the final price first came from sorting every
+  row by race. The file order already guarantees that, so no test could tell
+  the two apart. It was replaced by the previous season's last race, which
+  the "final price from race 1" mutation covers.
+
+**Interim state:** until step 16, a run that decides a start still refuses at
+the write, as `common.py` has no 2027 count (`KeyError`, reported as failing
+the integrity checks). Nothing is written by mistake in between.
+
+The suite went from 911 to 920, all passing.

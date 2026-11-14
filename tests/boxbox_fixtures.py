@@ -166,6 +166,64 @@ def season_ends_at_round_4(summary: dict) -> None:
     summary["rounds"].pop()
 
 
+NEW_SEASON = SEASON + 1
+
+
+def new_season_summary() -> dict:
+    """``season_summary.json`` for 2027 before its first race: rounds 1 to 3, none held, at round 1's prices."""
+    prediction = new_season_predictions()
+    return {
+        "season": NEW_SEASON,
+        "generated_at": "2027-02-20T07:00:00+00:00",
+        "rounds": [{"round": r, "name": f"GP {r}", "date": f"2027-03-0{r}", "has_actual": False} for r in (1, 2, 3)],
+        "driver_prices": {d["driver_id"]: {"name": d["name"], "constructor": d["constructor"],
+                                           "current_price": d["current_price"]} for d in prediction["drivers"]},
+        "constructor_prices": {c["constructor_id"]: {"name": c["name"], "current_price": c["current_price"]}
+                               for c in prediction["constructors"]},
+    }
+
+
+def new_season_history() -> dict:
+    """``driver_history.json`` for 2027 before its first race: no results."""
+    return {"season": NEW_SEASON, "drivers": {}, "constructors": {}}
+
+
+def new_season_predictions() -> dict:
+    """``predictions.json`` for 2027 round 1.
+
+    BoxBox lists the assets in a different order from the 2026 archive. HAD has
+    left, LAW has taken his Red Bull seat, and Cadillac is new with BOT and PER.
+    Every carried-over price differs from its final 2026 price (the archive's race 3).
+    """
+    return {
+        "race": "GP 1",
+        "round": 1,
+        "season": NEW_SEASON,
+        "generated_at": "2027-02-20T07:00:01+00:00",
+        "drivers": [
+            _predicted_driver("ANT", "mercedes", 21.0),
+            _predicted_driver("BOT", "cadillac", 6.0),
+            _predicted_driver("LAW", "red_bull", 8.0),
+            _predicted_driver("RUS", "mercedes", 27.5),
+            _predicted_driver("PER", "cadillac", 6.5),
+            _predicted_driver("VER", "red_bull", 29.0),
+        ],
+        "constructors": [
+            {"constructor_id": "cadillac", "name": "Cadillac", "current_price": 6.2, "expected_points": 5.0},
+            {"constructor_id": "mercedes", "name": "Mercedes", "current_price": 31.5, "expected_points": 20.0},
+            {"constructor_id": "red_bull", "name": "Red Bull", "current_price": 30.5, "expected_points": 20.0},
+        ],
+    }
+
+
+def new_season_files(summary: dict | None = None, history: dict | None = None,
+                     prediction: dict | None = None) -> dict[str, bytes]:
+    """The three 2027 files as downloaded bytes, from the defaults or the given dicts."""
+    return raw_files(summary if summary is not None else new_season_summary(),
+                     history if history is not None else new_season_history(),
+                     prediction if prediction is not None else new_season_predictions())
+
+
 def write_archive(directory: Path, drivers: str = DRIVERS_CSV, constructors: str = CONSTRUCTORS_CSV) -> Path:
     """Write the fixture archive CSVs into ``directory`` and return it."""
     (directory / "f1_fantasy_drivers.csv").write_text(drivers)
