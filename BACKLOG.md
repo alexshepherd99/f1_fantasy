@@ -66,47 +66,6 @@ strategy needs it. The metric now also exists as
 `backtest/per_race.py:concentration`, matching the odds strategy's definition, so
 a lift has a tested reference to check itself against.
 
-## Refine P2PM: better DRS nomination
-
-Not a priority. P2PM must not change before the 2026 season ends, so build this as a
-subclass.
-
-A perfect-hindsight DRS pick would have scored +226 (2023), +103 (2024) and +98
-(2025) points a season more than P2PM's current rule. That rule nominates the
-selected driver with the highest rolling three-race points, and it already picks
-the best driver in 60-76% of team-races. For comparison, the whole objective
-change `max_points_v1` tested was worth −4 to −156. See `docs/max_points_v1/log.md`,
-*The DRS nomination ceiling, measured while the data was to hand*.
-
-`StrategyBase` now has an opt-in DRS helper: `get_drs_objective_term()` models the
-boost inside the LP objective, and `get_drs_nominee()` reads it back. It was added
-in `max_points_v1` step 5 and nothing calls it yet. [2026-10-05: `odds_drs_v1`
-made `StrategyBettingOdds` its first caller, with odds as the values. P2PM still
-does not use it. See `docs/odds_drs_v1/log.md`.] What it can and cannot buy:
-
-- **With rolling points as the values, it nominates the same driver as today's
-  rule.** For a fixed team, the LP gives DRS to the highest-valued selected driver.
-  So it cannot collect any of the ceiling above. Its only effect is on team
-  selection, since it rewards teams with one strong driver. Reasoned from the LP's
-  structure, not run.
-- **With P2PM values, it would nominate worse than today's rule**, because a value
-  ratio predicts a points payoff less well than recent points do.
-- **The ceiling needs a better signal, not a better mechanism.** Candidates are
-  betting odds (already loaded by `StrategyBettingOdds`) or `fast_f1`'s
-  `AggregateRank`. Either works as a post-hoc `get_drs_driver()` override, or as
-  the helper's values if team selection should respond too. This overlaps with
-  *Build a strategy on the FastF1 indicators* and its regression prerequisite
-  above. [2026-11-01: that prerequisite is answered, in
-  `docs/indicator_analysis_v1/log.md`, and is off this list. The strategy item has moved
-  to `docs/fastf1_v2/`. 2026-11-08: `fastf1_v2` is done. Its strategy chooses DRS inside
-  the LP from its own signal, not `AggregateRank`, and dropping that DRS term lost
-  points in every season of its step 16. It did not test DRS for P2PM.] A DRS signal is a
-  narrower first use of `AggregateRank`.
-- Perfect hindsight is not achievable, so the realistic gain is some unknown
-  fraction of the ceiling.
-
-Raised 2026-09-28, from `max_points_v1`.
-
 ## Re-assess `StrategyFastF1`'s tuning values when 2026 finishes
 
 **For Alex, once the 2026 season is over.** `fastf1_v2` step 15.1 set the
