@@ -122,6 +122,7 @@ refused ("no input"), and exits 1.
 - **Gate 3 — first race with a FastF1 pick shown** (after step 6). D32: the pick
   equals a back-test-style `StrategyFastF1RuleRise` run on the same inputs. Also: the
   metrics file's `git diff --numstat` shows only that race's lines changed.
+  **Passed 2026-11-21** at Las Vegas, 2026 race 21 (`log.md`).
 
 ## Before closing
 

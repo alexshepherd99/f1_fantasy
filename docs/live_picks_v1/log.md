@@ -574,7 +574,8 @@ the signal.
 
 **Not yet run:** a FastF1 build of a race whose sessions have just run (Gate 3, from
 Las Vegas FP3); a rebuild once a race has results, with real changed inputs; a
-sprint weekend's sessions check on real data.
+sprint weekend's sessions check on real data. [The first ran 2026-11-21: Gate 3
+passed.]
 
 **Two slips.** I added `[34:]` to three test assertions with `sed` instead of the
 editor. Then I rewrote `live/lineup.py` through a Python script in the shell, and
@@ -704,3 +705,30 @@ header failed first (the existing tests build the header from `COLUMNS`, so coul
 not). Agreed checks on `data/live_team.csv`, all passed: `git diff --numstat` 1 1,
 the header line only; the race-21 row read back through `read_team_file` equal,
 field for field, to its read before the change; suite 885, all passing.
+
+## 2026-11-21 — Gate 3 passed at Las Vegas
+
+Alex ran `live.cli` after Las Vegas FP3 (record
+`outputs/live_picks/2026_21_20261121T143747Z.json`), from the race-20 team with 0.2
+unused and 2 free moves. The FastF1 step built race 21's metrics, and the run showed
+two picks: P2PM's BOR for HUL, as already in the team file, and
+`StrategyFastF1RuleRise`'s HAD and MER for LEC and FER, 2 moves, 3.8 unused, VER as
+DRS. Nothing was recorded, so race 21's row stays P2PM's pick from 2026-11-13. Alex
+committed the metrics as `8b44af2`.
+
+Both checks passed:
+
+1. **The metrics file.** `git show --numstat 8b44af2`: 22 added, 0 deleted, all
+   2026 race 21.
+2. **D32.** `StrategyFastF1RuleRise`, unaltered, run through `run_for_team` on the
+   committed archive and metrics file: the race-20 team held at race 20, stopped at
+   race 21 (`backtest.runner._stopped_at`), no bonus free move. Its race-21 pick
+   **equals** the record's: the same drivers, constructors and DRS driver, 2 moves,
+   3.8 unused. Inputs checked equal too: the record's 33 race-21 prices against the
+   archive's, the held team's value 139.3, and the record's 22 metrics rows against
+   the file's race-21 rows, the same in every text and blank cell. Numbers
+   differ by at most 4e-16, the 16-against-17-digit precision found in step 6.
+
+Read-only; the check script stayed in the session's scratchpad. **Not yet run:** a
+rebuild once a race has results, with real changed inputs; a sprint weekend's
+sessions check on real data.
