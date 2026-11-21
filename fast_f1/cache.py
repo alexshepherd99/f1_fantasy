@@ -140,7 +140,7 @@ def setup_fastf1_cache(
     except OSError as exc:
         raise RuntimeError(f"Failed to create FastF1 cache directory: {selected_cache_dir}") from exc
 
-    fastf1.Cache.enable_cache(str(cache_path))
+    fastf1.Cache.configure(cache_dir=str(cache_path))
     logging.info("FastF1 cache enabled at: %s", cache_path)
 
     try:

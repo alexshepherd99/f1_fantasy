@@ -50,7 +50,7 @@ def real_fastf1_cache():
     if cache_dir is None or not cache_dir.is_dir():
         logger.warning("No application FastF1 cache available; using the FastF1 default")
     else:
-        fastf1.Cache.enable_cache(str(cache_dir))
+        fastf1.Cache.configure(cache_dir=str(cache_dir))
 
 
 @pytest.fixture(autouse=True)

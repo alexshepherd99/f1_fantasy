@@ -58,7 +58,7 @@ def test_select_cache_directory_uses_persisted_path(monkeypatch, tmp_path):
 
 
 def test_setup_fastf1_cache_persists_user_specified_directory(monkeypatch, tmp_path):
-    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.enable_cache", lambda _: None)
+    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.configure", lambda **_: None)
     config_file = tmp_path / ".fastf1_cache_dir"
     monkeypatch.setattr("fast_f1.cache.CACHE_LOCATION_CONFIG_FILE", config_file)
 
@@ -69,8 +69,18 @@ def test_setup_fastf1_cache_persists_user_specified_directory(monkeypatch, tmp_p
     assert config_file.read_text().strip() == str(tmp_path)
 
 
+@pytest.mark.filterwarnings("error::FutureWarning")
+def test_setup_fastf1_cache_configures_fastf1_without_deprecation(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.configure", lambda **kwargs: calls.append(kwargs))
+
+    setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
+
+    assert calls == [{"cache_dir": str(tmp_path)}]
+
+
 def test_setup_fastf1_cache_creates_directories(monkeypatch, tmp_path):
-    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.enable_cache", lambda _: None)
+    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.configure", lambda **_: None)
     cache_path, local_cache_path = setup_fastf1_cache(cache_dir=tmp_path, interactive=False)
 
     assert cache_path == tmp_path
@@ -81,7 +91,7 @@ def test_setup_fastf1_cache_creates_directories(monkeypatch, tmp_path):
 
 
 def test_setup_fastf1_cache_raises_for_invalid_directory(monkeypatch, tmp_path):
-    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.enable_cache", lambda _: None)
+    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.configure", lambda **_: None)
     invalid_dir = tmp_path / "nonexistent" / "restricted"
 
     monkeypatch.setattr(Path, "mkdir", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("permission denied")))

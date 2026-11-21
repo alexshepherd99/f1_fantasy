@@ -22,15 +22,6 @@ Global list of not-yet-started work. Freeform. When an item is picked up, create
 
 An entry that runs past ~350 words gets its own `docs/<effort-name>/proposal.md`, leaving a short pointer entry in this list. Picking the item up then adds `requirements.md` / `plan.md` / `log.md` beside it as usual. The threshold is a prompt to judge, not a gate — it is where the entries here actually split (2026-07-30: seven at 110-330 words, two at 537 and 766), not a target. Note this puts a `docs/<effort-name>/` directory in place before work starts, which `agentic`'s `shared/persistent-docs.md` does not describe; it is a deliberate local extension, worth proposing upstream if it sticks.
 
-## FastF1 API deprecation warning
-
-Address this warning from the FastF1 API:
-
-```python
-/home/alexshepherd99/dev/f1_fantasy/venv/lib/python3.11/site-packages/fastf1/req.py:251: FutureWarning: `.enable_cache` is deprecated and will be removed in a future version. Use `.configure` instead.
-  warnings.warn("`.enable_cache` is deprecated and will be removed in a "
-```
-
 ## Lift concentration calculation into `StrategyBase`
 
 `StrategyBettingOdds.get_problem()` (`linear/strategy_odds.py:36-88`) builds

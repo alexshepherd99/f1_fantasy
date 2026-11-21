@@ -2,6 +2,7 @@
 
 What changed, newest first, one line each. The effort's docs carry the detail.
 
+- **2026-11-21** — FastF1's cache is set up through `Cache.configure`, replacing the deprecated `enable_cache` and its `FutureWarning`
 - **2026-11-14** — Odds capture refuses an unmatched driver name that isn't plainly a name, and BoxBox capture refuses NaN and infinite numbers
 - **2026-11-14** — `get_race_results` no longer downloads practice sessions when there is no local cache to keep them in
 - **2026-11-09** — README and CLAUDE.md tidied; changelog added; 2026 team log moved to [TEAM_2026.md](TEAM_2026.md) ([readme_tidy_v1](docs/readme_tidy_v1/))
