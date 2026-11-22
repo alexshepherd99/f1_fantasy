@@ -224,3 +224,6 @@ Numbered in the order they were settled. Q-numbers in `log.md` refer to the gril
 - BoxBox capture of a new season (in `data_capture_v2`, scope added 2026-11-14; D30).
 - Changing `StrategyMaxP2PM` or switching the live 2026 team off it.
 - Modelling chips inside the strategies (*Model the game's other chips*, backlog).
+- Fix A, asking before writing a correction that changes prices: dropped
+  2026-11-22, as the first capture with prices from `predictions.json` was clean
+  (`log.md`, 2026-11-22). Fix B was dropped 2026-11-13.

@@ -761,3 +761,10 @@ data is still not run.
 
 Read-only; the check script stayed in the session's scratchpad. The suite passed on
 the committed data (927).
+
+## 2026-11-22 — Fix A dropped
+
+Fix A, having the script ask before writing a correction that changes prices, was
+parked on 2026-11-13 until the capture after Las Vegas. That capture was clean
+(`data_capture_v2` Gate 1), so it is dropped, as agreed then. Confirmed by Alex. It
+is recorded under *Out of scope* in `requirements.md`.
