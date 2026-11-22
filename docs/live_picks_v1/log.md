@@ -732,3 +732,32 @@ Both checks passed:
 Read-only; the check script stayed in the session's scratchpad. **Not yet run:** a
 rebuild once a race has results, with real changed inputs; a sprint weekend's
 sessions check on real data.
+
+## 2026-11-22 — Gate 1 passed after Las Vegas
+
+Alex ran `live.cli` after Las Vegas (record
+`outputs/live_picks/2026_22_20261122T184706Z.json`) and committed the result as
+`3db3e41`. The run captured BoxBox (`data_capture_v2` Gate 1, passed the same day),
+rebuilt race 21's metrics, and scored race 21 at 265, which Alex accepted.
+Holding the race-21 team with 1.0 unused and 3 free moves, he recorded P2PM's
+race-22 pick: COL for LAW, NOR for LEC and MCL for FER, VER as DRS, 140.8 with
+0.1 unused.
+
+D31's two checks passed:
+
+1. **The pick.** `StrategyMaxP2PM` through `run_for_team`, from the race-21 team
+   with 1.0 unused and `bonus_free_transfer` (3 moves), on the committed archive,
+   gives the same race-22 team, DRS driver, moves and unused budget as the record.
+2. **The points.** The archive gives 265 for race 21: 14 + 10 + 13 − 17 + 2 × 60
+   for the drivers, VER doubled, plus 51 + 74 for the constructors. The engine's
+   race-21 row and the team file's `CalculatedPoints` both give 265. Alex confirmed
+   it is the app's figure.
+
+**Also seen: the rebuild once a race has results.** Race 21's 22 metrics lines
+were rebuilt. Only the result columns were filled (Status, Position,
+ClassifiedPosition, GridPosition, Points, TeamName). Every signal column and the
+row order stayed as committed at Gate 3. A sprint weekend's sessions check on real
+data is still not run.
+
+Read-only; the check script stayed in the session's scratchpad. The suite passed on
+the committed data (927).

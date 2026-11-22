@@ -114,6 +114,8 @@ refused ("no input"), and exits 1.
   P2PM pick equals `run_single_team.py`'s for the same team, budget and free moves;
   the prediction equals the app's points or differs by a nameable effect. A
   difference blocks the verified label and is investigated before the next pick.
+  **Passed 2026-11-22** after Las Vegas, 2026 race 21's points and race 22's pick
+  (`log.md`).
 - **Gate 2 — pre-season 2027** (after step 7). A race-1 run on real prices and a
   real odds page. Comes after, or in the same sitting as, `data_capture_v2`'s Gate 2,
   which writes race 1 into the archive. One `live.cli` run can do both: the race-1
