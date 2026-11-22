@@ -1,6 +1,6 @@
 fastf1==3.9.0
 openpyxl
 pandas
-pulp
+pulp<4
 pyarrow
 pytest
