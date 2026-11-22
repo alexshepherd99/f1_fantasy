@@ -5,7 +5,8 @@ from pathlib import Path
 
 import fastf1
 
-DEFAULT_FASTF1_CACHEDIR = Path("/mnt/chromeos/removable/sd256/linux/fastf1_cache")
+DEFAULT_FASTF1_CACHEDIR = Path("~/.cache/fastf1")
+SD_CARD_FASTF1_CACHEDIR = Path("/mnt/chromeos/removable/sd256/linux/fastf1_cache")
 DEFAULT_FALLBACK_CACHEDIR = Path("~/fastf1_cache")
 DEFAULT_LOCAL_CACHE_SUBDIR = "local_cache"
 CACHE_DIR_CONFIG_FILENAME = ".fastf1_cache_dir"
@@ -25,8 +26,12 @@ CACHE_LOCATION_CONFIG_FILE = get_default_config_file_location()
 
 
 def get_default_cache_directories() -> list[Path]:
-    """Return the supported default FastF1 cache directory options."""
-    return [DEFAULT_FASTF1_CACHEDIR.expanduser(), DEFAULT_FALLBACK_CACHEDIR.expanduser()]
+    """Return the supported default FastF1 cache directory options, the default first."""
+    return [
+        DEFAULT_FASTF1_CACHEDIR.expanduser(),
+        SD_CARD_FASTF1_CACHEDIR,
+        DEFAULT_FALLBACK_CACHEDIR.expanduser(),
+    ]
 
 
 def ensure_directory(path: Path) -> Path:
