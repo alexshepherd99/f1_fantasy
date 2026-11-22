@@ -126,7 +126,6 @@ def select_cache_directory(
     else:
         raise ValueError("Cache directory selection is out of range")
 
-    persist_cache_directory(selected_cache_dir)
     return selected_cache_dir
 
 
@@ -135,15 +134,21 @@ def setup_fastf1_cache(
     local_cache_subdir: str = DEFAULT_LOCAL_CACHE_SUBDIR,
     interactive: bool = True,
 ) -> tuple[Path, Path]:
-    """Enable FastF1 cache and create a module-level local cache directory."""
+    """Enable FastF1 cache and create a module-level local cache directory.
+
+    A directory given as ``cache_dir`` or chosen at the prompt is persisted,
+    but only once it has been created, so a path that cannot be is not reused.
+    """
+    persisted_cache_dir = get_persisted_cache_directory()
     selected_cache_dir = select_cache_directory(cache_dir, interactive=interactive)
-    if cache_dir is not None:
-        persist_cache_directory(selected_cache_dir)
 
     try:
         cache_path = ensure_directory(selected_cache_dir)
     except OSError as exc:
         raise RuntimeError(f"Failed to create FastF1 cache directory: {selected_cache_dir}") from exc
+
+    if (cache_dir is not None or interactive) and selected_cache_dir != persisted_cache_dir:
+        persist_cache_directory(selected_cache_dir)
 
     fastf1.Cache.configure(cache_dir=str(cache_path))
     logging.info("FastF1 cache enabled at: %s", cache_path)

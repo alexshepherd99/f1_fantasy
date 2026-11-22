@@ -105,3 +105,57 @@ def test_setup_fastf1_cache_raises_for_invalid_directory(monkeypatch, tmp_path):
 
     with pytest.raises(RuntimeError, match="Failed to create FastF1 cache directory"):
         setup_fastf1_cache(cache_dir=invalid_dir, interactive=False)
+
+
+def _fail_mkdir(monkeypatch):
+    monkeypatch.setattr(Path, "mkdir", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("permission denied")))
+
+
+def test_setup_fastf1_cache_does_not_persist_explicit_directory_it_cannot_create(monkeypatch, tmp_path):
+    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.configure", lambda **_: None)
+    config_file = tmp_path / ".fastf1_cache_dir"
+    monkeypatch.setattr("fast_f1.cache.CACHE_LOCATION_CONFIG_FILE", config_file)
+    _fail_mkdir(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="Failed to create FastF1 cache directory"):
+        setup_fastf1_cache(cache_dir=tmp_path / "uncreatable", interactive=False)
+
+    assert not config_file.exists()
+
+
+def test_setup_fastf1_cache_does_not_persist_prompted_directory_it_cannot_create(monkeypatch, tmp_path):
+    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.configure", lambda **_: None)
+    config_file = tmp_path / ".fastf1_cache_dir"
+    monkeypatch.setattr("fast_f1.cache.CACHE_LOCATION_CONFIG_FILE", config_file)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "4" if "Enter choice" in prompt else str(tmp_path / "uncreatable"))
+    _fail_mkdir(monkeypatch)
+
+    with pytest.raises(RuntimeError, match="Failed to create FastF1 cache directory"):
+        setup_fastf1_cache(interactive=True)
+
+    assert not config_file.exists()
+
+
+def test_setup_fastf1_cache_persists_prompted_directory(monkeypatch, tmp_path):
+    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.configure", lambda **_: None)
+    config_file = tmp_path / ".fastf1_cache_dir"
+    monkeypatch.setattr("fast_f1.cache.CACHE_LOCATION_CONFIG_FILE", config_file)
+    chosen_dir = tmp_path / "chosen"
+    monkeypatch.setattr("builtins.input", lambda prompt="": "4" if "Enter choice" in prompt else str(chosen_dir))
+
+    cache_path, _ = setup_fastf1_cache(interactive=True)
+
+    assert cache_path == chosen_dir
+    assert config_file.read_text().strip() == str(chosen_dir)
+
+
+def test_setup_fastf1_cache_does_not_persist_non_interactive_default(monkeypatch, tmp_path):
+    monkeypatch.setattr("fast_f1.cache.fastf1.Cache.configure", lambda **_: None)
+    config_file = tmp_path / ".fastf1_cache_dir"
+    monkeypatch.setattr("fast_f1.cache.CACHE_LOCATION_CONFIG_FILE", config_file)
+    monkeypatch.setattr("fast_f1.cache.DEFAULT_FASTF1_CACHEDIR", tmp_path / "default")
+
+    cache_path, _ = setup_fastf1_cache(interactive=False)
+
+    assert cache_path == tmp_path / "default"
+    assert not config_file.exists()
