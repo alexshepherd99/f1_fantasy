@@ -984,3 +984,27 @@ The suite went from 925 to 926.
 **Not executed:** anything against BoxBox's real 2027 files, which do not exist
 yet, and a start through `live.cli`, which needs Alex's terminal. Both are
 for Gate 2. Step 6's winter review comes first.
+
+## 2026-11-22 — Gate 1 passed: the capture after Las Vegas
+
+Alex ran `live.cli` after Las Vegas. Its BoxBox step captured race 21's points
+and race 22's prices, the first real capture with prices from
+`predictions.json`. Alex checked every written point and price against the F1
+Fantasy app before committing (`3db3e41`). That copy is saved under
+`outputs/boxbox/`, stamped 2026-11-22 18:47 UTC.
+
+Checks on the committed archive against the commit before, all passed:
+
+- **Only race 21 and 22 lines changed.** In both files, every other line is
+  unchanged and in the same order. Race 21's 22 driver and 11 constructor rows
+  went from empty points to filled, with their prices unchanged. Each new race-22
+  row follows that asset's race-21 row.
+- **The prices are for the right race.** BoxBox rebuilt `predictions.json` at
+  18:19 UTC for round 24, which is archive race 22, with no provisional price.
+  Every race-22 price written equals it.
+- **The 2026-11-09 fault did not come back.** `season_summary.json`, rebuilt at
+  the same time, agrees with `predictions.json` on all 33 prices, so the
+  disagreement warning would not have fired.
+- The suite passed on the committed data (927).
+
+Steps 11 and 12 are now verified. Gate 2 and step 6's winter review remain.

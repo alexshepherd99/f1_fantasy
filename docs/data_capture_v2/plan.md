@@ -90,11 +90,11 @@ Agreed by Alex 2026-11-08 (step 2), from a read-only survey of the workbook
 10. ~~Write the change~~ — done 2026-11-08, see log *Step 10*.
 
 11. ~~The CLI and its docs~~ — done (dev) 2026-11-08, see log *Step 11*.
-    Verified at Gate 1.
+    Verified at Gate 1, passed 2026-11-22.
 
 12. ~~Prices from `predictions.json`~~ — done (dev) 2026-11-13, see log
     *Step 12*. Added after `season_summary.json`'s prices went back a race
-    (log, 2026-11-12). Verified at Gate 1's second race.
+    (log, 2026-11-12). Verified at Gate 1's second race, passed 2026-11-22.
 
 Steps 13–17 start a new season, per `requirements.md`'s *Scope addition,
 2026-11-14*. They run unattended (*Working unattended* there), done (dev)
@@ -232,7 +232,8 @@ race at unchanged prices, which leaves the files as they are. Points and
 prices now come from different files, which BoxBox can rebuild at different
 times, so the round check is the expected guard against a partial update;
 "no price has moved" stays behind it. The second race is also the first
-capture with prices from `predictions.json`.
+capture with prices from `predictions.json`. **Passed 2026-11-22** at Las
+Vegas, 2026 race 21's points and race 22's prices (`log.md`).
 
 **Gate 2: the first real start, 2027 race 1.** This runs once the game has
 published 2027's prices, after winter testing, and after step 6's review of
