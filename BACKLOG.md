@@ -22,6 +22,25 @@ Global list of not-yet-started work. Freeform. When an item is picked up, create
 
 An entry that runs past ~350 words gets its own `docs/<effort-name>/proposal.md`, leaving a short pointer entry in this list. Picking the item up then adds `requirements.md` / `plan.md` / `log.md` beside it as usual. The threshold is a prompt to judge, not a gate — it is where the entries here actually split (2026-07-30: seven at 110-330 words, two at 537 and 766), not a target. Note this puts a `docs/<effort-name>/` directory in place before work starts, which `agentic`'s `shared/persistent-docs.md` does not describe; it is a deliberate local extension, worth proposing upstream if it sticks.
 
+## FastF1 cache default is one machine's SD-card path
+
+`fast_f1/cache.py:8` sets `DEFAULT_FASTF1_CACHEDIR` to
+`/mnt/chromeos/removable/sd256/linux/fastf1_cache`, a ChromeOS removable-card
+path (from `docs/fastf1_v1/requirements.md:80`). It is the first option the
+prompt offers and what `select_cache_directory(interactive=False)` returns, so
+on any machine without that card a non-interactive setup fails with
+`RuntimeError: Failed to create FastF1 cache directory`.
+
+`setup_fastf1_cache()` also persists an explicit `cache_dir` to
+`.fastf1_cache_dir` *before* creating it (`cache.py:132-141`), so a path that
+cannot be created stays saved after the failure and every later run reuses it.
+
+Options: default to FastF1's own location (`~/.cache/fastf1` on Linux) or the
+existing `~/fastf1_cache` fallback, keeping the SD-card path only as a
+persisted choice; and persist only once the directory exists.
+`tests/test_fast_f1_cache.py` asserts the current default and would change
+with it.
+
 ## Move off PuLP's deprecated `PULP_CBC_CMD`
 
 `requirements.txt` pins `pulp<4` because PuLP 4 drops `PULP_CBC_CMD`, which
