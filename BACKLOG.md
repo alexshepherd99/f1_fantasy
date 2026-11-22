@@ -22,6 +22,22 @@ Global list of not-yet-started work. Freeform. When an item is picked up, create
 
 An entry that runs past ~350 words gets its own `docs/<effort-name>/proposal.md`, leaving a short pointer entry in this list. Picking the item up then adds `requirements.md` / `plan.md` / `log.md` beside it as usual. The threshold is a prompt to judge, not a gate — it is where the entries here actually split (2026-07-30: seven at 110-330 words, two at 537 and 766), not a target. Note this puts a `docs/<effort-name>/` directory in place before work starts, which `agentic`'s `shared/persistent-docs.md` does not describe; it is a deliberate local extension, worth proposing upstream if it sticks.
 
+## Move off PuLP's deprecated `PULP_CBC_CMD`
+
+`requirements.txt` pins `pulp<4` because PuLP 4 drops `PULP_CBC_CMD`, which
+`StrategyBase.execute()` solves with (`linear/strategy_base.py:263`; also
+`linear/scratch_pulp.py`). PuLP 3.3.2 already warns:
+
+```
+pulp/apis/coin_api.py:70: DeprecationWarning: PULP_CBC_CMD is deprecated and will be removed in PuLP 4.0. Install CBC with `pip install pulp[cbc]` and use COIN_CMD instead.
+```
+
+Switching to `COIN_CMD` touches `StrategyBase`, so it needs Alex's OK and a
+back-test check that results are unchanged. The same release also warns about
+reading `LpProblem.constraints` as a dict, which
+`tests/test_strategy_fastf1.py:188` does. Lift the `pulp<4` pin once both are
+done.
+
 ## Lift concentration calculation into `StrategyBase`
 
 `StrategyBettingOdds.get_problem()` (`linear/strategy_odds.py:36-88`) builds
