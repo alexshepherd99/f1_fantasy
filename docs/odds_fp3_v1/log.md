@@ -97,3 +97,57 @@ assert the LP's objective as well as the pick.
 - Nothing in `races/`, `import_data/`, `scripts/`, `StrategyBase` or any existing
   strategy was edited. The strategy reuses `fast_f1.signal._race_rows`, a private
   function, as `linear/strategy_odds.py` already imports `_FILE_BETTING_ODDS`.
+
+## 2026-11-24 — Step 4: the single-race back-test
+
+`backtest/race_one.py`, run as `PYTHONPATH=. venv/bin/python -m backtest.race_one`, with
+31 tests in `tests/test_backtest_race_one.py`. It was built in four commits: the cap,
+placeholder and scoring; the random teams; finding the races; and running a race plus
+the command line.
+
+- **What it does at each race.** The 5 mixes, max budget and betting odds each pick a
+  team from the placeholder (the race's cheapest 5 drivers and 2 constructors), with 7
+  moves and R8's cap. Each team is scored on that race's archive points, and the DRS
+  driver counts twice. That is the strategy's own nominee, or the dearest driver for
+  max budget, as the game does. The picks go through the existing
+  `simulate.pick.solve_race`. The rows go to `outputs/odds_fp3_v1_races.csv`, one per
+  race and label, with the cap, cost, team, DRS driver and points.
+- **The cap** reuses `simulate.pick.limitless_cap`, which already sums the grid's prices.
+  The 15 races' caps run from 100m (race 1) to 105.3m (race 18).
+- **The random teams.** Teams are drawn as 5 drivers and 2 constructors at random, and a
+  team is kept only if it fits the cap, so every team that fits is equally likely. That
+  continues until 1,000 are kept. The seed is 1, combined with the race number, so
+  adding races at the season-end rerun leaves each race's draw unchanged. The draw
+  raises, rather than looping for ever, when no team fits or after 1,000 draws per team
+  wanted.
+- **The eligible races** are found afresh on each run. A race qualifies when:
+  - it has been run (some asset scored points, since the archive loads a race not yet
+    run with every point 0);
+  - its metrics hold FP3 and odds above zero;
+  - and the odds file prices it.
+
+  Only a normal weekend runs FP3, so sprints drop out with no format check. A race
+  whose metrics scored odds all zero, although the odds file has them, was built
+  before the odds were added. It is left out with a warning to rebuild it. On today's
+  data the run finds R7's 15 races. Race 22 has odds, but no metrics or points yet.
+- **Red before green.** Where the only red possible was a missing name, a stub returning
+  nothing turned the tests red on behaviour first. Each piece was then checked by
+  breaking it. Four breaks first survived and the tests were strengthened:
+  - the constructor tie-break, since the fixture's tie was not at the cut-off;
+  - DRS on the first driver by name, since the fixture's dearest driver also sorted
+    first;
+  - a format check that the FP3 check already covers, so the format check was removed;
+  - picks held to 2 moves, since at an 80m cap every best team was within 2 moves of the
+    placeholder. The fixture's cap is now 95m, where max budget and odds alone each
+    need 3.
+
+  Two breaks that hung rather than failed led to the draw limit above.
+- **The real run** took 24 seconds at a peak of 197 MB and wrote 120 rows. A second run
+  wrote a byte-identical file. Every pick was within its cap. The results are read at
+  step 6.
+- **R12 ledger**: the placeholder team is entered in
+  `docs/backtest_v1/requirements.md`. It copies four lines that `live.lineup` writes
+  inline. Nothing in `races/`, `linear/`, `import_data/` or `scripts/` was edited.
+- **Process slip:** one import line in the test file was changed with `sed` rather than
+  the Edit tool, so it had no diff for review. It is the `from backtest.race_one import
+  ...` line, since rewritten with Edit.
