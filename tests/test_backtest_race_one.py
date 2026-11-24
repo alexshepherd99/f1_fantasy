@@ -1,10 +1,22 @@
+import logging
+import math
+from pathlib import Path
+
+import pandas as pd
 import pytest
 
 from common import AssetType
 from races.asset import Constructor, Driver
-from races.season import Race
+from races.season import Race, Season
 
-from backtest.race_one import draw_random_teams, placeholder_team, race_cap, random_teams_points, score_team
+from backtest.race_one import (
+    draw_random_teams,
+    eligible_races,
+    placeholder_team,
+    race_cap,
+    random_teams_points,
+    score_team,
+)
 
 
 def _race(
@@ -188,3 +200,99 @@ def test_random_teams_points_averages_over_the_draw():
     expected = sum(score_team(d, c, "", race) for d, c in teams) / 30
 
     assert random_teams_points(race, cap=80.0, count=30, seed=3) == pytest.approx(expected)
+
+
+_SEASON = 2026
+
+
+def _write_metrics(path: Path, races: dict[int, str], season: int = _SEASON) -> Path:
+    """Metrics rows for each race's drivers, in the shape of ``data/fastf1_practice_rolling_metrics.csv``.
+
+    Each race is one of: ``normal``; ``sprint`` (FP1 and SQ, no FP2 or FP3); ``no_fp3`` (FP2 but
+    no FP3); ``odds_zero`` (a normal weekend whose odds all scored zero when the file was built).
+    """
+    records = []
+    for race_num, kind in races.items():
+        sprint = kind == "sprint"
+        for i, driver in enumerate(["A1", "A2", "B1", "B2", "C1", "C2", "C3"]):
+            records.append({
+                "Driver": driver,
+                "Season": season,
+                "Race": race_num,
+                "RollingPointsRank": 0.5,
+                "ConstructorRollingPointsRank": 0.5,
+                "FP2_MinLapTime_rank": math.nan if sprint else 0.5,
+                "FP3_MinLapTime_rank": math.nan if sprint or kind == "no_fp3" else i / 6,
+                "OddsImpliedProbability": 0.1,
+                "OddsRank": 0.0 if kind == "odds_zero" else 1 - i / 6,
+                "FP1_MinLapTime_rank": 0.5 if sprint else math.nan,
+                "SQ_MinLapTime_rank": 0.5 if sprint else math.nan,
+            })
+    pd.DataFrame(records).to_csv(path, index=False)
+    return path
+
+
+def _write_odds(path: Path, races: list[int]) -> Path:
+    """An odds file pricing every fixture driver at each of `races`."""
+    records = [
+        {"Driver": d.split("@")[0], "Constructor": d.split("@")[1], "Season": _SEASON, "Race": r, "Odds": f"{i + 2}/1"}
+        for r in races
+        for i, d in enumerate(_DRIVERS)
+    ]
+    pd.DataFrame(records).to_csv(path, index=False)
+    return path
+
+
+def _season(unscored: tuple[int, ...] = ()) -> Season:
+    """Races 1 and 2 of the fixture, with the races in `unscored` not yet run (every point 0)."""
+    races = {}
+    for race_num in (1, 2):
+        if race_num in unscored:
+            drivers = {d: (price, 0) for d, (price, _) in _DRIVERS.items()}
+            constructors = {c: (price, 0) for c, (price, _) in _CONSTRUCTORS.items()}
+        else:
+            drivers, constructors = _DRIVERS, _CONSTRUCTORS
+        races[race_num] = _race(race_num, drivers, constructors)
+    return Season(_SEASON, races)
+
+
+def test_eligible_races_takes_scored_normal_weekends_with_odds_and_fp3(tmp_path):
+    metrics = _write_metrics(tmp_path / "metrics.csv", {1: "normal", 2: "normal"})
+    odds = _write_odds(tmp_path / "odds.csv", [1, 2])
+
+    assert eligible_races(_season(), metrics, odds) == [1, 2]
+
+
+@pytest.mark.parametrize("race_2_metrics, odds_races, unscored, why", [
+    ({2: "sprint"}, [1, 2], (), "a sprint weekend has no FP3"),
+    ({2: "no_fp3"}, [1, 2], (), "a normal weekend whose FP3 is missing"),
+    ({}, [1, 2], (), "no metrics rows"),
+    ({2: "normal"}, [1], (), "no odds in the odds file"),
+    ({2: "normal"}, [1, 2], (2,), "not yet run, so nothing to score"),
+])
+def test_eligible_races_leaves_out_a_race(tmp_path, race_2_metrics, odds_races, unscored, why):
+    metrics = _write_metrics(tmp_path / "metrics.csv", {1: "normal"} | race_2_metrics)
+    odds = _write_odds(tmp_path / "odds.csv", odds_races)
+
+    assert eligible_races(_season(unscored), metrics, odds) == [1], why
+
+
+def test_eligible_races_ignores_another_seasons_metrics(tmp_path):
+    metrics = _write_metrics(tmp_path / "metrics.csv", {1: "normal", 2: "normal"}, season=_SEASON - 1)
+    odds = _write_odds(tmp_path / "odds.csv", [1, 2])
+
+    assert eligible_races(_season(), metrics, odds) == []
+
+
+def test_eligible_races_warns_when_the_metrics_predate_the_odds(tmp_path, caplog):
+    """The odds file has race 2's odds, but the metrics scored them all zero, so were built before they were added.
+
+    The strategy reads odds from the metrics, so the race is left out, with a warning to rebuild them.
+    """
+    metrics = _write_metrics(tmp_path / "metrics.csv", {1: "normal", 2: "odds_zero"})
+    odds = _write_odds(tmp_path / "odds.csv", [1, 2])
+
+    with caplog.at_level(logging.WARNING):
+        assert eligible_races(_season(), metrics, odds) == [1]
+
+    assert "2026 race 2" in caplog.text

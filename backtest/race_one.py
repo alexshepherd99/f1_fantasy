@@ -4,11 +4,14 @@ See ``docs/odds_fp3_v1/requirements.md``, R7-R9.
 """
 import logging
 from collections.abc import Iterable
+from pathlib import Path
 
 import numpy as np
 
 from common import DEFAULT_STARTING_BUDGET, AssetType
-from races.season import Race
+from fast_f1.output import load_existing_metrics
+from import_data.odds import load_odds
+from races.season import Race, Season
 from races.team import Team
 from simulate.pick import limitless_cap
 
@@ -119,6 +122,46 @@ def draw_random_teams(
                 tuple(sorted(constructors[i] for i in team_constructors)),
             ))
     return teams
+
+
+def eligible_races(season: Season, fn_metrics: Path | str, fn_odds: str) -> list[int]:
+    """The season's races a race-1 pick can be back-tested on (R7), found afresh on each run.
+
+    A race qualifies when it has been run (some asset scored points, as the archive loads a race
+    not yet run with every point 0), its metrics have FP3 and odds, so it was a normal weekend,
+    and the odds file prices it. A race whose odds file has odds but whose metrics scored them all
+    zero had its metrics built before the odds were added: it is left out with a warning to
+    rebuild them.
+    """
+    metrics = load_existing_metrics(fn_metrics)
+    if metrics.empty:
+        return []
+    metrics = metrics[metrics["Season"] == season.season]
+
+    eligible = []
+    for race_num, race in sorted(season.races.items()):
+        rows = metrics[metrics["Race"] == race_num]
+        if rows.empty or not _has_been_run(race):
+            continue
+        # Only a normal weekend runs FP3, so this also leaves out every sprint weekend
+        if rows["FP3_MinLapTime_rank"].isna().all():
+            continue
+        has_odds = any(odds > 0.0 for odds in load_odds(AssetType.DRIVER, season.season, race_num, fn=fn_odds).values())
+        if not has_odds:
+            continue
+        if not (rows["OddsRank"] > 0.0).any():
+            logging.warning(
+                f"{season.season} race {race_num} has odds, but its metrics scored them all zero: "
+                "rebuild its metrics to include it"
+            )
+            continue
+        eligible.append(int(race_num))
+    return eligible
+
+
+def _has_been_run(race: Race) -> bool:
+    """Whether any asset scored points at `race`; the archive loads a race not yet run with every point 0."""
+    return any(a.points != 0 for a in list(race.drivers.values()) + list(race.constructors.values()))
 
 
 def random_teams_points(race: Race, cap: float, count: int = RANDOM_TEAMS, seed: int = RANDOM_SEED) -> float:
