@@ -12,7 +12,11 @@ from helpers import load_with_derivations
 from races.asset import Constructor, Driver
 from races.season import Race, Season, factory_season
 
+from fast_f1.indicator_analysis import bootstrap_interval
+
 from backtest.race_one import (
+    choose_default,
+    compare_with_even_split,
     draw_random_teams,
     eligible_races,
     main,
@@ -449,3 +453,95 @@ def test_main_fails_when_no_race_is_eligible(tmp_path):
 
     assert exit_code == 1
     assert not output.exists()
+
+
+_BASELINE = "OddsFP3_w0p5"
+_BASELINE_POINTS = [100.0, 150.0, 80.0, 200.0, 120.0, 90.0]
+
+
+def _results(gains: dict[str, list[float]], races: list[int] | None = None) -> pd.DataFrame:
+    """Per-race results: every label at the baseline's points plus its gain at that race (0 if not given)."""
+    races = races or list(range(1, len(_BASELINE_POINTS) + 1))
+    rows = []
+    for i, race_num in enumerate(races):
+        for label in _LABELS:
+            gain = gains.get(label, [0.0] * len(races))[i]
+            rows.append({"season": _SEASON, "race": race_num, "label": label, "points": _BASELINE_POINTS[i] + gain})
+    return pd.DataFrame(rows)
+
+
+def _row(comparison: pd.DataFrame, label: str) -> pd.Series:
+    return comparison.set_index("label").loc[label]
+
+
+def test_compare_gives_a_row_per_label_but_the_even_split():
+    comparison = compare_with_even_split(_results({}))
+
+    assert comparison["label"].tolist() == [label for label in _LABELS if label != _BASELINE]
+    assert comparison["kind"].tolist() == ["mix"] * 4 + ["control"] * 3
+    assert (comparison["races"] == len(_BASELINE_POINTS)).all()
+
+
+def test_compare_passes_a_mix_ahead_at_every_race():
+    """10 points ahead at every race: every pretend season averages 10, so the interval is above zero."""
+    row = _row(compare_with_even_split(_results({"OddsFP3_w1": [10.0] * 6})), "OddsFP3_w1")
+
+    assert row["mean_gain"] == pytest.approx(10.0)
+    assert (row["low"], row["high"]) == pytest.approx((10.0, 10.0))
+    assert row["passes"]
+
+
+def test_compare_fails_a_mix_whose_interval_reaches_zero():
+    """Ahead on average, but by too little against its spread for the interval to clear zero."""
+    gains = [40.0, -30.0, 35.0, -25.0, 30.0, -20.0]
+    row = _row(compare_with_even_split(_results({"OddsFP3_w0": gains})), "OddsFP3_w0")
+
+    assert row["mean_gain"] == pytest.approx(5.0)
+    assert row["low"] < 0 < row["high"]
+    assert not row["passes"]
+
+
+def test_compare_interval_is_the_bootstrap_on_the_per_race_gains():
+    gains = [12.0, -3.0, 25.0, 4.0, 9.0, 1.0]
+    row = _row(compare_with_even_split(_results({"MaxBudget": gains})), "MaxBudget")
+
+    assert (row["low"], row["high"]) == pytest.approx(bootstrap_interval(gains))
+    assert row["passes"] == (bootstrap_interval(gains)[0] > 0)
+
+
+def test_compare_pairs_each_label_with_the_even_split_by_race():
+    """Rows shuffled and races numbered out of order: each gain is still taken at its own race."""
+    gains = [12.0, -3.0, 25.0, 4.0, 9.0, 1.0]
+    results = _results({"OddsFP3_w0p25": gains}, races=[3, 1, 8, 6, 21, 10]).sample(frac=1, random_state=0)
+
+    row = _row(compare_with_even_split(results), "OddsFP3_w0p25")
+
+    assert (row["low"], row["high"]) == pytest.approx(bootstrap_interval([-3.0, 12.0, 4.0, 25.0, 1.0, 9.0]))
+
+
+def test_compare_raises_when_a_label_misses_a_race():
+    results = _results({})
+    results = results[~((results["label"] == "BettingOdds") & (results["race"] == 4))]
+
+    with pytest.raises(ValueError, match="BettingOdds"):
+        compare_with_even_split(results)
+
+
+def test_choose_default_keeps_the_even_split_when_no_mix_passes():
+    comparison = compare_with_even_split(_results({"OddsFP3_w0": [40.0, -30.0, 35.0, -25.0, 30.0, -20.0]}))
+
+    assert choose_default(comparison) == _BASELINE
+
+
+def test_choose_default_takes_the_passing_mix_with_the_highest_gain():
+    comparison = compare_with_even_split(_results({"OddsFP3_w1": [10.0] * 6, "OddsFP3_w0p75": [20.0] * 6}))
+
+    assert choose_default(comparison) == "OddsFP3_w0p75"
+
+
+def test_choose_default_ignores_a_passing_control():
+    """A control ahead of the even split is reported, but never becomes the default."""
+    comparison = compare_with_even_split(_results({"OddsFP3_w1": [5.0] * 6, "BettingOdds": [50.0] * 6}))
+
+    assert _row(comparison, "BettingOdds")["passes"]
+    assert choose_default(comparison) == "OddsFP3_w1"

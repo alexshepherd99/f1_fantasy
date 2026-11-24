@@ -14,6 +14,7 @@ import pandas as pd
 
 from backtest.variants import make_variant
 from common import DEFAULT_STARTING_BUDGET, AssetType, setup_logging
+from fast_f1.indicator_analysis import bootstrap_interval
 from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, load_existing_metrics
 from helpers import load_with_derivations
 from import_data.odds import _FILE_BETTING_ODDS, load_odds
@@ -145,6 +146,9 @@ def mix_label(odds_weight: float) -> str:
     return f"OddsFP3_w{odds_weight:g}".replace(".", "p")
 
 
+BASELINE_LABEL = mix_label(0.5)
+
+
 def run_race(season_year: int, race: Race, first_race: Race, fn_metrics: Path | str, fn_odds: str) -> list[dict]:
     """Pick and score a team from scratch at `race` for each mix and control (R9).
 
@@ -230,6 +234,61 @@ def eligible_races(season: Season, fn_metrics: Path | str, fn_odds: str) -> list
             continue
         eligible.append(int(race_num))
     return eligible
+
+
+def compare_with_even_split(results: pd.DataFrame) -> pd.DataFrame:
+    """Each label's per-race points gain over the 50/50 mix, against R10's bar.
+
+    A label's gain at a race is its points minus the 50/50 mix's points there. The 95% interval
+    on the mean gain is `bootstrap_interval`'s, with its fixed seed: the races are drawn at random
+    with replacement 10,000 times, and the middle 95% of those means is the interval. A label
+    passes only if the whole interval is above zero.
+
+    Args:
+        results: `run_race`'s rows for one season.
+
+    Returns:
+        A row per label but the 50/50 mix, in the order the results give them, with ``label``,
+        ``kind`` (``mix`` or ``control``), ``races``, ``mean_gain``, ``low``, ``high`` and ``passes``.
+
+    Raises:
+        ValueError: A label lacks a race another label has.
+    """
+    points = results.pivot(index="race", columns="label", values="points")
+    missing = sorted(points.columns[points.isna().any()])
+    if missing:
+        msg = f"Results must cover the same races for every label; incomplete: {missing}"
+        logging.error(msg)
+        raise ValueError(msg)
+
+    mixes = {mix_label(w) for w in MIXES}
+    rows = []
+    for label in results["label"].drop_duplicates():
+        if label == BASELINE_LABEL:
+            continue
+        gains = points[label] - points[BASELINE_LABEL]
+        low, high = bootstrap_interval(gains)
+        rows.append({
+            "label": label,
+            "kind": "mix" if label in mixes else "control",
+            "races": len(gains),
+            "mean_gain": float(gains.mean()),
+            "low": low,
+            "high": high,
+            "passes": low > 0,
+        })
+    return pd.DataFrame(rows)
+
+
+def choose_default(comparison: pd.DataFrame) -> str:
+    """The mix R10 makes the default: the passing mix with the highest mean gain, else the 50/50 mix.
+
+    The controls are compared too, but never become the default.
+    """
+    passing = comparison[(comparison["kind"] == "mix") & comparison["passes"]]
+    if passing.empty:
+        return BASELINE_LABEL
+    return passing.sort_values("mean_gain", ascending=False)["label"].iloc[0]
 
 
 class NoEligibleRaces(ValueError):
