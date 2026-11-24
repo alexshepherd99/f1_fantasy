@@ -14,6 +14,7 @@ Efforts under `docs/`:
 | [`live_picks_v1`](docs/live_picks_v1/) | in progress |
 | [`max_points_v1`](docs/max_points_v1/) | done |
 | [`odds_drs_v1`](docs/odds_drs_v1/) | done |
+| [`odds_fp3_v1`](docs/odds_fp3_v1/) | in progress |
 | [`odds_source_v1`](docs/odds_source_v1/) | done |
 | [`readme_tidy_v1`](docs/readme_tidy_v1/) | done |
 | [`remove_batch_script_v1`](docs/remove_batch_script_v1/) | done |
@@ -201,3 +202,23 @@ needs making before building: what a live shadow shows that a back-test rerun at
 season end does not.
 
 Raised by Alex 2026-11-09, from `live_picks_v1`.
+
+## Pick the 2027 race-1 team live with `odds_fp3_v1`'s strategy
+
+**Before 2027 race 1, and only if `odds_fp3_v1`'s back-test says the strategy is worth
+using.** That effort builds the strategy and back-tests it, but gives no way to run it
+live. `live.cli` (`live_picks_v1`) collects odds and FastF1 data and runs strategies
+before each race. However, it works from an existing team and has never handled a
+season's first race, which starts from an empty team at 100m. The live pick runs after
+FP3, with whatever odds are latest at that point (`odds_fp3_v1` R2).
+
+Raised by Alex 2026-11-24, from `odds_fp3_v1`.
+
+## A race-1 pick for a sprint weekend
+
+`odds_fp3_v1`'s strategy needs FP3, so it refuses a sprint weekend (its R5). If a
+season opens with a sprint, nothing here picks the opening team from odds and practice.
+`indicator_analysis_v1` found practice weak on sprint weekends, so whether FP1 or Sprint
+Qualifying adds anything to odds there needs checking first.
+
+Raised 2026-11-24, from `odds_fp3_v1`.
