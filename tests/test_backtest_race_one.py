@@ -1,3 +1,4 @@
+import itertools
 import logging
 import math
 from pathlib import Path
@@ -15,6 +16,7 @@ from backtest.race_one import (
     placeholder_team,
     race_cap,
     random_teams_points,
+    run_race,
     score_team,
 )
 
@@ -203,6 +205,10 @@ def test_random_teams_points_averages_over_the_draw():
 
 
 _SEASON = 2026
+# Each fixture driver's OddsRank and FP3 rank, in `_DRIVERS`' order: odds favour A1 down to C3,
+# FP3 the reverse. Unevenly spaced, so no two teams tie on value
+_ODDS_RANKS = [1.0, 0.9, 0.55, 0.4, 0.33, 0.12, 0.0]
+_FP3_RANKS = [0.0, 0.2, 0.31, 0.47, 0.8, 0.93, 1.0]
 
 
 def _write_metrics(path: Path, races: dict[int, str], season: int = _SEASON) -> Path:
@@ -214,7 +220,7 @@ def _write_metrics(path: Path, races: dict[int, str], season: int = _SEASON) -> 
     records = []
     for race_num, kind in races.items():
         sprint = kind == "sprint"
-        for i, driver in enumerate(["A1", "A2", "B1", "B2", "C1", "C2", "C3"]):
+        for i, driver in enumerate(d.split("@")[0] for d in _DRIVERS):
             records.append({
                 "Driver": driver,
                 "Season": season,
@@ -222,9 +228,9 @@ def _write_metrics(path: Path, races: dict[int, str], season: int = _SEASON) -> 
                 "RollingPointsRank": 0.5,
                 "ConstructorRollingPointsRank": 0.5,
                 "FP2_MinLapTime_rank": math.nan if sprint else 0.5,
-                "FP3_MinLapTime_rank": math.nan if sprint or kind == "no_fp3" else i / 6,
+                "FP3_MinLapTime_rank": math.nan if sprint or kind == "no_fp3" else _FP3_RANKS[i],
                 "OddsImpliedProbability": 0.1,
-                "OddsRank": 0.0 if kind == "odds_zero" else 1 - i / 6,
+                "OddsRank": 0.0 if kind == "odds_zero" else _ODDS_RANKS[i],
                 "FP1_MinLapTime_rank": 0.5 if sprint else math.nan,
                 "SQ_MinLapTime_rank": 0.5 if sprint else math.nan,
             })
@@ -296,3 +302,112 @@ def test_eligible_races_warns_when_the_metrics_predate_the_odds(tmp_path, caplog
         assert eligible_races(_season(), metrics, odds) == [1]
 
     assert "2026 race 2" in caplog.text
+
+
+_LABELS = [
+    "OddsFP3_w0",
+    "OddsFP3_w0p25",
+    "OddsFP3_w0p5",
+    "OddsFP3_w0p75",
+    "OddsFP3_w1",
+    "MaxBudget",
+    "BettingOdds",
+    "RandomTeams",
+]
+_STRATEGY_LABELS = _LABELS[:-1]
+
+
+@pytest.fixture
+def race_one_rows(tmp_path) -> tuple[Race, float, list[dict]]:
+    """`run_race` on the fixture race, whose whole grid is 5% cheaper than at race 1, so the cap is 95m.
+
+    At 95m, max budget's team and the odds-alone team are each 3 moves from the placeholder, so a
+    pick held to fewer moves would show.
+    """
+    race = _race(3, _DRIVERS, _CONSTRUCTORS)
+    first_race = _race(
+        1,
+        {d: (price * 100 / 95, points) for d, (price, points) in _DRIVERS.items()},
+        {c: (price * 100 / 95, points) for c, (price, points) in _CONSTRUCTORS.items()},
+    )
+    metrics = _write_metrics(tmp_path / "metrics.csv", {3: "normal"})
+    odds = _write_odds(tmp_path / "odds.csv", [3])
+    return race, 95.0, run_race(_SEASON, race, first_race, metrics, odds)
+
+
+def _cost(drivers, constructors) -> float:
+    return sum(_DRIVERS[d][0] for d in drivers) + sum(_CONSTRUCTORS[c][0] for c in constructors)
+
+
+def _teams_within(cap: float) -> list[tuple[tuple[str, ...], tuple[str, ...]]]:
+    """Every team of the fixture within `cap`, found by listing all 63."""
+    return [
+        (drivers, constructors)
+        for drivers in itertools.combinations(sorted(_DRIVERS), 5)
+        for constructors in itertools.combinations(sorted(_CONSTRUCTORS), 2)
+        if _cost(drivers, constructors) <= cap
+    ]
+
+
+def test_run_race_gives_a_row_per_mix_and_control(race_one_rows):
+    _, cap, rows = race_one_rows
+
+    assert [row["label"] for row in rows] == _LABELS
+    for row in rows:
+        assert row["season"] == _SEASON
+        assert row["race"] == 3
+        assert row["cap"] == pytest.approx(cap)
+
+
+def test_run_race_picks_valid_teams_within_the_cap_and_scores_them(race_one_rows):
+    race, cap, rows = race_one_rows
+
+    for row in rows[:-1]:
+        drivers, constructors = row["drivers"].split(","), row["constructors"].split(",")
+        assert len(set(drivers)) == 5 and len(set(constructors)) == 2, row["label"]
+        assert row["cost"] == pytest.approx(_cost(drivers, constructors)), row["label"]
+        assert row["cost"] <= cap + 1e-6, row["label"]
+        assert row["points"] == score_team(drivers, constructors, row["drs_driver"], race), row["label"]
+
+
+def test_run_race_gives_the_strategies_the_cap(race_one_rows):
+    """Max budget spends as much of the 95m as any team can."""
+    _, cap, rows = race_one_rows
+    best_spend = max(_cost(d, c) for d, c in _teams_within(cap))
+
+    assert rows[_LABELS.index("MaxBudget")]["cost"] == pytest.approx(best_spend)
+
+
+@pytest.mark.parametrize("label, odds_weight", [("OddsFP3_w0", 0.0), ("OddsFP3_w1", 1.0)])
+def test_run_race_mixes_pick_by_their_weight(race_one_rows, label, odds_weight):
+    """Each mix's team is the best within the cap on its weight, its best driver counted twice for DRS.
+
+    The fixture's odds favour A1 down to C3 and its FP3 the reverse, so the two weights disagree.
+    """
+    _, cap, rows = race_one_rows
+    value = {
+        d: odds_weight * _ODDS_RANKS[i] + (1 - odds_weight) * _FP3_RANKS[i] for i, d in enumerate(_DRIVERS)
+    }
+    for constructor in _CONSTRUCTORS:
+        value[constructor] = sum(v for d, v in value.items() if d.endswith("@" + constructor))
+
+    def objective(team):
+        drivers, constructors = team
+        return sum(value[a] for a in drivers + constructors) + max(value[d] for d in drivers)
+
+    ranked = sorted(_teams_within(cap), key=objective, reverse=True)
+    assert objective(ranked[0]) > objective(ranked[1]) + 1e-9, "the fixture needs a single best team"
+    best_drivers, best_constructors = ranked[0]
+    row = rows[_LABELS.index(label)]
+
+    assert row["drivers"] == ",".join(best_drivers)
+    assert row["constructors"] == ",".join(best_constructors)
+    assert row["drs_driver"] == max(best_drivers, key=lambda d: value[d])
+
+
+def test_run_race_random_row_is_the_random_control(race_one_rows):
+    race, cap, rows = race_one_rows
+    row = rows[-1]
+
+    assert row["points"] == pytest.approx(random_teams_points(race, cap))
+    assert row["drivers"] == "" and row["drs_driver"] == ""

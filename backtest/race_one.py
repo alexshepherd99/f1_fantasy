@@ -3,20 +3,28 @@
 See ``docs/odds_fp3_v1/requirements.md``, R7-R9.
 """
 import logging
+import math
 from collections.abc import Iterable
 from pathlib import Path
 
 import numpy as np
 
+from backtest.variants import make_variant
 from common import DEFAULT_STARTING_BUDGET, AssetType
 from fast_f1.output import load_existing_metrics
 from import_data.odds import load_odds
+from linear.strategy_budget import StrategyMaxBudget
+from linear.strategy_odds import StrategyBettingOdds
+from linear.strategy_odds_fp3 import StrategyOddsFP3
 from races.season import Race, Season
 from races.team import Team
-from simulate.pick import limitless_cap
+from simulate.pick import limitless_cap, solve_race
 
 NUM_DRIVERS = 5
 NUM_CONSTRUCTORS = 2
+
+# R9's mixes: the odds' share of each driver's value, from FP3 alone to odds alone
+MIXES = (0.0, 0.25, 0.5, 0.75, 1.0)
 
 # R9's random control: how many teams, and the seed
 RANDOM_TEAMS = 1000
@@ -122,6 +130,63 @@ def draw_random_teams(
                 tuple(sorted(constructors[i] for i in team_constructors)),
             ))
     return teams
+
+
+def mix_label(odds_weight: float) -> str:
+    """The results label for a mix, such as ``OddsFP3_w0p25`` for an odds weight of 0.25."""
+    return f"OddsFP3_w{odds_weight:g}".replace(".", "p")
+
+
+def run_race(season_year: int, race: Race, first_race: Race, fn_metrics: Path | str, fn_odds: str) -> list[dict]:
+    """Pick and score a team from scratch at `race` for each mix and control (R9).
+
+    Each strategy picks from the placeholder team with every move allowed, under `race_cap`, and
+    its team is scored with its own DRS driver, or the dearest when it names none.
+
+    Args:
+        season_year: The season.
+        race: The race to pick and score at.
+        first_race: The season's race 1, which the cap is scaled from.
+        fn_metrics: The FastF1 metrics file the mixes read.
+        fn_odds: The odds file `StrategyBettingOdds` reads.
+
+    Returns:
+        One row per mix, then max budget, betting odds and the random teams, each with ``season``,
+        ``race``, ``label``, ``cap``, ``cost``, ``drivers``, ``constructors`` (comma-separated, sorted),
+        ``drs_driver`` (empty for the dearest) and ``points``. The random row's points are the mean,
+        and its team columns are empty.
+    """
+    cap = race_cap(race, first_race)
+    placeholder = placeholder_team(race)
+    strategies = [make_variant(StrategyOddsFP3, mix_label(w), odds_weight=w, fn_metrics=fn_metrics) for w in MIXES]
+    strategies += [make_variant(StrategyMaxBudget, "MaxBudget"), make_variant(StrategyBettingOdds, "BettingOdds", fn_odds=fn_odds)]
+
+    rows = []
+    for strategy in strategies:
+        pick = solve_race(strategy, placeholder, race, race, season_year, NUM_DRIVERS + NUM_CONSTRUCTORS, cap)
+        rows.append({
+            "season": season_year,
+            "race": race.race,
+            "label": strategy.__name__,
+            "cap": cap,
+            "cost": pick.cost,
+            "drivers": ",".join(pick.drivers),
+            "constructors": ",".join(pick.constructors),
+            "drs_driver": pick.drs_driver,
+            "points": score_team(pick.drivers, pick.constructors, pick.drs_driver, race),
+        })
+    rows.append({
+        "season": season_year,
+        "race": race.race,
+        "label": "RandomTeams",
+        "cap": cap,
+        "cost": math.nan,
+        "drivers": "",
+        "constructors": "",
+        "drs_driver": "",
+        "points": random_teams_points(race, cap),
+    })
+    return rows
 
 
 def eligible_races(season: Season, fn_metrics: Path | str, fn_odds: str) -> list[int]:
