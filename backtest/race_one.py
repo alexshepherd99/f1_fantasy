@@ -2,23 +2,31 @@
 
 See ``docs/odds_fp3_v1/requirements.md``, R7-R9.
 """
+import argparse
 import logging
 import math
-from collections.abc import Iterable
+import sys
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 from backtest.variants import make_variant
-from common import DEFAULT_STARTING_BUDGET, AssetType
-from fast_f1.output import load_existing_metrics
-from import_data.odds import load_odds
+from common import DEFAULT_STARTING_BUDGET, AssetType, setup_logging
+from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, load_existing_metrics
+from helpers import load_with_derivations
+from import_data.odds import _FILE_BETTING_ODDS, load_odds
 from linear.strategy_budget import StrategyMaxBudget
 from linear.strategy_odds import StrategyBettingOdds
 from linear.strategy_odds_fp3 import StrategyOddsFP3
-from races.season import Race, Season
+from races.season import Race, Season, factory_season
 from races.team import Team
 from simulate.pick import limitless_cap, solve_race
+
+# The one season with odds (R7)
+DEFAULT_SEASON = 2026
+DEFAULT_OUTPUT = "outputs/odds_fp3_v1_races.csv"
 
 NUM_DRIVERS = 5
 NUM_CONSTRUCTORS = 2
@@ -224,6 +232,60 @@ def eligible_races(season: Season, fn_metrics: Path | str, fn_odds: str) -> list
     return eligible
 
 
+class NoEligibleRaces(ValueError):
+    """No race of the season can be back-tested."""
+
+
+def run_season(season_year: int, fn_metrics: Path | str, fn_odds: str) -> pd.DataFrame:
+    """`run_race`'s rows for every eligible race of the season, in race order.
+
+    Raises:
+        NoEligibleRaces: No race is eligible.
+    """
+    season = factory_season(*load_with_derivations(season=season_year), season_year)
+    races = eligible_races(season, fn_metrics, fn_odds)
+    if not races:
+        msg = f"No {season_year} race has been run with FP3 and odds to back-test on"
+        logging.error(msg)
+        raise NoEligibleRaces(msg)
+
+    logging.info(f"Back-testing {season_year} races {races}")
+    rows = []
+    for race_num in races:
+        logging.info(f"Race {race_num}")
+        rows += run_race(season_year, season.races[race_num], season.races[1], fn_metrics, fn_odds)
+    return pd.DataFrame(rows)
+
+
+def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    """Parse the command line."""
+    parser = argparse.ArgumentParser(
+        description="Pick and score a team from scratch at each eligible race, for odds_fp3_v1's mixes and controls",
+    )
+    parser.add_argument("--season", type=int, default=DEFAULT_SEASON, help=f"season to run (default: {DEFAULT_SEASON})")
+    parser.add_argument("--metrics", default=str(DEFAULT_HISTORICAL_OUTPUT), help="FastF1 metrics file the mixes read")
+    parser.add_argument("--odds", default=_FILE_BETTING_ODDS, help="odds file the betting-odds control reads")
+    parser.add_argument("--output", default=DEFAULT_OUTPUT, help="per-race results CSV, overwritten")
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run the back-test and write its per-race results.
+
+    Returns:
+        0 on success, 1 if no race is eligible, when nothing is written.
+    """
+    args = parse_arguments(argv)
+    try:
+        results = run_season(args.season, args.metrics, args.odds)
+    except NoEligibleRaces:
+        return 1
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    results.to_csv(args.output, index=False)
+    logging.info(f"Wrote {len(results)} rows to {args.output}")
+    return 0
+
+
 def _has_been_run(race: Race) -> bool:
     """Whether any asset scored points at `race`; the archive loads a race not yet run with every point 0."""
     return any(a.points != 0 for a in list(race.drivers.values()) + list(race.constructors.values()))
@@ -233,3 +295,8 @@ def random_teams_points(race: Race, cap: float, count: int = RANDOM_TEAMS, seed:
     """The mean points of `draw_random_teams`' teams at `race`, DRS on each team's dearest driver."""
     teams = draw_random_teams(race, cap, count, seed)
     return sum(score_team(drivers, constructors, "", race) for drivers, constructors in teams) / len(teams)
+
+
+if __name__ == "__main__":
+    setup_logging()
+    sys.exit(main())

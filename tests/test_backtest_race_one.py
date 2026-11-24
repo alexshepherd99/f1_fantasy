@@ -7,12 +7,15 @@ import pandas as pd
 import pytest
 
 from common import AssetType
+from fast_f1.output import DEFAULT_HISTORICAL_OUTPUT, load_existing_metrics
+from helpers import load_with_derivations
 from races.asset import Constructor, Driver
-from races.season import Race, Season
+from races.season import Race, Season, factory_season
 
 from backtest.race_one import (
     draw_random_teams,
     eligible_races,
+    main,
     placeholder_team,
     race_cap,
     random_teams_points,
@@ -411,3 +414,38 @@ def test_run_race_random_row_is_the_random_control(race_one_rows):
 
     assert row["points"] == pytest.approx(random_teams_points(race, cap))
     assert row["drivers"] == "" and row["drs_driver"] == ""
+
+
+def _real_metrics(path: Path, races: list[int]) -> Path:
+    """The committed metrics file's 2026 rows for `races` only, so a run covers just those."""
+    metrics = load_existing_metrics(DEFAULT_HISTORICAL_OUTPUT)
+    metrics[(metrics["Season"] == _SEASON) & metrics["Race"].isin(races)].to_csv(path, index=False)
+    return path
+
+
+def test_main_writes_every_eligible_race(tmp_path):
+    """Run on the real 2026 archive and odds, with metrics for races 1, 2 (a sprint) and 3."""
+    output = tmp_path / "races.csv"
+
+    exit_code = main(["--metrics", str(_real_metrics(tmp_path / "m.csv", [1, 2, 3])), "--output", str(output)])
+
+    assert exit_code == 0
+    results = pd.read_csv(output)
+    assert results["race"].tolist() == [1] * len(_LABELS) + [3] * len(_LABELS)
+    assert results["label"].tolist() == _LABELS * 2
+    assert (results["season"] == _SEASON).all()
+    assert results.loc[results["race"] == 1, "cap"].tolist() == pytest.approx([100.0] * len(_LABELS))
+    season = factory_season(*load_with_derivations(season=_SEASON), _SEASON)
+    race_3_cap = race_cap(season.races[3], season.races[1])
+    assert race_3_cap != pytest.approx(100.0), "race 3's grid price must differ from race 1's for this check"
+    assert results.loc[results["race"] == 3, "cap"].tolist() == pytest.approx([race_3_cap] * len(_LABELS))
+
+
+def test_main_fails_when_no_race_is_eligible(tmp_path):
+    """Race 2 alone is a sprint, so there is nothing to run, and no results file is written."""
+    output = tmp_path / "races.csv"
+
+    exit_code = main(["--metrics", str(_real_metrics(tmp_path / "m.csv", [2])), "--output", str(output)])
+
+    assert exit_code == 1
+    assert not output.exists()
