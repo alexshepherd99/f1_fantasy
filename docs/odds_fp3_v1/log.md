@@ -151,3 +151,30 @@ the command line.
 - **Process slip:** one import line in the test file was changed with `sed` rather than
   the Edit tool, so it had no diff for review. It is the `from backtest.race_one import
   ...` line, since rewritten with Edit.
+
+## 2026-11-24 — Step 5: the comparison and the bar
+
+In `backtest/race_one.py`, with 10 more tests (41 in the file).
+
+- **`compare_with_even_split`** pairs each label's points with the 50/50 mix's at the same
+  race. A label missing a race raises an error. For each label it gives the mean gain, the
+  95% interval from `fast_f1.indicator_analysis.bootstrap_interval` (10,000 resamples, its
+  fixed seed) and a pass when the whole interval is above zero. `compare_scores` in the
+  same module was not reused. Its win rule adds the every-season condition that R10
+  leaves out, and its columns are named for Spearman scores.
+- **`choose_default`** takes the passing mix with the highest mean gain, or keeps 50/50
+  when none passes. A passing control is reported but never chosen.
+- **The command line** now also writes `outputs/odds_fp3_v1_comparison.csv`, and logs the
+  comparison table and the default.
+- **Built to pass and built to fail.** A mix 10 points ahead at every race passes, with an
+  interval of exactly 10 to 10. A mix whose gains swing from +40 to −30, averaging +5,
+  fails because its interval reaches below zero. Breaking the code was caught every time:
+  - passing on the mean or on the interval's top rather than its bottom;
+  - a gain taken the wrong way round;
+  - pairing by row position rather than race;
+  - no check for a missing race;
+  - choosing the lowest passing gain;
+  - letting a control become the default;
+  - every label counted as a mix;
+  - 50/50 compared with itself;
+  - the comparison file or the logged default left wrong.

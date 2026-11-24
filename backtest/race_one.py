@@ -28,6 +28,7 @@ from simulate.pick import limitless_cap, solve_race
 # The one season with odds (R7)
 DEFAULT_SEASON = 2026
 DEFAULT_OUTPUT = "outputs/odds_fp3_v1_races.csv"
+DEFAULT_COMPARISON = "outputs/odds_fp3_v1_comparison.csv"
 
 NUM_DRIVERS = 5
 NUM_CONSTRUCTORS = 2
@@ -325,11 +326,14 @@ def parse_arguments(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--metrics", default=str(DEFAULT_HISTORICAL_OUTPUT), help="FastF1 metrics file the mixes read")
     parser.add_argument("--odds", default=_FILE_BETTING_ODDS, help="odds file the betting-odds control reads")
     parser.add_argument("--output", default=DEFAULT_OUTPUT, help="per-race results CSV, overwritten")
+    parser.add_argument(
+        "--comparison", default=DEFAULT_COMPARISON, help="each label against the 50/50 mix (R10), overwritten",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the back-test and write its per-race results.
+    """Run the back-test, write its per-race results and the comparison with 50/50, and log the default R10 gives.
 
     Returns:
         0 on success, 1 if no race is eligible, when nothing is written.
@@ -339,9 +343,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         results = run_season(args.season, args.metrics, args.odds)
     except NoEligibleRaces:
         return 1
-    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    results.to_csv(args.output, index=False)
-    logging.info(f"Wrote {len(results)} rows to {args.output}")
+    comparison = compare_with_even_split(results)
+
+    for path, frame in ((args.output, results), (args.comparison, comparison)):
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        frame.to_csv(path, index=False)
+        logging.info(f"Wrote {len(frame)} rows to {path}")
+    logging.info(f"Against {BASELINE_LABEL}:\n{comparison.to_string(index=False)}")
+    logging.info(f"Default: {choose_default(comparison)}")
     return 0
 
 

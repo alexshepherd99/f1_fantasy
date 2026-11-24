@@ -431,7 +431,11 @@ def test_main_writes_every_eligible_race(tmp_path):
     """Run on the real 2026 archive and odds, with metrics for races 1, 2 (a sprint) and 3."""
     output = tmp_path / "races.csv"
 
-    exit_code = main(["--metrics", str(_real_metrics(tmp_path / "m.csv", [1, 2, 3])), "--output", str(output)])
+    exit_code = main([
+        "--metrics", str(_real_metrics(tmp_path / "m.csv", [1, 2, 3])),
+        "--output", str(output),
+        "--comparison", str(tmp_path / "comparison.csv"),
+    ])
 
     assert exit_code == 0
     results = pd.read_csv(output)
@@ -445,14 +449,34 @@ def test_main_writes_every_eligible_race(tmp_path):
     assert results.loc[results["race"] == 3, "cap"].tolist() == pytest.approx([race_3_cap] * len(_LABELS))
 
 
-def test_main_fails_when_no_race_is_eligible(tmp_path):
-    """Race 2 alone is a sprint, so there is nothing to run, and no results file is written."""
-    output = tmp_path / "races.csv"
+def test_main_writes_the_comparison_and_logs_the_default(tmp_path, caplog):
+    output, comparison = tmp_path / "races.csv", tmp_path / "comparison.csv"
 
-    exit_code = main(["--metrics", str(_real_metrics(tmp_path / "m.csv", [2])), "--output", str(output)])
+    with caplog.at_level(logging.INFO):
+        main([
+            "--metrics", str(_real_metrics(tmp_path / "m.csv", [1, 3])),
+            "--output", str(output),
+            "--comparison", str(comparison),
+        ])
+
+    expected = compare_with_even_split(pd.read_csv(output))
+    pd.testing.assert_frame_equal(pd.read_csv(comparison), expected)
+    assert f"Default: {choose_default(expected)}" in caplog.text
+
+
+def test_main_fails_when_no_race_is_eligible(tmp_path):
+    """Race 2 alone is a sprint, so there is nothing to run, and no results or comparison file is written."""
+    output, comparison = tmp_path / "races.csv", tmp_path / "comparison.csv"
+
+    exit_code = main([
+        "--metrics", str(_real_metrics(tmp_path / "m.csv", [2])),
+        "--output", str(output),
+        "--comparison", str(comparison),
+    ])
 
     assert exit_code == 1
     assert not output.exists()
+    assert not comparison.exists()
 
 
 _BASELINE = "OddsFP3_w0p5"
