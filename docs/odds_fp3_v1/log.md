@@ -7,6 +7,7 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 
 - Effort started 2026-11-24. Step 1 (docs) is complete, with requirements and plan
   agreed.
+- Step 2 (the strategy's shape) agreed 2026-11-24. See *Step 2* below.
 
 ## 2026-11-24 — Scoping
 
@@ -41,3 +42,37 @@ Found while scoping:
   is left out.
 - **One rule was added in drafting, not discussed:** if more than one mix passes R10,
   the highest average gain is chosen. Alex accepted it on reviewing these docs.
+
+## 2026-11-24 — Step 2: the strategy's shape
+
+Agreed with Alex in conversation before he left steps 3–6 to run unattended.
+
+- **`StrategyBase` does not accept an empty team.** `initialise()` takes the team's
+  size from the team passed in, so an empty team would pick 0 drivers and 0
+  constructors. `StrategyBase` stays unedited. Instead, the back-test passes a
+  placeholder team, the race's cheapest 5 drivers and 2 constructors as
+  `live.lineup` already does for race 1, with 7 moves allowed and the cap given
+  through `factory_strategy`'s `max_cost`. Every asset can be replaced and the
+  objective never reads the held team, so the placeholder cannot change the pick.
+  It is entered in `docs/backtest_v1/requirements.md`'s R12 ledger at step 4. (The
+  question put to Alex said the first 5 and 2 in data order. The cheapest was used
+  to match the existing race-1 code, which makes no difference to the pick.)
+- **The class:** `StrategyOddsFP3(StrategyBase)` in `linear/strategy_odds_fp3.py`.
+  - Keywords `odds_weight: float = 0.5`, refusing anything outside 0–1, and
+    `fn_metrics`, defaulting to `fast_f1.output.DEFAULT_HISTORICAL_OUTPUT`.
+  - It reads the race's rows through `fast_f1.signal._race_rows` and
+    `fast_f1.metrics.add_signal_inputs`. These reuse `fast_f1`'s matching of driver
+    codes to fantasy identifiers and its weekend-format rule. The drivers are matched
+    against the strategy's own available drivers, so no archive is loaded.
+  - It raises `ValueError` on a sprint weekend or a race with no rows.
+  - Driver value is `w × OddsRank + (1 − w) × FP3_MinLapTime_rank`. A missing input
+    scores 0, and so does a driver with no metrics row. A constructor's value is the
+    sum of its drivers' values.
+  - DRS is chosen in the LP through `get_drs_objective_term`. `get_drs_driver`
+    returns the LP's nominee, or `""` if the nominee's value is 0, as
+    `StrategyBettingOdds` does.
+  - The back-test builds the mixes with `backtest.variants.make_variant`.
+- **The back-test module** is `backtest/race_one.py`, run as
+  `python -m backtest.race_one`.
+- **Scope of the unattended run:** steps 3–6, with each step pushed when done. R3's
+  default changes only if R10's bar is passed.

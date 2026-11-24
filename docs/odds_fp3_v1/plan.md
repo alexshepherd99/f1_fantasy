@@ -23,6 +23,9 @@ In conversation, no code. A starting proposal to discuss:
   empty team lists, which `scripts/select_odds_start.py` sidesteps with a placeholder
   team. If it doesn't, stop and discuss rather than edit `StrategyBase`.
 
+[Done 2026-11-24: agreed as proposed. `StrategyBase` does not accept an empty team, so
+the back-test passes a placeholder team with every move allowed. See `log.md`, *Step 2*.]
+
 ## Step 3 — The strategy (R2–R5)
 
 `linear/strategy_odds_fp3.py`, with tests in `tests/test_strategy_odds_fp3.py`, each
@@ -38,7 +41,8 @@ seen failing first. Tests to cover at least:
 
 ## Step 4 — Single-race back-test harness (R7–R9)
 
-A new module under `backtest/` (name agreed at this step), with tests:
+A new module under `backtest/` (name agreed at this step; `backtest/race_one.py`,
+agreed at step 2), with tests:
 
 - The cap rule (R8).
 - Scoring one team on one race, with DRS.
