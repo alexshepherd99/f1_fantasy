@@ -20,6 +20,7 @@ is positive in every season tested.
 | Max points (`StrategyMaxPoints`) | [max_points_v1](docs/max_points_v1/) | 2026-09-20 | 2023, 2024, 2025 | −14.5, −156.2, −4.4 | No, 0 of 3 seasons | Hypothesis refuted |
 | P2PM without race-4 reset (`StrategyMaxP2PMNoReset`) | [max_points_v1](docs/max_points_v1/) | 2026-09-29 | 2023, 2024, 2025 | +1.8, −32.3, −168.0 | No, 1 of 3 seasons | Keep the race-4 chip |
 | FastF1 signal (`FastF1_RuleRise2p5`) | [fastf1_v2](docs/fastf1_v2/) | 2026-11-08 | 2025, 2026 to race 18 | +35.9, +338.0 | Yes, 2 of 2 seasons | Beats P2PM; 2026 is the fair read |
+| Odds and FP3 race-1 pick (`StrategyOddsFP3`) | [odds_fp3_v1](docs/odds_fp3_v1/) | 2026-11-24 | 2026, 15 normal weekends | Not compared: a single-race test against its own 50/50 mix | Not tested | 50/50 kept; beats max budget and random teams |
 
 ## Zero-stop and Max budget controls — `backtest_v1` (2026-09-18)
 
@@ -234,3 +235,50 @@ The live team stays on P2PM for the rest of 2026. 2027 is the next fair test.
 **Full detail:** [`docs/fastf1_v2/log.md`](docs/fastf1_v2/log.md),
 *Step 18: findings*, which links to each step. The numbers come from
 `outputs/fastf1_v2_summary_2025.csv` and `outputs/fastf1_v2_summary_2026.csv`.
+
+## Odds and FP3 race-1 pick — `odds_fp3_v1` (2026-11-24)
+
+**Not a season-long comparison with P2PM.** This is a single-race, from-scratch test,
+run with `backtest/race_one.py` rather than the `backtest` sample of starting teams.
+
+**Question.** Can betting odds and FP3 alone pick a good opening team, with no race
+history? And should the default even split between them move? `StrategyOddsFP3` values
+each driver at `w × OddsRank + (1 − w) × FP3 rank`, and each constructor at the sum of
+its drivers' values, with DRS chosen inside the LP.
+
+**Set-up.** Each of 2026's 15 normal weekends with odds and FP3 was treated as a race
+1. A team was picked from scratch under a cap of 100m scaled by the grid's price
+against race 1, and scored on that race's points. Five mixes (`w` = 0, 0.25, 0.5, 0.75,
+1) and three controls were each compared with 50/50, race by race. The bar was fixed
+before any results: another mix replaces 50/50 only if the 95% bootstrap interval on
+its mean per-race gain is wholly above zero.
+
+**Result: no mix clears the bar, so 50/50 stays.**
+
+| Against 50/50 | Mean gain (points/race) | 95% interval |
+| :--- | ---: | :--- |
+| FP3 alone | +10.7 | −15.7 to +38.7 |
+| Odds 0.25 | −7.8 | −24.1 to +9.1 |
+| Odds 0.75 | −6.1 | −14.9 to +2.7 |
+| Odds alone | −8.1 | −22.8 to +5.5 |
+| Betting odds (`StrategyBettingOdds`) | −13.8 | −39.1 to +13.6 |
+| Max budget | −75.5 | −110.9 to −38.7 |
+| Random teams (mean of 1,000) | −87.2 | −117.0 to −57.1 |
+
+**Key findings.**
+
+- **The signal clearly beats picking on price or at random,** by 75 and 87 points a
+  race, with both intervals wholly below zero.
+- **The mixes cannot be told apart on 15 races.** FP3 alone's lead over 50/50 is almost
+  all one race: 144 of its 161 points come from race 13.
+- **It is level with the betting-odds strategy** Alex played at 2026 race 1: no
+  measurable difference.
+- **The intervals are about ±25 points a race wide,** so a smaller real difference
+  would not show. The result is "not beaten", not "best".
+
+A rerun once 2026 ends, on up to 17 races, is a check on this result. Using the
+strategy live at 2027 race 1 is a separate backlog item.
+
+**Full detail:** [`docs/odds_fp3_v1/log.md`](docs/odds_fp3_v1/log.md), *Step 6*. The
+numbers come from `outputs/odds_fp3_v1_races.csv` and
+`outputs/odds_fp3_v1_comparison.csv`.

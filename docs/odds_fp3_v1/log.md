@@ -8,6 +8,12 @@ Requirements and plan live alongside in `requirements.md` and `plan.md`.
 - Effort started 2026-11-24. Step 1 (docs) is complete, with requirements and plan
   agreed.
 - Step 2 (the strategy's shape) agreed 2026-11-24. See *Step 2* below.
+- Steps 3–6 done 2026-11-24, while Alex was away: `StrategyOddsFP3`, the single-race
+  back-test `backtest/race_one.py`, and its first run. **No mix cleared R10's bar, so the
+  default stays 50/50.** The signal clearly beats max budget and random teams, and is
+  level with the betting-odds strategy. See *Step 6*.
+- **Next:** step 7, the rerun once 2026 race 24 is captured and its metrics are built,
+  then step 8, the close-out.
 
 ## 2026-11-24 — Scoping
 
@@ -178,3 +184,92 @@ In `backtest/race_one.py`, with 10 more tests (41 in the file).
   - every label counted as a mix;
   - 50/50 compared with itself;
   - the comparison file or the logged default left wrong.
+
+## 2026-11-24 — Step 6: the run and findings
+
+### In plain language
+
+Each of 15 race weekends in 2026 was treated as if it were the season's opening race. At
+each one, a team was picked from scratch using only betting odds and FP3 lap times, then
+scored on that race's real fantasy points. The odds and FP3 were mixed in five ways, from
+FP3 alone to odds alone. Each mix was set against the even 50/50 split, which stays the
+default unless another mix clears the bar fixed beforehand (R10).
+
+- **No mix cleared the bar, so 50/50 stays the default.** Every mix's interval runs
+  from below zero to above it. On 15 races, the differences between the mixes cannot
+  be told apart from luck.
+- **FP3 alone had the best average, but one race made it.** It was 10.7 points a race
+  ahead of 50/50. At race 13 alone it was 144 points ahead. Without that race the lead
+  is 1.2.
+- **The signal clearly beats picking on price or at random.** 50/50 scored 75 points a
+  race more than spending the whole budget, and 87 more than the average random team.
+  In both cases the whole interval is clear of zero. Mixing odds with FP3 carries real
+  information about who will score.
+- **It is level with the betting-odds strategy** Alex played at 2026 race 1. The
+  betting-odds strategy was 13.8 points a race behind 50/50, but its interval reaches
+  above zero, so there is no measurable difference.
+- **At the one real race 1,** 50/50 scored 259, betting odds 234, odds alone 244 and FP3
+  alone 220. That is one race and is not evidence on its own.
+
+What this can and cannot show: the intervals are about ±25 points a race wide. A real
+difference smaller than that between two mixes would not show up on 15 races. The
+result says 50/50 is not beaten by a measurable margin. It does not say 50/50 is best.
+The odds were mostly taken before or during the weekend, not after FP3 as live use will
+take them (*Scoping*), so live odds may carry a little more information than these did.
+
+### Detail
+
+Run with `PYTHONPATH=. venv/bin/python -m backtest.race_one` at commit `cc2f0c5`, on
+the 15 races R7 lists. Results are in `outputs/odds_fp3_v1_races.csv` and
+`outputs/odds_fp3_v1_comparison.csv`. The run takes 24 seconds and repeats
+byte for byte (step 4).
+
+Against 50/50, gain in points per race (R10's bar: the whole interval above zero):
+
+| Label | Kind | Mean gain | 95% interval | Passes |
+| :--- | :--- | ---: | :--- | :--- |
+| FP3 alone (`OddsFP3_w0`) | mix | +10.7 | −15.7 to +38.7 | No |
+| Odds 0.25 (`OddsFP3_w0p25`) | mix | −7.8 | −24.1 to +9.1 | No |
+| Odds 0.75 (`OddsFP3_w0p75`) | mix | −6.1 | −14.9 to +2.7 | No |
+| Odds alone (`OddsFP3_w1`) | mix | −8.1 | −22.8 to +5.5 | No |
+| Max budget | control | −75.5 | −110.9 to −38.7 | No |
+| Betting odds (`StrategyBettingOdds`) | control | −13.8 | −39.1 to +13.6 | No |
+| Random teams (mean of 1,000) | control | −87.2 | −117.0 to −57.1 | No |
+
+Points per race, each team picked from scratch under the race's cap (R8):
+
+| Race | Cap | FP3 alone | 0.25 | 50/50 | 0.75 | Odds alone | Betting odds | Max budget | Random |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 100.0 | 220 | 220 | 259 | 259 | 244 | 234 | 142 | 94 |
+| 3 | 100.9 | 247 | 248 | 286 | 286 | 286 | 196 | 131 | 109 |
+| 6 | 102.1 | 174 | 174 | 106 | 74 | 56 | 79 | −8 | 59 |
+| 7 | 101.7 | 146 | 99 | 99 | 73 | 73 | 38 | 138 | 73 |
+| 8 | 101.4 | 226 | 194 | 210 | 210 | 210 | 189 | 119 | 82 |
+| 10 | 101.6 | 223 | 209 | 209 | 182 | 182 | 166 | 204 | 105 |
+| 11 | 102.5 | 237 | 237 | 213 | 236 | 236 | 213 | 149 | 112 |
+| 13 | 103.6 | 288 | 144 | 144 | 106 | 160 | 252 | 196 | 170 |
+| 14 | 104.6 | 155 | 126 | 140 | 140 | 164 | 164 | 15 | 59 |
+| 15 | 104.7 | 130 | 154 | 227 | 227 | 201 | 237 | 24 | 77 |
+| 16 | 105.0 | 261 | 200 | 200 | 196 | 196 | 119 | 187 | 152 |
+| 18 | 105.3 | 242 | 221 | 265 | 265 | 192 | 190 | 116 | 99 |
+| 19 | 105.0 | 132 | 132 | 136 | 142 | 125 | 135 | 76 | 88 |
+| 20 | 104.9 | 204 | 189 | 205 | 190 | 231 | 214 | 92 | 114 |
+| 21 | 104.7 | 170 | 230 | 195 | 217 | 217 | 261 | 181 | 191 |
+| **Mean** | | **203.7** | **185.1** | **192.9** | **186.9** | **184.9** | **179.1** | **117.5** | **105.7** |
+
+Random-team points are rounded to whole points here.
+
+- **The mixes do not rank in weight order.** FP3 alone is first, 50/50 second, and 0.25
+  below both. With the intervals this wide, that pattern is what noise looks like, not
+  a sign that the scale is wrong.
+- **FP3 alone was ahead of 50/50 at 8 races and behind at 7.** Its +10.7 is 161 points
+  over 15 races, and race 13 gives 144 of them. The betting-odds control was also 108
+  ahead there. At that race the 50/50 and 0.25 mixes picked the same team, and FP3 alone
+  did not.
+- **Neighbouring mixes often pick the same team,** with the same DRS driver. 50/50 and
+  0.75 matched at 6 of 15 races, 50/50 and 0.25 at 4, and 50/50 and odds alone at 2.
+- **Max budget spent all but 0.05m of its cap on average, 50/50 left 0.76m and betting
+  odds 1.04m.** So the signal's lead over max budget is not from spending less.
+- **R3 is unchanged:** the default stays `odds_weight = 0.5`.
+- R11's rerun after the season ends (step 7) is a check on this run, not a second
+  chance. A different answer there is set out for Alex to decide before 2027 race 1.

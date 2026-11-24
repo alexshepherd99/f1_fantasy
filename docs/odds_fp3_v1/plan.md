@@ -64,6 +64,8 @@ include a case built to pass and one built to fail.
 Run on today's eligible races, then write the findings to `log.md` in plain language.
 Update `R3`'s default only if R10 says so. Add the `BACKTEST_LOG.md` entry.
 
+[Done 2026-11-24: no mix passed, so R3 stays at 0.5. See `log.md`, *Step 6*.]
+
 ## Step 7 — Season-end rerun (R11)
 
 Once 2026 race 24 is captured and its metrics built, rerun and report it against step 6.

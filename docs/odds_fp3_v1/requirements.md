@@ -53,7 +53,8 @@ them. No new indicator and no new normalisation.
 
 - Each driver's value = `w × OddsRank + (1 − w) × FP3_MinLapTime_rank`, where `w` is the
   odds share. **The default is `w = 0.5`**, an even split, to keep it simple and avoid
-  over-fitting. Only R10 can move it.
+  over-fitting. Only R10 can move it. [2026-11-24: R10's run left it at 0.5, as no
+  mix passed. See `log.md`, *Step 6*.]
 - A constructor's value is the sum of its drivers' values, the rule
   `fast_f1/signal.py` and `import_data/odds.py` already use.
 
