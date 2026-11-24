@@ -20,7 +20,7 @@ is positive in every season tested.
 | Max points (`StrategyMaxPoints`) | [max_points_v1](docs/max_points_v1/) | 2026-09-20 | 2023, 2024, 2025 | −14.5, −156.2, −4.4 | No, 0 of 3 seasons | Hypothesis refuted |
 | P2PM without race-4 reset (`StrategyMaxP2PMNoReset`) | [max_points_v1](docs/max_points_v1/) | 2026-09-29 | 2023, 2024, 2025 | +1.8, −32.3, −168.0 | No, 1 of 3 seasons | Keep the race-4 chip |
 | FastF1 signal (`FastF1_RuleRise2p5`) | [fastf1_v2](docs/fastf1_v2/) | 2026-11-08 | 2025, 2026 to race 18 | +35.9, +338.0 | Yes, 2 of 2 seasons | Beats P2PM; 2026 is the fair read |
-| Odds and FP3 race-1 pick (`StrategyOddsFP3`) | [odds_fp3_v1](docs/odds_fp3_v1/) | 2026-11-24 | 2026, 15 normal weekends | Not compared: a single-race test against its own 50/50 mix | Not tested | 50/50 kept; beats max budget and random teams |
+| Odds and FP3 race-1 pick (`StrategyOddsFP3`) | [odds_fp3_v1](docs/odds_fp3_v1/) | 2026-11-24 | 2026, 15 normal weekends | Not compared: a single-race test against its own 50/50 mix | Not tested | 50/50 clearly beats price and random picks; level with betting odds and the other mixes |
 
 ## Zero-stop and Max budget controls — `backtest_v1` (2026-09-18)
 
