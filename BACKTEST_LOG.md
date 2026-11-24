@@ -265,6 +265,9 @@ its mean per-race gain is wholly above zero.
 | Max budget | −75.5 | −110.9 to −38.7 |
 | Random teams (mean of 1,000) | −87.2 | −117.0 to −57.1 |
 
+**In one line:** 50/50 is clearly better than picking on price or at random. Against
+the betting-odds strategy and the other mixes, 15 races can't separate them.
+
 **Key findings.**
 
 - **The signal clearly beats picking on price or at random,** by 75 and 87 points a
