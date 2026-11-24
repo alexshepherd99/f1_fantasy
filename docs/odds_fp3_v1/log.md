@@ -76,3 +76,24 @@ Agreed with Alex in conversation before he left steps 3–6 to run unattended.
   `python -m backtest.race_one`.
 - **Scope of the unattended run:** steps 3–6, with each step pushed when done. R3's
   default changes only if R10's bar is passed.
+
+## 2026-11-24 — Step 3: the strategy
+
+`StrategyOddsFP3` in `linear/strategy_odds_fp3.py`, in the shape agreed at step 2, with
+14 tests in `tests/test_strategy_odds_fp3.py`. The tests write a small metrics file, so
+the strategy's real file reading runs. Each test team is 1 or 2 assets, and the tests
+assert the LP's objective as well as the pick.
+
+- **Red before green.** The only red before the code existed was the missing module,
+  which shows nothing. So each test was checked by breaking the finished code instead.
+  All 11 breaks turned at least one test red, and the restored file passed again:
+  swapping the weight, a constructor taking its best driver's value rather than the
+  sum, no zero for a missing odds or FP3 input, no zero for a driver with no metrics
+  row, no DRS term in the objective, always using the LP's DRS nominee, no sprint check,
+  no weight check, no check for an empty race, and a default weight of 0.6.
+- **Run on the real metrics file.** All 15 eligible races solved, using a placeholder
+  team and a flat 100m cap. 2026 race 2, a sprint, raised as intended. The back-test's
+  own cap (R8) comes at step 4.
+- Nothing in `races/`, `import_data/`, `scripts/`, `StrategyBase` or any existing
+  strategy was edited. The strategy reuses `fast_f1.signal._race_rows`, a private
+  function, as `linear/strategy_odds.py` already imports `_FILE_BETTING_ODDS`.
