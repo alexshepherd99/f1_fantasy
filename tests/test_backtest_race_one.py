@@ -4,7 +4,7 @@ from common import AssetType
 from races.asset import Constructor, Driver
 from races.season import Race
 
-from backtest.race_one import placeholder_team, race_cap, score_team
+from backtest.race_one import draw_random_teams, placeholder_team, race_cap, random_teams_points, score_team
 
 
 def _race(
@@ -96,3 +96,95 @@ def test_score_team_with_no_drs_driver_doubles_the_dearest():
     race = _race(1, _DRIVERS, _CONSTRUCTORS)
 
     assert score_team(_TEAM_DRIVERS, _TEAM_CONSTRUCTORS, "", race) == _TEAM_POINTS + 30
+
+
+# The cheapest team: C2, C3, C1, B2 and B1 for 34m, then CC and CB for 25m. Any other team
+# costs at least 5m more
+_CHEAPEST_DRIVERS = ("B1@CB", "B2@CB", "C1@CC", "C2@CC", "C3@CC")
+_CHEAPEST_CONSTRUCTORS = ("CB", "CC")
+_CHEAPEST_COST = 59.0
+
+
+def test_draw_random_teams_draws_valid_teams_under_the_cap():
+    race = _race(1, _DRIVERS, _CONSTRUCTORS)
+
+    teams = draw_random_teams(race, cap=80.0, count=200, seed=3)
+
+    assert len(teams) == 200
+    for drivers, constructors in teams:
+        assert len(set(drivers)) == 5 and set(drivers) <= set(_DRIVERS)
+        assert len(set(constructors)) == 2 and set(constructors) <= set(_CONSTRUCTORS)
+        cost = sum(_DRIVERS[d][0] for d in drivers) + sum(_CONSTRUCTORS[c][0] for c in constructors)
+        assert cost <= 80.0
+
+
+def test_draw_random_teams_keeps_only_teams_within_the_cap():
+    """At exactly the cheapest team's cost, it is the only team that fits, so every draw is it."""
+    race = _race(1, _DRIVERS, _CONSTRUCTORS)
+
+    teams = draw_random_teams(race, cap=_CHEAPEST_COST, count=20, seed=3)
+
+    assert teams == [(_CHEAPEST_DRIVERS, _CHEAPEST_CONSTRUCTORS)] * 20
+
+
+def test_draw_random_teams_can_draw_every_valid_team():
+    """With a cap every team fits, all 21 x 3 driver and constructor choices turn up."""
+    race = _race(1, _DRIVERS, _CONSTRUCTORS)
+
+    teams = draw_random_teams(race, cap=1000.0, count=2000, seed=3)
+
+    assert len(set(teams)) == 63
+
+
+def test_draw_random_teams_repeats_for_a_seed_and_differs_by_race():
+    """The draw is seeded by seed and race number together, so adding races leaves each race's draw alone."""
+    race = _race(1, _DRIVERS, _CONSTRUCTORS)
+    other_race = _race(2, _DRIVERS, _CONSTRUCTORS)
+
+    first = draw_random_teams(race, cap=1000.0, count=50, seed=3)
+
+    assert draw_random_teams(race, cap=1000.0, count=50, seed=3) == first
+    assert draw_random_teams(race, cap=1000.0, count=50, seed=4) != first
+    assert draw_random_teams(other_race, cap=1000.0, count=50, seed=3) != first
+
+
+def test_draw_random_teams_raises_when_no_team_fits():
+    race = _race(1, _DRIVERS, _CONSTRUCTORS)
+
+    with pytest.raises(ValueError, match="No team"):
+        draw_random_teams(race, cap=_CHEAPEST_COST - 0.1, count=5, seed=3)
+
+
+def test_draw_random_teams_raises_rather_than_drawing_forever():
+    """A cap so tight that almost no draw fits gives up after `MAX_DRAWS_PER_TEAM` draws a team."""
+    race = _race(1, _DRIVERS, _CONSTRUCTORS)
+
+    # One team in 63 fits, so 20 of them need about 1,260 draws, far more than 20 x 2
+    with pytest.raises(RuntimeError, match="draws"):
+        draw_random_teams(race, cap=_CHEAPEST_COST, count=20, seed=3, max_draws_per_team=2)
+
+
+def test_random_teams_points_is_the_mean_with_drs_on_the_dearest_driver():
+    """Only the cheapest team fits: 101 for its drivers, 2 for its constructors, and C's 30 again for DRS.
+
+    C is the dearest driver but neither first nor last by name, so DRS is not landing on either by accident.
+    """
+    drivers = {
+        "A@CA": (2.0, 10),
+        "B@CA": (3.0, 20),
+        "C@CB": (9.0, 30),
+        "D@CB": (4.0, 40),
+        "E@CB": (5.0, 1),
+        "F@CB": (50.0, 0),
+    }
+    race = _race(1, drivers, {"CA": (1.0, 1), "CB": (1.0, 1), "CC": (50.0, 0)})
+
+    assert random_teams_points(race, cap=25.0, count=10, seed=3) == pytest.approx(133.0)
+
+
+def test_random_teams_points_averages_over_the_draw():
+    race = _race(1, _DRIVERS, _CONSTRUCTORS)
+    teams = draw_random_teams(race, cap=80.0, count=30, seed=3)
+    expected = sum(score_team(d, c, "", race) for d, c in teams) / 30
+
+    assert random_teams_points(race, cap=80.0, count=30, seed=3) == pytest.approx(expected)
