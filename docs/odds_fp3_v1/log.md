@@ -273,3 +273,55 @@ Random-team points are rounded to whole points here.
 - **R3 is unchanged:** the default stays `odds_weight = 0.5`.
 - R11's rerun after the season ends (step 7) is a check on this run, not a second
   chance. A different answer there is set out for Alex to decide before 2027 race 1.
+
+## 2026-11-24 — Follow-up: race 13, and 50/50 against betting odds
+
+Alex asked why race 13 swung so far for FP3 alone, and whether 50/50 has any edge over
+the betting-odds strategy once race 13 is left out. Both answers below were worked out
+from `outputs/odds_fp3_v1_races.csv`, the 2026 archive points and the metrics file.
+Nothing was rerun or changed.
+
+### Why race 13 swung
+
+FP3 alone scored 288 there and 50/50 144. FP3 alone held Mercedes and 50/50 held
+Ferrari, and the weekend went to extremes.
+
+| | FP3 alone | 50/50 | Difference |
+| :--- | :--- | :--- | ---: |
+| Constructor | Mercedes, 128 | Ferrari, 24 | +104 |
+| Drivers, DRS counted twice | Russell DRS (33 × 2), Colapinto, Gasly, Hülkenberg, Lindblad | Hamilton DRS (26 × 2), Leclerc (−12), Bortoleto, Hülkenberg, Lindblad | +40 |
+| Second constructor | Audi, 41 | Audi, 41 | 0 |
+
+- **Odds and FP3 disagreed about Ferrari.** On odds, Leclerc (0.94) and Hamilton (0.90)
+  were close to Russell (1.00) and ahead of Antonelli (0.75). In FP3, Russell was
+  fastest and Antonelli (0.89) was level with both Ferraris.
+- **At 50/50 the two teams all but tied.** A constructor's value is its drivers' sum:
+  about 1.82 for Mercedes and 1.81 for Ferrari, from the metrics' rounded inputs.
+  Ferrari was 6m cheaper, so the LP took it and spent the difference on drivers. With
+  FP3 alone, Mercedes led 1.89 to 1.78 and was picked.
+- **The race then went as badly as it could for that choice.** Antonelli won (93
+  points) and Russell was second, so Mercedes scored 128 as a constructor. Leclerc
+  finished last on −12.
+
+So the 144 points rest on a hundredth of value between two teams, decided by an extreme
+result. It is weak evidence for FP3 over 50/50.
+
+### 50/50 against betting odds without race 13
+
+This is a check made after seeing the results, not part of R10's bar. The bar is fixed,
+and the default does not move on it.
+
+| 50/50 minus betting odds | Mean (points/race) | 95% interval | Races ahead / behind / level |
+| :--- | ---: | :--- | :--- |
+| All 15 races | +13.8 | −13.6 to +39.1 | 9 / 5 / 1 |
+| Without race 13 | +22.5 | −0.4 to +44.9 | 9 / 4 / 1 |
+
+- **Race 13 cut the other way here.** Betting odds held Mercedes too and scored 252,
+  108 ahead of 50/50. It was the worst race for 50/50 against betting odds, so removing
+  it helps 50/50 more than removing any other race would.
+- **Even so, the interval does not clear zero.** Dropping each of the 15 races in turn
+  leaves 50/50 between 8.4 and 22.5 points a race ahead, and none of the 15 intervals is
+  wholly above zero. Race 13 is the only removal that comes close.
+- **So 50/50 leads betting odds on average, but not measurably.** It was ahead at 9 of
+  15 races. The lead could be real, but 15 races cannot show it. Race 13 was chosen
+  after seeing the results, so leaving it out is not grounds to call a winner.
