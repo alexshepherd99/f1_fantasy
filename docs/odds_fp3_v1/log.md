@@ -325,3 +325,36 @@ and the default does not move on it.
 - **So 50/50 leads betting odds on average, but not measurably.** It was ahead at 9 of
   15 races. The lead could be real, but 15 races cannot show it. Race 13 was chosen
   after seeing the results, so leaving it out is not grounds to call a winner.
+
+### FP3 alone against betting odds
+
+Alex asked for the same check on FP3 alone. It too was made after seeing the results,
+and it is the second strategy set against betting odds, which makes a lucky result
+likelier. R10's bar compares mixes with 50/50 only, so this moves nothing.
+
+| FP3 alone minus betting odds | Mean (points/race) | 95% interval | Races ahead / behind |
+| :--- | ---: | :--- | :--- |
+| All 15 races | +24.5 | −9.7 to +56.6 | 9 / 6 |
+| Without race 13 | +23.7 | −12.8 to +57.6 | 8 / 6 |
+
+- **Race 13 hardly matters here.** Both held Mercedes, and FP3 alone was 36 ahead.
+- **The race-by-race swings are large:** FP3 alone was 142 ahead at race 16 and 108
+  ahead at race 7, but 107 behind at race 15 and 91 behind at race 21.
+- **Dropping each race in turn** leaves FP3 alone between 16.1 and 33.9 points a race
+  ahead. Only 2 of the 15 intervals clear zero, both barely: without race 15 (low
+  +3.1) and without race 21 (low +0.9). Those are its two worst races, so the edge
+  depends on not counting its own biggest losses.
+- **So FP3 alone also leads betting odds on average, but not measurably.**
+
+### Summary of where 50/50 stands
+
+Alex asked whether it is fair to say 50/50 has a marginal advantage that could be the
+luck of 15 races. Against betting odds, yes: it is ahead on average and at 9 of 15
+races. But its interval, −13.6 to +39.1 points a race, is consistent with no
+difference, and with 50/50 being somewhat worse. Two parts of the claim need care:
+
+- **Over the other mixes it has no advantage.** It is not ahead of FP3 alone, at −10.7
+  points a race. It does lead the other three mixes, by 6 to 8, but every gap is well
+  inside the noise.
+- **Over max budget and random teams the advantage is not luck.** Both intervals are
+  wholly clear of zero, by 39 and 57 points a race at their nearest.
